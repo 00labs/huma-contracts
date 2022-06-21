@@ -30,9 +30,9 @@ contract HumaPool is Ownable {
     on,
     off
   }
-  PoolStatus public status = PoolStatus.off;
+  PoolStatus public status = PoolStatus.on;
 
-  constructor(address _poolToken) {
+  constructor(address _poolToken) payable {
     poolToken = IERC20(_poolToken);
     poolTokenDecimals = ERC20(_poolToken).decimals();
     poolSafe = HumaPoolSafeFactory.deployNewPoolSafe(address(this), _poolToken);
@@ -45,6 +45,7 @@ contract HumaPool is Ownable {
 
   function getPoolTranches() external view returns (PoolTranche[] memory) {
     return tranches;
+    _;
   }
 
   function setPoolTranches(PoolTranche[] calldata _tranches)
@@ -74,7 +75,6 @@ contract HumaPool is Ownable {
 
   // Allow borrow applications and loans to be processed by this pool.
   function enablePool() external onlyOwner {
-    require(tranches.length > 0);
     status = PoolStatus.on;
   }
 
