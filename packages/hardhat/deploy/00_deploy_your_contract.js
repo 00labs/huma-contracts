@@ -17,16 +17,39 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const { deployer } = await getNamedAccounts();
   const chainId = await getChainId();
 
-  await deploy("YourContract", {
-    // Learn more about args here: https://www.npmjs.com/package/hardhat-deploy#deploymentsdeploy
+  await deploy("HumaAdmins", {
     from: deployer,
-    // args: [ "Hello", ethers.utils.parseEther("1.5") ],
+    log: true,
+    waitConfirmations: 5,
+  });
+
+  await deploy("HumaPoolSafeFactory", {
+    from: deployer,
+    log: true,
+    waitConfirmations: 5,
+  });
+
+  const HumaAdmins = await ethers.getContract("HumaAdmins", deployer);
+  const HumaPoolSafeFactory = await ethers.getContract(
+    "HumaPoolSafeFactory",
+    deployer
+  );
+
+  await deploy("HumaPoolFactory", {
+    from: deployer,
+    log: true,
+    args: [HumaAdmins.address, HumaPoolSafeFactory.address],
+    waitConfirmations: 5,
+  });
+
+  await deploy("TestToken", {
+    from: deployer,
     log: true,
     waitConfirmations: 5,
   });
 
   // Getting a previously deployed contract
-  const YourContract = await ethers.getContract("YourContract", deployer);
+  // const TestToken = await ethers.getContract("TestToken", deployer);
   /*  await YourContract.setPurpose("Hello");
   
     To take ownership of yourContract using the ownable library uncomment next line and add the 
@@ -55,9 +78,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   /*
   //If you want to link a library into your contract:
   // reference: https://github.com/austintgriffith/scaffold-eth/blob/using-libraries-example/packages/hardhat/scripts/deploy.js#L19
-  const yourContract = await deploy("YourContract", [], {}, {
-   LibraryName: **LibraryAddress**
-  });
+  // const yourContract = await deploy("YourContract", [], {}, {
+  //  LibraryName: **LibraryAddress**
+  // });
   */
 
   // Verify from the command line by running `yarn verify`
