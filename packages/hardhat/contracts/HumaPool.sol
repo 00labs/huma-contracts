@@ -4,20 +4,12 @@ pragma solidity >=0.8.0 <0.9.0;
 import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./HumaPoolSafeFactory.sol";
-
 contract HumaPool is Ownable {
-  using SafeERC20 for IERC20;
-
   IERC20 public immutable poolToken;
   uint256 private immutable poolTokenDecimals;
-
-  HumaPoolSafe private poolSafe;
-
-  mapping(address => uint256) liquidityMapping;
 
   struct PoolTranche {
     uint256 humaScoreLowerBound;
@@ -27,31 +19,28 @@ contract HumaPool is Ownable {
   PoolTranche[] public tranches;
 
   enum PoolStatus {
-    on,
-    off
+    open,
+    closed
   }
-  PoolStatus public status = PoolStatus.on;
+  PoolStatus public status = PoolStatus.open;
 
   constructor(address _poolToken) payable {
     poolToken = IERC20(_poolToken);
     poolTokenDecimals = ERC20(_poolToken).decimals();
-    poolSafe = HumaPoolSafeFactory.deployNewPoolSafe(address(this), _poolToken);
   }
 
-  modifier poolOn() {
-    require(status == PoolStatus.on, "HumaPool:POOL_NOT_ON");
-    _;
+  modifier poolOpen() {
+    require(
+      status == PoolStatus.open,
+      "HumaPool: Pool is not open. The owner must call enablePool"
+    );
   }
 
   function getPoolTranches() external view returns (PoolTranche[] memory) {
     return tranches;
-    _;
   }
 
-  function setPoolTranches(PoolTranche[] calldata _tranches)
-    external
-    onlyOwner
-  {
+  function setPoolTranches(PoolTranche[] calldata _tranches) external {
     uint256 lastHumaScore = 100;
     for (uint256 i = 0; i < _tranches.length; i++) {
       require(_tranches[i].humaScoreLowerBound < lastHumaScore);
@@ -62,26 +51,15 @@ contract HumaPool is Ownable {
     tranches = _tranches;
   }
 
-  function deposit(uint256 liquidityAmount) external poolOn {
-    poolToken.safeTransferFrom(msg.sender, poolSafe, liquidityAmount);
-    liquidityMapping[msg.sender] += liquidityAmount;
-  }
-
-  function withdraw(uint256 amount) external {
-    require(amount <= liquidityMapping[msg.sender]);
-    liquidityMapping[msg.sender] -= amount;
-    poolSafe.transfer(msg.sender, amount);
-  }
-
   // Allow borrow applications and loans to be processed by this pool.
   function enablePool() external onlyOwner {
-    status = PoolStatus.on;
+    status = PoolStatus.open;
   }
 
   // Reject all future borrow applications and loans. Note that existing
   // loans will still be processed as expected.
   function disablePool() external onlyOwner {
-    status = PoolStatus.off;
+    status = PoolStatus.closed;
   }
 
   // Function to receive Ether. msg.data must be empty

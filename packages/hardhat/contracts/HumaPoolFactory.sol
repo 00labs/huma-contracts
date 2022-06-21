@@ -16,20 +16,23 @@ contract HumaPoolFactory {
   address[] public pools;
 
   // Minimum liquidity deposit needed to create a Huma Pool
-  uint256 public minimumLiquidityNeeded = 100000;
+  uint256 public minimumLiquidityNeededUSD = 100000;
 
   event HumaPoolCreated(address indexed owner, address humaPool);
 
-  function setMinimumLiquidityNeeded(uint256 _minimumLiquidityNeeded) external {
-    humaAdmins.isMasterAdmin();
-    minimumLiquidityNeeded = _minimumLiquidityNeeded;
+  constructor() {
+    // what should we do on deploy?
   }
 
-  function deployNewPool(uint256 _initialLiquidity)
+  function setMinimumLiquidityNeededUSD(uint256 _minimumLiquidityNeededUSD)
     external
-    returns (address humaPool)
   {
-    require(_initialLiquidity >= minimumLiquidityNeeded);
+    humaAdmins.isMasterAdmin();
+    minimumLiquidityNeededUSD = _minimumLiquidityNeededUSD;
+  }
+
+  function deployNewPool() external payable returns (address humaPool) {
+    require(msg.value >= minimumLiquidityNeededUSD);
     humaAdmins.isApprovedAdmin();
 
     humaPool = address(new HumaPool());
