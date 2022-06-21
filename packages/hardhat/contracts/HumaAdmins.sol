@@ -4,9 +4,8 @@ pragma solidity >=0.8.0 <0.9.0;
 import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./HumaPool.sol";
-
-// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol
 
 contract HumaAdmins is Ownable {
   // A map of addresses which are allowed to create new Huma Pools.
