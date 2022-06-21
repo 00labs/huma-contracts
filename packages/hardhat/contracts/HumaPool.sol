@@ -7,8 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./interfaces/IHumaPoolSafeFactory.sol";
-import "./interfaces/IHumaPoolSafe.sol";
+import "./HumaPoolSafeFactory.sol";
 
 contract HumaPool is Ownable {
   using SafeERC20 for IERC20;
@@ -16,7 +15,7 @@ contract HumaPool is Ownable {
   IERC20 public immutable poolToken;
   uint256 private immutable poolTokenDecimals;
 
-  address private poolSafe;
+  HumaPoolSafe private poolSafe;
 
   mapping(address => uint256) liquidityMapping;
 
@@ -33,13 +32,10 @@ contract HumaPool is Ownable {
   }
   PoolStatus public status = PoolStatus.off;
 
-  constructor(address _poolToken, address _poolSafeFactory) {
+  constructor(address _poolToken) {
     poolToken = IERC20(_poolToken);
     poolTokenDecimals = ERC20(_poolToken).decimals();
-    poolSafe = IHumaPoolSafeFactory(_poolSafeFactory).deployNewPoolSafe(
-      address(this),
-      _poolToken
-    );
+    poolSafe = HumaPoolSafeFactory.deployNewPoolSafe(address(this), _poolToken);
   }
 
   modifier poolOn() {
@@ -47,22 +43,22 @@ contract HumaPool is Ownable {
     _;
   }
 
-  function getPoolTranches() public view returns (PoolTranche[] memory) {
+  function getPoolTranches() external view returns (PoolTranche[] memory) {
     return tranches;
   }
 
-  function setPoolTranches(PoolTranche[] memory _tranches) external onlyOwner {
+  function setPoolTranches(PoolTranche[] calldata _tranches)
+    external
+    onlyOwner
+  {
     uint256 lastHumaScore = 100;
-    delete tranches;
     for (uint256 i = 0; i < _tranches.length; i++) {
       require(_tranches[i].humaScoreLowerBound < lastHumaScore);
       require(_tranches[i].interestRate >= 0);
       require(_tranches[i].collateralRequired >= 0);
-
-      lastHumaScore = _tranches[i].humaScoreLowerBound;
-
-      tranches.push(_tranches[i]);
     }
+
+    tranches = _tranches;
   }
 
   function deposit(uint256 liquidityAmount) external poolOn {
@@ -73,7 +69,7 @@ contract HumaPool is Ownable {
   function withdraw(uint256 amount) external {
     require(amount <= liquidityMapping[msg.sender]);
     liquidityMapping[msg.sender] -= amount;
-    IHumaPoolSafe(poolSafe).transfer(msg.sender, amount);
+    poolSafe.transfer(msg.sender, amount);
   }
 
   // Allow borrow applications and loans to be processed by this pool.

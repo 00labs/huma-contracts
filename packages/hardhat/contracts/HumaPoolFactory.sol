@@ -5,18 +5,14 @@ import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./HumaPool.sol";
-import "./interfaces/IHumaAdmins.sol";
+import "./HumaAdmins.sol";
 
 // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol
 
 contract HumaPoolFactory {
   using SafeERC20 for IERC20;
 
-  // HumaAdmins
-  address public immutable humaAdmins;
-
-  // HumaPoolSafeFactory
-  address public immutable humaPoolSafeFactory;
+  HumaAdmins humaAdmins;
 
   // Array of all Huma Pools created from this factory
   address[] public pools;
@@ -24,27 +20,26 @@ contract HumaPoolFactory {
   // Minimum liquidity deposit needed to create a Huma Pool
   uint256 public minimumLiquidityNeeded = 100;
 
-  constructor(address _humaAdmins, address _humaPoolSafeFactory) {
-    humaAdmins = _humaAdmins;
-    humaPoolSafeFactory = _humaPoolSafeFactory;
-  }
+  event HumaPoolCreated(address indexed owner, address humaPool);
 
   function setMinimumLiquidityNeeded(uint256 _minimumLiquidityNeeded) external {
-    IHumaAdmins(humaAdmins).isMasterAdmin();
+    humaAdmins.isMasterAdmin();
     minimumLiquidityNeeded = _minimumLiquidityNeeded;
   }
 
-  function deployNewPool(address _poolTokenAddress, uint256 _initialLiquidity)
+  function deployNewPool(address _poolToken, uint256 _initialLiquidity)
     external
     returns (address humaPool)
   {
     require(_initialLiquidity >= minimumLiquidityNeeded);
-    IHumaAdmins(humaAdmins).isApprovedAdmin();
+    humaAdmins.isApprovedAdmin();
 
-    humaPool = address(new HumaPool(_poolTokenAddress, humaPoolSafeFactory));
+    humaPool = address(new HumaPool(_poolToken));
     pools.push(humaPool);
 
-    IERC20 poolToken = IERC20(_poolTokenAddress);
+    poolToken = IERC20(_poolToken);
     poolToken.safeTransfer(humaPool, _initialLiquidity);
+
+    emit HumaPoolCreated(msg.sender, humaPool);
   }
 }
