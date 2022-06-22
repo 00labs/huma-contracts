@@ -1,11 +1,10 @@
+//SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-//SPDX-License-Identifier: MIT
+interface IHumaPoolAdmins {
+  function isApprovedAdmin() external view returns (bool);
 
-interface IHumaAdmins {
-  function isApprovedAdmin() external view;
-
-  function isMasterAdmin() external view;
+  function isMasterAdmin() external view returns (bool);
 
   // Add a new admin to the approved admins list. By default they
   // won't be allowed to create pools right away. The owner must

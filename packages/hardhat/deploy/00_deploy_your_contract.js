@@ -17,7 +17,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const { deployer } = await getNamedAccounts();
   const chainId = await getChainId();
 
-  await deploy("HumaAdmins", {
+  await deploy("HumaPoolAdmins", {
     from: deployer,
     log: true,
     waitConfirmations: 5,
@@ -29,7 +29,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     waitConfirmations: 5,
   });
 
-  const HumaAdmins = await ethers.getContract("HumaAdmins", deployer);
+  const HumaPoolAdmins = await ethers.getContract("HumaPoolAdmins", deployer);
   const HumaPoolSafeFactory = await ethers.getContract(
     "HumaPoolSafeFactory",
     deployer
@@ -38,7 +38,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   await deploy("HumaPoolFactory", {
     from: deployer,
     log: true,
-    args: [HumaAdmins.address, HumaPoolSafeFactory.address],
+    args: [HumaPoolAdmins.address, HumaPoolSafeFactory.address],
     waitConfirmations: 5,
   });
 

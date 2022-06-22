@@ -1,5 +1,5 @@
-pragma solidity >=0.8.0 <0.9.0;
 //SPDX-License-Identifier: MIT
+pragma solidity >=0.8.0 <0.9.0;
 
 import "hardhat/console.sol";
 
@@ -28,10 +28,10 @@ contract HumaPool is Ownable {
   PoolTranche[] public tranches;
 
   enum PoolStatus {
-    on,
-    off
+    On,
+    Off
   }
-  PoolStatus public status = PoolStatus.off;
+  PoolStatus public status = PoolStatus.Off;
 
   constructor(address _poolToken, address _poolSafeFactory) {
     poolToken = IERC20(_poolToken);
@@ -43,7 +43,7 @@ contract HumaPool is Ownable {
   }
 
   modifier poolOn() {
-    require(status == PoolStatus.on, "HumaPool:POOL_NOT_ON");
+    require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
     _;
   }
 
@@ -51,13 +51,16 @@ contract HumaPool is Ownable {
     return tranches;
   }
 
+  // Pass in an array of tranches to define this pools risk-loan tolerance.
+  // The tranches must be passed in descending order and define the loan
+  // strategy for the risk tranche from humaScoreLowerBound <-> next tranche bound (or MAX_INT) inclusive
   function setPoolTranches(PoolTranche[] memory _tranches) external onlyOwner {
-    uint256 lastHumaScore = 100;
+    uint256 lastHumaScore = 2**256 - 1; // MAX_INT
     delete tranches;
     for (uint256 i = 0; i < _tranches.length; i++) {
-      require(_tranches[i].humaScoreLowerBound < lastHumaScore);
-      require(_tranches[i].interestRate >= 0);
-      require(_tranches[i].collateralRequired >= 0);
+      require(_tranches[i].humaScoreLowerBound <= lastHumaScore);
+      require(_tranches[i].interestRate > 0);
+      require(_tranches[i].collateralRequired > 0);
 
       lastHumaScore = _tranches[i].humaScoreLowerBound;
 
@@ -65,9 +68,11 @@ contract HumaPool is Ownable {
     }
   }
 
-  function deposit(uint256 liquidityAmount) external poolOn {
+  function deposit(uint256 liquidityAmount) external poolOn returns (bool) {
     poolToken.safeTransferFrom(msg.sender, poolSafe, liquidityAmount);
     liquidityMapping[msg.sender] += liquidityAmount;
+
+    return true;
   }
 
   function withdraw(uint256 amount) external {
@@ -79,13 +84,13 @@ contract HumaPool is Ownable {
   // Allow borrow applications and loans to be processed by this pool.
   function enablePool() external onlyOwner {
     require(tranches.length > 0);
-    status = PoolStatus.on;
+    status = PoolStatus.On;
   }
 
   // Reject all future borrow applications and loans. Note that existing
   // loans will still be processed as expected.
   function disablePool() external onlyOwner {
-    status = PoolStatus.off;
+    status = PoolStatus.Off;
   }
 
   // Function to receive Ether. msg.data must be empty
