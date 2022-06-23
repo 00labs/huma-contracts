@@ -8,8 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "./interfaces/IHumaPoolLoanHelper.sol";
-import "./interfaces/IHumaPoolSafeFactory.sol";
-import "./interfaces/IHumaPoolSafe.sol";
+import "./interfaces/IHumaPoolLockerFactory.sol";
+import "./interfaces/IHumaPoolLocker.sol";
 
 contract HumaPool is Ownable {
   using SafeERC20 for IERC20;
@@ -17,15 +17,19 @@ contract HumaPool is Ownable {
   IERC20 public immutable poolToken;
   uint256 private immutable poolTokenDecimals;
 
-  // Liquidity holder proxy contract for this pool
-  address private poolSafe;
-
   // IHumaPoolLoanHelper, for adding additional logic on top of the pool's borrow functionality
   address private humaPoolLoanHelper;
   bool private isHumaPoolLoanHelperApproved = false;
 
+  // Liquidity holder proxy contract for this pool
+  address private poolLocker;
+
+  struct LenderInfo {
+    uint256 amount;
+    uint256 mostRecentLoanTimestamp;
+  }
   // Tracks the amount of liquidity in poolTokens provided to this pool by an address
-  mapping(address => uint256) private liquidityMapping;
+  mapping(address => LenderInfo) private lenderInfo;
 
   struct Loan {
     uint256 amount;
@@ -51,13 +55,17 @@ contract HumaPool is Ownable {
   }
   PoolStatus public status = PoolStatus.Off;
 
-  constructor(address _poolToken, address _poolSafeFactory) {
+  // How long after the last deposit that a lender needs to wait
+  // before they can withdraw their capital
+  uint256 loanWithdrawalLockoutPeriod = 2630000;
+
+  constructor(address _poolToken, address _poolLockerFactory) {
     poolToken = IERC20(_poolToken);
     poolTokenDecimals = ERC20(_poolToken).decimals();
-    poolSafe = IHumaPoolSafeFactory(_poolSafeFactory).deployNewPoolSafe(
-      address(this),
-      _poolToken
-    );
+    poolLocker = IHumaPoolLockerFactory(_poolLockerFactory).deployNewPoolLocker(
+        address(this),
+        _poolToken
+      );
   }
 
   // In order for a pool to issue new loans, it must be turned on by an admin
@@ -83,10 +91,19 @@ contract HumaPool is Ownable {
     uint256 lastHumaScore = 2**256 - 1; // MAX_INT
     delete tranches;
     for (uint256 i = 0; i < _tranches.length; i++) {
-      require(_tranches[i].humaScoreLowerBound <= lastHumaScore);
-      require(_tranches[i].interestRate > 0);
-      require(_tranches[i].collateralRequired > 0);
-      require(_tranches[i].maxLoanAmount > 0);
+      require(
+        _tranches[i].humaScoreLowerBound <= lastHumaScore,
+        "HumaPool:TRANCHES_NOT_DESCENDING"
+      );
+      require(_tranches[i].interestRate >= 0, "HumaPool:ZERO_INTEREST_RATE");
+      require(
+        _tranches[i].collateralRequired >= 0,
+        "HumaPool:COLLATERAL_VALUE_REQUIRED"
+      );
+      require(
+        _tranches[i].maxLoanAmount > 0,
+        "HumaPool:MAX_LOAN_AMOUNT_REQUIRED"
+      );
 
       lastHumaScore = _tranches[i].humaScoreLowerBound;
 
@@ -117,17 +134,42 @@ contract HumaPool is Ownable {
     status = PoolStatus.Off;
   }
 
+  function getLoanWithdrawalLockoutPeriod() public view returns (uint256) {
+    return loanWithdrawalLockoutPeriod;
+  }
+
+  function setLoanWithdrawalLockoutPeriod(uint256 _loanWithdrawalLockoutPeriod)
+    external
+    onlyOwner
+  {
+    loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
+  }
+
   function deposit(uint256 liquidityAmount) external poolOn returns (bool) {
-    poolToken.safeTransferFrom(msg.sender, poolSafe, liquidityAmount);
-    liquidityMapping[msg.sender] += liquidityAmount;
+    lenderInfo[msg.sender].amount += liquidityAmount;
+    lenderInfo[msg.sender].mostRecentLoanTimestamp = block.timestamp;
+    poolToken.safeTransferFrom(msg.sender, poolLocker, liquidityAmount);
 
     return true;
   }
 
   function withdraw(uint256 amount) external {
-    require(amount <= liquidityMapping[msg.sender]);
-    liquidityMapping[msg.sender] -= amount;
-    IHumaPoolSafe(poolSafe).transfer(msg.sender, amount);
+    require(
+      amount <= lenderInfo[msg.sender].amount,
+      "HumaPool:WITHDRAW_AMT_TOO_GREAT"
+    );
+    require(
+      block.timestamp >=
+        lenderInfo[msg.sender].mostRecentLoanTimestamp +
+          loanWithdrawalLockoutPeriod,
+      "HumaPool:WITHDRAW_TOO_SOON"
+    );
+    // TODO allow withdrawal of past loans that passed lockout period
+
+    lenderInfo[msg.sender].amount -= amount;
+    IHumaPoolLocker(poolLocker).transfer(msg.sender, amount);
+
+    return true;
   }
 
   function borrow(
@@ -149,7 +191,7 @@ contract HumaPool is Ownable {
     uint256 trancheIndex = getTrancheIndexForHumaScore(humaScore);
     require(
       tranches[trancheIndex].maxLoanAmount >= _borrowAmount,
-      "HumaPool:DENY_BORROW_EXISTING_LOAN"
+      "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
     );
 
     creditMapping[msg.sender] = Loan({
