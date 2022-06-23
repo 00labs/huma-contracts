@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+import "./interfaces/IHumaPoolLoanHelper.sol";
 import "./interfaces/IHumaPoolSafeFactory.sol";
 import "./interfaces/IHumaPoolSafe.sol";
 
@@ -16,7 +17,12 @@ contract HumaPool is Ownable {
   IERC20 public immutable poolToken;
   uint256 private immutable poolTokenDecimals;
 
+  // Liquidity holder proxy contract for this pool
   address private poolSafe;
+
+  // IHumaPoolLoanHelper, for adding additional logic on top of the pool's borrow functionality
+  address private humaPoolLoanHelper;
+  bool private isHumaPoolLoanHelperApproved = false;
 
   // Tracks the amount of liquidity in poolTokens provided to this pool by an address
   mapping(address => uint256) private liquidityMapping;
@@ -54,8 +60,14 @@ contract HumaPool is Ownable {
     );
   }
 
+  // In order for a pool to issue new loans, it must be turned on by an admin
+  // and its custom loan helper must be approved by the Huma team
   modifier poolOn() {
     require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
+    require(
+      humaPoolLoanHelper == address(0) || isHumaPoolLoanHelperApproved == true,
+      "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
+    );
     _;
   }
 
@@ -80,6 +92,29 @@ contract HumaPool is Ownable {
 
       tranches.push(_tranches[i]);
     }
+  }
+
+  function setHumaPoolLoanHelper(address _humaPoolLoanHelper)
+    external
+    onlyOwner
+  {
+    humaPoolLoanHelper = _humaPoolLoanHelper;
+    // New loan helpers must be reviewed and approved by the Huma team.
+    isHumaPoolLoanHelperApproved = false;
+  }
+
+  // TODO: Add function to approve pool loan helper (only callable by huma)
+
+  // Allow borrow applications and loans to be processed by this pool.
+  function enablePool() external onlyOwner {
+    require(tranches.length > 0);
+    status = PoolStatus.On;
+  }
+
+  // Reject all future borrow applications and loans. Note that existing
+  // loans will still be processed as expected.
+  function disablePool() external onlyOwner {
+    status = PoolStatus.Off;
   }
 
   function deposit(uint256 liquidityAmount) external poolOn returns (bool) {
@@ -143,18 +178,6 @@ contract HumaPool is Ownable {
     }
 
     revert("HumaPool:NO_TRANCHE_FOR_SCORE");
-  }
-
-  // Allow borrow applications and loans to be processed by this pool.
-  function enablePool() external onlyOwner {
-    require(tranches.length > 0);
-    status = PoolStatus.On;
-  }
-
-  // Reject all future borrow applications and loans. Note that existing
-  // loans will still be processed as expected.
-  function disablePool() external onlyOwner {
-    status = PoolStatus.Off;
   }
 
   // Function to receive Ether. msg.data must be empty
