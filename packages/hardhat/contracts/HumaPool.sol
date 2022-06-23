@@ -24,8 +24,8 @@ contract HumaPool is Ownable {
   struct Loan {
     uint256 amount;
     uint256 issuedTimestamp;
-    uint256 paybackTimestamp;
-    uint256 payInterval;
+    uint256 paybackAmount;
+    uint256 paybackInterval;
     uint256 interestRate;
   }
   // Tracks currently issued loans from this pool
@@ -97,8 +97,8 @@ contract HumaPool is Ownable {
 
   function borrow(
     uint256 _borrowAmount,
-    uint256 _paybackTimestamp,
-    uint256 _payInterval
+    uint256 _paybackInterval,
+    uint256 _paybackAmount
   ) external poolOn returns (bool) {
     // Borrowers must not have existing loans from this pool
     require(
@@ -106,6 +106,8 @@ contract HumaPool is Ownable {
       "HumaPool:DENY_BORROW_EXISTING_LOAN"
     );
     // TODO: check token allowance for pool collector
+
+    // TODO: make sure paybackAmount reflects proper interest rate of tranche
 
     // TODO: Check huma score here. Hardcoding for now.
     uint256 humaScore = 88;
@@ -118,8 +120,8 @@ contract HumaPool is Ownable {
     creditMapping[msg.sender] = Loan({
       amount: _borrowAmount,
       issuedTimestamp: block.timestamp,
-      paybackTimestamp: _paybackTimestamp,
-      payInterval: _payInterval,
+      paybackAmount: _paybackAmount,
+      paybackInterval: _paybackInterval,
       interestRate: tranches[trancheIndex].interestRate
     });
     IHumaPoolSafe(poolSafe).transfer(msg.sender, _borrowAmount);
