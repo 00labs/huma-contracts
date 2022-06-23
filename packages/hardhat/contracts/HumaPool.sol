@@ -129,6 +129,8 @@ contract HumaPool is Ownable {
           loanWithdrawalLockoutPeriod,
       "HumaPool:WITHDRAW_TOO_SOON"
     );
+    // TODO allow withdrawal of past loans that passed lockout period
+
     lenderInfo[msg.sender].amount -= amount;
     IHumaPoolSafe(poolSafe).transfer(msg.sender, amount);
   }
