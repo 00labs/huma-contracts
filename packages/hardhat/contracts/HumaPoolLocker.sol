@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract HumaPoolSafe {
+contract HumaPoolLocker {
   using SafeERC20 for IERC20;
 
   address public immutable pool;
@@ -15,12 +15,12 @@ contract HumaPoolSafe {
   }
 
   modifier isPool() {
-    require(msg.sender == pool, "HumaPoolSafe:NOT_POOL");
+    require(msg.sender == pool, "HumaPoolLocker:NOT_POOL");
     _;
   }
 
   function transfer(address to, uint256 amount) external isPool {
-    require(to != address(0), "HumaPoolSafe:NULL_ADDR");
+    require(to != address(0), "HumaPoolLocker:NULL_ADDR");
     poolToken.safeTransfer(to, amount);
   }
 }

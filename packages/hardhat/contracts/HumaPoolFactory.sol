@@ -15,8 +15,8 @@ contract HumaPoolFactory {
   // HumaPoolAdmins
   address public immutable humaPoolAdmins;
 
-  // HumaPoolSafeFactory
-  address public immutable humaPoolSafeFactory;
+  // HumaPoolLockerFactory
+  address public immutable humaPoolLockerFactory;
 
   // Array of all Huma Pools created from this factory
   address[] public pools;
@@ -24,9 +24,9 @@ contract HumaPoolFactory {
   // Minimum liquidity deposit needed to create a Huma Pool
   uint256 public minimumLiquidityNeeded = 100;
 
-  constructor(address _humaPoolAdmins, address _humaPoolSafeFactory) {
+  constructor(address _humaPoolAdmins, address _humaPoolLockerFactory) {
     humaPoolAdmins = _humaPoolAdmins;
-    humaPoolSafeFactory = _humaPoolSafeFactory;
+    humaPoolLockerFactory = _humaPoolLockerFactory;
   }
 
   function setMinimumLiquidityNeeded(uint256 _minimumLiquidityNeeded) external {
@@ -50,7 +50,7 @@ contract HumaPoolFactory {
       "HumaPoolFactory:CALLER_NOT_APPROVED"
     );
 
-    humaPool = address(new HumaPool(_poolTokenAddress, humaPoolSafeFactory));
+    humaPool = address(new HumaPool(_poolTokenAddress, humaPoolLockerFactory));
     pools.push(humaPool);
 
     IERC20 poolToken = IERC20(_poolTokenAddress);

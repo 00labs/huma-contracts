@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./interfaces/IHumaPoolSafeFactory.sol";
-import "./interfaces/IHumaPoolSafe.sol";
+import "./interfaces/IHumaPoolLockerFactory.sol";
+import "./interfaces/IHumaPoolLocker.sol";
 
 contract HumaPool is Ownable {
   using SafeERC20 for IERC20;
@@ -16,7 +16,7 @@ contract HumaPool is Ownable {
   IERC20 public immutable poolToken;
   uint256 private immutable poolTokenDecimals;
 
-  address private poolSafe;
+  address private poolLocker;
 
   struct LenderInfo {
     uint256 amount;
@@ -28,8 +28,8 @@ contract HumaPool is Ownable {
   struct Loan {
     uint256 amount;
     uint256 issuedTimestamp;
-    uint256 paybackTimestamp;
-    uint256 payInterval;
+    uint256 paybackAmount;
+    uint256 paybackInterval;
     uint256 interestRate;
   }
   // Tracks currently issued loans from this pool
@@ -53,13 +53,13 @@ contract HumaPool is Ownable {
   // before they can withdraw their capital
   uint256 loanWithdrawalLockoutPeriod = 2630000;
 
-  constructor(address _poolToken, address _poolSafeFactory) {
+  constructor(address _poolToken, address _poolLockerFactory) {
     poolToken = IERC20(_poolToken);
     poolTokenDecimals = ERC20(_poolToken).decimals();
-    poolSafe = IHumaPoolSafeFactory(_poolSafeFactory).deployNewPoolSafe(
-      address(this),
-      _poolToken
-    );
+    poolLocker = IHumaPoolLockerFactory(_poolLockerFactory).deployNewPoolLocker(
+        address(this),
+        _poolToken
+      );
   }
 
   modifier poolOn() {
@@ -113,7 +113,7 @@ contract HumaPool is Ownable {
   function deposit(uint256 liquidityAmount) external poolOn returns (bool) {
     lenderInfo[msg.sender].amount += liquidityAmount;
     lenderInfo[msg.sender].mostRecentLoanTimestamp = block.timestamp;
-    poolToken.safeTransferFrom(msg.sender, poolSafe, liquidityAmount);
+    poolToken.safeTransferFrom(msg.sender, poolLocker, liquidityAmount);
 
     return true;
   }
@@ -132,13 +132,15 @@ contract HumaPool is Ownable {
     // TODO allow withdrawal of past loans that passed lockout period
 
     lenderInfo[msg.sender].amount -= amount;
-    IHumaPoolSafe(poolSafe).transfer(msg.sender, amount);
+    IHumaPoolLocker(poolLocker).transfer(msg.sender, amount);
+
+    return true;
   }
 
   function borrow(
     uint256 _borrowAmount,
-    uint256 _paybackTimestamp,
-    uint256 _payInterval
+    uint256 _paybackInterval,
+    uint256 _paybackAmount
   ) external poolOn returns (bool) {
     // Borrowers must not have existing loans from this pool
     require(
@@ -146,6 +148,8 @@ contract HumaPool is Ownable {
       "HumaPool:DENY_BORROW_EXISTING_LOAN"
     );
     // TODO: check token allowance for pool collector
+
+    // TODO: make sure paybackAmount reflects proper interest rate of tranche
 
     // TODO: Check huma score here. Hardcoding for now.
     uint256 humaScore = 88;
@@ -158,8 +162,8 @@ contract HumaPool is Ownable {
     creditMapping[msg.sender] = Loan({
       amount: _borrowAmount,
       issuedTimestamp: block.timestamp,
-      paybackTimestamp: _paybackTimestamp,
-      payInterval: _payInterval,
+      paybackAmount: _paybackAmount,
+      paybackInterval: _paybackInterval,
       interestRate: tranches[trancheIndex].interestRate
     });
     IHumaPoolSafe(poolSafe).transfer(msg.sender, _borrowAmount);
