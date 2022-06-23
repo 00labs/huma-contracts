@@ -83,7 +83,7 @@ contract HumaPool is Ownable {
         _tranches[i].humaScoreLowerBound <= lastHumaScore,
         "HumaPool:TRANCHES_NOT_DESCENDING"
       );
-      require(_tranches[i].interestRate > 0, "HumaPool:ZERO_INTEREST_RATE");
+      require(_tranches[i].interestRate >= 0, "HumaPool:ZERO_INTEREST_RATE");
       require(
         _tranches[i].collateralRequired >= 0,
         "HumaPool:COLLATERAL_VALUE_REQUIRED"
