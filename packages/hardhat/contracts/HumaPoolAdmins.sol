@@ -5,9 +5,11 @@ import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./HumaPool.sol";
 
-contract HumaPoolAdmins is Ownable {
+import "./HumaPool.sol";
+import "./interfaces/IHumaPoolAdmins.sol";
+
+contract HumaPoolAdmins is Ownable, IHumaPoolAdmins {
   // A map of addresses which are allowed to create new Huma Pools.
   mapping(address => bool) public approvedAdmins;
 
