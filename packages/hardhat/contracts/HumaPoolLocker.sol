@@ -3,9 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./interfaces/IHumaPoolLocker.sol";
-
-contract HumaPoolLocker is IHumaPoolLocker {
+contract HumaPoolLocker {
   using SafeERC20 for IERC20;
 
   address public immutable pool;

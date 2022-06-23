@@ -1,10 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "./interfaces/IHumaPoolLockerFactory.sol";
 import "./HumaPoolLocker.sol";
 
-contract HumaPoolLockerFactory is IHumaPoolLockerFactory {
+contract HumaPoolLockerFactory {
   // Array of all Huma Pool Lockers created from this factory
   address[] public poolLockers;
 
