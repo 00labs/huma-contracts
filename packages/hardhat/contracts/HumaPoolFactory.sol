@@ -1,63 +1,59 @@
-pragma solidity >=0.8.0 <0.9.0;
 //SPDX-License-Identifier: MIT
+pragma solidity >=0.8.0 <0.9.0;
 
 import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./HumaPool.sol";
+import "./interfaces/IHumaPoolAdmins.sol";
 
 // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol
 
-contract HumaPoolFactory is Ownable {
-  // A map of addresses which are allowed to create new Huma Pools.
-  // Key: address
-  // Value: Whether this address is currently allowed to create a pool
-  mapping(address => bool) public approvedAdmins;
+contract HumaPoolFactory {
+  using SafeERC20 for IERC20;
+
+  // HumaPoolAdmins
+  address public immutable humaPoolAdmins;
+
+  // HumaPoolLockerFactory
+  address public immutable humaPoolLockerFactory;
 
   // Array of all Huma Pools created from this factory
   address[] public pools;
 
   // Minimum liquidity deposit needed to create a Huma Pool
-  uint256 public minimumLiquidityNeededUSD = 100000;
+  uint256 public minimumLiquidityNeeded = 100;
 
-  event HumaPoolCreated(address indexed owner, address humaPool);
-
-  constructor() {
-    // what should we do on deploy?
+  constructor(address _humaPoolAdmins, address _humaPoolLockerFactory) {
+    humaPoolAdmins = _humaPoolAdmins;
+    humaPoolLockerFactory = _humaPoolLockerFactory;
   }
 
-  // Add a new admin to the approved admins list. By default they
-  // won't be allowed to create pools right away. The owner must
-  // call `enableApprovedPoolAdmin` to give the admin creation privileges
-  function addApprovedPoolAdmin(address _admin) external onlyOwner {
-    approvedAdmins[_admin] = false;
+  function setMinimumLiquidityNeeded(uint256 _minimumLiquidityNeeded) external {
+    require(
+      IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(),
+      "HumaPoolFactory:NOT_MASTER_ADMIN"
+    );
+    minimumLiquidityNeeded = _minimumLiquidityNeeded;
   }
 
-  // Disable an admin from being able to create new huma pools
-  function disableApprovedPoolAdmin(address _admin) external onlyOwner {
-    approvedAdmins[_admin] = false;
-  }
-
-  // Grant an admin Huma Pool creation privileges
-  function enableApprovedPoolAdmin(address _admin) external onlyOwner {
-    approvedAdmins[_admin] = true;
-  }
-
-  function setMinimumLiquidityNeededUSD(uint256 _minimumLiquidityNeededUSD)
+  function deployNewPool(address _poolTokenAddress, uint256 _initialLiquidity)
     external
-    onlyOwner
+    returns (address humaPool)
   {
-    minimumLiquidityNeededUSD = _minimumLiquidityNeededUSD;
-  }
+    require(
+      _initialLiquidity >= minimumLiquidityNeeded,
+      "HumaPoolFactory:ERR_LIQUIDITY_REQUIREMENT"
+    );
+    require(
+      IHumaPoolAdmins(humaPoolAdmins).isApprovedAdmin(),
+      "HumaPoolFactory:CALLER_NOT_APPROVED"
+    );
 
-  function deployNewPool() external payable returns (address humaPool) {
-    require(msg.value >= minimumLiquidityNeededUSD);
-    require(approvedAdmins[msg.sender] == true);
-    humaPool = address(new HumaPool());
+    humaPool = address(new HumaPool(_poolTokenAddress, humaPoolLockerFactory));
     pools.push(humaPool);
 
-    // TODO fund huma pool. Should we use ERC20 tokens? WETH? USDC?
-
-    emit HumaPoolCreated(msg.sender, humaPool);
+    IERC20 poolToken = IERC20(_poolTokenAddress);
+    poolToken.safeTransfer(humaPool, _initialLiquidity);
   }
 }
