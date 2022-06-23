@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./interfaces/IHumaPoolSafeFactory.sol";
-import "./interfaces/IHumaPoolSafe.sol";
+import "./interfaces/IHumaPoolLockerFactory.sol";
+import "./interfaces/IHumaPoolLocker.sol";
 
 contract HumaPool is Ownable {
   using SafeERC20 for IERC20;
@@ -16,7 +16,7 @@ contract HumaPool is Ownable {
   IERC20 public immutable poolToken;
   uint256 private immutable poolTokenDecimals;
 
-  address private poolSafe;
+  address private poolLocker;
 
   // Tracks the amount of liquidity in poolTokens provided to this pool by an address
   mapping(address => uint256) private liquidityMapping;
@@ -45,13 +45,13 @@ contract HumaPool is Ownable {
   }
   PoolStatus public status = PoolStatus.Off;
 
-  constructor(address _poolToken, address _poolSafeFactory) {
+  constructor(address _poolToken, address _poolLockerFactory) {
     poolToken = IERC20(_poolToken);
     poolTokenDecimals = ERC20(_poolToken).decimals();
-    poolSafe = IHumaPoolSafeFactory(_poolSafeFactory).deployNewPoolSafe(
-      address(this),
-      _poolToken
-    );
+    poolLocker = IHumaPoolLockerFactory(_poolLockerFactory).deployNewPoolLocker(
+        address(this),
+        _poolToken
+      );
   }
 
   modifier poolOn() {
@@ -72,8 +72,8 @@ contract HumaPool is Ownable {
     delete tranches;
     for (uint256 i = 0; i < _tranches.length; i++) {
       require(_tranches[i].humaScoreLowerBound <= lastHumaScore);
-      require(_tranches[i].interestRate > 0);
-      require(_tranches[i].collateralRequired > 0);
+      require(_tranches[i].interestRate >= 0);
+      require(_tranches[i].collateralRequired >= 0);
       require(_tranches[i].maxLoanAmount > 0);
 
       lastHumaScore = _tranches[i].humaScoreLowerBound;
@@ -83,16 +83,18 @@ contract HumaPool is Ownable {
   }
 
   function deposit(uint256 liquidityAmount) external poolOn returns (bool) {
-    poolToken.safeTransferFrom(msg.sender, poolSafe, liquidityAmount);
+    poolToken.safeTransferFrom(msg.sender, poolLocker, liquidityAmount);
     liquidityMapping[msg.sender] += liquidityAmount;
 
     return true;
   }
 
-  function withdraw(uint256 amount) external {
+  function withdraw(uint256 amount) external returns (bool) {
     require(amount <= liquidityMapping[msg.sender]);
     liquidityMapping[msg.sender] -= amount;
-    IHumaPoolSafe(poolSafe).transfer(msg.sender, amount);
+    IHumaPoolLocker(poolLocker).transfer(msg.sender, amount);
+
+    return true;
   }
 
   function borrow(

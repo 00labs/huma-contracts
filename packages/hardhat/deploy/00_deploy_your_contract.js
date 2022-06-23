@@ -23,22 +23,22 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     waitConfirmations: 5,
   });
 
-  await deploy("HumaPoolSafeFactory", {
+  await deploy("HumaPoolLockerFactory", {
     from: deployer,
     log: true,
     waitConfirmations: 5,
   });
 
   const HumaPoolAdmins = await ethers.getContract("HumaPoolAdmins", deployer);
-  const HumaPoolSafeFactory = await ethers.getContract(
-    "HumaPoolSafeFactory",
+  const HumaPoolLockerFactory = await ethers.getContract(
+    "HumaPoolLockerFactory",
     deployer
   );
 
   await deploy("HumaPoolFactory", {
     from: deployer,
     log: true,
-    args: [HumaPoolAdmins.address, HumaPoolSafeFactory.address],
+    args: [HumaPoolAdmins.address, HumaPoolLockerFactory.address],
     waitConfirmations: 5,
   });
 
