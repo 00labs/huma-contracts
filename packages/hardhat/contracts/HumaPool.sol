@@ -145,6 +145,7 @@ contract HumaPool is Ownable {
     loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
   }
 
+  // Deposit liquidityAmount of poolTokens to the pool to lend and earn interest on
   function deposit(uint256 liquidityAmount) external poolOn returns (bool) {
     lenderInfo[msg.sender].amount += liquidityAmount;
     lenderInfo[msg.sender].mostRecentLoanTimestamp = block.timestamp;
@@ -153,6 +154,9 @@ contract HumaPool is Ownable {
     return true;
   }
 
+  // Withdraw amount of poolTokens to the pool that was previously deposited
+  // Note that withdrawals are limited based on a lockout period of when the
+  // last deposit was made.
   function withdraw(uint256 amount) external returns (bool) {
     require(
       amount <= lenderInfo[msg.sender].amount,
@@ -172,6 +176,9 @@ contract HumaPool is Ownable {
     return true;
   }
 
+  // Apply to borrow from the pool. Borrowing is subject to interest,
+  // collateral, and maximum loan requirements as dictated by the
+  // tranche a users huma score falls into (higher huma score == lower risk)
   function borrow(
     uint256 _borrowAmount,
     uint256 _paybackInterval,
