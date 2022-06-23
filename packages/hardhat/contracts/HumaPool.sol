@@ -153,7 +153,7 @@ contract HumaPool is Ownable {
     return true;
   }
 
-  function withdraw(uint256 amount) external {
+  function withdraw(uint256 amount) external returns (bool) {
     require(
       amount <= lenderInfo[msg.sender].amount,
       "HumaPool:WITHDRAW_AMT_TOO_GREAT"
@@ -194,6 +194,15 @@ contract HumaPool is Ownable {
       "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
     );
 
+    // Check custom borrowing logic in the loan helper of this pool
+    require(
+      IHumaPoolLoanHelper(humaPoolLoanHelper).evaluateBorrowRequest(
+        msg.sender,
+        _borrowAmount
+      ),
+      "HumaPool:BORROW_DENIED_POOL_LOAN_HELPER"
+    );
+
     creditMapping[msg.sender] = Loan({
       amount: _borrowAmount,
       issuedTimestamp: block.timestamp,
@@ -201,7 +210,13 @@ contract HumaPool is Ownable {
       paybackInterval: _paybackInterval,
       interestRate: tranches[trancheIndex].interestRate
     });
-    IHumaPoolSafe(poolSafe).transfer(msg.sender, _borrowAmount);
+    IHumaPoolLocker(poolLocker).transfer(msg.sender, _borrowAmount);
+
+    // Run custom post-borrowing logic in the loan helper of this pool
+    IHumaPoolLoanHelper(humaPoolLoanHelper).postBorrowRequest(
+      msg.sender,
+      _borrowAmount
+    );
 
     return true;
   }
