@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+import "./interfaces/IHumaPoolLoanHelper.sol";
 import "./interfaces/IHumaPoolLockerFactory.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 
@@ -16,6 +17,11 @@ contract HumaPool is Ownable {
   IERC20 public immutable poolToken;
   uint256 private immutable poolTokenDecimals;
 
+  // IHumaPoolLoanHelper, for adding additional logic on top of the pool's borrow functionality
+  address private humaPoolLoanHelper;
+  bool private isHumaPoolLoanHelperApproved = false;
+
+  // Liquidity holder proxy contract for this pool
   address private poolLocker;
 
   struct LenderInfo {
@@ -62,8 +68,14 @@ contract HumaPool is Ownable {
       );
   }
 
+  // In order for a pool to issue new loans, it must be turned on by an admin
+  // and its custom loan helper must be approved by the Huma team
   modifier poolOn() {
     require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
+    require(
+      humaPoolLoanHelper == address(0) || isHumaPoolLoanHelperApproved == true,
+      "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
+    );
     _;
   }
 
@@ -99,6 +111,29 @@ contract HumaPool is Ownable {
     }
   }
 
+  function setHumaPoolLoanHelper(address _humaPoolLoanHelper)
+    external
+    onlyOwner
+  {
+    humaPoolLoanHelper = _humaPoolLoanHelper;
+    // New loan helpers must be reviewed and approved by the Huma team.
+    isHumaPoolLoanHelperApproved = false;
+  }
+
+  // TODO: Add function to approve pool loan helper (only callable by huma)
+
+  // Allow borrow applications and loans to be processed by this pool.
+  function enablePool() external onlyOwner {
+    require(tranches.length > 0);
+    status = PoolStatus.On;
+  }
+
+  // Reject all future borrow applications and loans. Note that existing
+  // loans will still be processed as expected.
+  function disablePool() external onlyOwner {
+    status = PoolStatus.Off;
+  }
+
   function getLoanWithdrawalLockoutPeriod() public view returns (uint256) {
     return loanWithdrawalLockoutPeriod;
   }
@@ -110,6 +145,7 @@ contract HumaPool is Ownable {
     loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
   }
 
+  // Deposit liquidityAmount of poolTokens to the pool to lend and earn interest on
   function deposit(uint256 liquidityAmount) external poolOn returns (bool) {
     lenderInfo[msg.sender].amount += liquidityAmount;
     lenderInfo[msg.sender].mostRecentLoanTimestamp = block.timestamp;
@@ -118,7 +154,10 @@ contract HumaPool is Ownable {
     return true;
   }
 
-  function withdraw(uint256 amount) external {
+  // Withdraw amount of poolTokens to the pool that was previously deposited
+  // Note that withdrawals are limited based on a lockout period of when the
+  // last deposit was made.
+  function withdraw(uint256 amount) external returns (bool) {
     require(
       amount <= lenderInfo[msg.sender].amount,
       "HumaPool:WITHDRAW_AMT_TOO_GREAT"
@@ -137,6 +176,9 @@ contract HumaPool is Ownable {
     return true;
   }
 
+  // Apply to borrow from the pool. Borrowing is subject to interest,
+  // collateral, and maximum loan requirements as dictated by the
+  // tranche a users huma score falls into (higher huma score == lower risk)
   function borrow(
     uint256 _borrowAmount,
     uint256 _paybackInterval,
@@ -159,6 +201,15 @@ contract HumaPool is Ownable {
       "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
     );
 
+    // Check custom borrowing logic in the loan helper of this pool
+    require(
+      IHumaPoolLoanHelper(humaPoolLoanHelper).evaluateBorrowRequest(
+        msg.sender,
+        _borrowAmount
+      ),
+      "HumaPool:BORROW_DENIED_POOL_LOAN_HELPER"
+    );
+
     creditMapping[msg.sender] = Loan({
       amount: _borrowAmount,
       issuedTimestamp: block.timestamp,
@@ -166,7 +217,13 @@ contract HumaPool is Ownable {
       paybackInterval: _paybackInterval,
       interestRate: tranches[trancheIndex].interestRate
     });
-    IHumaPoolSafe(poolSafe).transfer(msg.sender, _borrowAmount);
+    IHumaPoolLocker(poolLocker).transfer(msg.sender, _borrowAmount);
+
+    // Run custom post-borrowing logic in the loan helper of this pool
+    IHumaPoolLoanHelper(humaPoolLoanHelper).postBorrowRequest(
+      msg.sender,
+      _borrowAmount
+    );
 
     return true;
   }
@@ -185,18 +242,6 @@ contract HumaPool is Ownable {
     }
 
     revert("HumaPool:NO_TRANCHE_FOR_SCORE");
-  }
-
-  // Allow borrow applications and loans to be processed by this pool.
-  function enablePool() external onlyOwner {
-    require(tranches.length > 0, "HumaPool:ENABLE_WITHOUT_TRANCHES");
-    status = PoolStatus.On;
-  }
-
-  // Reject all future borrow applications and loans. Note that existing
-  // loans will still be processed as expected.
-  function disablePool() external onlyOwner {
-    status = PoolStatus.Off;
   }
 
   // Function to receive Ether. msg.data must be empty
