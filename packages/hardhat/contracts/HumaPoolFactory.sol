@@ -50,7 +50,9 @@ contract HumaPoolFactory {
       "HumaPoolFactory:CALLER_NOT_APPROVED"
     );
 
-    humaPool = address(new HumaPool(_poolTokenAddress, humaPoolLockerFactory));
+    humaPool = address(
+      new HumaPool(_poolTokenAddress, humaPoolLockerFactory, humaPoolAdmins)
+    );
     pools.push(humaPool);
 
     IERC20 poolToken = IERC20(_poolTokenAddress);
