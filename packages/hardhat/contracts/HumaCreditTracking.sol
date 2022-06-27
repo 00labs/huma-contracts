@@ -123,7 +123,7 @@ contract HumaCreditTracking is ICreditTracking {
     function revokeTracking(address borrower) external virtual override {
         require(
             owner == msg.sender,
-            "Only the contract owner can report a payoff."
+            "Only the contract owner can revoke a non-transferrable tracking NFT."
         );
 
         ctt.burn(_records[borrower].tokenId);
@@ -167,7 +167,6 @@ contract HumaCreditTracking is ICreditTracking {
             )
         );
 
-        // Just like before, we prepend data:application/json;base64, to our data.
         string memory finalTokenUri = string(
             abi.encodePacked("data:application/json;base64,", json)
         );
