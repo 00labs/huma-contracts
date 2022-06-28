@@ -44,8 +44,8 @@ contract HumaCreditTracking is ICreditTracking {
      */
     function reportBorrowing(address borrower) external virtual override {
         require(
-            borrower == msg.sender || owner == msg.sender,
-            "Only the borrower or the contract owner can request a credit tracking."
+            owner == msg.sender,
+            "Only the contract owner can request a credit tracking."
         );
 
         if (0 == ctt.balanceOf(borrower)) {

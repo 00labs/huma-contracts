@@ -42,7 +42,7 @@ contract HumaCreditTrackingToken is ERC721URIStorage {
         address from,
         address to,
         uint256 tokenId,
-        bytes calldata data
+        bytes memory data
     ) public override {
         /// @dev Intentionally do nothing to make the token non-transferrable
     }
