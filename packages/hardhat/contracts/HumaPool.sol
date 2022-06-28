@@ -37,10 +37,12 @@ contract HumaPool is Ownable {
 
   struct Loan {
     uint256 amount;
+    uint256 amountPaidBack;
     uint256 issuedTimestamp;
-    uint256 paybackAmount;
+    uint256 lastPaymentTimestamp;
+    uint256 paybackPerInterval;
     uint256 paybackInterval;
-    uint256 interestRate;
+    uint256 interestRate; // Represented in percentiles e.g. 5% = 5
   }
   // Tracks currently issued loans from this pool
   mapping(address => Loan) private creditMapping;
@@ -205,7 +207,7 @@ contract HumaPool is Ownable {
   function borrow(
     uint256 _borrowAmount,
     uint256 _paybackInterval,
-    uint256 _paybackAmount
+    uint256 _paybackPerInterval
   ) external poolOn returns (bool) {
     // Borrowers must not have existing loans from this pool
     require(
@@ -214,7 +216,7 @@ contract HumaPool is Ownable {
     );
     // TODO: check token allowance for pool collector
 
-    // TODO: make sure paybackAmount reflects proper interest rate of tranche
+    // TODO: make sure paybackPerInterval reflects proper interest rate of tranche
 
     // TODO: Check huma score here. Hardcoding for now.
     uint256 humaScore = 88;
@@ -235,8 +237,10 @@ contract HumaPool is Ownable {
 
     creditMapping[msg.sender] = Loan({
       amount: _borrowAmount,
+      amountPaidBack: 0,
       issuedTimestamp: block.timestamp,
-      paybackAmount: _paybackAmount,
+      lastPaymentTimestamp: 0,
+      paybackPerInterval: _paybackPerInterval,
       paybackInterval: _paybackInterval,
       interestRate: tranches[trancheIndex].interestRate
     });
@@ -247,6 +251,41 @@ contract HumaPool is Ownable {
       msg.sender,
       _borrowAmount
     );
+
+    return true;
+  }
+
+  // Attempt to make a partial payback on a loan if its conditions are met:
+  // - amountPaidBack must be less than amount
+  // - Time passed since lastPaymentTimestamp must equal or exceed paybackInterval
+  // TODO: Add manual payback function
+  function makeIntervalPayback(address _borrower)
+    external
+    returns (bool _success)
+  {
+    Loan memory borrowerLoan = creditMapping[_borrower];
+    require(
+      borrowerLoan.amountPaidBack <
+        (borrowerLoan.amount +
+          (borrowerLoan.amount * borrowerLoan.interestRate) /
+          100),
+      "HumaPool:MAKE_INTERVAL_PAYBACK_AMT_EXCEEDED"
+    );
+    require(
+      block.timestamp - borrowerLoan.lastPaymentTimestamp >=
+        borrowerLoan.paybackInterval,
+      "HumaPool:MAKE_INTERVAL_PAYBACK_TOO_EARLY"
+    );
+
+    // TODO @richard calculate interest rate distribution among lenders here?
+    poolToken.safeTransferFrom(
+      msg.sender,
+      poolLocker,
+      borrowerLoan.paybackPerInterval
+    );
+
+    borrowerLoan.lastPaymentTimestamp = block.timestamp;
+    borrowerLoan.amountPaidBack += borrowerLoan.paybackPerInterval;
 
     return true;
   }
