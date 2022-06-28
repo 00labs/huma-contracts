@@ -235,6 +235,7 @@ contract HumaPool is Ownable {
   // Attempt to make a partial payback on a loan if its conditions are met:
   // - amountPaidBack must be less than amount
   // - Time passed since lastPaymentTimestamp must equal or exceed paybackInterval
+  // TODO: Add manual payback function
   function makeIntervalPayback(address _borrower)
     external
     returns (bool _success)
