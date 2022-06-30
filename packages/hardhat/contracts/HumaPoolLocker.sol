@@ -21,6 +21,6 @@ contract HumaPoolLocker {
 
   function transfer(address to, uint256 amount) external isPool {
     require(to != address(0), "HumaPoolLocker:NULL_ADDR");
-    poolToken.safeTransfer(to, amount);
+    poolToken.safeTransferFrom(msg.sender, to, amount);
   }
 }

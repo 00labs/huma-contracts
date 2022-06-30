@@ -84,7 +84,7 @@ contract HumaPool is Ownable {
   modifier onlyOwnerOrHumaMasterAdmin() {
     require(
       (msg.sender == owner() ||
-        IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin() == true),
+        IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) == true),
       "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
     );
     _;
@@ -149,7 +149,7 @@ contract HumaPool is Ownable {
 
   // Allow borrow applications and loans to be processed by this pool.
   function enablePool() external onlyOwnerOrHumaMasterAdmin {
-    require(tranches.length > 0);
+    require(tranches.length > 0, "HumaPool:NO_TRANCHES_SET");
     status = PoolStatus.On;
   }
 

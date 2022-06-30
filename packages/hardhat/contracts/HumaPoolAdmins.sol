@@ -17,12 +17,12 @@ contract HumaPoolAdmins is Ownable {
     approvedAdmins[msg.sender] = true;
   }
 
-  function isApprovedAdmin() external view returns (bool) {
-    return approvedAdmins[msg.sender] == true;
+  function isApprovedAdmin(address _wallet) external view returns (bool) {
+    return approvedAdmins[_wallet] == true;
   }
 
-  function isMasterAdmin() external view returns (bool) {
-    return msg.sender == owner();
+  function isMasterAdmin(address _wallet) external view returns (bool) {
+    return _wallet == owner();
   }
 
   // Add a new admin to the approved admins list.

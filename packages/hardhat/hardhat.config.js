@@ -67,7 +67,6 @@ module.exports = {
   networks: {
     localhost: {
       url: "http://localhost:8545",
-      accounts: [process.env.DEFAULT_LOCALHOST_WALLET_PRIV_KEY || null],
       /*      
         notice no mnemonic here? it will just use account 0 of the hardhat node to deploy
         (you can put in a mnemonic here to set the deployer locally)

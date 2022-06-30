@@ -2,9 +2,9 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 interface IHumaPoolAdmins {
-  function isApprovedAdmin() external view returns (bool);
+  function isApprovedAdmin(address _wallet) external view returns (bool);
 
-  function isMasterAdmin() external view returns (bool);
+  function isMasterAdmin(address _wallet) external view returns (bool);
 
   // Add a new admin to the approved admins list. By default they
   // won't be allowed to create pools right away. The owner must
