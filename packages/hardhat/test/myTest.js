@@ -1,8 +1,13 @@
+/* eslint-disable no-underscore-dangle */
 const { ethers } = require("hardhat");
 const { use, expect } = require("chai");
 const { solidity } = require("ethereum-waffle");
 
 use(solidity);
+
+const getLoanContractFromAddress = async function (address, signer) {
+  return ethers.getContractAt("HumaLoan", address, signer);
+};
 
 describe("Base Contracts", function () {
   let humaPoolAdminsContract;
@@ -15,7 +20,7 @@ describe("Base Contracts", function () {
   let borrower;
   const TRANCHE_INTEREST_RATE = 10;
 
-  beforeEach(async function () {
+  before(async function () {
     [owner, lender, borrower] = await ethers.getSigners();
 
     const HumaPoolAdmins = await ethers.getContractFactory("HumaPoolAdmins");
@@ -198,16 +203,24 @@ describe("Base Contracts", function () {
 
         await humaPoolContract.connect(borrower).borrow(99, 1000, 10);
 
-        const borrowerInfo = await humaPoolContract
-          .connect(borrower)
-          .getBorrowerInfo(borrower.address);
-        expect(borrowerInfo.amount).to.equal(99);
-        expect(borrowerInfo.amountPaidBack).to.equal(0);
-        expect(borrowerInfo.issuedTimestamp).to.not.equal(0);
-        expect(borrowerInfo.lastPaymentTimestamp).to.equal(0);
-        expect(borrowerInfo.paybackPerInterval).to.equal(10);
-        expect(borrowerInfo.paybackInterval).to.equal(1000);
-        expect(borrowerInfo.interestRate).to.equal(TRANCHE_INTEREST_RATE);
+        const loanAddress = await humaPoolContract.creditMapping(
+          borrower.address
+        );
+        const loanContract = await getLoanContractFromAddress(
+          loanAddress,
+          borrower
+        );
+        const loanInformation = await loanContract.getLoanInformation();
+        console.log(loanInformation);
+        expect(loanInformation._amount).to.equal(99);
+        expect(loanInformation._amountPaidBack).to.equal(0);
+        expect(loanInformation._issuedTimestamp).to.not.equal(0);
+        expect(loanInformation._lastPaymentTimestamp).to.equal(0);
+        expect(loanInformation._paybackPerInterval).to.equal(10);
+        expect(loanInformation._paybackInterval).to.equal(1000);
+        expect(loanInformation._interestRateBasis).to.equal(
+          TRANCHE_INTEREST_RATE
+        );
 
         expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
           99
@@ -236,11 +249,16 @@ describe("Base Contracts", function () {
           .connect(borrower)
           .makeIntervalPayback(borrower.address);
 
-        const borrowerInfo = await humaPoolContract
-          .connect(borrower)
-          .getBorrowerInfo(borrower.address);
-        expect(borrowerInfo.amountPaidBack).to.equal(99);
-        expect(borrowerInfo.lastPaymentTimestamp).to.not.equal(0);
+        const loanAddress = await humaPoolContract.creditMapping(
+          borrower.address
+        );
+        const loanContract = await getLoanContractFromAddress(
+          loanAddress,
+          borrower
+        );
+        const loanInformation = await loanContract.getLoanInformation();
+        expect(loanInformation._amountPaidBack).to.equal(99);
+        expect(loanInformation._lastPaymentTimestamp).to.not.equal(0);
         expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
       });
     });
