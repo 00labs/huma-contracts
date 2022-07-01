@@ -172,7 +172,7 @@ describe("Base Contracts", function () {
       });
     });
 
-    describe.only("Borrowing and payback", function () {
+    describe("Borrowing and payback", function () {
       beforeEach(async function () {
         await humaPoolContract.connect(lender).deposit(100);
         await testTokenContract
