@@ -211,7 +211,6 @@ describe("Base Contracts", function () {
           borrower
         );
         const loanInformation = await loanContract.getLoanInformation();
-        console.log(loanInformation);
         expect(loanInformation._amount).to.equal(99);
         expect(loanInformation._amountPaidBack).to.equal(0);
         expect(loanInformation._issuedTimestamp).to.not.equal(0);
