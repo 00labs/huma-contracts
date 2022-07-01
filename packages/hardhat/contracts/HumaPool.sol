@@ -170,6 +170,26 @@ contract HumaPool is Ownable {
     loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
   }
 
+  function getLenderInfo(address _lender)
+    public
+    view
+    returns (LenderInfo memory)
+  {
+    return lenderInfo[_lender];
+  }
+
+  function getBorrowerInfo(address _borrower)
+    public
+    view
+    returns (Loan memory)
+  {
+    return creditMapping[_borrower];
+  }
+
+  function getPoolLiquidity() public view returns (uint256) {
+    return poolToken.balanceOf(poolLocker);
+  }
+
   // Deposit liquidityAmount of poolTokens to the pool to lend and earn interest on
   function deposit(uint256 liquidityAmount) external poolOn returns (bool) {
     lenderInfo[msg.sender].amount += liquidityAmount;
@@ -218,6 +238,8 @@ contract HumaPool is Ownable {
 
     // TODO: make sure paybackPerInterval reflects proper interest rate of tranche
 
+    // TODO: set a threshold of minimum liquidity we want the pool to maintain for withdrawals
+
     // TODO: Check huma score here. Hardcoding for now.
     uint256 humaScore = 88;
     uint256 trancheIndex = getTrancheIndexForHumaScore(humaScore);
@@ -227,13 +249,16 @@ contract HumaPool is Ownable {
     );
 
     // Check custom borrowing logic in the loan helper of this pool
-    require(
-      IHumaPoolLoanHelper(humaPoolLoanHelper).evaluateBorrowRequest(
-        msg.sender,
-        _borrowAmount
-      ),
-      "HumaPool:BORROW_DENIED_POOL_LOAN_HELPER"
-    );
+    // TODO add test for this
+    if (humaPoolLoanHelper != address(0)) {
+      require(
+        IHumaPoolLoanHelper(humaPoolLoanHelper).evaluateBorrowRequest(
+          msg.sender,
+          _borrowAmount
+        ),
+        "HumaPool:BORROW_DENIED_POOL_LOAN_HELPER"
+      );
+    }
 
     creditMapping[msg.sender] = Loan({
       amount: _borrowAmount,
@@ -244,13 +269,16 @@ contract HumaPool is Ownable {
       paybackInterval: _paybackInterval,
       interestRate: tranches[trancheIndex].interestRate
     });
+    console.log(msg.sender);
     IHumaPoolLocker(poolLocker).transfer(msg.sender, _borrowAmount);
 
     // Run custom post-borrowing logic in the loan helper of this pool
-    IHumaPoolLoanHelper(humaPoolLoanHelper).postBorrowRequest(
-      msg.sender,
-      _borrowAmount
-    );
+    if (humaPoolLoanHelper != address(0)) {
+      IHumaPoolLoanHelper(humaPoolLoanHelper).postBorrowRequest(
+        msg.sender,
+        _borrowAmount
+      );
+    }
 
     return true;
   }
@@ -272,8 +300,10 @@ contract HumaPool is Ownable {
       "HumaPool:MAKE_INTERVAL_PAYBACK_AMT_EXCEEDED"
     );
     require(
-      block.timestamp - borrowerLoan.lastPaymentTimestamp >=
-        borrowerLoan.paybackInterval,
+      (block.timestamp - borrowerLoan.lastPaymentTimestamp >=
+        borrowerLoan.paybackInterval) &&
+        (block.timestamp - borrowerLoan.issuedTimestamp >=
+          borrowerLoan.paybackInterval),
       "HumaPool:MAKE_INTERVAL_PAYBACK_TOO_EARLY"
     );
 
@@ -286,6 +316,7 @@ contract HumaPool is Ownable {
 
     borrowerLoan.lastPaymentTimestamp = block.timestamp;
     borrowerLoan.amountPaidBack += borrowerLoan.paybackPerInterval;
+    creditMapping[_borrower] = borrowerLoan;
 
     return true;
   }

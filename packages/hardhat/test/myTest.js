@@ -13,6 +13,7 @@ describe("Base Contracts", function () {
   let owner;
   let lender;
   let borrower;
+  const TRANCHE_INTEREST_RATE = 10;
 
   beforeEach(async function () {
     [owner, lender, borrower] = await ethers.getSigners();
@@ -62,7 +63,7 @@ describe("Base Contracts", function () {
     });
   });
 
-  describe.only("HumaPool", function () {
+  describe("HumaPool", function () {
     beforeEach(async function () {
       await testTokenContract.approve(humaPoolFactoryContract.address, 99999);
       const tx = await humaPoolFactoryContract.deployNewPool(
@@ -83,6 +84,22 @@ describe("Base Contracts", function () {
         poolAddress,
         owner
       );
+
+      await humaPoolContract.setPoolTranches([
+        {
+          maxLoanAmount: 100,
+          humaScoreLowerBound: 0,
+          interestRate: TRANCHE_INTEREST_RATE,
+          collateralRequired: 3,
+        },
+      ]);
+
+      await humaPoolContract.enablePool();
+
+      await testTokenContract.give1000To(lender.address);
+      await testTokenContract
+        .connect(lender)
+        .approve(humaPoolContract.address, 99999);
     });
 
     it("Only pool owner and master admin can edit pool settings", async function () {
@@ -105,6 +122,127 @@ describe("Base Contracts", function () {
           .connect(borrower)
           .setHumaPoolLoanHelper("0x0000000000000000000000000000000000000000")
       ).to.be.revertedWith("HumaPool:PERMISSION_DENIED_NOT_ADMIN");
+    });
+
+    describe("Depositing and withdrawal", function () {
+      it("Cannot deposit while pool is off", async function () {
+        await humaPoolContract.disablePool();
+        await expect(
+          humaPoolContract.connect(lender).deposit(100)
+        ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
+      });
+
+      it("Pool deposit works correctly", async function () {
+        await humaPoolContract.connect(lender).deposit(100);
+        const lenderInfo = await humaPoolContract
+          .connect(lender)
+          .getLenderInfo(lender.address);
+        expect(lenderInfo.amount).to.equal(100);
+        expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+        expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+      });
+
+      it("Pool withdrawal works correctly", async function () {
+        await humaPoolContract.connect(lender).deposit(100);
+
+        // Test withdrawing before the lockout passes
+        await expect(
+          humaPoolContract.connect(lender).withdraw(100)
+        ).to.be.revertedWith("HumaPool:WITHDRAW_TOO_SOON");
+
+        // Increment block by lockout period
+        const loanWithdrawalLockout =
+          await humaPoolContract.getLoanWithdrawalLockoutPeriod();
+        await ethers.provider.send("evm_increaseTime", [
+          loanWithdrawalLockout.toNumber(),
+        ]);
+
+        // Test withdrawing more than deposited fails
+        await expect(
+          humaPoolContract.connect(lender).withdraw(9999)
+        ).to.be.revertedWith("HumaPool:WITHDRAW_AMT_TOO_GREAT");
+
+        // Test success case
+        await humaPoolContract.connect(lender).withdraw(100);
+
+        const lenderInfo = await humaPoolContract
+          .connect(lender)
+          .getLenderInfo(lender.address);
+        expect(lenderInfo.amount).to.equal(0);
+      });
+    });
+
+    describe.only("Borrowing and payback", function () {
+      beforeEach(async function () {
+        await humaPoolContract.connect(lender).deposit(100);
+        await testTokenContract
+          .connect(borrower)
+          .approve(humaPoolContract.address, 99999);
+      });
+
+      it("Cannot borrow while pool is off", async function () {
+        await humaPoolContract.disablePool();
+        await expect(
+          humaPoolContract.connect(borrower).borrow(99, 1000, 10)
+        ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
+      });
+
+      it("Cannot borrow greater than limit", async function () {
+        await expect(
+          humaPoolContract.connect(borrower).borrow(9999, 1000, 10)
+        ).to.be.revertedWith("HumaPool:DENY_BORROW_GREATER_THAN_LIMIT");
+      });
+
+      it("Borrowing works correctly", async function () {
+        expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
+
+        await humaPoolContract.connect(borrower).borrow(99, 1000, 10);
+
+        const borrowerInfo = await humaPoolContract
+          .connect(borrower)
+          .getBorrowerInfo(borrower.address);
+        expect(borrowerInfo.amount).to.equal(99);
+        expect(borrowerInfo.amountPaidBack).to.equal(0);
+        expect(borrowerInfo.issuedTimestamp).to.not.equal(0);
+        expect(borrowerInfo.lastPaymentTimestamp).to.equal(0);
+        expect(borrowerInfo.paybackPerInterval).to.equal(10);
+        expect(borrowerInfo.paybackInterval).to.equal(1000);
+        expect(borrowerInfo.interestRate).to.equal(TRANCHE_INTEREST_RATE);
+
+        expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
+          99
+        );
+
+        expect(await humaPoolContract.getPoolLiquidity()).to.equal(1);
+
+        // Borrowing with existing loans should fail
+        await expect(
+          humaPoolContract.connect(borrower).borrow(99, 1000, 10)
+        ).to.be.revertedWith("HumaPool:DENY_BORROW_EXISTING_LOAN");
+      });
+
+      it("Payback works correctly", async function () {
+        // Borrow with a single payback
+        await humaPoolContract.connect(borrower).borrow(99, 1000, 99);
+        await expect(
+          humaPoolContract
+            .connect(borrower)
+            .makeIntervalPayback(borrower.address)
+        ).to.be.revertedWith("HumaPool:MAKE_INTERVAL_PAYBACK_TOO_EARLY");
+
+        await ethers.provider.send("evm_increaseTime", [1000]);
+
+        await humaPoolContract
+          .connect(borrower)
+          .makeIntervalPayback(borrower.address);
+
+        const borrowerInfo = await humaPoolContract
+          .connect(borrower)
+          .getBorrowerInfo(borrower.address);
+        expect(borrowerInfo.amountPaidBack).to.equal(99);
+        expect(borrowerInfo.lastPaymentTimestamp).to.not.equal(0);
+        expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+      });
     });
   });
 });

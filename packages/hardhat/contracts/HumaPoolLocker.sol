@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract HumaPoolLocker {
@@ -21,6 +23,6 @@ contract HumaPoolLocker {
 
   function transfer(address to, uint256 amount) external isPool {
     require(to != address(0), "HumaPoolLocker:NULL_ADDR");
-    poolToken.safeTransferFrom(msg.sender, to, amount);
+    poolToken.safeTransfer(to, amount);
   }
 }
