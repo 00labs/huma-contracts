@@ -9,10 +9,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLoanHelper.sol";
-import "./interfaces/IHumaPoolLockerFactory.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 
 import "./HumaLoan.sol";
+import "./HumaPoolLocker.sol";
 
 contract HumaPool is Ownable {
   using SafeERC20 for IERC20;
@@ -66,17 +66,10 @@ contract HumaPool is Ownable {
   // before they can withdraw their capital
   uint256 loanWithdrawalLockoutPeriod = 2630000;
 
-  constructor(
-    address _poolToken,
-    address _poolLockerFactory,
-    address _humaPoolAdmins
-  ) {
+  constructor(address _poolToken, address _humaPoolAdmins) {
     poolToken = IERC20(_poolToken);
     poolTokenDecimals = ERC20(_poolToken).decimals();
-    poolLocker = IHumaPoolLockerFactory(_poolLockerFactory).deployNewPoolLocker(
-        address(this),
-        _poolToken
-      );
+    poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
     humaPoolAdmins = _humaPoolAdmins;
   }
 
