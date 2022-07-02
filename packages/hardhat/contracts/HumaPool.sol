@@ -12,6 +12,8 @@ import "./interfaces/IHumaPoolLoanHelper.sol";
 import "./interfaces/IHumaPoolLockerFactory.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 
+import "./HumaLoan.sol";
+
 contract HumaPool is Ownable {
   using SafeERC20 for IERC20;
 
@@ -35,17 +37,9 @@ contract HumaPool is Ownable {
   // Tracks the amount of liquidity in poolTokens provided to this pool by an address
   mapping(address => LenderInfo) private lenderInfo;
 
-  struct Loan {
-    uint256 amount;
-    uint256 amountPaidBack;
-    uint256 issuedTimestamp;
-    uint256 lastPaymentTimestamp;
-    uint256 paybackPerInterval;
-    uint256 paybackInterval;
-    uint256 interestRate; // Represented in percentiles e.g. 5% = 5
-  }
   // Tracks currently issued loans from this pool
-  mapping(address => Loan) private creditMapping;
+  // Maps from wallet to Loan
+  mapping(address => address) public creditMapping;
 
   struct PoolTranche {
     uint256 maxLoanAmount;
@@ -178,14 +172,6 @@ contract HumaPool is Ownable {
     return lenderInfo[_lender];
   }
 
-  function getBorrowerInfo(address _borrower)
-    public
-    view
-    returns (Loan memory)
-  {
-    return creditMapping[_borrower];
-  }
-
   function getPoolLiquidity() public view returns (uint256) {
     return poolToken.balanceOf(poolLocker);
   }
@@ -231,12 +217,10 @@ contract HumaPool is Ownable {
   ) external poolOn returns (bool) {
     // Borrowers must not have existing loans from this pool
     require(
-      creditMapping[msg.sender].amount == 0,
+      creditMapping[msg.sender] == address(0),
       "HumaPool:DENY_BORROW_EXISTING_LOAN"
     );
     // TODO: check token allowance for pool collector
-
-    // TODO: make sure paybackPerInterval reflects proper interest rate of tranche
 
     // TODO: set a threshold of minimum liquidity we want the pool to maintain for withdrawals
 
@@ -260,16 +244,18 @@ contract HumaPool is Ownable {
       );
     }
 
-    creditMapping[msg.sender] = Loan({
-      amount: _borrowAmount,
-      amountPaidBack: 0,
-      issuedTimestamp: block.timestamp,
-      lastPaymentTimestamp: 0,
-      paybackPerInterval: _paybackPerInterval,
-      paybackInterval: _paybackInterval,
-      interestRate: tranches[trancheIndex].interestRate
-    });
-    console.log(msg.sender);
+    creditMapping[msg.sender] = address(
+      new HumaLoan(
+        HumaLoan.InitialValues({
+          amount: _borrowAmount,
+          paybackPerInterval: _paybackPerInterval,
+          paybackInterval: _paybackInterval,
+          interestRateBasis: tranches[trancheIndex].interestRate,
+          pool: address(this)
+        })
+      )
+    );
+
     IHumaPoolLocker(poolLocker).transfer(msg.sender, _borrowAmount);
 
     // Run custom post-borrowing logic in the loan helper of this pool
@@ -291,32 +277,30 @@ contract HumaPool is Ownable {
     external
     returns (bool _success)
   {
-    Loan memory borrowerLoan = creditMapping[_borrower];
+    (
+      uint256 _amount,
+      uint256 _amountPaidBack,
+      uint256 _issuedTimestamp,
+      uint256 _lastPaymentTimestamp,
+      uint256 _paybackPerInterval,
+      uint256 _paybackInterval,
+      uint256 _interestRateBasis
+    ) = HumaLoan(creditMapping[_borrower]).getLoanInformation();
+
     require(
-      borrowerLoan.amountPaidBack <
-        (borrowerLoan.amount +
-          (borrowerLoan.amount * borrowerLoan.interestRate) /
-          100),
+      _amountPaidBack < (_amount + (_amount * _interestRateBasis) / 100),
       "HumaPool:MAKE_INTERVAL_PAYBACK_AMT_EXCEEDED"
     );
     require(
-      (block.timestamp - borrowerLoan.lastPaymentTimestamp >=
-        borrowerLoan.paybackInterval) &&
-        (block.timestamp - borrowerLoan.issuedTimestamp >=
-          borrowerLoan.paybackInterval),
+      (block.timestamp - _lastPaymentTimestamp >= _paybackInterval) &&
+        (block.timestamp - _issuedTimestamp >= _paybackInterval),
       "HumaPool:MAKE_INTERVAL_PAYBACK_TOO_EARLY"
     );
 
     // TODO @richard calculate interest rate distribution among lenders here?
-    poolToken.safeTransferFrom(
-      msg.sender,
-      poolLocker,
-      borrowerLoan.paybackPerInterval
-    );
+    poolToken.safeTransferFrom(msg.sender, poolLocker, _paybackPerInterval);
 
-    borrowerLoan.lastPaymentTimestamp = block.timestamp;
-    borrowerLoan.amountPaidBack += borrowerLoan.paybackPerInterval;
-    creditMapping[_borrower] = borrowerLoan;
+    HumaLoan(creditMapping[_borrower]).markPayment(_paybackPerInterval);
 
     return true;
   }
