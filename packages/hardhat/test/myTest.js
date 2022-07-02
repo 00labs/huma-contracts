@@ -18,7 +18,6 @@ describe("Base Contracts", function () {
   let owner;
   let lender;
   let borrower;
-  const TRANCHE_INTEREST_RATE = 10;
 
   before(async function () {
     [owner, lender, borrower] = await ethers.getSigners();
@@ -90,15 +89,8 @@ describe("Base Contracts", function () {
         owner
       );
 
-      await humaPoolContract.setPoolTranches([
-        {
-          maxLoanAmount: 100,
-          humaScoreLowerBound: 0,
-          interestRate: TRANCHE_INTEREST_RATE,
-          collateralRequired: 3,
-        },
-      ]);
-
+      await humaPoolContract.setInterestRateBasis(10);
+      await humaPoolContract.setMaxLoanAmount(100);
       await humaPoolContract.enablePool();
 
       await testTokenContract.give1000To(lender.address);
@@ -217,9 +209,7 @@ describe("Base Contracts", function () {
         expect(loanInformation._lastPaymentTimestamp).to.equal(0);
         expect(loanInformation._paybackPerInterval).to.equal(10);
         expect(loanInformation._paybackInterval).to.equal(1000);
-        expect(loanInformation._interestRateBasis).to.equal(
-          TRANCHE_INTEREST_RATE
-        );
+        expect(loanInformation._interestRateBasis).to.equal(10);
 
         expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
           99

@@ -20,13 +20,6 @@ contract HumaPool is Ownable {
   // HumaPoolAdmins
   address private immutable humaPoolAdmins;
 
-  IERC20 public immutable poolToken;
-  uint256 private immutable poolTokenDecimals;
-
-  // IHumaPoolLoanHelper, for adding additional logic on top of the pool's borrow functionality
-  address private humaPoolLoanHelper;
-  bool private isHumaPoolLoanHelperApproved = false;
-
   // Liquidity holder proxy contract for this pool
   address private poolLocker;
 
@@ -41,13 +34,27 @@ contract HumaPool is Ownable {
   // Maps from wallet to Loan
   mapping(address => address) public creditMapping;
 
-  struct PoolTranche {
-    uint256 maxLoanAmount;
-    uint256 humaScoreLowerBound;
-    uint256 interestRate;
-    uint256 collateralRequired;
-  }
-  PoolTranche[] private tranches;
+  /********************************************/
+  //                Settings                  //
+  /********************************************/
+
+  // The ERC20 token this pool manages
+  IERC20 public immutable poolToken;
+  uint256 private immutable poolTokenDecimals;
+
+  // An optional utility contract that implements IHumaPoolLoanHelper,
+  // for additional logic on top of the pool's borrow functionality
+  address private humaPoolLoanHelper;
+  bool private isHumaPoolLoanHelperApproved = false;
+
+  // The maximum amount of poolTokens that this pool allows in a single loan
+  uint256 maxLoanAmount;
+
+  // The interest rate this pool charges for loans
+  uint256 interestRateBasis;
+
+  // The collateral basis percentage required from lenders
+  uint256 collateralRequired;
 
   enum PoolStatus {
     On,
@@ -95,39 +102,37 @@ contract HumaPool is Ownable {
     _;
   }
 
-  function getPoolTranches() public view returns (PoolTranche[] memory) {
-    return tranches;
-  }
-
-  // Pass in an array of tranches to define this pools risk-loan tolerance.
-  // The tranches must be passed in descending order and define the loan
-  // strategy for the risk tranche from humaScoreLowerBound <-> next tranche bound (or MAX_INT) inclusive
-  // A higher Huma score = less risky loan
-  function setPoolTranches(PoolTranche[] memory _tranches)
+  function setMaxLoanAmount(uint256 _maxLoanAmount)
     external
     onlyOwnerOrHumaMasterAdmin
+    returns (bool)
   {
-    uint256 lastHumaScore = 2**256 - 1; // MAX_INT
-    delete tranches;
-    for (uint256 i = 0; i < _tranches.length; i++) {
-      require(
-        _tranches[i].humaScoreLowerBound <= lastHumaScore,
-        "HumaPool:TRANCHES_NOT_DESCENDING"
-      );
-      require(_tranches[i].interestRate >= 0, "HumaPool:ZERO_INTEREST_RATE");
-      require(
-        _tranches[i].collateralRequired >= 0,
-        "HumaPool:COLLATERAL_VALUE_REQUIRED"
-      );
-      require(
-        _tranches[i].maxLoanAmount > 0,
-        "HumaPool:MAX_LOAN_AMOUNT_REQUIRED"
-      );
+    require(_maxLoanAmount > 0);
+    maxLoanAmount = _maxLoanAmount;
 
-      lastHumaScore = _tranches[i].humaScoreLowerBound;
+    return true;
+  }
 
-      tranches.push(_tranches[i]);
-    }
+  function setInterestRateBasis(uint256 _interestRateBasis)
+    external
+    onlyOwnerOrHumaMasterAdmin
+    returns (bool)
+  {
+    require(_interestRateBasis >= 0);
+    interestRateBasis = _interestRateBasis;
+
+    return true;
+  }
+
+  function setCollateralRequired(uint256 _collateralRequired)
+    external
+    onlyOwnerOrHumaMasterAdmin
+    returns (bool)
+  {
+    require(_collateralRequired >= 0);
+    collateralRequired = _collateralRequired;
+
+    return true;
   }
 
   function setHumaPoolLoanHelper(address _humaPoolLoanHelper)
@@ -143,7 +148,6 @@ contract HumaPool is Ownable {
 
   // Allow borrow applications and loans to be processed by this pool.
   function enablePool() external onlyOwnerOrHumaMasterAdmin {
-    require(tranches.length > 0, "HumaPool:NO_TRANCHES_SET");
     status = PoolStatus.On;
   }
 
@@ -208,8 +212,7 @@ contract HumaPool is Ownable {
   }
 
   // Apply to borrow from the pool. Borrowing is subject to interest,
-  // collateral, and maximum loan requirements as dictated by the
-  // tranche a users huma score falls into (higher huma score == lower risk)
+  // collateral, and maximum loan requirements as dictated by the pool
   function borrow(
     uint256 _borrowAmount,
     uint256 _paybackInterval,
@@ -224,11 +227,9 @@ contract HumaPool is Ownable {
 
     // TODO: set a threshold of minimum liquidity we want the pool to maintain for withdrawals
 
-    // TODO: Check huma score here. Hardcoding for now.
-    uint256 humaScore = 88;
-    uint256 trancheIndex = getTrancheIndexForHumaScore(humaScore);
+    // TODO: Check huma API here
     require(
-      tranches[trancheIndex].maxLoanAmount >= _borrowAmount,
+      maxLoanAmount >= _borrowAmount,
       "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
     );
 
@@ -250,7 +251,7 @@ contract HumaPool is Ownable {
           amount: _borrowAmount,
           paybackPerInterval: _paybackPerInterval,
           paybackInterval: _paybackInterval,
-          interestRateBasis: tranches[trancheIndex].interestRate,
+          interestRateBasis: interestRateBasis,
           pool: address(this)
         })
       )
@@ -303,22 +304,6 @@ contract HumaPool is Ownable {
     HumaLoan(creditMapping[_borrower]).markPayment(_paybackPerInterval);
 
     return true;
-  }
-
-  // Given a Huma score, finds the appropriate pool tranche that defines loan conditions
-  // for that score. If no pool tranche fits the score, return -1.
-  function getTrancheIndexForHumaScore(uint256 _humaScore)
-    public
-    view
-    returns (uint256)
-  {
-    for (uint256 i = 0; i < tranches.length; i++) {
-      if (_humaScore > tranches[i].humaScoreLowerBound) {
-        return i;
-      }
-    }
-
-    revert("HumaPool:NO_TRANCHE_FOR_SCORE");
   }
 
   // Function to receive Ether. msg.data must be empty
