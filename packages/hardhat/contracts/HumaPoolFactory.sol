@@ -13,9 +13,6 @@ contract HumaPoolFactory {
   // HumaPoolAdmins
   address public immutable humaPoolAdmins;
 
-  // HumaPoolLockerFactory
-  address public immutable humaPoolLockerFactory;
-
   // Array of all Huma Pools created from this factory
   address[] public pools;
 
@@ -24,9 +21,8 @@ contract HumaPoolFactory {
 
   event PoolDeployed(address _poolAddress);
 
-  constructor(address _humaPoolAdmins, address _humaPoolLockerFactory) {
+  constructor(address _humaPoolAdmins) {
     humaPoolAdmins = _humaPoolAdmins;
-    humaPoolLockerFactory = _humaPoolLockerFactory;
   }
 
   function setMinimumLiquidityNeeded(uint256 _minimumLiquidityNeeded) external {
@@ -50,9 +46,7 @@ contract HumaPoolFactory {
       "HumaPoolFactory:CALLER_NOT_APPROVED"
     );
 
-    humaPool = payable(
-      new HumaPool(_poolTokenAddress, humaPoolLockerFactory, humaPoolAdmins)
-    );
+    humaPool = payable(new HumaPool(_poolTokenAddress, humaPoolAdmins));
     HumaPool(humaPool).transferOwnership(msg.sender);
     pools.push(humaPool);
 

@@ -12,7 +12,6 @@ const getLoanContractFromAddress = async function (address, signer) {
 describe("Base Contracts", function () {
   let humaPoolAdminsContract;
   let humaPoolFactoryContract;
-  let humaPoolLockerFactoryContract;
   let testTokenContract;
   let humaPoolContract;
   let owner;
@@ -25,15 +24,9 @@ describe("Base Contracts", function () {
     const HumaPoolAdmins = await ethers.getContractFactory("HumaPoolAdmins");
     humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
-    const HumaPoolLockerFactory = await ethers.getContractFactory(
-      "HumaPoolLockerFactory"
-    );
-    humaPoolLockerFactoryContract = await HumaPoolLockerFactory.deploy();
-
     const HumaPoolFactory = await ethers.getContractFactory("HumaPoolFactory");
     humaPoolFactoryContract = await HumaPoolFactory.deploy(
-      humaPoolAdminsContract.address,
-      humaPoolLockerFactoryContract.address
+      humaPoolAdminsContract.address
     );
 
     const TestToken = await ethers.getContractFactory("TestToken");

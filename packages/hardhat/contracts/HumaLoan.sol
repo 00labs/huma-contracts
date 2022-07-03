@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLoanHelper.sol";
-import "./interfaces/IHumaPoolLockerFactory.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 
 contract HumaLoan {
