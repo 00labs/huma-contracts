@@ -70,7 +70,7 @@ abstract contract FDT is IFDT, ERC20 {
      *     and try to distribute it in the next distribution ....... todo implement
      */
     function distributeFunds(uint256 value) public virtual override {
-        require(totalSupply() > 0, "FDT._distributeFunds: SUPPLY_IS_ZERO");
+        require(totalSupply() > 0, "FDT:SUPPLY_IS_ZERO");
 
         if (value > 0) {
             pointsPerShare = pointsPerShare.add(

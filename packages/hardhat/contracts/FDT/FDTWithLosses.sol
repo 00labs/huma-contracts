@@ -17,9 +17,6 @@ abstract contract FDTWithLosses is FDT, IFDTWithLosses {
     using SafeMathInt for int256;
     using SafeMathUint for uint256;
 
-    /// Sum of recognized losses. Not sure if we really need it. todo verify it
-    uint256 public totalRecognizedLosses;
-
     /// reported losses per share
     uint256 internal lossesPerShare;
 
@@ -57,10 +54,7 @@ abstract contract FDTWithLosses is FDT, IFDTWithLosses {
      *     and try to distribute it in the next distribution ....... todo implement
      */
     function distributeLosses(uint256 amount) public virtual override {
-        require(
-            totalSupply() > 0,
-            "FDTWithLosses.distributeLosses:ZERO_SUPPLY"
-        );
+        require(totalSupply() > 0, "FDTWithLosses:ZERO_SUPPLY");
 
         if (amount > 0) {
             lossesPerShare = lossesPerShare.add(
