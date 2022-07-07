@@ -138,9 +138,9 @@ abstract contract FDTWithLosses is FDT, IFDTWithLosses {
     ) internal override {
         super._transfer(from, to, value);
 
-        int256 _Correction = pointsPerShare.mul(value).toInt256Safe();
-        pointsCorrection[from] = pointsCorrection[from].add(_Correction);
-        pointsCorrection[to] = pointsCorrection[to].sub(_Correction);
+        int256 _pointsCorrection = pointsPerShare.mul(value).toInt256Safe();
+        pointsCorrection[from] = pointsCorrection[from].add(_pointsCorrection);
+        pointsCorrection[to] = pointsCorrection[to].sub(_pointsCorrection);
 
         int256 _lossCorrection = lossesPerShare.mul(value).toInt256Safe();
         lossesCorrection[from] = lossesCorrection[from].add(_lossCorrection);
