@@ -4,19 +4,15 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./interfaces/IFDT.sol";
+import "./interfaces/IHDT.sol";
 import "../libraries/SafeMathInt.sol";
 import "../libraries/SafeMathUint.sol";
 
 /**
- * @title Funds Distribution Token
- * @notice A mintable token that can represent claims on cash flow of arbitrary assets such as dividends, loan repayments,
- * fee or revenue shares among large numbers of token holders. Anyone can deposit funds, token holders can withdraw
- * their claims.
- *
- * Code referenced https://github.com/atpar/funds-distribution-token/blob/master/contracts/FundsDistributionToken.sol
+ * @title Huma Distribution Token
+ * @notice HDT tracks the principal, earnings and losses associated with a token.
  */
-abstract contract FDT is IFDT, ERC20 {
+contract HDT is IHDT, ERC20 {
     using SafeMath for uint256;
     using SafeMathInt for int256;
     using SafeMathUint for uint256;
@@ -25,24 +21,22 @@ abstract contract FDT is IFDT, ERC20 {
     // optimize, see https://github.com/ethereum/EIPs/issues/1726#issuecomment-472352728
     uint256 internal constant pointsMultiplier = 2**128;
 
-    /// Tracks the earning per share
+    /// // The underlying token that the FDT owners can claim interest for
+    IERC20 public immutable fundsToken;
+
+    /**
+     * The value per share. It starts with $1, goes up with income, goes down with losses,
+     * and it will never go below $0.
+     */
     uint256 internal pointsPerShare;
 
     /**
-     * Accumulative earning adjustment per account.
-     * pointsCorrection is used when tokens are minted to the owner on different dates
-     * or transferred between accounts.
+     * Accumulative adjustment per account.
      */
     mapping(address => int256) internal pointsCorrection;
 
     /// Amount that has withdrawn by the account owner
     mapping(address => uint256) internal withdrawnFunds;
-
-    /// // The underlying token that the FDT owners can claim interest for
-    IERC20 public immutable fundsToken;
-
-    /// total amount of the interest for the FDT that has not been withdrawn
-    uint256 public fundsBalance;
 
     /**
      * @param name the name of the token
@@ -55,13 +49,14 @@ abstract contract FDT is IFDT, ERC20 {
         address _fundsToken
     ) ERC20(name, symbol) {
         fundsToken = IERC20(_fundsToken);
+        pointsPerShare = 1;
     }
 
     /**
-     * @notice Distributes funds to token holders.
+     * @notice Distributes income to token holders.
      * @dev It reverts if the total supply of tokens is 0.
-     * It emits the `FundsDistributed` event if the amount of received is greater than 0.
-     * About undistributed funds:
+     * It emits the `IncomeDistributed` event if the amount of received is greater than 0.
+     * About undistributed income:
      *   In each distribution, there is a small amount of funds which does not get distributed,
      *     which is `(msg.value * pointsMultiplier) % totalSupply()`.
      *   With a well-chosen `pointsMultiplier`, the amount funds that are not getting distributed
@@ -69,22 +64,40 @@ abstract contract FDT is IFDT, ERC20 {
      *   We can actually keep track of the undistributed in a distribution
      *     and try to distribute it in the next distribution ....... todo implement
      */
-    function distributeFunds(uint256 value) public virtual override {
-        require(totalSupply() > 0, "FDT:SUPPLY_IS_ZERO");
+    function distributeIncome(uint256 value) public virtual override {
+        require(totalSupply() > 0, "HDT:SUPPLY_IS_ZERO");
 
         if (value > 0) {
             pointsPerShare = pointsPerShare.add(
                 value.mul(pointsMultiplier) / totalSupply()
             );
 
-            emit FundsDistributed(msg.sender, value);
+            emit IncomeDistributed(msg.sender, value);
+        }
+    }
+
+    /**
+     * @notice Distributes losses associated with the token
+     * @dev Technically, we can combine distributeIncome() and distributeLossees() by making
+     * the parameter to int256, however, we decided to use separate APIs to improve readability
+     * and reduce errors.
+     * @param value the amount of losses to be distributed
+     */
+    function distributeLosses(uint256 value) public virtual override {
+        require(totalSupply() > 0, "HDT:SUPPLY_IS_ZERO");
+
+        if (value > 0) {
+            pointsPerShare = pointsPerShare.sub(
+                value.mul(pointsMultiplier) / totalSupply()
+            );
+            emit LossesDistributed(msg.sender, value);
         }
     }
 
     /**
      * @dev Withdraws all available funds for a token holder.
      */
-    function withdrawFunds() external virtual override {
+    function withdrawFunds() external virtual override returns (uint256) {
         uint256 _withdrawableFund = withdrawableFundsOf(msg.sender);
 
         withdrawnFunds[msg.sender] = withdrawnFunds[msg.sender].add(
@@ -96,20 +109,8 @@ abstract contract FDT is IFDT, ERC20 {
 
             emit FundsWithdrawn(msg.sender, _withdrawableFund);
         }
-    }
 
-    /**
-     * @dev Since withdrawFunds() does not return per EIP-2222, this is a hack to allow
-     * the client know the amount that has been withdrawn. The calling sequence is:
-     *     account.withdrawFunds();
-     *     int amount = _getFundsBalanceChanges();
-     */
-    function _getFundsBalanceChanges() internal virtual returns (int256) {
-        uint256 _prevFundsBalance = fundsBalance;
-
-        fundsBalance = fundsToken.balanceOf(address(this));
-
-        return int256(fundsBalance).sub(int256(_prevFundsBalance));
+        return _withdrawableFund;
     }
 
     /**
