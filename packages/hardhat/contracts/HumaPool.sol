@@ -127,7 +127,7 @@ contract HumaPool is HDT, Ownable {
      * @dev the `amount` is principal amount. It does not include interest or losses accrued. The amount
      *      withdrawn will be the `amount` plus associated interest and losses.
      */
-    function withdraw(uint256 amount) external returns (bool) {
+    function withdraw(uint256 amount) public returns (bool) {
         // todo(by RL) require the pool has not paused withdraw
         require(
             amount <= lenderInfo[msg.sender].amount,
@@ -154,6 +154,13 @@ contract HumaPool is HDT, Ownable {
         emit LiquidityWithdrawn(msg.sender, amount, amountToWithdraw);
 
         return true;
+    }
+
+    /**
+     * @notice Withdraw all balance from the pool.
+     */
+    function withdrawAll() external returns (bool) {
+        return withdraw(lenderInfo[msg.sender].amount);
     }
 
     //********************************************/
