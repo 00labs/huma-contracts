@@ -49,7 +49,7 @@ contract HDT is IHDT, ERC20 {
         address _fundsToken
     ) ERC20(name, symbol) {
         fundsToken = IERC20(_fundsToken);
-        pointsPerShare = 1;
+        pointsPerShare = pointsMultiplier; //1 * pointsMultiplier.
     }
 
     /**

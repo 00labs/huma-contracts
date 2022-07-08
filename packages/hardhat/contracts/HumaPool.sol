@@ -19,7 +19,7 @@ contract HumaPool is HDT, Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    uint256 constant WAD = 10**18;
+    uint256 constant POWER18 = 10**18;
 
     // HumaPoolAdmins
     address private immutable humaPoolAdmins;
@@ -92,7 +92,7 @@ contract HumaPool is HDT, Ownable {
         // todo (by RL) Need to check if the pool is open to msg.sender to deposit
         // todo (by RL) Need to add maximal pool size support and check if it has reached the size
 
-        uint256 wad = _toWad(amount);
+        uint256 amtInPower18 = _toPower18(amount);
 
         // Update weighted deposit date:
         // prevDate + (now - prevDate) * (amount / (balance + amount))
@@ -112,7 +112,7 @@ contract HumaPool is HDT, Ownable {
         poolToken.safeTransferFrom(msg.sender, poolLocker, amount);
 
         // Mint HDT for the LP to claim future income and losses
-        _mint(msg.sender, wad);
+        _mint(msg.sender, amtInPower18);
 
         emit LiquidityDeposited(msg.sender, amount);
 
@@ -139,13 +139,16 @@ contract HumaPool is HDT, Ownable {
                     loanWithdrawalLockoutPeriod,
             "HumaPool:WITHDRAW_TOO_SOON"
         );
-        // TODO allow withdrawal of past loans that passed lockout period  //By Richard: I do not think this todo is necessary.
 
-        uint256 wad = _toWad(amount);
-        _burn(msg.sender, wad);
+        uint256 amtInPower18 = _toPower18(amount);
+        _burn(msg.sender, amtInPower18);
 
         lenderInfo[msg.sender].amount -= amount;
 
+        // Calculate the amount that msg.sender can actually withdraw.
+        // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
+        // number of poolToken, incl. principal,income and losses.
+        // then get the portion that msg.sender wants to withdraw (amount / total principal)
         uint256 amountToWithdraw = withdrawableFundsOf(msg.sender)
             .mul(amount)
             .div(balanceOf(msg.sender));
@@ -366,8 +369,8 @@ contract HumaPool is HDT, Ownable {
         return poolToken.balanceOf(poolLocker);
     }
 
-    function _toWad(uint256 amt) internal view returns (uint256) {
-        return amt.mul(WAD).div(10**poolTokenDecimals);
+    function _toPower18(uint256 amt) internal view returns (uint256) {
+        return amt.mul(POWER18).div(10**poolTokenDecimals);
     }
 
     // Function to receive Ether. msg.data must be empty
