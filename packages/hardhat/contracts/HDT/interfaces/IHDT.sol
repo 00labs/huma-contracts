@@ -32,6 +32,11 @@ interface IHDT {
     function distributeLosses(uint256 value) external;
 
     /**
+     * @notice Reports amount withdrawn from account
+     */
+    function reportWithdrawn(uint256 amount) external;
+
+    /**
      * @dev Returns the total amount of funds a given address is able to withdraw currently.
      * @param owner Address of the token holder
      * @return a uint256 representing the available funds for a given account

@@ -95,6 +95,13 @@ contract HDT is IHDT, ERC20 {
     }
 
     /**
+     * @dev Withdraws all available funds for a token holder.
+     */
+    function reportWithdrawn(uint256 amount) external virtual override {
+        withdrawnFunds[msg.sender] = withdrawnFunds[msg.sender].add(amount);
+    }
+
+    /**
      * @notice Views the amount of funds that an address can withdraw.
      * @param _owner The address of a token holder.
      * @return The amount funds that `_owner` can withdraw.
