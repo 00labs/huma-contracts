@@ -15,6 +15,8 @@ import "./HumaLoan.sol";
 import "./HumaPoolLocker.sol";
 import "./HDT/HDT.sol";
 
+import "hardhat/console.sol";
+
 contract HumaPool is HDT, Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -141,7 +143,6 @@ contract HumaPool is HDT, Ownable {
         );
 
         uint256 amtInPower18 = _toPower18(amount);
-        _burn(msg.sender, amtInPower18);
 
         lenderInfo[msg.sender].amount -= amount;
 
@@ -152,6 +153,9 @@ contract HumaPool is HDT, Ownable {
         uint256 amountToWithdraw = withdrawableFundsOf(msg.sender)
             .mul(amount)
             .div(balanceOf(msg.sender));
+
+        _burn(msg.sender, amtInPower18);
+
         IHumaPoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
 
         emit LiquidityWithdrawn(msg.sender, amount, amountToWithdraw);
