@@ -49,7 +49,7 @@ contract HDT is IHDT, ERC20 {
         address _fundsToken
     ) ERC20(name, symbol) {
         fundsToken = IERC20(_fundsToken);
-        pointsPerShare = 1;
+        pointsPerShare = pointsMultiplier; //1 * pointsMultiplier.
     }
 
     /**
@@ -97,20 +97,8 @@ contract HDT is IHDT, ERC20 {
     /**
      * @dev Withdraws all available funds for a token holder.
      */
-    function withdrawFunds() external virtual override returns (uint256) {
-        uint256 _withdrawableFund = withdrawableFundsOf(msg.sender);
-
-        withdrawnFunds[msg.sender] = withdrawnFunds[msg.sender].add(
-            _withdrawableFund
-        );
-
-        if (_withdrawableFund > uint256(0)) {
-            fundsToken.safeTransfer(msg.sender, _withdrawableFund);
-
-            emit FundsWithdrawn(msg.sender, _withdrawableFund);
-        }
-
-        return _withdrawableFund;
+    function reportWithdrawn(uint256 amount) external virtual override {
+        withdrawnFunds[msg.sender] = withdrawnFunds[msg.sender].add(amount);
     }
 
     /**
@@ -118,7 +106,13 @@ contract HDT is IHDT, ERC20 {
      * @param _owner The address of a token holder.
      * @return The amount funds that `_owner` can withdraw.
      */
-    function withdrawableFundsOf(address _owner) public view returns (uint256) {
+    function withdrawableFundsOf(address _owner)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         return accumulativeFundsOf(_owner).sub(withdrawnFunds[_owner]);
     }
 
@@ -138,7 +132,12 @@ contract HDT is IHDT, ERC20 {
      * @param _owner The address of a token holder.
      * @return The amount of funds that `_owner` has earned in total.
      */
-    function accumulativeFundsOf(address _owner) public view returns (uint256) {
+    function accumulativeFundsOf(address _owner)
+        public
+        view
+        virtual
+        returns (uint256)
+    {
         return
             pointsPerShare
                 .mul(balanceOf(_owner))
