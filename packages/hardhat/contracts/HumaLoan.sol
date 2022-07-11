@@ -9,66 +9,66 @@ import "./interfaces/IHumaPoolLoanHelper.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 
 contract HumaLoan {
-  using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20;
 
-  struct InitialValues {
-    uint256 amount;
-    uint256 paybackPerInterval;
-    uint256 paybackInterval;
-    uint256 interestRateBasis;
-    address pool;
-  }
+    struct InitialValues {
+        uint256 amount;
+        uint256 paybackPerInterval;
+        uint256 paybackInterval;
+        uint256 interestRateBasis;
+        address pool;
+    }
 
-  uint256 public amount;
-  uint256 public amountPaidBack;
-  uint256 public issuedTimestamp;
-  uint256 public lastPaymentTimestamp;
-  uint256 public paybackPerInterval;
-  uint256 public paybackInterval;
-  uint256 public interestRateBasis; // Represented in percentiles e.g. 5% = 5
+    uint256 public amount;
+    uint256 public amountPaidBack;
+    uint256 public issuedTimestamp;
+    uint256 public lastPaymentTimestamp;
+    uint256 public paybackPerInterval;
+    uint256 public paybackInterval;
+    uint256 public interestRateBasis; // Represented in percentiles e.g. 5% = 5
 
-  address public immutable pool;
+    address public immutable pool;
 
-  constructor(InitialValues memory _initialValues) {
-    amount = _initialValues.amount;
-    amountPaidBack = 0;
-    issuedTimestamp = block.timestamp;
-    lastPaymentTimestamp = 0;
-    paybackPerInterval = _initialValues.paybackPerInterval;
-    paybackInterval = _initialValues.paybackInterval;
-    interestRateBasis = _initialValues.interestRateBasis;
+    constructor(InitialValues memory _initialValues) {
+        amount = _initialValues.amount;
+        amountPaidBack = 0;
+        issuedTimestamp = block.timestamp;
+        lastPaymentTimestamp = 0;
+        paybackPerInterval = _initialValues.paybackPerInterval;
+        paybackInterval = _initialValues.paybackInterval;
+        interestRateBasis = _initialValues.interestRateBasis;
 
-    pool = _initialValues.pool;
-  }
+        pool = _initialValues.pool;
+    }
 
-  function markPayment(uint256 _amount) external returns (bool) {
-    amountPaidBack += _amount;
-    lastPaymentTimestamp = block.timestamp;
+    function markPayment(uint256 _amount) external returns (bool) {
+        amountPaidBack += _amount;
+        lastPaymentTimestamp = block.timestamp;
 
-    return true;
-  }
+        return true;
+    }
 
-  function getLoanInformation()
-    external
-    view
-    returns (
-      uint256 _amount,
-      uint256 _amountPaidBack,
-      uint256 _issuedTimestamp,
-      uint256 _lastPaymentTimestamp,
-      uint256 _paybackPerInterval,
-      uint256 _paybackInterval,
-      uint256 _interestRateBasis
-    )
-  {
-    return (
-      amount,
-      amountPaidBack,
-      issuedTimestamp,
-      lastPaymentTimestamp,
-      paybackPerInterval,
-      paybackInterval,
-      interestRateBasis
-    );
-  }
+    function getLoanInformation()
+        external
+        view
+        returns (
+            uint256 _amount,
+            uint256 _amountPaidBack,
+            uint256 _issuedTimestamp,
+            uint256 _lastPaymentTimestamp,
+            uint256 _paybackPerInterval,
+            uint256 _paybackInterval,
+            uint256 _interestRateBasis
+        )
+    {
+        return (
+            amount,
+            amountPaidBack,
+            issuedTimestamp,
+            lastPaymentTimestamp,
+            paybackPerInterval,
+            paybackInterval,
+            interestRateBasis
+        );
+    }
 }
