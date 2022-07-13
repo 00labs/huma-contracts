@@ -72,12 +72,6 @@ interface IHumaCredit {
     function triggerDefault() external returns (uint256 losses);
 
     /**
-     * @notice Gets the balance of principal
-     * @return amount the amount of the balance
-     */
-    function getPrincipalBalance() external view returns (uint256 amount);
-
-    /**
      * @notice Gets the payoff information
      * @return total the total amount for the payoff
      * @return principal the remaining principal amount
