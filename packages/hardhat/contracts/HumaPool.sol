@@ -14,7 +14,6 @@ import "./interfaces/IHumaPoolLocker.sol";
 import "./HumaLoan.sol";
 import "./HumaPoolLocker.sol";
 import "./HDT/HDT.sol";
-import "./HumaCreditFactory.sol";
 
 import "hardhat/console.sol";
 
@@ -176,8 +175,6 @@ contract HumaPool is HDT, Ownable {
     //********************************************/
     // Apply to borrow from the pool. Borrowing is subject to interest,
     // collateral, and maximum loan requirements as dictated by the pool
-    // todo the pool parameters do not seem right. Need to change this API sigature.
-    //      _paybackPerInterval should be computed.
     function borrow(
         uint256 _borrowAmount,
         uint256 _paybackInterval,
@@ -210,29 +207,19 @@ contract HumaPool is HDT, Ownable {
             );
         }
 
-        // todo Change to use Factory and CloneFactory to create new IHumaCredit.
-        IHumaCredit loan = new HumaLoan();
-        // loan.initiate(xxx);
-
-        creditMapping[msg.sender] = address(loan);
-
-        // call risk.approve, which will call loan.approve(...)
-        // break this function into requestLoan().
-
-        uint256[] terms = getLoanTerms();
-        // todo connect to global config to get the real address
-        address treasuryAddress = address(poolLocker);
-        //todo Add real collateral info
-        loan.originateCredit(
-            poolLocker,
-            treasuryAddress,
-            msg.sender,
-            poolToken,
-            _borrowAmount,
-            address(0),
-            0,
-            terms
+        creditMapping[msg.sender] = address(
+            new HumaLoan(
+                HumaLoan.InitialValues({
+                    amount: _borrowAmount,
+                    paybackPerInterval: _paybackPerInterval,
+                    paybackInterval: _paybackInterval,
+                    interestRateBasis: interestRateBasis,
+                    pool: address(this)
+                })
+            )
         );
+
+        IHumaPoolLocker(poolLocker).transfer(msg.sender, _borrowAmount);
 
         // Run custom post-borrowing logic in the loan helper of this pool
         if (humaPoolLoanHelper != address(0)) {
@@ -245,29 +232,10 @@ contract HumaPool is HDT, Ownable {
         return true;
     }
 
-    /**
-     * Retrieve loan terms from pool config. 
-     //todo It is hard-coded right now. Need to call poll config to get the real data
-    */
-    function getLoanTerms() private returns (uint256[] terms) {
-        terms.push(1); //[0] numOfPayments
-        terms.push(30); //payment_interval, in days
-        terms.push(1000); //apr_in_bps
-        terms.push(100); //platform_fee_flat
-        terms.push(0); //platform_fee_bps
-        terms.push(20); //late_fee_flat
-        terms.push(0); //late_fee_bps
-        terms.push(0); //early_payff_fee_flat
-        terms.push(0); //early_payoff_fee_bps
-        terms.push(2592000); //payementFrequency
-    }
-
     // Attempt to make a partial payback on a loan if its conditions are met:
     // - amountPaidBack must be less than amount
     // - Time passed since lastPaymentTimestamp must equal or exceed paybackInterval
     // TODO: Add manual payback function
-    // todo Sunset this function after checking with Michael. Payment should be in
-    //      contracts that implement IHumaCredit, such as HumaLoan.
     function makeIntervalPayback(address _borrower)
         external
         returns (bool _success)
