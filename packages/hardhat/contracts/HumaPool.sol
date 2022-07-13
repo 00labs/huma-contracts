@@ -60,6 +60,9 @@ contract HumaPool is HDT, Ownable {
     // The collateral basis percentage required from lenders
     uint256 collateralRequired;
 
+    // Helper counter used to ensure every loan has a unique ID
+    uint256 humaLoanUniqueIdCounter;
+
     enum PoolStatus {
         On,
         Off
@@ -80,6 +83,38 @@ contract HumaPool is HDT, Ownable {
         poolTokenDecimals = ERC20(_poolToken).decimals();
         poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
         humaPoolAdmins = _humaPoolAdmins;
+    }
+
+    // Allow for sensitive pool functions only to be called by
+    // the pool owner and the huma master admin
+    modifier onlyOwnerOrHumaMasterAdmin() {
+        // TODO integrate humaconfig once its ready
+        require(
+            (msg.sender == owner() ||
+                IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) == true),
+            "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
+        );
+        _;
+    }
+
+    modifier onlyHumaMasterAdmin() {
+        // TODO integrate humaconfig once its ready
+        require(
+            IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) == true,
+            "HumaPool:PERMISSION_DENIED_NOT_MASTER_ADMIN"
+        );
+        _;
+    }
+
+    // In order for a pool to issue new loans, it must be turned on by an admin
+    // and its custom loan helper must be approved by the Huma team
+    modifier poolOn() {
+        require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
+        require(
+            humaPoolLoanHelper == address(0) || isHumaPoolLoanHelperApproved == true,
+            "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
+        );
+        _;
     }
 
     //********************************************/
@@ -150,9 +185,9 @@ contract HumaPool is HDT, Ownable {
         // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
         // number of poolToken, incl. principal,income and losses.
         // then get the portion that msg.sender wants to withdraw (amount / total principal)
-        uint256 amountToWithdraw = withdrawableFundsOf(msg.sender)
-            .mul(amount)
-            .div(balanceOf(msg.sender));
+        uint256 amountToWithdraw = withdrawableFundsOf(msg.sender).mul(amount).div(
+            balanceOf(msg.sender)
+        );
 
         _burn(msg.sender, amtInPower18);
 
@@ -272,30 +307,6 @@ contract HumaPool is HDT, Ownable {
     //                Settings                  //
     /********************************************/
 
-    // Allow for sensitive pool functions only to be called by
-    // the pool owner and the huma master admin
-    modifier onlyOwnerOrHumaMasterAdmin() {
-        require(
-            (msg.sender == owner() ||
-                IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) ==
-                true),
-            "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
-        );
-        _;
-    }
-
-    // In order for a pool to issue new loans, it must be turned on by an admin
-    // and its custom loan helper must be approved by the Huma team
-    modifier poolOn() {
-        require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
-        require(
-            humaPoolLoanHelper == address(0) ||
-                isHumaPoolLoanHelperApproved == true,
-            "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
-        );
-        _;
-    }
-
     function setMaxLoanAmount(uint256 _maxLoanAmount)
         external
         onlyOwnerOrHumaMasterAdmin
@@ -338,7 +349,12 @@ contract HumaPool is HDT, Ownable {
         isHumaPoolLoanHelperApproved = false;
     }
 
-    // TODO: Add function to approve pool loan helper (only callable by huma)
+    function setHumaPoolLoanHelperApprovalStatus(bool _approvalStatus)
+        external
+        onlyHumaMasterAdmin
+    {
+        isHumaPoolLoanHelperApproved = _approvalStatus;
+    }
 
     // Allow borrow applications and loans to be processed by this pool.
     function enablePool() external onlyOwnerOrHumaMasterAdmin {
@@ -355,9 +371,10 @@ contract HumaPool is HDT, Ownable {
         return loanWithdrawalLockoutPeriod;
     }
 
-    function setLoanWithdrawalLockoutPeriod(
-        uint256 _loanWithdrawalLockoutPeriod
-    ) external onlyOwnerOrHumaMasterAdmin {
+    function setLoanWithdrawalLockoutPeriod(uint256 _loanWithdrawalLockoutPeriod)
+        external
+        onlyOwnerOrHumaMasterAdmin
+    {
         loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
     }
 

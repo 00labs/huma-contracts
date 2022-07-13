@@ -92,6 +92,30 @@ describe("Base Contracts", function () {
         .approve(humaPoolContract.address, 99999);
     });
 
+    it("Pool loan helper can only be approved by master admin", async function () {
+      await humaPoolContract.setHumaPoolLoanHelper(
+        "0x0000000000000000000000000000000000000001"
+      );
+
+      // Cannot deposit while helper not approved
+      await expect(
+        humaPoolContract.connect(lender).deposit(100)
+      ).to.be.revertedWith("HumaPool:POOL_LOAN_HELPER_NOT_APPROVED");
+
+      // Pool cannot be approved by non-master admin
+      await expect(
+        humaPoolContract
+          .connect(lender)
+          .setHumaPoolLoanHelperApprovalStatus(true)
+      ).to.be.revertedWith("HumaPool:PERMISSION_DENIED_NOT_MASTER_ADMIN");
+
+      // Approval by master admin should work
+      await humaPoolContract.setHumaPoolLoanHelperApprovalStatus(true);
+
+      // Deposit should work
+      await humaPoolContract.connect(lender).deposit(100);
+    });
+
     it("Only pool owner and master admin can edit pool settings", async function () {
       // Transfer ownership of pool to other account
       await humaPoolContract.transferOwnership(lender.address);
