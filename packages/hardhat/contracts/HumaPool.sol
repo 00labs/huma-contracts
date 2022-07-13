@@ -212,8 +212,12 @@ contract HumaPool is HDT, Ownable {
 
         // todo Change to use Factory and CloneFactory to create new IHumaCredit.
         IHumaCredit loan = new HumaLoan();
+        // loan.initiate(xxx);
 
         creditMapping[msg.sender] = address(loan);
+
+        // call risk.approve, which will call loan.approve(...)
+        // break this function into requestLoan().
 
         uint256[] terms = getLoanTerms();
         // todo connect to global config to get the real address
