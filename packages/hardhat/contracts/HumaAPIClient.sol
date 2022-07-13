@@ -16,15 +16,16 @@ contract HumaAPIClient is ChainlinkClient, ConfirmedOwner {
   bytes32 private jobId;
   uint256 private fee;
 
-  mapping(address => bool) public approval;
+  mapping(uint256 => bool) public loanIdApproval;
+  mapping(uint256 => bool) public loanIdApprovalFulfilled;
 
-  event SendRequest(
+  event RiskRequestSent(
     string network,
     address walletAddress,
-    address loanAddress,
+    uint256 loanId,
     uint256 amount
   );
-  event ResponseReceived(bool approved, address walletAddress);
+  event RiskRequestFulfilled(bytes32 indexed requestId, bytes indexed data);
 
   /**
    * @notice Initialize the link token and target oracle
@@ -40,8 +41,8 @@ contract HumaAPIClient is ChainlinkClient, ConfirmedOwner {
    */
   constructor() ConfirmedOwner(msg.sender) {
     setChainlinkToken(0x01BE23585060835E02B77ef475b0Cc51aA1e0709);
-    setChainlinkOracle(0xf3FBB7f3391F62C8fe53f89B41dFC8159EE9653f);
-    jobId = "7da2702f37fd48e5b1b9a5715e3509b6";
+    setChainlinkOracle(0x188b71C9d27cDeE01B9b0dfF5C1aff62E8D6F434);
+    jobId = "a84b561bd8f64300a0832682f208321f";
     fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
   }
 
@@ -68,10 +69,13 @@ contract HumaAPIClient is ChainlinkClient, ConfirmedOwner {
   function requestMultipleParameters(
     string memory _network,
     address _wallet,
-    address _loan,
-    uint256 _amount
+    uint256 _loanId,
+    uint256 _amount,
+    uint256 _interestRate,
+    uint256 _paymentDue,
+    string memory term
   ) public {
-    emit SendRequest(_network, _wallet, _loan, _amount);
+    emit RiskRequestSent(_network, _wallet, _loanId, _amount);
     Chainlink.Request memory req = buildChainlinkRequest(
       jobId,
       address(this),
@@ -79,36 +83,45 @@ contract HumaAPIClient is ChainlinkClient, ConfirmedOwner {
     );
     string memory walletString = toAsciiString(_wallet);
     req.add(
-      "url",
+      "get",
       string(
         abi.encodePacked(
-          "http://risk.huma.finance/",
+          "http://risk.huma.finance/protocolApproval?network=",
           _network,
-          "/0x",
+          "&wallet_address=0x",
           walletString,
-          "?amount=",
-          Strings.toString(_amount)
+          "&amount=",
+          Strings.toString(_amount),
+          "&loan_id=",
+          Strings.toString(_loanId),
+          "&term=",
+          term,
+          "&interest_rate=",
+          Strings.toString(_interestRate),
+          "&payment_due=",
+          Strings.toString(_paymentDue)
         )
       )
     );
-    req.add("pathApproval", "approval");
-    sendChainlinkRequest(req, fee); // MWR API.
+    req.add("path", "approvalCode");
+    sendOperatorRequest(req, fee); // MWR API.
   }
 
   /**
    * @notice Fulfillment function for multiple parameters in a single request
    * @dev This is called by the oracle. recordChainlinkFulfillment must be used.
    */
-  function fulfillMultipleParameters(bytes32 requestId, bytes memory response)
-    public
-    recordChainlinkFulfillment(requestId)
-  {
-    (uint8 approved, address loanAddress) = abi.decode(
-      response,
-      (uint8, address)
+  function fulfillMultipleParameters(
+    bytes32 _requestId,
+    bytes memory _approvalCodeResponse
+  ) public recordChainlinkFulfillment(_requestId) {
+    emit RiskRequestFulfilled(_requestId, _approvalCodeResponse);
+    (uint256 approved, uint256 loanId) = abi.decode(
+      _approvalCodeResponse,
+      (uint256, uint256)
     );
-    emit ResponseReceived(approved == 1, loanAddress);
-    approval[loanAddress] = approved == 1;
+    loanIdApproval[loanId] = approved == 1;
+    loanIdApprovalFulfilled[loanId] = false;
   }
 
   /**
