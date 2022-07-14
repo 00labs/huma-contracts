@@ -66,6 +66,7 @@ contract HumaConfig {
         governor = _governor;
         protocolAdmin = _protocolAdmin;
         defaultGracePeriod = 5 days;
+        humaTreasury = _governor;
         treasuryFee = 50; // 0.5%
         emit ProtocolInitialized();
     }
@@ -85,6 +86,10 @@ contract HumaConfig {
         require(newGovernor != governor, "ERROR: NOMINATED_THE_SAME_GOVERNOR");
         pendingGovernor = newGovernor;
         emit NewGovernorNominated(newGovernor);
+    }
+
+    function getGovernor() external view returns (address) {
+        return governor;
     }
 
     /**
@@ -158,6 +163,10 @@ contract HumaConfig {
         emit TreasuryFeeChanged(fee);
     }
 
+    function getTreasuryFee() external view isGovernor returns (uint256) {
+        return treasuryFee;
+    }
+
     /**
       @notice Sets the default grace period. Governor is required to call. 
       @dev Emits DefaultGracePeriodChanged event
@@ -166,5 +175,9 @@ contract HumaConfig {
     function setDefaultGracePeriod(uint256 gracePeriod) external isGovernor {
         defaultGracePeriod = gracePeriod;
         emit DefaultGracePeriodChanged(gracePeriod);
+    }
+
+    function getHumaTreasury() external view returns (address) {
+        return humaTreasury;
     }
 }
