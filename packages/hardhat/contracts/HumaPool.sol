@@ -28,7 +28,7 @@ contract HumaPool is HDT, Ownable {
     address private immutable humaPoolAdmins;
 
     // HumaConfig
-    address private immutable humaConfig;
+    // address private immutable humaConfig;
 
     // Liquidity holder proxy contract for this pool
     address private poolLocker;
@@ -87,16 +87,15 @@ contract HumaPool is HDT, Ownable {
     event LiquidityDeposited(address by, uint256 principal);
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
 
-    constructor(
-        address _poolToken,
-        address _humaPoolAdmins,
-        address _humaConfig
-    ) HDT("Huma", "Huma", _poolToken) {
+    constructor(address _poolToken, address _humaPoolAdmins)
+        //address _humaConfig
+        HDT("Huma", "Huma", _poolToken)
+    {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
         poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
         humaPoolAdmins = _humaPoolAdmins;
-        humaConfig = _humaConfig;
+        //humaConfig = _humaConfig;
     }
 
     //********************************************/
@@ -228,7 +227,8 @@ contract HumaPool is HDT, Ownable {
         IHumaCredit loan = new HumaLoan();
 
         // todo connect to global config to get the real address
-        address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
+        //address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
+        address treasuryAddress = humaPoolAdmins;
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
         loan.initiate(
@@ -254,6 +254,27 @@ contract HumaPool is HDT, Ownable {
             );
         }
 
+        return true;
+    }
+
+    function originateLoan() external returns (bool) {
+        require(
+            creditMapping[msg.sender] != address(0),
+            "HumaPool:NO_EXISTING_LOAN_REQUESTS"
+        );
+        HumaLoan humaLoanContract = HumaLoan(creditMapping[msg.sender]);
+
+        require(humaLoanContract.isApproved(), "HumaPool:LOAN_NOT_APPROVED");
+
+        (uint256 amtForBorrower, uint256 amtForTreasury) = humaLoanContract
+            .originateCredit();
+
+        //CRITICAL: Funding the loan
+        //address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
+        address treasuryAddress = humaPoolAdmins;
+        HumaPoolLocker locker = HumaPoolLocker(poolLocker);
+        locker.transfer(treasuryAddress, amtForTreasury);
+        locker.transfer(msg.sender, amtForBorrower);
         return true;
     }
 
@@ -417,10 +438,13 @@ contract HumaPool is HDT, Ownable {
         return platform_fee_flat;
     }
 
-    function getFees()
+    /// returns (maxLoanAmount, interest, and the 6 fee fields)
+    function getPoolSettings()
         public
         view
         returns (
+            uint256,
+            uint256,
             uint256,
             uint256,
             uint256,
@@ -430,6 +454,8 @@ contract HumaPool is HDT, Ownable {
         )
     {
         return (
+            maxLoanAmount,
+            interestRateBasis,
             platform_fee_flat,
             platform_fee_bps,
             late_fee_flat,

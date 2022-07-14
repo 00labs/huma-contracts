@@ -140,6 +140,10 @@ contract HumaLoan is IHumaCredit {
         return approved;
     }
 
+    function isApproved() external virtual returns (bool) {
+        return approved;
+    }
+
     /**
      * @notice
      */
@@ -147,7 +151,7 @@ contract HumaLoan is IHumaCredit {
         external
         virtual
         override
-        returns (uint256 netAmount)
+        returns (uint256 amtForBorrower, uint256 amtForTreasury)
     {
         require(approved, "HumaLoan:LOAN_NOT_APPROVED");
 
@@ -169,11 +173,7 @@ contract HumaLoan is IHumaCredit {
             fees += li.loanAmount.mul(li.platform_fee_bps).div(100);
 
         // CRITICAL: Transfer fees to treasury, remaining proceeds to the borrower
-        netAmount = li.loanAmount - fees;
-        IHumaPoolLocker locker = IHumaPoolLocker(poolLocker);
-        locker.transfer(treasury, fees);
-        locker.transfer(msg.sender, netAmount);
-        return netAmount;
+        return (li.loanAmount - fees, fees);
     }
 
     /**

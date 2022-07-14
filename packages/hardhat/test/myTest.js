@@ -24,14 +24,9 @@ describe("Base Contracts", function () {
     const HumaPoolAdmins = await ethers.getContractFactory("HumaPoolAdmins");
     humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
-    const HumaConfig = await ethers.getContractFactory("HumaConfig");
-    humaConfigContract = await HumaConfig.deploy(
-      owner.address, owner.address
-    );
-
     const HumaPoolFactory = await ethers.getContractFactory("HumaPoolFactory");
     humaPoolFactoryContract = await HumaPoolFactory.deploy(
-      humaPoolAdminsContract.address, humaConfigContract.address
+      humaPoolAdminsContract.address
     );
 
     const TestToken = await ethers.getContractFactory("TestToken");
@@ -53,7 +48,7 @@ describe("Base Contracts", function () {
     });
     it("Update treasury fee", async function () {
       await humaConfigContract.setTreasuryFee(50);
-      expect(await humaConfigContract.getTreasuryFee()).to.equal(50);
+      expect(await humaConfigContract.treasuryFee()).to.equal(50);
     });
   });
 
@@ -100,9 +95,10 @@ describe("Base Contracts", function () {
         owner
       );
 
-      await humaPoolContract.setInterestRateBasis(10);
+      await humaPoolContract.setInterestRateBasis(1200);  //bps
       await humaPoolContract.setMaxLoanAmount(100);
       await humaPoolContract.enablePool();
+      await humaPoolContract.setFees(10, 0, 20, 0, 30, 0);
 
       await testTokenContract.give1000To(lender.address);
       await testTokenContract
@@ -132,10 +128,19 @@ describe("Base Contracts", function () {
       ).to.be.revertedWith("HumaPool:PERMISSION_DENIED_NOT_ADMIN");
     });
 
-    //it("Setting pool fees", async function () {
-    //  await humaPoolContract.setFees(100, 10, 200, 20, 300, 30);
-    //  await expect(humaPoolContract.getPlatformFeeFlat()).to.equal(100);
-    //});
+    // describe("Huma Pool Settings", function () {
+    //   it("Set pool fees and parameters", async function () {
+    //     var [maxLoanAmount, interest, f1, f2, f3, f4, f5, f6] = await humaPoolContract.getPoolSettings();
+    //     expect(maxLoanAmount).to.equal(100);
+    //     expect(interest).to.equal(1200);
+    //     expect(f1).to.equal(10);
+    //     expect(f2).to.equal(0);
+    //     expect(f3).to.equal(20);
+    //     expect(f4).to.equal(0);
+    //     expect(f5).to.equal(30);
+    //     expect(f6).to.equal(0);
+    //   });
+    // });
 
     describe("Depositing and withdrawal", function () {
       it("Cannot deposit while pool is off", async function () {
@@ -227,15 +232,14 @@ describe("Base Contracts", function () {
         expect(loanInformation._interestRateBasis).to.equal(1200);
       });
 
-      it("Borrowing works correctly", async function () {
-        expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
-
-        await humaPoolContract.connect(owner).setInterestRateBasis(1200);
-
-        await humaPoolContract.connect(owner).setFees(10, 0, 20, 0, 30, 0);
-
+      it("Prevent loan funding before approval", async function () {
         await humaPoolContract.connect(borrower).requestLoan(100, 30, 12);
 
+        expect(await humaPoolContract.connect(borrower).originateLoan()).to.be.revertedWith("HumaPool:LOAN_NOT_APPROVED");
+
+      });
+
+      it("Loan funding", async function () {
         const loanAddress = await humaPoolContract.creditMapping(
           borrower.address
         );
@@ -243,44 +247,25 @@ describe("Base Contracts", function () {
           loanAddress,
           borrower
         );
-
-        // address _poolLocker,
-        // address _treasury,
-        // address _borrower,
-        // address liquidityAsset,
-        // uint256 liquidityAmount,
-        // address collateralAsset,
-        // uint256 collateralAmount,
-        // uint256[] memory terms
-        // await loanContract.initiate();
-
-        const loanInformation = await loanContract.getLoanInformation();
-        expect(loanInformation._amount).to.equal(100);
-        expect(loanInformation._paybackPerInterval).greaterThan(0);
-        expect(loanInformation._paybackPerInterval).lessThan(20);
-        expect(loanInformation._paybackInterval).to.equal(30);
-        expect(loanInformation._interestRateBasis).to.equal(1200);
-
         await loanContract.approve();
+        expect(await loanContract.approved()).to.be.true;
 
-        expect(await loanContract.approved.to.equal(true));
-
-        await loanContract.originateCredit();
+        await humaPoolContract.connect(borrower).originateLoan();
 
         expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
           90
         );
 
         // Check the amount in the treasury.
-        // expect(await testTokenContract.balanceOf()).to.equal(
-        //   10
-        // );
+        expect(await testTokenContract.balanceOf(humaConfigContract.getHumaTreasury())).to.equal(
+          10
+        );
 
         expect(await humaPoolContract.getPoolLiquidity()).to.equal(1);
 
         // Borrowing with existing loans should fail
         await expect(
-          humaPoolContract.connect(borrower).borrow(99, 1000, 10)
+          humaPoolContract.connect(borrower).requestLoan(99, 30, 2)
         ).to.be.revertedWith("HumaPool:DENY_BORROW_EXISTING_LOAN");
       });
 
