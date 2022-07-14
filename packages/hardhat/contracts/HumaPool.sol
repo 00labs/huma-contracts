@@ -106,7 +106,8 @@ contract HumaPool is HDT, Ownable {
      * @notice LP deposits to the pool to earn interest, and share losses
      * @param amount the number of `poolToken` to be deposited
      */
-    function deposit(uint256 amount) external poolOn returns (bool) {
+    function deposit(uint256 amount) external returns (bool) {
+        poolOn();
         // todo (by RL) Need to check if the pool is open to msg.sender to deposit
         // todo (by RL) Need to add maximal pool size support and check if it has reached the size
 
@@ -195,7 +196,8 @@ contract HumaPool is HDT, Ownable {
         uint256 _borrowAmount,
         uint256 _paymentInterval,
         uint256 _numOfPayments
-    ) external poolOn returns (bool) {
+    ) external returns (bool) {
+        poolOn();
         // Borrowers must not have existing loans from this pool
         require(
             creditMapping[msg.sender] == address(0),
@@ -305,33 +307,30 @@ contract HumaPool is HDT, Ownable {
 
     // Allow for sensitive pool functions only to be called by
     // the pool owner and the huma master admin
-    modifier onlyOwnerOrHumaMasterAdmin() {
+    function onlyOwnerOrHumaMasterAdmin() private view {
         require(
             (msg.sender == owner() ||
                 IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) ==
                 true),
             "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
         );
-        _;
+        //_;
     }
 
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
-    modifier poolOn() {
+    function poolOn() private view {
         require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
         require(
             humaPoolLoanHelper == address(0) ||
                 isHumaPoolLoanHelperApproved == true,
             "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
         );
-        _;
+        //_;
     }
 
-    function setMaxLoanAmount(uint256 _maxLoanAmount)
-        external
-        onlyOwnerOrHumaMasterAdmin
-        returns (bool)
-    {
+    function setMaxLoanAmount(uint256 _maxLoanAmount) external returns (bool) {
+        onlyOwnerOrHumaMasterAdmin();
         require(_maxLoanAmount > 0);
         maxLoanAmount = _maxLoanAmount;
 
@@ -340,9 +339,9 @@ contract HumaPool is HDT, Ownable {
 
     function setInterestRateBasis(uint256 _interestRateBasis)
         external
-        onlyOwnerOrHumaMasterAdmin
         returns (bool)
     {
+        onlyOwnerOrHumaMasterAdmin();
         require(_interestRateBasis >= 0);
         interestRateBasis = _interestRateBasis;
 
@@ -351,19 +350,17 @@ contract HumaPool is HDT, Ownable {
 
     function setCollateralRequired(uint256 _collateralRequired)
         external
-        onlyOwnerOrHumaMasterAdmin
         returns (bool)
     {
+        onlyOwnerOrHumaMasterAdmin();
         require(_collateralRequired >= 0);
         collateralRequired = _collateralRequired;
 
         return true;
     }
 
-    function setHumaPoolLoanHelper(address _humaPoolLoanHelper)
-        external
-        onlyOwnerOrHumaMasterAdmin
-    {
+    function setHumaPoolLoanHelper(address _humaPoolLoanHelper) external {
+        onlyOwnerOrHumaMasterAdmin();
         humaPoolLoanHelper = _humaPoolLoanHelper;
         // New loan helpers must be reviewed and approved by the Huma team.
         isHumaPoolLoanHelperApproved = false;
@@ -372,13 +369,15 @@ contract HumaPool is HDT, Ownable {
     // TODO: Add function to approve pool loan helper (only callable by huma)
 
     // Allow borrow applications and loans to be processed by this pool.
-    function enablePool() external onlyOwnerOrHumaMasterAdmin {
+    function enablePool() external {
+        onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.On;
     }
 
     // Reject all future borrow applications and loans. Note that existing
     // loans will still be processed as expected.
-    function disablePool() external onlyOwnerOrHumaMasterAdmin {
+    function disablePool() external {
+        onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.Off;
     }
 
@@ -388,7 +387,8 @@ contract HumaPool is HDT, Ownable {
 
     function setLoanWithdrawalLockoutPeriod(
         uint256 _loanWithdrawalLockoutPeriod
-    ) external onlyOwnerOrHumaMasterAdmin {
+    ) external {
+        onlyOwnerOrHumaMasterAdmin();
         loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
     }
 
@@ -432,10 +432,6 @@ contract HumaPool is HDT, Ownable {
         late_fee_bps = _late_fee_bps;
         early_payoff_fee_flat = _early_payoff_fee_flat;
         early_payoff_fee_bps = _early_payoff_fee_bps;
-    }
-
-    function getPlatformFeeFlat() public view returns (uint256) {
-        return platform_fee_flat;
     }
 
     /// returns (maxLoanAmount, interest, and the 6 fee fields)
