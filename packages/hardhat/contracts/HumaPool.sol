@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -15,8 +13,6 @@ import "./HumaLoan.sol";
 import "./HumaPoolLocker.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
-
-import "hardhat/console.sol";
 
 contract HumaPool is HDT, Ownable {
     using SafeERC20 for IERC20;
@@ -76,6 +72,8 @@ contract HumaPool is HDT, Ownable {
     // Early payoff fee, charged when the borrow pays off prematurely
     uint256 early_payoff_fee_flat;
     uint256 early_payoff_fee_bps;
+    // Helper counter used to ensure every loan has a unique ID
+    uint256 humaLoanUniqueIdCounter;
 
     enum PoolStatus {
         On,
@@ -103,6 +101,15 @@ contract HumaPool is HDT, Ownable {
         poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
+    }
+
+    modifier onlyHumaMasterAdmin() {
+        // TODO integrate humaconfig once its ready
+        require(
+            IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) == true,
+            "HumaPool:PERMISSION_DENIED_NOT_MASTER_ADMIN"
+        );
+        _;
     }
 
     //********************************************/
@@ -370,7 +377,12 @@ contract HumaPool is HDT, Ownable {
         isHumaPoolLoanHelperApproved = false;
     }
 
-    // TODO: Add function to approve pool loan helper (only callable by huma)
+    function setHumaPoolLoanHelperApprovalStatus(bool _approvalStatus)
+        external
+        onlyHumaMasterAdmin
+    {
+        isHumaPoolLoanHelperApproved = _approvalStatus;
+    }
 
     // Allow borrow applications and loans to be processed by this pool.
     function enablePool() external {
