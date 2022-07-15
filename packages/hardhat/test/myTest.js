@@ -25,9 +25,13 @@ describe("Base Contracts", function () {
     const HumaPoolAdmins = await ethers.getContractFactory("HumaPoolAdmins");
     humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
+    const HumaConfig = await ethers.getContractFactory("HumaConfig");
+    humaConfigContract = await HumaConfig.deploy(owner.address, owner.address);
+
     const HumaPoolFactory = await ethers.getContractFactory("HumaPoolFactory");
     humaPoolFactoryContract = await HumaPoolFactory.deploy(
-      humaPoolAdminsContract.address
+      humaPoolAdminsContract.address,
+      humaConfigContract.address
     );
 
     const TestToken = await ethers.getContractFactory("TestToken");
@@ -40,18 +44,18 @@ describe("Base Contracts", function () {
     });
   });
 
-  // describe("HumaConfig", function () {
-  //   it("Should show the right governor", async function () {
-  //     expect(await humaConfigContract.getGovernor()).to.equal(owner.address);
-  //   });
-  //   it("Should show the right treasury address", async function () {
-  //     expect(await humaConfigContract.getHumaTreasury()).to.equal(owner.address);
-  //   });
-  //   it("Update treasury fee", async function () {
-  //     await humaConfigContract.setTreasuryFee(50);
-  //     expect(await humaConfigContract.treasuryFee()).to.equal(50);
-  //   });
-  // });
+  describe("HumaConfig", function () {
+    it("Should show the right governor", async function () {
+      expect(await humaConfigContract.getGovernor()).to.equal(owner.address);
+    });
+    it("Should show the right treasury address", async function () {
+      expect(await humaConfigContract.getHumaTreasury()).to.equal(owner.address);
+    });
+    it("Update treasury fee", async function () {
+      await humaConfigContract.setTreasuryFee(50);
+      expect(await humaConfigContract.treasuryFee()).to.equal(50);
+    });
+  });
 
   describe("HumaPoolAdmins", function () {
     it("Only huma master admin can create new pools", async function () {
