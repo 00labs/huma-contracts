@@ -320,7 +320,6 @@ contract HumaPool is HDT, Ownable {
                 true),
             "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
         );
-        //_;
     }
 
     // In order for a pool to issue new loans, it must be turned on by an admin
@@ -332,7 +331,6 @@ contract HumaPool is HDT, Ownable {
                 isHumaPoolLoanHelperApproved == true,
             "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
         );
-        //_;
     }
 
     function setMaxLoanAmount(uint256 _maxLoanAmount) external returns (bool) {
