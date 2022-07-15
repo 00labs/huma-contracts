@@ -66,6 +66,8 @@ contract HumaConfig {
         governor = _governor;
         protocolAdmin = _protocolAdmin;
         defaultGracePeriod = 5 days;
+        // Set governor as default treasury, which can be changed via setHumaTreasury().
+        humaTreasury = _governor;
         treasuryFee = 50; // 0.5%
         emit ProtocolInitialized();
     }
@@ -87,6 +89,10 @@ contract HumaConfig {
         emit NewGovernorNominated(newGovernor);
     }
 
+    function getGovernor() external view returns (address) {
+        return governor;
+    }
+
     /**
      @notice Accepts the Governor position. Only the nominated governor can call this function.
      @dev Emits a NewGovernorAccepted event.
@@ -99,6 +105,12 @@ contract HumaConfig {
         governor = msg.sender;
         pendingGovernor = address(0);
         emit NewGovernorAccepted(msg.sender);
+    }
+
+    function setHumaTreasury(address treasury) external isGovernor {
+        require(treasury != address(0), "HumaConfig:TREASURY_ADDRESS_ZERO");
+        require(!protocolPaused, "HumaConfig:PROTOCOL_PAUSED");
+        humaTreasury = treasury;
     }
 
     /**
@@ -158,6 +170,10 @@ contract HumaConfig {
         emit TreasuryFeeChanged(fee);
     }
 
+    function getTreasuryFee() external view isGovernor returns (uint256) {
+        return treasuryFee;
+    }
+
     /**
       @notice Sets the default grace period. Governor is required to call. 
       @dev Emits DefaultGracePeriodChanged event
@@ -166,5 +182,9 @@ contract HumaConfig {
     function setDefaultGracePeriod(uint256 gracePeriod) external isGovernor {
         defaultGracePeriod = gracePeriod;
         emit DefaultGracePeriodChanged(gracePeriod);
+    }
+
+    function getHumaTreasury() external view returns (address) {
+        return humaTreasury;
     }
 }

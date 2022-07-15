@@ -45,7 +45,7 @@ interface IHumaCredit {
     /**
      * @notice allows the borrower to originate the credit
      */
-    function originateCredit() external returns (uint256);
+    function originateCredit() external returns (uint256, uint256);
 
     /**
      * @notice Borrower makes one payment

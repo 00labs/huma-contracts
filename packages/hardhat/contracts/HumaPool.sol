@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -14,8 +12,7 @@ import "./interfaces/IHumaPoolLocker.sol";
 import "./HumaLoan.sol";
 import "./HumaPoolLocker.sol";
 import "./HDT/HDT.sol";
-
-import "hardhat/console.sol";
+import "./HumaConfig.sol";
 
 contract HumaPool is HDT, Ownable {
     using SafeERC20 for IERC20;
@@ -25,6 +22,12 @@ contract HumaPool is HDT, Ownable {
 
     // HumaPoolAdmins
     address private immutable humaPoolAdmins;
+
+    // HumaConfig
+    address private immutable humaConfig;
+
+    // HumaConfig
+    // address private immutable humaConfig;
 
     // Liquidity holder proxy contract for this pool
     address private poolLocker;
@@ -60,6 +63,15 @@ contract HumaPool is HDT, Ownable {
     // The collateral basis percentage required from lenders
     uint256 collateralRequired;
 
+    // Platform fee, charged when a loan is originated
+    uint256 platform_fee_flat;
+    uint256 platform_fee_bps;
+    // Late fee, charged when the borrow is late for a pyament.
+    uint256 late_fee_flat;
+    uint256 late_fee_bps;
+    // Early payoff fee, charged when the borrow pays off prematurely
+    uint256 early_payoff_fee_flat;
+    uint256 early_payoff_fee_bps;
     // Helper counter used to ensure every loan has a unique ID
     uint256 humaLoanUniqueIdCounter;
 
@@ -76,25 +88,19 @@ contract HumaPool is HDT, Ownable {
     event LiquidityDeposited(address by, uint256 principal);
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
 
-    constructor(address _poolToken, address _humaPoolAdmins)
+    constructor(
+        address _poolToken,
+        address _humaPoolAdmins,
+        address _humaConfig
+    )
+        //address _humaConfig
         HDT("Huma", "Huma", _poolToken)
     {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
         poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
         humaPoolAdmins = _humaPoolAdmins;
-    }
-
-    // Allow for sensitive pool functions only to be called by
-    // the pool owner and the huma master admin
-    modifier onlyOwnerOrHumaMasterAdmin() {
-        // TODO integrate humaconfig once its ready
-        require(
-            (msg.sender == owner() ||
-                IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) == true),
-            "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
-        );
-        _;
+        humaConfig = _humaConfig;
     }
 
     modifier onlyHumaMasterAdmin() {
@@ -102,17 +108,6 @@ contract HumaPool is HDT, Ownable {
         require(
             IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) == true,
             "HumaPool:PERMISSION_DENIED_NOT_MASTER_ADMIN"
-        );
-        _;
-    }
-
-    // In order for a pool to issue new loans, it must be turned on by an admin
-    // and its custom loan helper must be approved by the Huma team
-    modifier poolOn() {
-        require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
-        require(
-            humaPoolLoanHelper == address(0) || isHumaPoolLoanHelperApproved == true,
-            "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
         );
         _;
     }
@@ -125,7 +120,8 @@ contract HumaPool is HDT, Ownable {
      * @notice LP deposits to the pool to earn interest, and share losses
      * @param amount the number of `poolToken` to be deposited
      */
-    function deposit(uint256 amount) external poolOn returns (bool) {
+    function deposit(uint256 amount) external returns (bool) {
+        poolOn();
         // todo (by RL) Need to check if the pool is open to msg.sender to deposit
         // todo (by RL) Need to add maximal pool size support and check if it has reached the size
 
@@ -185,9 +181,9 @@ contract HumaPool is HDT, Ownable {
         // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
         // number of poolToken, incl. principal,income and losses.
         // then get the portion that msg.sender wants to withdraw (amount / total principal)
-        uint256 amountToWithdraw = withdrawableFundsOf(msg.sender).mul(amount).div(
-            balanceOf(msg.sender)
-        );
+        uint256 amountToWithdraw = withdrawableFundsOf(msg.sender)
+            .mul(amount)
+            .div(balanceOf(msg.sender));
 
         _burn(msg.sender, amtInPower18);
 
@@ -210,11 +206,12 @@ contract HumaPool is HDT, Ownable {
     //********************************************/
     // Apply to borrow from the pool. Borrowing is subject to interest,
     // collateral, and maximum loan requirements as dictated by the pool
-    function borrow(
+    function requestLoan(
         uint256 _borrowAmount,
-        uint256 _paybackInterval,
-        uint256 _paybackPerInterval
-    ) external poolOn returns (bool) {
+        uint256 _paymentInterval,
+        uint256 _numOfPayments
+    ) external returns (bool) {
+        poolOn();
         // Borrowers must not have existing loans from this pool
         require(
             creditMapping[msg.sender] == address(0),
@@ -242,19 +239,27 @@ contract HumaPool is HDT, Ownable {
             );
         }
 
-        creditMapping[msg.sender] = address(
-            new HumaLoan(
-                HumaLoan.InitialValues({
-                    amount: _borrowAmount,
-                    paybackPerInterval: _paybackPerInterval,
-                    paybackInterval: _paybackInterval,
-                    interestRateBasis: interestRateBasis,
-                    pool: address(this)
-                })
-            )
+        // todo Merge with Michael's Factory PR (use CloneFactory)
+        IHumaCredit loan = new HumaLoan();
+
+        // todo connect to global config to get the real address
+        address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
+        //todo Add real collateral info
+        uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
+        loan.initiate(
+            poolLocker,
+            treasuryAddress,
+            msg.sender,
+            address(poolToken),
+            _borrowAmount,
+            address(0),
+            0,
+            terms
         );
 
-        IHumaPoolLocker(poolLocker).transfer(msg.sender, _borrowAmount);
+        creditMapping[msg.sender] = address(loan);
+
+        // todo Replace this statement with a call to risk.approve, which will call loan.approve(...)
 
         // Run custom post-borrowing logic in the loan helper of this pool
         if (humaPoolLoanHelper != address(0)) {
@@ -267,51 +272,76 @@ contract HumaPool is HDT, Ownable {
         return true;
     }
 
-    // Attempt to make a partial payback on a loan if its conditions are met:
-    // - amountPaidBack must be less than amount
-    // - Time passed since lastPaymentTimestamp must equal or exceed paybackInterval
-    // TODO: Add manual payback function
-    function makeIntervalPayback(address _borrower)
-        external
-        returns (bool _success)
-    {
-        (
-            uint256 _amount,
-            uint256 _amountPaidBack,
-            uint256 _issuedTimestamp,
-            uint256 _lastPaymentTimestamp,
-            uint256 _paybackPerInterval,
-            uint256 _paybackInterval,
-            uint256 _interestRateBasis
-        ) = HumaLoan(creditMapping[_borrower]).getLoanInformation();
-
+    function originateLoan() external returns (bool) {
         require(
-            _amountPaidBack < (_amount + (_amount * _interestRateBasis) / 100),
-            "HumaPool:MAKE_INTERVAL_PAYBACK_AMT_EXCEEDED"
+            creditMapping[msg.sender] != address(0),
+            "HumaPool:NO_EXISTING_LOAN_REQUESTS"
         );
-        require(
-            (block.timestamp - _lastPaymentTimestamp >= _paybackInterval) &&
-                (block.timestamp - _issuedTimestamp >= _paybackInterval),
-            "HumaPool:MAKE_INTERVAL_PAYBACK_TOO_EARLY"
-        );
+        HumaLoan humaLoanContract = HumaLoan(creditMapping[msg.sender]);
 
-        // TODO @richard calculate interest rate distribution among lenders here?
-        poolToken.safeTransferFrom(msg.sender, poolLocker, _paybackPerInterval);
+        require(humaLoanContract.isApproved(), "HumaPool:LOAN_NOT_APPROVED");
 
-        HumaLoan(creditMapping[_borrower]).markPayment(_paybackPerInterval);
+        (uint256 amtForBorrower, uint256 amtForTreasury) = humaLoanContract
+            .originateCredit();
 
+        //CRITICAL: Funding the loan
+        //address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
+        address treasuryAddress = humaPoolAdmins;
+        HumaPoolLocker locker = HumaPoolLocker(poolLocker);
+        locker.transfer(treasuryAddress, amtForTreasury);
+        locker.transfer(msg.sender, amtForBorrower);
         return true;
+    }
+
+    /**
+     * Retrieve loan terms from pool config. 
+     //todo It is hard-coded right now. Need to call poll config to get the real data
+    */
+    function getLoanTerms(uint256 _paymentInterval, uint256 _numOfPayments)
+        private
+        view
+        returns (uint256[] memory terms)
+    {
+        terms = new uint256[](9);
+        terms[0] = _numOfPayments; //numOfPayments
+        terms[1] = _paymentInterval; //payment_interval, in days
+        terms[2] = interestRateBasis; //apr_in_bps
+        terms[3] = platform_fee_flat;
+        terms[4] = platform_fee_bps;
+        terms[5] = late_fee_flat;
+        terms[6] = late_fee_bps;
+        terms[7] = early_payoff_fee_flat;
+        terms[8] = early_payoff_fee_bps;
     }
 
     /********************************************/
     //                Settings                  //
     /********************************************/
 
-    function setMaxLoanAmount(uint256 _maxLoanAmount)
-        external
-        onlyOwnerOrHumaMasterAdmin
-        returns (bool)
-    {
+    // Allow for sensitive pool functions only to be called by
+    // the pool owner and the huma master admin
+    function onlyOwnerOrHumaMasterAdmin() private view {
+        require(
+            (msg.sender == owner() ||
+                IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) ==
+                true),
+            "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
+        );
+    }
+
+    // In order for a pool to issue new loans, it must be turned on by an admin
+    // and its custom loan helper must be approved by the Huma team
+    function poolOn() private view {
+        require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
+        require(
+            humaPoolLoanHelper == address(0) ||
+                isHumaPoolLoanHelperApproved == true,
+            "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
+        );
+    }
+
+    function setMaxLoanAmount(uint256 _maxLoanAmount) external returns (bool) {
+        onlyOwnerOrHumaMasterAdmin();
         require(_maxLoanAmount > 0);
         maxLoanAmount = _maxLoanAmount;
 
@@ -320,9 +350,9 @@ contract HumaPool is HDT, Ownable {
 
     function setInterestRateBasis(uint256 _interestRateBasis)
         external
-        onlyOwnerOrHumaMasterAdmin
         returns (bool)
     {
+        onlyOwnerOrHumaMasterAdmin();
         require(_interestRateBasis >= 0);
         interestRateBasis = _interestRateBasis;
 
@@ -331,19 +361,17 @@ contract HumaPool is HDT, Ownable {
 
     function setCollateralRequired(uint256 _collateralRequired)
         external
-        onlyOwnerOrHumaMasterAdmin
         returns (bool)
     {
+        onlyOwnerOrHumaMasterAdmin();
         require(_collateralRequired >= 0);
         collateralRequired = _collateralRequired;
 
         return true;
     }
 
-    function setHumaPoolLoanHelper(address _humaPoolLoanHelper)
-        external
-        onlyOwnerOrHumaMasterAdmin
-    {
+    function setHumaPoolLoanHelper(address _humaPoolLoanHelper) external {
+        onlyOwnerOrHumaMasterAdmin();
         humaPoolLoanHelper = _humaPoolLoanHelper;
         // New loan helpers must be reviewed and approved by the Huma team.
         isHumaPoolLoanHelperApproved = false;
@@ -357,13 +385,15 @@ contract HumaPool is HDT, Ownable {
     }
 
     // Allow borrow applications and loans to be processed by this pool.
-    function enablePool() external onlyOwnerOrHumaMasterAdmin {
+    function enablePool() external {
+        onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.On;
     }
 
     // Reject all future borrow applications and loans. Note that existing
     // loans will still be processed as expected.
-    function disablePool() external onlyOwnerOrHumaMasterAdmin {
+    function disablePool() external {
+        onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.Off;
     }
 
@@ -371,10 +401,10 @@ contract HumaPool is HDT, Ownable {
         return loanWithdrawalLockoutPeriod;
     }
 
-    function setLoanWithdrawalLockoutPeriod(uint256 _loanWithdrawalLockoutPeriod)
-        external
-        onlyOwnerOrHumaMasterAdmin
-    {
+    function setLoanWithdrawalLockoutPeriod(
+        uint256 _loanWithdrawalLockoutPeriod
+    ) external {
+        onlyOwnerOrHumaMasterAdmin();
         loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
     }
 
@@ -402,5 +432,48 @@ contract HumaPool is HDT, Ownable {
 
     function getBalance() public view returns (uint256) {
         return address(this).balance;
+    }
+
+    function setFees(
+        uint256 _platform_fee_flat,
+        uint256 _platform_fee_bps,
+        uint256 _late_fee_flat,
+        uint256 _late_fee_bps,
+        uint256 _early_payoff_fee_flat,
+        uint256 _early_payoff_fee_bps
+    ) public {
+        platform_fee_flat = _platform_fee_flat;
+        platform_fee_bps = _platform_fee_bps;
+        late_fee_flat = _late_fee_flat;
+        late_fee_bps = _late_fee_bps;
+        early_payoff_fee_flat = _early_payoff_fee_flat;
+        early_payoff_fee_bps = _early_payoff_fee_bps;
+    }
+
+    /// returns (maxLoanAmount, interest, and the 6 fee fields)
+    function getPoolSettings()
+        public
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (
+            maxLoanAmount,
+            interestRateBasis,
+            platform_fee_flat,
+            platform_fee_bps,
+            late_fee_flat,
+            late_fee_bps,
+            early_payoff_fee_flat,
+            early_payoff_fee_bps
+        );
     }
 }
