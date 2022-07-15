@@ -160,7 +160,7 @@ contract HumaLoan is IHumaCredit {
         ls.lastLateFeeTimestamp = 0;
         ls.nextDueDate = uint48(block.timestamp + uint256(ls.paymentInterval));
         // todo Calculate the next payment for different payback interval.
-        ls.nextAmountDue = uint16(calcMonthlyPayment());
+        ls.nextAmountDue = uint16(calcInterestOnlyMonthlyPayment());
         ls.remainingPayments = ls.numOfPayments;
 
         loanState = ls;
@@ -203,7 +203,13 @@ contract HumaLoan is IHumaCredit {
         if (ls.remainingPayments == 1) {
             (totalAmount, principal, interest, fees, ) = getPayoffInfo();
         } else {
-            (totalAmount, principal, interest, fees, ) = getNextPayment();
+            (
+                totalAmount,
+                principal,
+                interest,
+                fees,
+
+            ) = getNextPaymentInterestOnly();
         }
 
         // Do not accept partial payments. Requires amount to be able to cover
@@ -246,8 +252,8 @@ contract HumaLoan is IHumaCredit {
         if (li.early_payoff_fee_bps > 0) {
             uint32 remainingPrincipal = li.loanAmount - ls.principalPaidBack;
             penalty.add(
-                remainingPrincipal.mul(li.early_payoff_fee_bps).div(1200)
-            ); //1200 = 100(due to bps) * 12 (convert rate to monthly)
+                remainingPrincipal.mul(li.early_payoff_fee_bps).div(120000)
+            ); //120000 = 10000(due to bps) * 12 (convert rate to monthly)
         }
         ls.feesDue.add(penalty);
         loanInfo = li;
@@ -284,8 +290,8 @@ contract HumaLoan is IHumaCredit {
         ) {
             if (li.late_fee_flat > 0) newFees = li.late_fee_flat;
             if (li.late_fee_bps > 0) {
-                // 1200 = 100 (due to bps) * 12 (convert to monthly), combined for gas opt.
-                newFees += ls.nextAmountDue.mul(li.late_fee_bps).div(1200);
+                // 120000 = 10000 (due to bps) * 12 (convert to monthly), combined for gas opt.
+                newFees += ls.nextAmountDue.mul(li.late_fee_bps).div(120000);
             }
             ls.feesDue.add(newFees);
             ls.lastLateFeeTimestamp = uint48(block.timestamp);
@@ -323,23 +329,23 @@ contract HumaLoan is IHumaCredit {
     {
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
-        uint256 monthlyRate = li.apr_in_bps / 100 / 12;
+        uint256 monthlyRateBP = li.apr_in_bps / 12;
         monthlyPayment = li
             .loanAmount
-            .mul(monthlyRate.mul(monthlyRate.add(1)) ^ ls.numOfPayments)
-            .div(monthlyRate.add(1) ^ ls.numOfPayments.sub(1));
+            .mul(monthlyRateBP.mul(monthlyRateBP.add(10000)) ^ ls.numOfPayments)
+            .div(monthlyRateBP.add(10000) ^ ls.numOfPayments.sub(10000));
     }
 
     /**
      * @notice Calculates the monthly payment for interest only borrowing
      */
-    function calcInterestOnlyMonthlyPayment(LoanInfo calldata li)
+    function calcInterestOnlyMonthlyPayment()
         private
-        pure
+        view
         returns (uint256 amount)
     {
-        uint256 monthlyRate = li.apr_in_bps / 100 / 12;
-        return li.loanAmount.mul(monthlyRate);
+        LoanInfo storage li = loanInfo;
+        return li.loanAmount.mul(li.apr_in_bps).div(120000); //1200=10000*12
     }
 
     /**
@@ -369,9 +375,8 @@ contract HumaLoan is IHumaCredit {
         // which is remaining principal times monthly interest rate. The difference b/w the total amount
         // and the interest payment pays down principal.
         uint256 remainingPrincipal = li.loanAmount - ls.principalPaidBack;
-        interest = remainingPrincipal.mul(li.apr_in_bps).div(1200); // 1200=100*12
+        interest = remainingPrincipal.mul(li.apr_in_bps).div(120000); // 120000=10000*12
         principal = ls.nextAmountDue - interest;
-        fees = assessLateFee();
         return (
             principal + interest + fees,
             principal,
@@ -379,6 +384,31 @@ contract HumaLoan is IHumaCredit {
             fees,
             block.timestamp
         );
+    }
+
+    /**
+     * @notice Gets the information of the next payment due for interest only
+     * @return totalAmount the full amount due for the next payment
+     * @return principal the amount towards principal
+     * @return interest the amount towards interest
+     * @return fees the amount towards fees
+     * @return dueDate the datetime of when the next payment is due
+     */
+    function getNextPaymentInterestOnly()
+        public
+        virtual
+        returns (
+            uint256 totalAmount,
+            uint256 principal,
+            uint256 interest,
+            uint256 fees,
+            uint256 dueDate
+        )
+    {
+        fees = assessLateFee();
+        LoanInfo storage li = loanInfo;
+        interest = li.loanAmount.mul(li.apr_in_bps).div(120000); //120000 = 10000 * 12
+        return (interest + fees, 0, interest, fees, block.timestamp);
     }
 
     /**
@@ -412,16 +442,48 @@ contract HumaLoan is IHumaCredit {
     }
 
     /**
+     * @notice Gets the payoff information
+     * @return total the total amount for the payoff
+     * @return principal the remaining principal amount
+     * @return interest the interest amount for the last period
+     * @return fees fees including early payoff penalty
+     * @return dueDate the date that payment needs to be made for this payoff amount
+     */
+    function getPayoffInfoInterestOnly()
+        public
+        virtual
+        returns (
+            uint256 total,
+            uint256 principal,
+            uint256 interest,
+            uint256 fees,
+            uint256 dueDate
+        )
+    {
+        LoanInfo storage li = loanInfo;
+        principal = li.loanAmount;
+        interest = principal.mul(li.apr_in_bps).div(120000); //1200=10000*12
+        fees = assessLateFee();
+        fees.add(assessEarlyPayoffFees());
+        total = principal + interest + fees;
+        return (total, principal, interest, fees, block.timestamp);
+    }
+
+    /**
      * @notice Gets high-level information about the loan.
      */
     function getLoanInformation()
         external
         view
         returns (
-            uint256 _amount,
-            uint256 _paybackPerInterval,
-            uint256 _paybackInterval,
-            uint256 _interestRateBasis
+            uint32 _amount,
+            uint32 _paybackPerInterval,
+            uint48 _paybackInterval,
+            uint32 _interestRateBasis,
+            uint48 _nextDueDate,
+            uint32 _principalPaidBack,
+            uint16 _remainingPayments,
+            uint16 _numOfPayments
         )
     {
         LoanInfo storage li = loanInfo;
@@ -430,7 +492,11 @@ contract HumaLoan is IHumaCredit {
             li.loanAmount,
             ls.nextAmountDue,
             ls.paymentInterval,
-            li.apr_in_bps
+            li.apr_in_bps,
+            ls.nextDueDate,
+            ls.principalPaidBack,
+            ls.remainingPayments,
+            ls.numOfPayments
         );
     }
 
