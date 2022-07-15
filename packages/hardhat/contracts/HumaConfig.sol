@@ -66,6 +66,7 @@ contract HumaConfig {
         governor = _governor;
         protocolAdmin = _protocolAdmin;
         defaultGracePeriod = 5 days;
+        // Set governor as default treasury, which can be changed via setHumaTreasury().
         humaTreasury = _governor;
         treasuryFee = 50; // 0.5%
         emit ProtocolInitialized();
@@ -104,6 +105,12 @@ contract HumaConfig {
         governor = msg.sender;
         pendingGovernor = address(0);
         emit NewGovernorAccepted(msg.sender);
+    }
+
+    function setHumaTreasury(address treasury) external isGovernor {
+        require(treasury != address(0), "HumaConfig:TREASURY_ADDRESS_ZERO");
+        require(!protocolPaused, "HumaConfig:PROTOCOL_PAUSED");
+        humaTreasury = treasury;
     }
 
     /**

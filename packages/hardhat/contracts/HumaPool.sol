@@ -28,6 +28,9 @@ contract HumaPool is HDT, Ownable {
     address private immutable humaPoolAdmins;
 
     // HumaConfig
+    address private immutable humaConfig;
+
+    // HumaConfig
     // address private immutable humaConfig;
 
     // Liquidity holder proxy contract for this pool
@@ -87,7 +90,11 @@ contract HumaPool is HDT, Ownable {
     event LiquidityDeposited(address by, uint256 principal);
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
 
-    constructor(address _poolToken, address _humaPoolAdmins)
+    constructor(
+        address _poolToken,
+        address _humaPoolAdmins,
+        address _humaConfig
+    )
         //address _humaConfig
         HDT("Huma", "Huma", _poolToken)
     {
@@ -95,7 +102,7 @@ contract HumaPool is HDT, Ownable {
         poolTokenDecimals = ERC20(_poolToken).decimals();
         poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
         humaPoolAdmins = _humaPoolAdmins;
-        //humaConfig = _humaConfig;
+        humaConfig = _humaConfig;
     }
 
     //********************************************/
@@ -229,8 +236,7 @@ contract HumaPool is HDT, Ownable {
         IHumaCredit loan = new HumaLoan();
 
         // todo connect to global config to get the real address
-        //address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
-        address treasuryAddress = humaPoolAdmins;
+        address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
         loan.initiate(
