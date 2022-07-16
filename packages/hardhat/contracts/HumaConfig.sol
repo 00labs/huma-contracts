@@ -8,6 +8,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract HumaConfig {
     using SafeMath for uint256;
 
+    // The network the pools in this config are under (e.g. mainnet, rinkeby)
+    // Used for risk API integration
+    string public network;
+
     /// The Governor is repsonsible for managing all protocol-level configs.
     address public governor;
 
@@ -186,5 +190,9 @@ contract HumaConfig {
 
     function getHumaTreasury() external view returns (address) {
         return humaTreasury;
+    }
+
+    function setNetwork(string memory newNetwork) external isGovernor returns (uint256) {
+        network = newNetwork;
     }
 }
