@@ -243,7 +243,7 @@ contract HumaPool is HDT, Ownable {
         IHumaCredit loan = new HumaLoan();
 
         // todo connect to global config to get the real address
-        address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
+        address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
         loan.initiate(
