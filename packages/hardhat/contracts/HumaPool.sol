@@ -224,7 +224,10 @@ contract HumaPool is HDT, Ownable {
             creditMapping[msg.sender] == address(0),
             "HumaPool:DENY_BORROW_EXISTING_LOAN"
         );
-        // TODO: check token allowance for pool collector
+        require(
+            poolToken.allowance(msg.sender, address(this)) >= _borrowAmount,
+            "HumaPool:DENY_NO_ALLOWANCE"
+        );
 
         // TODO: set a threshold of minimum liquidity we want the pool to maintain for withdrawals
         require(
