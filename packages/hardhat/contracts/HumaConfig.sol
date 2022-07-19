@@ -10,6 +10,10 @@ contract HumaConfig {
     /// The default treasury fee in bps.
     uint256 private constant DEFAULT_TREASURY_FEE = 50; // 0.5%
 
+    // The network the pools in this config are under (e.g. mainnet, rinkeby)
+    // Used for risk API integration
+    string public network;
+
     /// The Governor is repsonsible for managing all protocol-level configs.
     address private governor;
 
@@ -253,5 +257,9 @@ contract HumaConfig {
 
     function getTreasuryFee() public view returns (uint256) {
         return treasuryFee;
+    }
+
+    function setNetwork(string memory newNetwork) external isGovernor {
+        network = newNetwork;
     }
 }
