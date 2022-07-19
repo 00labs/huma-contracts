@@ -8,10 +8,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 contract HumaConfig {
     using SafeMath for uint256;
 
-    // The network the pools in this config are under (e.g. mainnet, rinkeby)
-    // Used for risk API integration
-    string public network;
-
     /// The Governor is repsonsible for managing all protocol-level configs.
     address public governor;
 
@@ -93,6 +89,10 @@ contract HumaConfig {
         emit NewGovernorNominated(newGovernor);
     }
 
+    function getGovernor() external view returns (address) {
+        return governor;
+    }
+
     /**
      @notice Accepts the Governor position. Only the nominated governor can call this function.
      @dev Emits a NewGovernorAccepted event.
@@ -170,6 +170,10 @@ contract HumaConfig {
         emit TreasuryFeeChanged(fee);
     }
 
+    function getTreasuryFee() external view isGovernor returns (uint256) {
+        return treasuryFee;
+    }
+
     /**
       @notice Sets the default grace period. Governor is required to call. 
       @dev Emits DefaultGracePeriodChanged event
@@ -180,7 +184,14 @@ contract HumaConfig {
         emit DefaultGracePeriodChanged(gracePeriod);
     }
 
-    function setNetwork(string memory newNetwork) external isGovernor {
+    function getHumaTreasury() external view returns (address) {
+        return humaTreasury;
+<<<<<<< HEAD
+=======
+    }
+
+    function setNetwork(string memory newNetwork) external isGovernor returns (uint256) {
         network = newNetwork;
+>>>>>>> parent of aed9408e (Merge pull request #35 from 00labs/cleanup)
     }
 }
