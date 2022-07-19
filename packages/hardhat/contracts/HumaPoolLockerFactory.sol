@@ -8,10 +8,10 @@ import "./HumaPoolLocker.sol";
 contract HumaPoolLockerFactory {
     constructor() {}
 
-    function deployNewLocker(address _poolTokenAddress)
+    function deployNewLocker(address _pool, address _poolTokenAddress)
         external
         returns (address)
     {
-        return address(new HumaPoolLocker(address(this), _poolTokenAddress));
+        return address(new HumaPoolLocker(_pool, _poolTokenAddress));
     }
 }
