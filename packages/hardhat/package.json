@@ -12,6 +12,7 @@
     "hardhat-contract-sizer": "^2.6.1"
   },
   "dependencies": {
+    "@chainlink/contracts": "^0.4.1",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
     "@nomiclabs/hardhat-etherscan": "^3.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.0",
