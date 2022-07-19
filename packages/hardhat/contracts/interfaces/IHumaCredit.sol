@@ -15,6 +15,7 @@ enum CreditType {
 interface IHumaCredit {
     /**
      * @notice the initiation of a credit
+     * @param id a unique identifier of this credit implementation
      * @param _poolLocker the address of pool locker that holds the liquidity asset
      * @param _treasury the address of the treasury that accepts fees
      * @param _borrower the address of the borrower
@@ -27,6 +28,7 @@ interface IHumaCredit {
      * @param collateralAmount the amount of the collateral asset
      */
     function initiate(
+        uint256 id,
         address _poolLocker,
         address _treasury,
         address _borrower,
