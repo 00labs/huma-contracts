@@ -2,8 +2,11 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./HumaPool.sol";
+
 import "./interfaces/IHumaPoolAdmins.sol";
+import "./interfaces/IHumaPoolLockerFactory.sol";
+
+import "./HumaPool.sol";
 
 // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol
 
@@ -74,14 +77,22 @@ contract HumaPoolFactory {
         humaPool = payable(
             new HumaPool(
                 _poolTokenAddress,
-                humaPoolLockerFactory,
                 humaPoolAdmins,
                 humaConfig,
                 humaLoanFactory,
                 humaAPIClient
             )
         );
+
+        HumaPool(humaPool).setPoolLocker(
+            IHumaPoolLockerFactory(humaPoolLockerFactory).deployNewLocker(
+                humaPool,
+                _poolTokenAddress
+            )
+        );
+
         HumaPool(humaPool).transferOwnership(msg.sender);
+
         pools.push(humaPool);
 
         IERC20 poolToken = IERC20(_poolTokenAddress);

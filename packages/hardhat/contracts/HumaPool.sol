@@ -95,7 +95,6 @@ contract HumaPool is HDT, Ownable {
 
     constructor(
         address _poolToken,
-        address _poolLocker,
         address _humaPoolAdmins,
         address _humaConfig,
         address _humaLoanFactory,
@@ -106,8 +105,6 @@ contract HumaPool is HDT, Ownable {
     {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
-        // poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
-        poolLocker = _poolLocker;
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
         humaLoanFactory = _humaLoanFactory;
@@ -356,6 +353,13 @@ contract HumaPool is HDT, Ownable {
                 isHumaPoolLoanHelperApproved == true,
             "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
         );
+    }
+
+    function setPoolLocker(address _poolLocker) external returns (bool) {
+        onlyOwnerOrHumaMasterAdmin();
+        poolLocker = _poolLocker;
+
+        return true;
     }
 
     function setMaxLoanAmount(uint256 _maxLoanAmount) external returns (bool) {
