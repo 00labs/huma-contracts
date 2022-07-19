@@ -480,6 +480,7 @@ contract HumaLoan is IHumaCredit {
         external
         view
         returns (
+            uint256 _id,
             uint32 _amount,
             uint32 _paybackPerInterval,
             uint48 _paybackInterval,
@@ -493,6 +494,7 @@ contract HumaLoan is IHumaCredit {
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
         return (
+            li.id,
             li.loanAmount,
             ls.nextAmountDue,
             ls.paymentInterval,

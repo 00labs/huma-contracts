@@ -36,5 +36,7 @@ contract HumaLoanFactory {
             _collateralAmount,
             terms
         );
+
+        return address(humaLoan);
     }
 }
