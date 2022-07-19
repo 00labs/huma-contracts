@@ -14,6 +14,7 @@ import "./HumaPoolLocker.sol";
 import "./HumaAPIClient.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
+import "./HumaLoanFactory.sol";
 
 contract HumaPool is HDT, Ownable {
     using SafeERC20 for IERC20;
@@ -27,14 +28,14 @@ contract HumaPool is HDT, Ownable {
     // HumaConfig
     address private immutable humaConfig;
 
-    // HumaConfig
-    // address private immutable humaConfig;
-
     // Liquidity holder proxy contract for this pool
     address private poolLocker;
 
     // API client used to connect with huma's risk service
     address private humaAPIClient;
+
+    // HumaLoanFactory
+    address private humaLoanFactory;
 
     // todo (by RL) need to check whether it is more efficient to use a struct or 3 mappings.
     struct LenderInfo {
@@ -104,6 +105,7 @@ contract HumaPool is HDT, Ownable {
         poolTokenDecimals = ERC20(_poolToken).decimals();
         poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
         humaAPIClient = address(new HumaAPIClient());
+        humaLoanFactory = address(new HumaLoanFactory());
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
     }
@@ -242,14 +244,12 @@ contract HumaPool is HDT, Ownable {
             );
         }
 
-        // todo Merge with Michael's Factory PR (use CloneFactory)
-        IHumaCredit loan = new HumaLoan();
-
         // todo connect to global config to get the real address
         address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
-        loan.initiate(
+
+        address loan = HumaLoanFactory(humaLoanFactory).deployNewLoan(
             poolLocker,
             treasuryAddress,
             msg.sender,
@@ -259,8 +259,7 @@ contract HumaPool is HDT, Ownable {
             0,
             terms
         );
-
-        creditMapping[msg.sender] = address(loan);
+        creditMapping[msg.sender] = loan;
 
         // todo grab real loan id and fix term
         HumaAPIClient(humaAPIClient).requestRiskApproval(
