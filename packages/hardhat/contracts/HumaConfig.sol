@@ -93,10 +93,6 @@ contract HumaConfig {
         emit NewGovernorNominated(newGovernor);
     }
 
-    function getGovernor() external view returns (address) {
-        return governor;
-    }
-
     /**
      @notice Accepts the Governor position. Only the nominated governor can call this function.
      @dev Emits a NewGovernorAccepted event.
@@ -174,10 +170,6 @@ contract HumaConfig {
         emit TreasuryFeeChanged(fee);
     }
 
-    function getTreasuryFee() external view isGovernor returns (uint256) {
-        return treasuryFee;
-    }
-
     /**
       @notice Sets the default grace period. Governor is required to call. 
       @dev Emits DefaultGracePeriodChanged event
@@ -188,11 +180,7 @@ contract HumaConfig {
         emit DefaultGracePeriodChanged(gracePeriod);
     }
 
-    function getHumaTreasury() external view returns (address) {
-        return humaTreasury;
-    }
-
-    function setNetwork(string memory newNetwork) external isGovernor returns (uint256) {
+    function setNetwork(string memory newNetwork) external isGovernor {
         network = newNetwork;
     }
 }
