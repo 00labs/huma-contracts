@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("hardhat-contract-sizer");
 const { utils } = require("ethers");
 const fs = require("fs");
 const chalk = require("chalk");
@@ -301,6 +302,12 @@ module.exports = {
             mainnet: "DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW",
             // add other network's API key here
         },
+    },
+    contractSizer: {
+        alphaSort: true,
+        disambiguatePaths: false,
+        runOnCompile: true,
+        strict: true,
     },
     abiExporter: {
         path: "../react-app/src/contracts/ABI",
