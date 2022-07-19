@@ -266,15 +266,15 @@ contract HumaPool is HDT, Ownable {
         creditMapping[msg.sender] = loan;
 
         // todo grab real loan id and fix term
-        HumaAPIClient(humaAPIClient).requestRiskApproval(
-            HumaConfig(humaConfig).network(),
-            msg.sender,
-            0,
-            _borrowAmount,
-            terms[2],
-            _paymentInterval,
-            "oneMonth"
-        );
+        // HumaAPIClient(humaAPIClient).requestRiskApproval(
+        //     HumaConfig(humaConfig).network(),
+        //     msg.sender,
+        //     0,
+        //     _borrowAmount,
+        //     terms[2],
+        //     _paymentInterval,
+        //     "oneMonth"
+        // );
 
         // Run custom post-borrowing logic in the loan helper of this pool
         if (humaPoolLoanHelper != address(0)) {

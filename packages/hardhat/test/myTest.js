@@ -276,9 +276,11 @@ describe("Base Contracts", function () {
                 expect(
                     await testTokenContract.balanceOf(borrower.address)
                 ).to.equal(0);
+
                 await humaPoolContract
                     .connect(owner)
                     .setInterestRateBasis(1200);
+
                 await testTokenContract
                     .connect(borrower)
                     .approve(humaPoolContract.address, 0);
@@ -293,7 +295,7 @@ describe("Base Contracts", function () {
 
                 await humaPoolContract
                     .connect(borrower)
-                    .requestLoan(10, 1000, 10);
+                    .requestLoan(100, 30, 12);
 
                 const loanAddress = await humaPoolContract.creditMapping(
                     borrower.address
@@ -302,10 +304,12 @@ describe("Base Contracts", function () {
                     loanAddress,
                     borrower
                 );
+
                 const loanInformation = await loanContract.getLoanInformation();
                 expect(loanInformation._id).to.equal(1);
-                expect(loanInformation._amount).to.equal(10);
-                expect(loanInformation._paybackInterval).to.equal(1000);
+                expect(loanInformation._amount).to.equal(100);
+                expect(loanInformation._paybackPerInterval).to.equal(0);
+                expect(loanInformation._paybackInterval).to.equal(30);
                 expect(loanInformation._interestRateBasis).to.equal(1200);
 
                 // expect(
@@ -326,7 +330,7 @@ describe("Base Contracts", function () {
                 await humaPoolContract
                     .connect(borrower2)
                     .requestLoan(10, 1000, 10);
-                const loanAddress2 = await humaPoolContract.walletToActiveLoan(
+                const loanAddress2 = await humaPoolContract.creditMapping(
                     borrower2.address
                 );
                 const loanContract2 = await getLoanContractFromAddress(
