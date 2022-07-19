@@ -96,18 +96,19 @@ contract HumaPool is HDT, Ownable {
     constructor(
         address _poolToken,
         address _humaPoolAdmins,
-        address _humaConfig
+        address _humaConfig,
+        address _humaLoanFactory,
+        address _humaAPIClient
     )
         //address _humaConfig
         HDT("Huma", "Huma", _poolToken)
     {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
-        poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
-        humaAPIClient = address(new HumaAPIClient());
-        humaLoanFactory = address(new HumaLoanFactory());
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
+        humaLoanFactory = _humaLoanFactory;
+        humaAPIClient = _humaAPIClient;
     }
 
     modifier onlyHumaMasterAdmin() {
@@ -265,15 +266,15 @@ contract HumaPool is HDT, Ownable {
         creditMapping[msg.sender] = loan;
 
         // todo grab real loan id and fix term
-        HumaAPIClient(humaAPIClient).requestRiskApproval(
-            HumaConfig(humaConfig).network(),
-            msg.sender,
-            0,
-            _borrowAmount,
-            terms[2],
-            _paymentInterval,
-            "oneMonth"
-        );
+        // HumaAPIClient(humaAPIClient).requestRiskApproval(
+        //     HumaConfig(humaConfig).network(),
+        //     msg.sender,
+        //     0,
+        //     _borrowAmount,
+        //     terms[2],
+        //     _paymentInterval,
+        //     "oneMonth"
+        // );
 
         // Run custom post-borrowing logic in the loan helper of this pool
         if (humaPoolLoanHelper != address(0)) {
@@ -352,6 +353,13 @@ contract HumaPool is HDT, Ownable {
                 isHumaPoolLoanHelperApproved == true,
             "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
         );
+    }
+
+    function setPoolLocker(address _poolLocker) external returns (bool) {
+        onlyOwnerOrHumaMasterAdmin();
+        poolLocker = _poolLocker;
+
+        return true;
     }
 
     function setMaxLoanAmount(uint256 _maxLoanAmount) external returns (bool) {
