@@ -95,19 +95,23 @@ contract HumaPool is HDT, Ownable {
 
     constructor(
         address _poolToken,
+        address _poolLocker,
         address _humaPoolAdmins,
-        address _humaConfig
+        address _humaConfig,
+        address _humaLoanFactory,
+        address _humaAPIClient
     )
         //address _humaConfig
         HDT("Huma", "Huma", _poolToken)
     {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
-        poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
-        humaAPIClient = address(new HumaAPIClient());
-        humaLoanFactory = address(new HumaLoanFactory());
+        // poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
+        poolLocker = _poolLocker;
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
+        humaLoanFactory = _humaLoanFactory;
+        humaAPIClient = _humaAPIClient;
     }
 
     modifier onlyHumaMasterAdmin() {

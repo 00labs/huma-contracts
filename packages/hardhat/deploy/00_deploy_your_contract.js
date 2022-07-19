@@ -13,34 +13,70 @@ const localChainId = "31337";
 //   );
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
-  const { deploy } = deployments;
-  const { deployer } = await getNamedAccounts();
-  const chainId = await getChainId();
+    const { deploy } = deployments;
+    const { deployer } = await getNamedAccounts();
+    const chainId = await getChainId();
 
-  await deploy("HumaPoolAdmins", {
-    from: deployer,
-    log: true,
-    waitConfirmations: 5,
-  });
+    await deploy("HumaPoolAdmins", {
+        from: deployer,
+        log: true,
+        waitConfirmations: 5,
+    });
 
-  const HumaPoolAdmins = await ethers.getContract("HumaPoolAdmins", deployer);
+    const HumaPoolAdmins = await ethers.getContract("HumaPoolAdmins", deployer);
 
-  await deploy("HumaPoolFactory", {
-    from: deployer,
-    log: true,
-    args: [HumaPoolAdmins.address],
-    waitConfirmations: 5,
-  });
+    await deploy("HumaLoanFactory", {
+        from: deployer,
+        log: true,
+        waitConfirmations: 5,
+    });
 
-  await deploy("TestToken", {
-    from: deployer,
-    log: true,
-    waitConfirmations: 5,
-  });
+    const HumaLoanFactory = await ethers.getContract(
+        "HumaLoanFactory",
+        deployer
+    );
 
-  // Getting a previously deployed contract
-  // const TestToken = await ethers.getContract("TestToken", deployer);
-  /*  await YourContract.setPurpose("Hello");
+    await deploy("HumaAPIClient", {
+        from: deployer,
+        log: true,
+        waitConfirmations: 5,
+    });
+
+    const HumaAPIClient = await ethers.getContract("HumaAPIClient", deployer);
+
+    await deploy("HumaPoolLockerFactory", {
+        from: deployer,
+        log: true,
+        waitConfirmations: 5,
+    });
+
+    const HumaPoolLockerFactory = await ethers.getContract(
+        "HumaPoolLockerFactory",
+        deployer
+    );
+
+    await deploy("HumaPoolFactory", {
+        from: deployer,
+        log: true,
+        args: [
+            HumaPoolAdmins.address,
+            ethers.constants.AddressZero,
+            HumaLoanFactory.address,
+            HumaPoolLockerFactory.address,
+            HumaAPIClient.address,
+        ],
+        waitConfirmations: 5,
+    });
+
+    await deploy("TestToken", {
+        from: deployer,
+        log: true,
+        waitConfirmations: 5,
+    });
+
+    // Getting a previously deployed contract
+    // const TestToken = await ethers.getContract("TestToken", deployer);
+    /*  await YourContract.setPurpose("Hello");
   
     To take ownership of yourContract using the ownable library uncomment next line and add the 
     address you want to be the owner. 
@@ -49,7 +85,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     //const yourContract = await ethers.getContractAt('YourContract', "0xaAC799eC2d00C013f1F11c37E654e59B0429DF6A") //<-- if you want to instantiate a version of a contract at a specific address!
   */
 
-  /*
+    /*
   //If you want to send value to an address from the deployer
   const deployerWallet = ethers.provider.getSigner()
   await deployerWallet.sendTransaction({
@@ -58,14 +94,14 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   })
   */
 
-  /*
+    /*
   //If you want to send some ETH to a contract on deploy (make your constructor payable!)
   const yourContract = await deploy("YourContract", [], {
   value: ethers.utils.parseEther("0.05")
   });
   */
 
-  /*
+    /*
   //If you want to link a library into your contract:
   // reference: https://github.com/austintgriffith/scaffold-eth/blob/using-libraries-example/packages/hardhat/scripts/deploy.js#L19
   // const yourContract = await deploy("YourContract", [], {}, {
@@ -73,20 +109,20 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   // });
   */
 
-  // Verify from the command line by running `yarn verify`
+    // Verify from the command line by running `yarn verify`
 
-  // You can also Verify your contracts with Etherscan here...
-  // You don't want to verify on localhost
-  // try {
-  //   if (chainId !== localChainId) {
-  //     await run("verify:verify", {
-  //       address: YourContract.address,
-  //       contract: "contracts/YourContract.sol:YourContract",
-  //       constructorArguments: [],
-  //     });
-  //   }
-  // } catch (error) {
-  //   console.error(error);
-  // }
+    // You can also Verify your contracts with Etherscan here...
+    // You don't want to verify on localhost
+    // try {
+    //   if (chainId !== localChainId) {
+    //     await run("verify:verify", {
+    //       address: YourContract.address,
+    //       contract: "contracts/YourContract.sol:YourContract",
+    //       constructorArguments: [],
+    //     });
+    //   }
+    // } catch (error) {
+    //   console.error(error);
+    // }
 };
 module.exports.tags = ["YourContract"];
