@@ -44,19 +44,6 @@ describe("Base Contracts", function () {
     });
   });
 
-  describe("HumaConfig", function () {
-    it("Should show the right governor", async function () {
-      expect(await humaConfigContract.getGovernor()).to.equal(owner.address);
-    });
-    it("Should show the right treasury address", async function () {
-      expect(await humaConfigContract.getHumaTreasury()).to.equal(owner.address);
-    });
-    it("Update treasury fee", async function () {
-      await humaConfigContract.setTreasuryFee(50);
-      expect(await humaConfigContract.treasuryFee()).to.equal(50);
-    });
-  });
-
   describe("HumaPoolAdmins", function () {
     it("Only huma master admin can create new pools", async function () {
       await testTokenContract.approve(humaPoolFactoryContract.address, 99999);
