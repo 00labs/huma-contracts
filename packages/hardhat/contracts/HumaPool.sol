@@ -11,7 +11,6 @@ import "./interfaces/IHumaPoolLocker.sol";
 
 import "./HumaLoan.sol";
 import "./HumaPoolLocker.sol";
-import "./HumaAPIClient.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 
@@ -32,9 +31,6 @@ contract HumaPool is HDT, Ownable {
 
     // Liquidity holder proxy contract for this pool
     address private poolLocker;
-
-    // API client used to connect with huma's risk service
-    address private humaAPIClient;
 
     // todo (by RL) need to check whether it is more efficient to use a struct or 3 mappings.
     struct LenderInfo {
@@ -103,7 +99,6 @@ contract HumaPool is HDT, Ownable {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
         poolLocker = address(new HumaPoolLocker(address(this), _poolToken));
-        humaAPIClient = address(new HumaAPIClient());
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
     }
@@ -225,6 +220,8 @@ contract HumaPool is HDT, Ownable {
         // TODO: check token allowance for pool collector
 
         // TODO: set a threshold of minimum liquidity we want the pool to maintain for withdrawals
+
+        // TODO: Check huma API here
         require(
             maxLoanAmount >= _borrowAmount,
             "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
@@ -262,16 +259,7 @@ contract HumaPool is HDT, Ownable {
 
         creditMapping[msg.sender] = address(loan);
 
-        // todo grab real loan id and fix term
-        HumaAPIClient(humaAPIClient).requestRiskApproval(
-            HumaConfig(humaConfig).network(),
-            msg.sender,
-            0,
-            _borrowAmount,
-            terms[2],
-            _paymentInterval,
-            "oneMonth"
-        );
+        // todo Replace this statement with a call to risk.approve, which will call loan.approve(...)
 
         // Run custom post-borrowing logic in the loan helper of this pool
         if (humaPoolLoanHelper != address(0)) {
