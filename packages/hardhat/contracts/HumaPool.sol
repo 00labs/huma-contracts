@@ -95,6 +95,7 @@ contract HumaPool is HDT, Ownable {
 
     constructor(
         address _poolToken,
+        address _poolLocker,
         address _humaPoolAdmins,
         address _humaConfig,
         address _humaLoanFactory,
