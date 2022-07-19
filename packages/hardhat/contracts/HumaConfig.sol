@@ -186,5 +186,12 @@ contract HumaConfig {
 
     function getHumaTreasury() external view returns (address) {
         return humaTreasury;
+<<<<<<< HEAD
+=======
+    }
+
+    function setNetwork(string memory newNetwork) external isGovernor returns (uint256) {
+        network = newNetwork;
+>>>>>>> parent of aed9408e (Merge pull request #35 from 00labs/cleanup)
     }
 }
