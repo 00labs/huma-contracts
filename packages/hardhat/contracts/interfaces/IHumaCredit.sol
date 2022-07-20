@@ -30,6 +30,7 @@ interface IHumaCredit {
     function initiate(
         uint256 id,
         address _poolLocker,
+        address _humaConfig,
         address _treasury,
         address _borrower,
         address liquidityAsset,

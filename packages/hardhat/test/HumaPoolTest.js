@@ -187,6 +187,17 @@ describe("Huma Pool", function () {
     });
 
     describe("Deposit", function () {
+        afterEach(async function () {
+            await humaConfigContract.setProtocolPaused(false);
+        });
+
+        it("Cannot deposit while protocol is paused", async function () {
+            await humaConfigContract.setProtocolPaused(true);
+            await expect(
+                humaPoolContract.connect(lender).deposit(100)
+            ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
+        });
+
         it("Cannot deposit while pool is off", async function () {
             await humaPoolContract.disablePool();
             await expect(
@@ -218,6 +229,17 @@ describe("Huma Pool", function () {
     describe("Withdraw", function () {
         beforeEach(async function () {
             await humaPoolContract.connect(lender).deposit(100);
+        });
+
+        afterEach(async function () {
+            await humaConfigContract.setProtocolPaused(false);
+        });
+
+        it("Should not withdraw while protocol is paused", async function () {
+            await humaConfigContract.setProtocolPaused(true);
+            await expect(
+                humaPoolContract.connect(lender).withdraw(100)
+            ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
         });
 
         it("Should reject if the protocol is off", async function () {
@@ -271,8 +293,15 @@ describe("Huma Pool", function () {
                 .approve(humaPoolContract.address, 99999);
         });
 
-        it("Cannot request loan while the protocol is paused", async function () {
-            // todo coordinate with HumaPool change to implement it
+        afterEach(async function () {
+            await humaConfigContract.setProtocolPaused(false);
+        });
+
+        it("Should not allow loan requests while protocol is paused", async function () {
+            await humaConfigContract.setProtocolPaused(true);
+            await expect(
+                humaPoolContract.connect(borrower).requestLoan(100, 30, 12)
+            ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
         });
 
         it("Cannot request loan while pool is off", async function () {
@@ -354,6 +383,16 @@ describe("Huma Pool", function () {
                     .requestLoan(100, 30, 12);
             });
 
+            afterEach(async function () {
+                await humaConfigContract.setProtocolPaused(false);
+            });
+
+            it("Should not allow loan funding while protocol is paused", async function () {
+                await humaConfigContract.setProtocolPaused(true);
+                await expect(humaPoolContract.connect(borrower).originateLoan())
+                    .to.be.reverted;
+            });
+
             //Borrowing with existing loans should fail
             it("Should not allow repeated loans for the same wallet", async function () {
                 await expect(
@@ -417,7 +456,18 @@ describe("Huma Pool", function () {
                 await humaPoolContract.connect(borrower).originateLoan();
             });
 
-            // todo if the protocol is paused, shall we accept payback?
+            afterEach(async function () {
+                await humaConfigContract.setProtocolPaused(false);
+            });
+
+            it("Should not allow payback while protocol is paused", async function () {
+                await humaConfigContract.setProtocolPaused(true);
+                await expect(
+                    loanContract
+                        .connect(borrower)
+                        .makePayment(testTokenContract.address, 5)
+                ).to.be.reverted;
+            });
 
             // todo if the pool is stopped, shall we accept payback?
 
