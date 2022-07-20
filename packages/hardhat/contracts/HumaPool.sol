@@ -301,7 +301,6 @@ contract HumaPool is HDT, Ownable {
 
         //CRITICAL: Funding the loan
         address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
-        //address treasuryAddress = humaPoolAdmins;
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
         locker.transfer(treasuryAddress, amtForTreasury);
         locker.transfer(msg.sender, amtForBorrower);
