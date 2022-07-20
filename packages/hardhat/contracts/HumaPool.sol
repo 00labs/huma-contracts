@@ -498,4 +498,9 @@ contract HumaPool is HDT, Ownable {
             early_payoff_fee_bps
         );
     }
+
+    function getPoolLockerAddress() external view returns (address) {
+        console.log("In sol b/4 return, poolLocker=", poolLocker);
+        return poolLocker;
+    }
 }

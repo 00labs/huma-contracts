@@ -35,7 +35,8 @@ describe("Huma Pool", function () {
     let treasury;
 
     before(async function () {
-        [owner, lender, borrower, borrower2] = await ethers.getSigners();
+        [owner, lender, borrower, borrower2, treasury] =
+            await ethers.getSigners();
 
         const HumaPoolAdmins = await ethers.getContractFactory(
             "HumaPoolAdmins"
@@ -47,6 +48,7 @@ describe("Huma Pool", function () {
             owner.address,
             owner.address
         );
+        humaConfigContract.setHumaTreasury(treasury.address);
 
         const HumaLoanFactory = await ethers.getContractFactory(
             "HumaLoanFactory"
@@ -424,45 +426,18 @@ describe("Huma Pool", function () {
                     30 * 24 * 3600,
                 ]);
 
-                const loanInformation = await loanContract.getLoanInformation();
-                console.log("amount", loanInformation._amount);
-                console.log(
-                    "amount per payback",
-                    loanInformation._paybackPerInterval
-                );
-                console.log(
-                    "payback interval",
-                    loanInformation._paybackInterval
-                );
-                console.log(
-                    "interest rate",
-                    loanInformation._interestRateBasis
-                );
-                console.log("Next due date", loanInformation._nextDueDate);
-                console.log(
-                    "principal paid back",
-                    loanInformation._principalPaidBack
-                );
-                console.log(
-                    "remaining payments",
-                    loanInformation._remainingPayments
-                );
-                console.log(
-                    "number of payments",
-                    loanInformation._numOfPayments
-                );
+                await testTokenContract
+                    .connect(borrower)
+                    .approve(loanContract.address, 5);
 
-                console.log(
-                    ethers.utils.formatEther(
-                        await testTokenContract.balanceOf(borrower.address)
-                    )
-                );
+                await loanContract
+                    .connect(borrower)
+                    .makePayment(testTokenContract.address, 5);
 
-                // todo the test complains not enough balance in the test account. Thre is a bug in the code.
-                // await loanContract
-                //   .connect(borrower)
-                //   .makePayment(testTokenContract.address, 20);
-                // expect(loanInformation._amountPaidBack).to.equal(20);
+                let loanInfo = await loanContract.getLoanInformation();
+
+                expect(loanInfo._principalPaidBack).to.equal(4);
+                expect(loanInfo._remainingPayments).to.equal(11);
             });
         });
     });
