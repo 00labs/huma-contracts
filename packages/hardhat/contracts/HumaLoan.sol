@@ -24,7 +24,7 @@ contract HumaLoan is IHumaCredit {
     using SafeMathUint for uint16;
     using SafeMathUint for uint32;
 
-    address public poolLocker;
+    address private poolLocker;
     address public treasury;
     address public borrower;
     bool public approved;
@@ -239,8 +239,8 @@ contract HumaLoan is IHumaCredit {
 
         // todo, use config to get treasury address
         IERC20 assetIERC20 = IERC20(li.liquidityAsset);
-        assetIERC20.transfer(treasury, fees);
-        assetIERC20.transfer(poolLocker, totalAmount);
+        assetIERC20.transferFrom(msg.sender, treasury, fees);
+        assetIERC20.transferFrom(msg.sender, poolLocker, totalAmount);
 
         return true;
     }
