@@ -500,7 +500,6 @@ contract HumaPool is HDT, Ownable {
     }
 
     function getPoolLockerAddress() external view returns (address) {
-        console.log("In sol b/4 return, poolLocker=", poolLocker);
         return poolLocker;
     }
 }
