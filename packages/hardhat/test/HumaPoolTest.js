@@ -172,11 +172,33 @@ describe("Huma Pool", function () {
     });
 
     describe("Huma Pool Settings", function () {
-        it("Set pool fees and parameters", async function () {
-            var [maxLoanAmount, interest, f1, f2, f3, f4, f5, f6] =
-                await humaPoolContract.getPoolSettings();
-            expect(maxLoanAmount).to.equal(100);
+        //setPoolLiquidityCap
+        it("Should be able to change pool liquidity cap", async function () {
+            await humaPoolContract.setPoolLiquidityCap(1000000);
+            var [, , , , cap] = await humaPoolContract.getPoolSummary();
+
+            expect(cap).to.equal(1000000);
+        });
+
+        it("Should have the right liquidity token and interest", async function () {
+            var [token, interest] = await humaPoolContract.getPoolSummary();
+
+            expect(token).to.equal(testTokenContract.address);
             expect(interest).to.equal(1200);
+        });
+
+        it("Should be able to set min and max credit size", async function () {
+            await humaPoolContract.setMinMaxCreditAmount(100, 10000);
+            var [token, interest, min, max] =
+                await humaPoolContract.getPoolSummary();
+
+            expect(min).to.equal(100);
+            expect(max).to.equal(10000);
+        });
+
+        it("Set pool fees and parameters", async function () {
+            var [interest, f1, f2, f3, f4, f5, f6] =
+                await humaPoolContract.getPoolFees();
             expect(f1).to.equal(10);
             expect(f2).to.equal(0);
             expect(f3).to.equal(0);
