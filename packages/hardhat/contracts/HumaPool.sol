@@ -23,44 +23,45 @@ contract HumaPool is HDT, Ownable {
     uint256 constant POWER18 = 10**18;
 
     // HumaPoolAdmins
-    address private immutable humaPoolAdmins;
+    address internal immutable humaPoolAdmins;
 
     // HumaConfig
-    address private immutable humaConfig;
+    address internal immutable humaConfig;
 
     // Liquidity holder proxy contract for this pool
-    address private poolLocker;
+    address internal poolLocker;
 
     // API client used to connect with huma's risk service
-    address private humaAPIClient;
+    address internal humaAPIClient;
 
     // HumaLoanFactory
-    address private humaLoanFactory;
+    address internal humaLoanFactory;
 
-    // todo (by RL) need to check whether it is more efficient to use a struct or 3 mappings.
-    struct LenderInfo {
-        uint256 amount;
-        uint256 weightedDepositDate; // weighted average deposit date
-        uint256 mostRecentLoanTimestamp;
-    }
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
-    mapping(address => LenderInfo) private lenderInfo;
+    mapping(address => LenderInfo) internal lenderInfo;
 
     // Tracks currently issued loans from this pool
     // Maps from wallet to Loan
+    // todo need to change to internal
     mapping(address => address) public creditMapping;
 
     // The ERC20 token this pool manages
-    IERC20 public immutable poolToken;
-    uint256 private immutable poolTokenDecimals;
+    IERC20 internal immutable poolToken;
+    uint256 internal immutable poolTokenDecimals;
 
     // An optional utility contract that implements IHumaPoolLoanHelper,
     // for additional logic on top of the pool's borrow functionality
-    address private humaPoolLoanHelper;
-    bool private isHumaPoolLoanHelperApproved = false;
+    address internal humaPoolLoanHelper;
+    bool internal isHumaPoolLoanHelperApproved = false;
+
+    // The max liquidity allowed for the pool.
+    uint256 internal liquidityCap;
+
+    // the min amount each loan/credit. 
+    uint256 internal minCreditAmount;
 
     // The maximum amount of poolTokens that this pool allows in a single loan
-    uint256 maxLoanAmount;
+    uint256 maxCreditAmount;
 
     // The interest rate this pool charges for loans
     uint256 interestRateBasis;
@@ -80,15 +81,23 @@ contract HumaPool is HDT, Ownable {
     // Helper counter used to ensure every loan has a unique ID
     uint256 humaLoanUniqueIdCounter;
 
-    enum PoolStatus {
-        On,
-        Off
-    }
     PoolStatus public status = PoolStatus.Off;
 
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
     uint256 loanWithdrawalLockoutPeriod = 2630000;
+
+    // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
+    struct LenderInfo {
+        uint256 amount;
+        uint256 weightedDepositDate; // weighted average deposit date
+        uint256 mostRecentLoanTimestamp;
+    }
+
+    enum PoolStatus {
+        On,
+        Off
+    }
 
     event LiquidityDeposited(address by, uint256 principal);
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
@@ -231,7 +240,7 @@ contract HumaPool is HDT, Ownable {
 
         // TODO: set a threshold of minimum liquidity we want the pool to maintain for withdrawals
         require(
-            maxLoanAmount >= _borrowAmount,
+            maxCreditAmount >= _borrowAmount,
             "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
         );
 
@@ -365,7 +374,7 @@ contract HumaPool is HDT, Ownable {
     function setMaxLoanAmount(uint256 _maxLoanAmount) external returns (bool) {
         onlyOwnerOrHumaMasterAdmin();
         require(_maxLoanAmount > 0);
-        maxLoanAmount = _maxLoanAmount;
+        maxCreditAmount = _maxLoanAmount;
 
         return true;
     }
@@ -430,6 +439,40 @@ contract HumaPool is HDT, Ownable {
         loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
     }
 
+    /**
+     * @notice Sets the cap of the pool liquidity. 
+     */
+    function setPoolLiquidityCap(uint256 cap) external {
+        onlyOwnerOrHumaMasterAdmin();
+        liquidityCap = cap;
+    }
+
+    /**
+     * @notice Sets the min and max of each loan/credit allowed by the pool. 
+     */
+    function setMinMaxCreditAmount(uint256 minAmt, uint256 maxAmt) external {
+        onlyOwnerOrHumaMasterAdmin();
+        minCreditAmount = minAmt;
+        maxCreditAmount = maxAmt;
+    }
+ 
+    function setFees(
+        uint256 _platform_fee_flat,
+        uint256 _platform_fee_bps,
+        uint256 _late_fee_flat,
+        uint256 _late_fee_bps,
+        uint256 _early_payoff_fee_flat,
+        uint256 _early_payoff_fee_bps
+    ) public {
+        platform_fee_flat = _platform_fee_flat;
+        platform_fee_bps = _platform_fee_bps;
+        late_fee_flat = _late_fee_flat;
+        late_fee_bps = _late_fee_bps;
+        early_payoff_fee_flat = _early_payoff_fee_flat;
+        early_payoff_fee_bps = _early_payoff_fee_bps;
+    }
+
+
     function getLenderInfo(address _lender)
         public
         view
@@ -456,28 +499,15 @@ contract HumaPool is HDT, Ownable {
         return address(this).balance;
     }
 
-    function setFees(
-        uint256 _platform_fee_flat,
-        uint256 _platform_fee_bps,
-        uint256 _late_fee_flat,
-        uint256 _late_fee_bps,
-        uint256 _early_payoff_fee_flat,
-        uint256 _early_payoff_fee_bps
-    ) public {
-        platform_fee_flat = _platform_fee_flat;
-        platform_fee_bps = _platform_fee_bps;
-        late_fee_flat = _late_fee_flat;
-        late_fee_bps = _late_fee_bps;
-        early_payoff_fee_flat = _early_payoff_fee_flat;
-        early_payoff_fee_bps = _early_payoff_fee_bps;
+    function getPoolSummary() public view returns (address token, uint apr, uint minCreditAmt, uint maxCreditAmt, uint liquiditycap) {
+        return (address(poolToken), interestRateBasis, minCreditAmount, maxCreditAmount, liquidityCap);
     }
 
     /// returns (maxLoanAmount, interest, and the 6 fee fields)
-    function getPoolSettings()
+    function getPoolFees()
         public
         view
         returns (
-            uint256,
             uint256,
             uint256,
             uint256,
@@ -488,7 +518,6 @@ contract HumaPool is HDT, Ownable {
         )
     {
         return (
-            maxLoanAmount,
             interestRateBasis,
             platform_fee_flat,
             platform_fee_bps,
