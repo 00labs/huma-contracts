@@ -100,7 +100,6 @@ contract HumaPool is HDT, Ownable {
         address _humaLoanFactory,
         address _humaAPIClient
     )
-        //address _humaConfig
         HDT("Huma", "Huma", _poolToken)
     {
         poolToken = IERC20(_poolToken);
@@ -169,7 +168,7 @@ contract HumaPool is HDT, Ownable {
      *      withdrawn will be the `amount` plus associated interest and losses.
      */
     function withdraw(uint256 amount) public returns (bool) {
-        // todo(by RL) require the pool has not paused withdraw
+        poolOn();
         require(
             amount <= lenderInfo[msg.sender].amount,
             "HumaPool:WITHDRAW_AMT_TOO_GREAT"
@@ -248,13 +247,13 @@ contract HumaPool is HDT, Ownable {
             );
         }
 
-        // todo connect to global config to get the real address
         address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
 
         address loan = HumaLoanFactory(humaLoanFactory).deployNewLoan(
             poolLocker,
+            humaConfig,
             treasuryAddress,
             msg.sender,
             address(poolToken),
@@ -288,6 +287,7 @@ contract HumaPool is HDT, Ownable {
     }
 
     function originateLoan() external returns (bool) {
+        poolOn();
         require(
             creditMapping[msg.sender] != address(0),
             "HumaPool:NO_EXISTING_LOAN_REQUESTS"
@@ -300,8 +300,7 @@ contract HumaPool is HDT, Ownable {
             .originateCredit();
 
         //CRITICAL: Funding the loan
-        //address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
-        address treasuryAddress = humaPoolAdmins;
+        address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
         locker.transfer(treasuryAddress, amtForTreasury);
         locker.transfer(msg.sender, amtForBorrower);
@@ -347,6 +346,7 @@ contract HumaPool is HDT, Ownable {
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
     function poolOn() private view {
+        require(HumaConfig(humaConfig).isProtocolPaused() == false, "HumaPool:PROTOCOL_PAUSED");
         require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
         require(
             humaPoolLoanHelper == address(0) ||

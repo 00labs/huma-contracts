@@ -25,8 +25,9 @@ contract HumaLoan is IHumaCredit {
     using SafeMathUint for uint32;
 
     address private poolLocker;
+    address private humaConfig;
     address public treasury;
-    address public borrower;
+    address public borrower; 
     bool public approved;
     LoanInfo public loanInfo;
     LoanState public loanState;
@@ -98,6 +99,7 @@ contract HumaLoan is IHumaCredit {
     function initiate(
         uint256 id,
         address _poolLocker,
+        address _humaConfig,
         address _treasury,
         address _borrower,
         address liquidityAsset,
@@ -106,6 +108,8 @@ contract HumaLoan is IHumaCredit {
         uint256 collateralAmount,
         uint256[] memory terms
     ) external virtual override {
+        humaConfig = _humaConfig;
+        protoNotPaused();
         poolLocker = _poolLocker;
         treasury = _treasury;
         borrower = _borrower;
@@ -138,8 +142,9 @@ contract HumaLoan is IHumaCredit {
     /**
      * Approves the loan request with the terms on record.
      */
-    function approve() external virtual override returns (bool) {
+    function approve() external virtual override returns (bool)  {
         // todo add access control.
+        protoNotPaused();
         approved = true;
         return approved;
     }
@@ -157,6 +162,7 @@ contract HumaLoan is IHumaCredit {
         override
         returns (uint256 amtForBorrower, uint256 amtForTreasury)
     {
+        protoNotPaused();
         require(approved, "HumaLoan:LOAN_NOT_APPROVED");
 
         LoanState storage ls = loanState;
@@ -193,6 +199,7 @@ contract HumaLoan is IHumaCredit {
         override
         returns (bool)
     {
+        protoNotPaused();
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
 
@@ -514,5 +521,12 @@ contract HumaLoan is IHumaCredit {
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
         return li.loanAmount.sub(ls.principalPaidBack);
+    }
+
+    function protoNotPaused() internal view{
+        require(
+            HumaConfig(humaConfig).isProtocolPaused() == false,
+            "HumaLoan:PROTOCOL_PAUSED"
+        );
     }
 }

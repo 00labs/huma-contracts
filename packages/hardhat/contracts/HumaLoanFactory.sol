@@ -15,6 +15,7 @@ contract HumaLoanFactory {
     // Create a new loan. Refer to HumaLoan.initiate for parameter details
     function deployNewLoan(
         address _poolLocker,
+        address _humaConfig,
         address _treasury,
         address _borrower,
         address _poolToken,
@@ -24,10 +25,12 @@ contract HumaLoanFactory {
         uint256[] memory terms
     ) external returns (address) {
         humaLoanUniqueIdCounter += 1;
+
         HumaLoan humaLoan = new HumaLoan();
         humaLoan.initiate(
             humaLoanUniqueIdCounter,
             _poolLocker,
+            _humaConfig,
             _treasury,
             _borrower,
             _poolToken,
