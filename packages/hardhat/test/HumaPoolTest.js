@@ -103,7 +103,7 @@ describe("Huma Pool", function () {
         await humaPoolContract.addCreditApprover(creditApprover.address);
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
-        await humaPoolContract.setMinMaxBorrowAmount(10, 100);
+        await humaPoolContract.setMinMaxBorrowAmt(10, 100);
         await humaPoolContract.enablePool();
         await humaPoolContract.setFees(10, 0, 0, 0, 0, 0);
 
@@ -191,7 +191,7 @@ describe("Huma Pool", function () {
         });
 
         it("Should be able to set min and max credit size", async function () {
-            await humaPoolContract.setMinMaxBorrowAmount(10, 100);
+            await humaPoolContract.setMinMaxBorrowAmt(10, 100);
             var [token, interest, min, max] =
                 await humaPoolContract.getPoolSummary();
 
@@ -386,7 +386,7 @@ describe("Huma Pool", function () {
                 humaPoolContract
                     .connect(lender)
                     .postApprovedLoanRequest(borrower.address, 100, 30, 12)
-            ).to.be.revertedWith("HumaPool:ILLEGAL_LOAN_REQUESTER");
+            ).to.be.revertedWith("HumaPool:ILLEGAL_LOAN_POSTER");
         });
 
         it("Should not allow posting approved loans while protocol is paused", async function () {

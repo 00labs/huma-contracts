@@ -58,7 +58,7 @@ contract HumaPool is HDT, Ownable {
     uint256 internal liquidityCap;
 
     // the min amount each loan/credit. 
-    uint256 internal minBorrowAmount;
+    uint256 internal minBorrowAmt;
 
     // The maximum amount of poolTokens that this pool allows in a single loan
     uint256 maxBorrowAmt;
@@ -103,7 +103,7 @@ contract HumaPool is HDT, Ownable {
     }
 
     event LiquidityDeposited(address by, uint256 principal);
-    event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
+    event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmt);
 
     constructor(
         address _poolToken,
@@ -226,26 +226,26 @@ contract HumaPool is HDT, Ownable {
     // Apply to borrow from the pool. Borrowing is subject to interest,
     // collateral, and maximum loan requirements as dictated by the pool
     function requestLoan(
-        uint256 _borrowAmount,
+        uint256 _borrowAmt,
         uint256 _paymentInterval,
         uint256 _numOfPayments
     ) external returns (bool) {
         poolOn();
-        _requestLoan(msg.sender, _borrowAmount, _paymentInterval, _numOfPayments);
+        _requestLoan(msg.sender, _borrowAmt, _paymentInterval, _numOfPayments);
         return true;
     }
 
-    function postApprovedLoanRequest(address borrower, uint256 _borrowAmount,
+    function postApprovedLoanRequest(address borrower, uint256 _borrowAmt,
         uint256 _paymentInterval,
         uint256 _numOfPayments) public returns (address) {
         poolOn();
-        require(creditApprovers[msg.sender] == true, "HumaPool:ILLEGAL_LOAN_REQUESTER");
-        address loanAddress = _requestLoan(borrower, _borrowAmount, _paymentInterval, _numOfPayments);
+        require(creditApprovers[msg.sender] == true, "HumaPool:ILLEGAL_LOAN_POSTER");
+        address loanAddress = _requestLoan(borrower, _borrowAmt, _paymentInterval, _numOfPayments);
         HumaLoan(loanAddress).approve();
         return loanAddress;
     }    
 
-    function _requestLoan(address borrower, uint256 _borrowAmount,
+    function _requestLoan(address borrower, uint256 _borrowAmt,
         uint256 _paymentInterval,
         uint256 _numOfPayments) internal returns (address loan) {
         // Borrowers must not have existing loans from this pool
@@ -256,13 +256,13 @@ contract HumaPool is HDT, Ownable {
 
         // Borrowing amount needs to be higher than min for the pool.
         require(
-            _borrowAmount >= minBorrowAmount,
+            _borrowAmt >= minBorrowAmt,
             "HumaPool:DENY_BORROW_SMALLER_THAN_LIMIT"
         );
 
         // Borrowing amount needs to be lower than max for the pool.
         require(
-            maxBorrowAmt >= _borrowAmount,
+            maxBorrowAmt >= _borrowAmt,
             "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
         );
 
@@ -272,7 +272,7 @@ contract HumaPool is HDT, Ownable {
             require(
                 IHumaPoolLoanHelper(humaPoolLoanHelper).evaluateBorrowRequest(
                     borrower,
-                    _borrowAmount
+                    _borrowAmt
                 ),
                 "HumaPool:BORROW_DENIED_POOL_LOAN_HELPER"
             );
@@ -288,7 +288,7 @@ contract HumaPool is HDT, Ownable {
             treasuryAddress,
             borrower,
             address(poolToken),
-            _borrowAmount,
+            _borrowAmt,
             address(0),
             0,
             terms
@@ -300,7 +300,7 @@ contract HumaPool is HDT, Ownable {
         //     HumaConfig(humaConfig).network(),
         //     msg.sender,
         //     0,
-        //     _borrowAmount,
+        //     _borrowAmt,
         //     terms[2],
         //     _paymentInterval,
         //     "oneMonth"
@@ -310,7 +310,7 @@ contract HumaPool is HDT, Ownable {
         if (humaPoolLoanHelper != address(0)) {
             IHumaPoolLoanHelper(humaPoolLoanHelper).postBorrowRequest(
                 borrower,
-                _borrowAmount
+                _borrowAmt
             );
         }
 
@@ -405,11 +405,11 @@ contract HumaPool is HDT, Ownable {
     /**
      * @notice Sets the min and max of each loan/credit allowed by the pool. 
      */
-    function setMinMaxBorrowAmount(uint256 minAmt, uint256 maxAmt) external {
+    function setMinMaxBorrowAmt(uint256 minAmt, uint256 maxAmt) external {
         onlyOwnerOrHumaMasterAdmin();
         require(minAmt > 0, "HumaPool:MINAMT_IS_ZERO");
         require(maxAmt >= minAmt, "HumaPool:MAXAMIT_LESS_THAN_MINAMT");
-        minBorrowAmount = minAmt;
+        minBorrowAmt = minAmt;
         maxBorrowAmt = maxAmt;
     }
 
@@ -525,10 +525,10 @@ contract HumaPool is HDT, Ownable {
     }
 
     function getPoolSummary() public view returns (address token, uint apr, uint minCreditAmt, uint maxCreditAmt, uint liquiditycap) {
-        return (address(poolToken), interestRateBasis, minBorrowAmount, maxBorrowAmt, liquidityCap);
+        return (address(poolToken), interestRateBasis, minBorrowAmt, maxBorrowAmt, liquidityCap);
     }
 
-    /// returns (maxLoanAmount, interest, and the 6 fee fields)
+    /// returns (maxLoanAmt, interest, and the 6 fee fields)
     function getPoolFees()
         public
         view
