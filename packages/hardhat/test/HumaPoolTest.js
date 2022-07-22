@@ -196,7 +196,14 @@ describe("Huma Pool", function () {
             expect(max).to.equal(10000);
         });
 
+        it("Should not allow users other than pool owner or super admin to set fees", async function () {
+            await expect(
+                humaPoolContract.connect(lender).setFees(20, 0, 0, 0, 0, 0)
+            ).to.be.revertedWith("HumaPool:PERMISSION_DENIED_NOT_ADMIN");
+        });
+
         it("Set pool fees and parameters", async function () {
+            await humaPoolContract.connect(owner).setFees(10, 0, 0, 0, 0, 0);
             var [interest, f1, f2, f3, f4, f5, f6] =
                 await humaPoolContract.getPoolFees();
             expect(f1).to.equal(10);
