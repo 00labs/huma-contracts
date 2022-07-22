@@ -14,7 +14,7 @@ describe("Base Contracts", function () {
     let humaPoolFactoryContract;
     let humaPoolContract;
     let humaConfigContract;
-    let humaLoanFactoryContract;
+    let humaCreditFactoryContract;
     let humaPoolLockerFactoryContract;
     let humaAPIClientContract;
     let testTokenContract;
@@ -37,10 +37,10 @@ describe("Base Contracts", function () {
             owner.address
         );
 
-        const HumaLoanFactory = await ethers.getContractFactory(
-            "HumaLoanFactory"
+        const HumaCreditFactory = await ethers.getContractFactory(
+            "HumaCreditFactory"
         );
-        humaLoanFactoryContract = await HumaLoanFactory.deploy();
+        humaCreditFactoryContract = await HumaCreditFactory.deploy();
 
         const HumaPoolLockerFactory = await ethers.getContractFactory(
             "HumaPoolLockerFactory"
@@ -56,7 +56,7 @@ describe("Base Contracts", function () {
         humaPoolFactoryContract = await HumaPoolFactory.deploy(
             humaPoolAdminsContract.address,
             humaConfigContract.address,
-            humaLoanFactoryContract.address,
+            humaCreditFactoryContract.address,
             humaPoolLockerFactoryContract.address,
             humaAPIClientContract.address
         );
