@@ -464,6 +464,7 @@ contract HumaPool is HDT, Ownable {
         uint256 _early_payoff_fee_flat,
         uint256 _early_payoff_fee_bps
     ) public {
+        onlyOwnerOrHumaMasterAdmin();
         platform_fee_flat = _platform_fee_flat;
         platform_fee_bps = _platform_fee_bps;
         late_fee_flat = _late_fee_flat;
