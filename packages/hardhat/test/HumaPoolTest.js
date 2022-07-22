@@ -33,9 +33,10 @@ describe("Huma Pool", function () {
     let borrower;
     let borrower2;
     let treasury;
+    let creditApprover;
 
     before(async function () {
-        [owner, lender, borrower, borrower2, treasury] =
+        [owner, lender, borrower, borrower2, treasury, creditApprover] =
             await ethers.getSigners();
 
         const HumaPoolAdmins = await ethers.getContractFactory(
@@ -99,8 +100,10 @@ describe("Huma Pool", function () {
             owner
         );
 
+        await humaPoolContract.addCreditApprover(creditApprover.address);
+
         await humaPoolContract.setInterestRateBasis(1200); //bps
-        await humaPoolContract.setMaxLoanAmount(100);
+        await humaPoolContract.setMinMaxBorrowAmount(10, 100);
         await humaPoolContract.enablePool();
         await humaPoolContract.setFees(10, 0, 0, 0, 0, 0);
 
@@ -188,12 +191,12 @@ describe("Huma Pool", function () {
         });
 
         it("Should be able to set min and max credit size", async function () {
-            await humaPoolContract.setMinMaxCreditAmount(100, 10000);
+            await humaPoolContract.setMinMaxBorrowAmount(10, 100);
             var [token, interest, min, max] =
                 await humaPoolContract.getPoolSummary();
 
-            expect(min).to.equal(100);
-            expect(max).to.equal(10000);
+            expect(min).to.equal(10);
+            expect(max).to.equal(100);
         });
 
         it("Set pool fees and parameters", async function () {
@@ -333,13 +336,19 @@ describe("Huma Pool", function () {
             ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
         });
 
+        it("Cannot request loan lower than limit", async function () {
+            await expect(
+                humaPoolContract.connect(borrower).requestLoan(5, 30, 12)
+            ).to.be.revertedWith("HumaPool:DENY_BORROW_SMALLER_THAN_LIMIT");
+        });
+
         it("Cannot request loan greater than limit", async function () {
             await expect(
                 humaPoolContract.connect(borrower).requestLoan(9999, 30, 12)
             ).to.be.revertedWith("HumaPool:DENY_BORROW_GREATER_THAN_LIMIT");
         });
 
-        it("Loan initiates correctly", async function () {
+        it("Loan requested by borrower initiates correctly", async function () {
             expect(
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
@@ -349,10 +358,6 @@ describe("Huma Pool", function () {
             await testTokenContract
                 .connect(borrower)
                 .approve(humaPoolContract.address, 0);
-
-            await expect(
-                humaPoolContract.connect(borrower).requestLoan(10, 1000, 10)
-            ).to.be.revertedWith("HumaPool:DENY_NO_ALLOWANCE");
 
             await testTokenContract
                 .connect(borrower)
@@ -370,6 +375,76 @@ describe("Huma Pool", function () {
 
             const loanInformation = await loanContract.getLoanInformation();
             expect(loanInformation._id).to.equal(1);
+            expect(loanInformation._amount).to.equal(100);
+            expect(loanInformation._paybackPerInterval).to.equal(0);
+            expect(loanInformation._paybackInterval).to.equal(30);
+            expect(loanInformation._interestRateBasis).to.equal(1200);
+        });
+
+        it("Should only allow credit approvers to post approved loan requests", async function () {
+            await expect(
+                humaPoolContract
+                    .connect(lender)
+                    .postApprovedLoanRequest(borrower.address, 100, 30, 12)
+            ).to.be.revertedWith("HumaPool:ILLEGAL_LOAN_REQUESTER");
+        });
+
+        it("Should not allow posting approved loans while protocol is paused", async function () {
+            await humaConfigContract.setProtocolPaused(true);
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .postApprovedLoanRequest(borrower.address, 100, 30, 12)
+            ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
+        });
+
+        it("Should not allow posting approved laons while pool is off", async function () {
+            await humaPoolContract.disablePool();
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .postApprovedLoanRequest(borrower.address, 100, 30, 12)
+            ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
+        });
+
+        it("Cannot post approved loan with amount lower than limit", async function () {
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .postApprovedLoanRequest(borrower.address, 5, 30, 12)
+            ).to.be.revertedWith("HumaPool:DENY_BORROW_SMALLER_THAN_LIMIT");
+        });
+
+        it("Cannot post approved loan with amount greater than limit", async function () {
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .postApprovedLoanRequest(borrower.address, 9999, 30, 12)
+            ).to.be.revertedWith("HumaPool:DENY_BORROW_GREATER_THAN_LIMIT");
+        });
+
+        it("Should post approved loan successfully", async function () {
+            expect(
+                await testTokenContract.balanceOf(borrower.address)
+            ).to.equal(0);
+
+            await humaPoolContract.connect(owner).setInterestRateBasis(1200);
+
+            await humaPoolContract
+                .connect(creditApprover)
+                .postApprovedLoanRequest(borrower.address, 100, 30, 12);
+
+            const loanAddress = await humaPoolContract.creditMapping(
+                borrower.address
+            );
+
+            const loanContract = await getLoanContractFromAddress(
+                loanAddress,
+                borrower
+            );
+
+            const loanInformation = await loanContract.getLoanInformation();
+            expect(loanInformation._id).to.equal(2);
             expect(loanInformation._amount).to.equal(100);
             expect(loanInformation._paybackPerInterval).to.equal(0);
             expect(loanInformation._paybackInterval).to.equal(30);
@@ -394,7 +469,7 @@ describe("Huma Pool", function () {
                 );
                 const loanInformation2 =
                     await loanContract2.getLoanInformation();
-                expect(loanInformation2._id).to.equal(2);
+                expect(loanInformation2._id).to.equal(3);
             });
         });
 
