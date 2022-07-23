@@ -128,34 +128,42 @@ describe("Huma Pool", function () {
             await humaPoolContract.setHumaPoolLoanHelper(
                 "0x0000000000000000000000000000000000000001"
             );
+
             // Cannot deposit while helper not approved
             await expect(
                 humaPoolContract.connect(lender).deposit(100)
             ).to.be.revertedWith("HumaPool:POOL_LOAN_HELPER_NOT_APPROVED");
+
             // Pool cannot be approved by non-master admin
             await expect(
                 humaPoolContract
                     .connect(lender)
                     .setHumaPoolLoanHelperApprovalStatus(true)
             ).to.be.revertedWith("HumaPool:PERMISSION_DENIED_NOT_MASTER_ADMIN");
+
             // Approval by master admin should work
             await humaPoolContract.setHumaPoolLoanHelperApprovalStatus(true);
+
             // Deposit should work
             await humaPoolContract.connect(lender).deposit(100);
         });
+
         it("Only pool owner and master admin can edit pool settings", async function () {
             // Transfer ownership of pool to other account
             await humaPoolContract.transferOwnership(lender.address);
+
             // Master admin should succeed
             await humaPoolContract.setHumaPoolLoanHelper(
                 "0x0000000000000000000000000000000000000000"
             );
+
             // Owner should succeed
             await humaPoolContract
                 .connect(lender)
                 .setHumaPoolLoanHelper(
                     "0x0000000000000000000000000000000000000000"
                 );
+
             // Non-owner should fail
             await expect(
                 humaPoolContract
@@ -315,28 +323,6 @@ describe("Huma Pool", function () {
             await humaConfigContract.setProtocolPaused(false);
         });
 
-        describe("Loan Id", function () {
-            it("LoanId", async function () {
-                await testTokenContract
-                    .connect(borrower2)
-                    .approve(humaPoolContract.address, 10);
-                // Test that id increments
-                await humaPoolContract
-                    .connect(borrower2)
-                    .requestCredit(10, 1000, 10);
-                const loanAddress2 = await humaPoolContract.creditMapping(
-                    borrower2.address
-                );
-                const loanContract2 = await getLoanContractFromAddress(
-                    loanAddress2,
-                    borrower2
-                );
-                const loanInformation2 =
-                    await loanContract2.getLoanInformation();
-                expect(loanInformation2._id).to.equal(2);
-            });
-        });
-
         it("Should not allow loan requests while protocol is paused", async function () {
             await humaConfigContract.setProtocolPaused(true);
             await expect(
@@ -396,6 +382,98 @@ describe("Huma Pool", function () {
             expect(loanInformation._interestRateBasis).to.equal(1200);
         });
 
+        it("Should only allow credit approvers to post approved loan requests", async function () {
+            await expect(
+                humaPoolContract
+                    .connect(lender)
+                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+            ).to.be.revertedWith("HumaPool:ILLEGAL_LOAN_REQUESTER");
+        });
+
+        it("Should not allow posting approved loans while protocol is paused", async function () {
+            await humaConfigContract.setProtocolPaused(true);
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+            ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
+        });
+
+        it("Should not allow posting approved laons while pool is off", async function () {
+            await humaPoolContract.disablePool();
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+            ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
+        });
+
+        it("Cannot post approved loan with amount lower than limit", async function () {
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .postApprovedCreditRequest(borrower.address, 5, 30, 12)
+            ).to.be.revertedWith("HumaPool:DENY_BORROW_SMALLER_THAN_LIMIT");
+        });
+
+        it("Cannot post approved loan with amount greater than limit", async function () {
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .postApprovedCreditRequest(borrower.address, 9999, 30, 12)
+            ).to.be.revertedWith("HumaPool:DENY_BORROW_GREATER_THAN_LIMIT");
+        });
+
+        it("Should post approved loan successfully", async function () {
+            expect(
+                await testTokenContract.balanceOf(borrower.address)
+            ).to.equal(0);
+
+            await humaPoolContract.connect(owner).setInterestRateBasis(1200);
+
+            await humaPoolContract
+                .connect(creditApprover)
+                .postApprovedCreditRequest(borrower.address, 100, 30, 12);
+
+            const loanAddress = await humaPoolContract.creditMapping(
+                borrower.address
+            );
+
+            const loanContract = await getLoanContractFromAddress(
+                loanAddress,
+                borrower
+            );
+
+            const loanInformation = await loanContract.getLoanInformation();
+            expect(loanInformation._id).to.equal(2);
+            expect(loanInformation._amount).to.equal(100);
+            expect(loanInformation._paybackPerInterval).to.equal(0);
+            expect(loanInformation._paybackInterval).to.equal(30);
+            expect(loanInformation._interestRateBasis).to.equal(1200);
+        });
+
+        describe("Loan Id", function () {
+            it("LoanId", async function () {
+                await testTokenContract
+                    .connect(borrower2)
+                    .approve(humaPoolContract.address, 10);
+                // Test that id increments
+                await humaPoolContract
+                    .connect(borrower2)
+                    .requestCredit(10, 1000, 10);
+                const loanAddress2 = await humaPoolContract.creditMapping(
+                    borrower2.address
+                );
+                const loanContract2 = await getLoanContractFromAddress(
+                    loanAddress2,
+                    borrower2
+                );
+                const loanInformation2 =
+                    await loanContract2.getLoanInformation();
+                expect(loanInformation2._id).to.equal(3);
+            });
+        });
+
         describe("Loan Funding", function () {
             beforeEach(async function () {
                 await humaPoolContract
@@ -420,14 +498,14 @@ describe("Huma Pool", function () {
                     humaPoolContract
                         .connect(borrower)
                         .requestCredit(10, 1000, 10)
-                ).to.be.revertedWith("HumaPool:DENY_BORROW_EXISTING_CREDIT");
+                ).to.be.revertedWith("HumaPool:DENY_BORROW_EXISTING_LOAN");
             });
 
             // todo This test throw VM Exception. More investigation needed
             it("Prevent loan funding before approval", async function () {
                 // expect(
                 //     await humaPoolContract.connect(borrower).originateCredit()
-                // ).to.be.revertedWith("HumaPool:CREDIT_NOT_APPROVED");
+                // ).to.be.revertedWith("HumaPool:LOAN_NOT_APPROVED");
             });
 
             it("Funding", async function () {

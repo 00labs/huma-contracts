@@ -24,7 +24,6 @@ contract HumaLoan is IHumaCredit {
     using SafeMathUint for uint16;
     using SafeMathUint for uint32;
 
-    address payable pool;
     address private poolLocker;
     address private humaConfig;
     address public treasury;
@@ -98,7 +97,6 @@ contract HumaLoan is IHumaCredit {
      *                [8] early_payoff_fee_bps
      */
     function initiate(
-        address payable _pool,
         uint256 id,
         address _poolLocker,
         address _humaConfig,
@@ -110,7 +108,6 @@ contract HumaLoan is IHumaCredit {
         uint256 collateralAmount,
         uint256[] memory terms
     ) external virtual override {
-        pool = _pool;
         humaConfig = _humaConfig;
         protoNotPaused();
         poolLocker = _poolLocker;
@@ -120,11 +117,11 @@ contract HumaLoan is IHumaCredit {
         // Populate LoanInfo object
         LoanInfo memory li;
         li.liquidityAsset = liquidityAsset;
-        li.apr_in_bps = uint16(terms[0]);
-        li.platform_fee_flat = uint16(terms[1]);
-        li.platform_fee_bps = uint16(terms[2]);
-        li.late_fee_flat = uint16(terms[3]);
-        li.late_fee_bps = uint16(terms[4]);
+        li.apr_in_bps = uint16(terms[2]);
+        li.platform_fee_flat = uint16(terms[3]);
+        li.platform_fee_bps = uint16(terms[4]);
+        li.late_fee_flat = uint16(terms[5]);
+        li.late_fee_bps = uint16(terms[6]);
         li.early_payoff_fee_flat = uint16(terms[7]);
         li.early_payoff_fee_bps = uint16(terms[8]);
         li.loanAmount = uint32(liquidityAmount);
@@ -133,8 +130,8 @@ contract HumaLoan is IHumaCredit {
         li.id = id;
 
         LoanState memory ls;
-        ls.paymentInterval = uint16(terms[5]);
-        ls.numOfPayments = uint16(terms[6]);
+        ls.numOfPayments = uint16(terms[0]);
+        ls.paymentInterval = uint16(terms[1]);
         ls.principalPaidBack = 0;
 
         approved = false;

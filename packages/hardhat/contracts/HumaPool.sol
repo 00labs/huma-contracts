@@ -232,10 +232,6 @@ contract HumaPool is HDT, Ownable {
         uint256 _numOfPayments
     ) external returns (bool) {
         poolOn();
-        require(
-            poolCreditType == CreditType.Loan,
-            "HumaPool:ONLY_LOAN_TYPE_ALLOWED"
-        );
         _requestCredit(
             msg.sender,
             _borrowAmount,
@@ -253,12 +249,8 @@ contract HumaPool is HDT, Ownable {
     ) public returns (address) {
         poolOn();
         require(
-            poolCreditType == CreditType.InvoiceFactoring,
-            "HumaPool:ONLY_INVOICE_FACTORING_ALLOWED"
-        );
-        require(
             creditApprovers[msg.sender] == true,
-            "HumaPool:ILLEGAL_CREDIT_REQUESTER"
+            "HumaPool:ILLEGAL_LOAN_REQUESTER"
         );
         address loanAddress = _requestCredit(
             borrower,
@@ -279,7 +271,7 @@ contract HumaPool is HDT, Ownable {
         // Borrowers must not have existing loans from this pool
         require(
             creditMapping[borrower] == address(0),
-            "HumaPool:DENY_BORROW_EXISTING_CREDIT"
+            "HumaPool:DENY_BORROW_EXISTING_LOAN"
         );
 
         // Borrowing amount needs to be higher than min for the pool.
@@ -310,10 +302,7 @@ contract HumaPool is HDT, Ownable {
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
 
-        //address thisAddress = address(this);
-        //address payable thisPayableAddress = address(uint160(thisAddress));
         credit = HumaCreditFactory(humaCreditFactory).deployNewCredit(
-            payable(address(this)),
             poolCreditType,
             poolLocker,
             humaConfig,
@@ -353,7 +342,7 @@ contract HumaPool is HDT, Ownable {
         poolOn();
         require(
             creditMapping[msg.sender] != address(0),
-            "HumaPool:NO_EXISTING_CREDIT_REQUESTS"
+            "HumaPool:NO_EXISTING_LOAN_REQUESTS"
         );
         //HumaLoan humaLoanContract = HumaLoan(creditMapping[msg.sender]);
         IHumaCredit humaCreditContract = IHumaCredit(creditMapping[msg.sender]);
@@ -374,15 +363,6 @@ contract HumaPool is HDT, Ownable {
         return true;
     }
 
-    function processRefund(address receiver, uint256 amount) external {
-        require(
-            creditMapping[receiver] == msg.sender,
-            "HumaPool:CONTRACT_REQUIRED_FOR_REFUND"
-        );
-        HumaPoolLocker locker = HumaPoolLocker(poolLocker);
-        locker.transfer(receiver, amount);
-    }
-
     /**
      * Retrieve loan terms from pool config. 
      //todo It is hard-coded right now. Need to call poll config to get the real data
@@ -393,13 +373,13 @@ contract HumaPool is HDT, Ownable {
         returns (uint256[] memory terms)
     {
         terms = new uint256[](9);
-        terms[0] = interestRateBasis; //apr_in_bps
-        terms[1] = platform_fee_flat;
-        terms[2] = platform_fee_bps;
-        terms[3] = late_fee_flat;
-        terms[4] = late_fee_bps;
-        terms[5] = _paymentInterval; //payment_interval, in days
-        terms[6] = _numOfPayments; //numOfPayments
+        terms[0] = _numOfPayments; //numOfPayments
+        terms[1] = _paymentInterval; //payment_interval, in days
+        terms[2] = interestRateBasis; //apr_in_bps
+        terms[3] = platform_fee_flat;
+        terms[4] = platform_fee_bps;
+        terms[5] = late_fee_flat;
+        terms[6] = late_fee_bps;
         terms[7] = early_payoff_fee_flat;
         terms[8] = early_payoff_fee_bps;
     }
