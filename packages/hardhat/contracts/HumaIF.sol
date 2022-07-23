@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "./HumaConfig.sol";
+import "./HumaPool.sol";
 import "./HumaPoolLocker.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./interfaces/IHumaPoolAdmins.sol";
@@ -28,6 +29,7 @@ contract HumaIF is IHumaCredit {
     using SafeMathUint for uint16;
     using SafeMathUint for uint32;
 
+    address payable pool;
     address private poolLocker;
     address private humaConfig;
     address public treasury;
@@ -81,6 +83,7 @@ contract HumaIF is IHumaCredit {
      *                [5] dueDate
      */
     function initiate(
+        address payable _pool,
         uint256 _id,
         address _poolLocker,
         address _humaConfig,
@@ -92,6 +95,7 @@ contract HumaIF is IHumaCredit {
         uint256 collateralAmt,
         uint256[] memory terms
     ) external virtual override {
+        pool = _pool;
         humaConfig = _humaConfig;
         protoNotPaused();
         poolLocker = _poolLocker;
@@ -106,7 +110,7 @@ contract HumaIF is IHumaCredit {
         ii.factoring_fee_bps = uint16(terms[2]);
         ii.late_fee_flat = uint16(terms[3]);
         ii.late_fee_bps = uint16(terms[4]);
-        ii.dueDate = uint16(terms[5]);
+        ii.dueDate = uint48(block.timestamp + uint256(terms[5]) * 24 * 3600);
         ii.loanAmt = uint32(liquidityAmt);
         ii.collateralAsset = collateralAsset;
         ii.collateralAmt = uint32(collateralAmt);
@@ -146,9 +150,13 @@ contract HumaIF is IHumaCredit {
         // Calculate platform fee due
         uint256 fees;
         InvoiceInfo storage ii = invoiceInfo;
-        if (ii.factoring_fee_flat != 0) fees = ii.factoring_fee_flat;
-        if (ii.factoring_fee_bps != 0)
+
+        if (ii.factoring_fee_flat != 0) {
+            fees = ii.factoring_fee_flat;
+        }
+        if (ii.factoring_fee_bps != 0) {
             fees += ii.loanAmt.mul(ii.factoring_fee_bps).div(100);
+        }
 
         return (ii.loanAmt - fees, fees);
     }
@@ -183,10 +191,10 @@ contract HumaIF is IHumaCredit {
         // Sends the remainder to the borrower
         ii.paidOff = true;
         uint256 lateFee = assessLateFee();
-        HumaPoolLocker(poolLocker).transfer(
-            borrower,
-            amount - ii.loanAmt - lateFee
-        );
+        // HumaPoolLocker locker = HumaPoolLocker(
+        //     HumaPool(pool).getPoolLockerAddress()
+        // );
+        HumaPool(pool).processRefund(borrower, amount - ii.loanAmt - lateFee);
 
         return true;
     }

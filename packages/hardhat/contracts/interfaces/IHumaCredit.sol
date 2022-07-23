@@ -22,6 +22,7 @@ interface IHumaCredit {
      * @param collateralAmount the amount of the collateral asset
      */
     function initiate(
+        address payable _pool,
         uint256 id,
         address _poolLocker,
         address _humaConfig,
