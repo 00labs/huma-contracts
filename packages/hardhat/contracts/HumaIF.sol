@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "./HumaConfig.sol";
+import "./HumaPool.sol";
 import "./HumaPoolLocker.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./interfaces/IHumaPoolAdmins.sol";
@@ -28,6 +29,7 @@ contract HumaIF is IHumaCredit {
     using SafeMathUint for uint16;
     using SafeMathUint for uint32;
 
+    address payable private pool;
     address private poolLocker;
     address private humaConfig;
     address public treasury;
@@ -81,6 +83,7 @@ contract HumaIF is IHumaCredit {
      *                [5] dueDate
      */
     function initiate(
+        address payable _pool,
         uint256 _id,
         address _poolLocker,
         address _humaConfig,
@@ -92,6 +95,7 @@ contract HumaIF is IHumaCredit {
         uint256 collateralAmt,
         uint256[] memory terms
     ) external virtual override {
+        pool = _pool;
         humaConfig = _humaConfig;
         protoNotPaused();
         poolLocker = _poolLocker;
@@ -183,10 +187,7 @@ contract HumaIF is IHumaCredit {
         // Sends the remainder to the borrower
         ii.paidOff = true;
         uint256 lateFee = assessLateFee();
-        HumaPoolLocker(poolLocker).transfer(
-            borrower,
-            amount - ii.loanAmt - lateFee
-        );
+        HumaPool(pool).processRefund(borrower, amount - ii.loanAmt - lateFee);
 
         return true;
     }

@@ -303,6 +303,7 @@ contract HumaPool is HDT, Ownable {
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
 
         credit = HumaCreditFactory(humaCreditFactory).deployNewCredit(
+            payable(address(this)),
             poolCreditType,
             poolLocker,
             humaConfig,
@@ -360,6 +361,20 @@ contract HumaPool is HDT, Ownable {
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
         locker.transfer(treasuryAddress, amtForTreasury);
         locker.transfer(msg.sender, amtForBorrower);
+        return true;
+    }
+
+    function processRefund(address receiver, uint256 amount)
+        external
+        returns (bool)
+    {
+        require(
+            creditMapping[receiver] == msg.sender,
+            "HumaPool:ILLEGAL_REFUND_REQUESTER"
+        );
+        HumaPoolLocker locker = HumaPoolLocker(poolLocker);
+        locker.transfer(receiver, amount);
+
         return true;
     }
 

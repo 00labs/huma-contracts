@@ -15,6 +15,7 @@ contract HumaCreditFactory {
     constructor() {}
 
     function deployNewCredit(
+        address payable _pool,
         CreditType _type,
         address _poolLocker,
         address _humaConfig,
@@ -28,6 +29,7 @@ contract HumaCreditFactory {
     ) external returns (address credit) {
         if (_type == CreditType.Loan)
             credit = deployNewLoan(
+                _pool,
                 _poolLocker,
                 _humaConfig,
                 _treasury,
@@ -40,6 +42,7 @@ contract HumaCreditFactory {
             );
         else if (_type == CreditType.InvoiceFactoring)
             credit = deployNewInvoiceFactoring(
+                _pool,
                 _poolLocker,
                 _humaConfig,
                 _treasury,
@@ -54,6 +57,7 @@ contract HumaCreditFactory {
 
     // Create a new loan. Refer to HumaLoan.initiate for parameter details
     function deployNewLoan(
+        address payable _pool,
         address _poolLocker,
         address _humaConfig,
         address _treasury,
@@ -68,6 +72,7 @@ contract HumaCreditFactory {
 
         HumaLoan humaLoan = new HumaLoan();
         humaLoan.initiate(
+            _pool,
             humaLoanUniqueIdCounter,
             _poolLocker,
             _humaConfig,
@@ -85,6 +90,7 @@ contract HumaCreditFactory {
 
     // Create a new loan. Refer to HumaLoan.initiate for parameter details
     function deployNewInvoiceFactoring(
+        address payable _pool,
         address _poolLocker,
         address _humaConfig,
         address _treasury,
@@ -99,6 +105,7 @@ contract HumaCreditFactory {
 
         HumaIF humaInvoice = new HumaIF();
         humaInvoice.initiate(
+            _pool,
             humaLoanUniqueIdCounter,
             _poolLocker,
             _humaConfig,

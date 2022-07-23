@@ -202,9 +202,9 @@ describe("Huma Invoice Financing", function () {
                 borrower
             );
 
-            const loanInformation = await invoiceContract.getInvoiceInfo();
+            const invoiceInfo = await invoiceContract.getInvoiceInfo();
 
-            expect(loanInformation._amount).to.equal(100);
+            expect(invoiceInfo._amount).to.equal(100);
         });
 
         describe("Invoice Factoring Funding", function () {
@@ -296,23 +296,23 @@ describe("Huma Invoice Financing", function () {
 
             // todo if the pool is stopped, shall we accept payback?
 
-            // it("Process payback", async function () {
-            //     await ethers.provider.send("evm_increaseTime", [
-            //         25 * 24 * 3600,
-            //     ]);
+            it("Process payback", async function () {
+                await ethers.provider.send("evm_increaseTime", [
+                    25 * 24 * 3600,
+                ]);
 
-            //     await testTokenContract
-            //         .connect(borrower)
-            //         .approve(invoiceContract.address, 5);
+                await testTokenContract
+                    .connect(borrower)
+                    .approve(invoiceContract.address, 5);
 
-            //     await invoiceContract
-            //         .connect(borrower)
-            //         .makePayment(testTokenContract.address, 150);
+                await invoiceContract
+                    .connect(borrower)
+                    .makePayment(testTokenContract.address, 150);
 
-            //     expect(
-            //         await testTokenContract.balanceOf(borrower.address)
-            //     ).to.equal(130);
-            // });
+                expect(
+                    await testTokenContract.balanceOf(borrower.address)
+                ).to.equal(130);
+            });
         });
     });
 });

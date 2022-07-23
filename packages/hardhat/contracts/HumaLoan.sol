@@ -24,6 +24,7 @@ contract HumaLoan is IHumaCredit {
     using SafeMathUint for uint16;
     using SafeMathUint for uint32;
 
+    address payable pool;
     address private poolLocker;
     address private humaConfig;
     address public treasury;
@@ -97,6 +98,7 @@ contract HumaLoan is IHumaCredit {
      *                [8] early_payoff_fee_bps
      */
     function initiate(
+        address payable _pool,
         uint256 id,
         address _poolLocker,
         address _humaConfig,
@@ -108,6 +110,7 @@ contract HumaLoan is IHumaCredit {
         uint256 collateralAmount,
         uint256[] memory terms
     ) external virtual override {
+        pool = _pool;
         humaConfig = _humaConfig;
         protoNotPaused();
         poolLocker = _poolLocker;
