@@ -106,7 +106,7 @@ contract HumaIF is IHumaCredit {
         ii.factoring_fee_bps = uint16(terms[2]);
         ii.late_fee_flat = uint16(terms[3]);
         ii.late_fee_bps = uint16(terms[4]);
-        ii.dueDate = uint16(terms[5]);
+        ii.dueDate = uint48((block.timestamp + uint256(terms[5] * 24 * 3600)));
         ii.loanAmt = uint32(liquidityAmt);
         ii.collateralAsset = collateralAsset;
         ii.collateralAmt = uint32(collateralAmt);

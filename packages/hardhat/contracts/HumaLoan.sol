@@ -86,13 +86,13 @@ contract HumaLoan is IHumaCredit {
      * @param collateralAsset the address of the collateral asset.
      * @param collateralAmount the amount of the collateral asset
      * @param terms[] the terms for the loan.
-     *                [0] numOfPayments
-     *                [1] payment_interval, in seconds
-     *                [2] apr_in_bps
-     *                [3] platform_fee_flat
-     *                [4] platform_fee_bps
-     *                [5] late_fee_flat
-     *                [6] late_fee_bps
+     *                [0] apr_in_bps
+     *                [1] platform_fee_flat
+     *                [2] platform_fee_bps
+     *                [3] late_fee_flat
+     *                [4] late_fee_bps
+     *                [5] payment_interval, in days
+     *                [6] numOfPayments
      *                [7] early_payff_fee_flat
      *                [8] early_payoff_fee_bps
      */
@@ -117,11 +117,11 @@ contract HumaLoan is IHumaCredit {
         // Populate LoanInfo object
         LoanInfo memory li;
         li.liquidityAsset = liquidityAsset;
-        li.apr_in_bps = uint16(terms[2]);
-        li.platform_fee_flat = uint16(terms[3]);
-        li.platform_fee_bps = uint16(terms[4]);
-        li.late_fee_flat = uint16(terms[5]);
-        li.late_fee_bps = uint16(terms[6]);
+        li.apr_in_bps = uint16(terms[0]);
+        li.platform_fee_flat = uint16(terms[1]);
+        li.platform_fee_bps = uint16(terms[2]);
+        li.late_fee_flat = uint16(terms[3]);
+        li.late_fee_bps = uint16(terms[4]);
         li.early_payoff_fee_flat = uint16(terms[7]);
         li.early_payoff_fee_bps = uint16(terms[8]);
         li.loanAmount = uint32(liquidityAmount);
@@ -130,8 +130,8 @@ contract HumaLoan is IHumaCredit {
         li.id = id;
 
         LoanState memory ls;
-        ls.numOfPayments = uint16(terms[0]);
-        ls.paymentInterval = uint16(terms[1]);
+        ls.paymentInterval = uint16(terms[5]);
+        ls.numOfPayments = uint16(terms[6]);
         ls.principalPaidBack = 0;
 
         approved = false;
