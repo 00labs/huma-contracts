@@ -27,7 +27,7 @@ contract HumaLoan is IHumaCredit {
     address private poolLocker;
     address private humaConfig;
     address public treasury;
-    address public borrower; 
+    address public borrower;
     bool public approved;
     LoanInfo public loanInfo;
     LoanState public loanState;
@@ -142,14 +142,14 @@ contract HumaLoan is IHumaCredit {
     /**
      * Approves the loan request with the terms on record.
      */
-    function approve() external virtual override returns (bool)  {
+    function approve() external virtual override returns (bool) {
         // todo add access control.
         protoNotPaused();
         approved = true;
         return approved;
     }
 
-    function isApproved() external virtual returns (bool) {
+    function isApproved() external view virtual override returns (bool) {
         return approved;
     }
 
@@ -523,7 +523,7 @@ contract HumaLoan is IHumaCredit {
         return li.loanAmount.sub(ls.principalPaidBack);
     }
 
-    function protoNotPaused() internal view{
+    function protoNotPaused() internal view {
         require(
             HumaConfig(humaConfig).isProtocolPaused() == false,
             "HumaLoan:PROTOCOL_PAUSED"

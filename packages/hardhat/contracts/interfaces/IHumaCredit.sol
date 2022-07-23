@@ -1,12 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-enum CreditType {
-    Loan,
-    InvoiceFactoring,
-    X_to_own
-}
-
 /**
  * @notice Base interface for all credit in Huma protocol. Example applications
  * are loan, invoice factoring, and x-to-own, where the users can gain ownership
@@ -109,4 +103,9 @@ interface IHumaCredit {
             uint256 fees,
             uint256 duedate
         );
+
+    /**
+     * @notice Check if the credit is approved or not.
+     */
+    function isApproved() external view returns (bool);
 }

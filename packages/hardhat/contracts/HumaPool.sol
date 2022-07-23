@@ -9,8 +9,6 @@ import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLoanHelper.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 import "./interfaces/IHumaCredit.sol";
-
-import "./HumaLoan.sol";
 import "./HumaPoolLocker.sol";
 import "./HumaAPIClient.sol";
 import "./HDT/HDT.sol";
@@ -91,6 +89,8 @@ contract HumaPool is HDT, Ownable {
     // before they can withdraw their capital
     uint256 loanWithdrawalLockoutPeriod = 2630000;
 
+    CreditType poolCreditType;
+
     // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
         uint256 amount;
@@ -103,11 +103,6 @@ contract HumaPool is HDT, Ownable {
         Off
     }
 
-    enum PoolType {
-        Loan,
-        InvoiceFactoring
-    }
-
     event LiquidityDeposited(address by, uint256 principal);
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
 
@@ -116,7 +111,8 @@ contract HumaPool is HDT, Ownable {
         address _humaPoolAdmins,
         address _humaConfig,
         address _humaCreditFactory,
-        address _humaAPIClient
+        address _humaAPIClient,
+        CreditType _poolCreditType
     ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
@@ -124,6 +120,7 @@ contract HumaPool is HDT, Ownable {
         humaConfig = _humaConfig;
         humaCreditFactory = _humaCreditFactory;
         humaAPIClient = _humaAPIClient;
+        poolCreditType = _poolCreditType;
     }
 
     modifier onlyHumaMasterAdmin() {
@@ -229,13 +226,13 @@ contract HumaPool is HDT, Ownable {
     //********************************************/
     // Apply to borrow from the pool. Borrowing is subject to interest,
     // collateral, and maximum loan requirements as dictated by the pool
-    function requestLoan(
+    function requestCredit(
         uint256 _borrowAmount,
         uint256 _paymentInterval,
         uint256 _numOfPayments
     ) external returns (bool) {
         poolOn();
-        _requestLoan(
+        _requestCredit(
             msg.sender,
             _borrowAmount,
             _paymentInterval,
@@ -244,7 +241,7 @@ contract HumaPool is HDT, Ownable {
         return true;
     }
 
-    function postApprovedLoanRequest(
+    function postApprovedCreditRequest(
         address borrower,
         uint256 _borrowAmount,
         uint256 _paymentInterval,
@@ -255,22 +252,22 @@ contract HumaPool is HDT, Ownable {
             creditApprovers[msg.sender] == true,
             "HumaPool:ILLEGAL_LOAN_REQUESTER"
         );
-        address loanAddress = _requestLoan(
+        address loanAddress = _requestCredit(
             borrower,
             _borrowAmount,
             _paymentInterval,
             _numOfPayments
         );
-        HumaLoan(loanAddress).approve();
+        IHumaCredit(loanAddress).approve();
         return loanAddress;
     }
 
-    function _requestLoan(
+    function _requestCredit(
         address borrower,
         uint256 _borrowAmount,
         uint256 _paymentInterval,
         uint256 _numOfPayments
-    ) internal returns (address loan) {
+    ) internal returns (address credit) {
         // Borrowers must not have existing loans from this pool
         require(
             creditMapping[borrower] == address(0),
@@ -305,8 +302,8 @@ contract HumaPool is HDT, Ownable {
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
 
-        loan = HumaCreditFactory(humaCreditFactory).deployNewCredit(
-            CreditType.Loan,
+        credit = HumaCreditFactory(humaCreditFactory).deployNewCredit(
+            poolCreditType,
             poolLocker,
             humaConfig,
             treasuryAddress,
@@ -317,7 +314,7 @@ contract HumaPool is HDT, Ownable {
             0,
             terms
         );
-        creditMapping[borrower] = loan;
+        creditMapping[borrower] = credit;
 
         // todo grab real loan id and fix term
         // HumaAPIClient(humaAPIClient).requestRiskApproval(
@@ -338,20 +335,24 @@ contract HumaPool is HDT, Ownable {
             );
         }
 
-        return loan;
+        return credit;
     }
 
-    function originateLoan() external returns (bool) {
+    function originateCredit() external returns (bool) {
         poolOn();
         require(
             creditMapping[msg.sender] != address(0),
             "HumaPool:NO_EXISTING_LOAN_REQUESTS"
         );
-        HumaLoan humaLoanContract = HumaLoan(creditMapping[msg.sender]);
+        //HumaLoan humaLoanContract = HumaLoan(creditMapping[msg.sender]);
+        IHumaCredit humaCreditContract = IHumaCredit(creditMapping[msg.sender]);
 
-        require(humaLoanContract.isApproved(), "HumaPool:LOAN_NOT_APPROVED");
+        require(
+            humaCreditContract.isApproved(),
+            "HumaPool:CREDIT_NOT_APPROVED"
+        );
 
-        (uint256 amtForBorrower, uint256 amtForTreasury) = humaLoanContract
+        (uint256 amtForBorrower, uint256 amtForTreasury) = humaCreditContract
             .originateCredit();
 
         //CRITICAL: Funding the loan

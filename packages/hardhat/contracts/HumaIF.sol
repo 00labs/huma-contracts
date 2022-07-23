@@ -127,7 +127,7 @@ contract HumaIF is IHumaCredit {
         return approved;
     }
 
-    function isApproved() external virtual returns (bool) {
+    function isApproved() external view virtual override returns (bool) {
         return approved;
     }
 
