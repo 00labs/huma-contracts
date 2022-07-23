@@ -104,7 +104,7 @@ describe("Huma Pool", function () {
         await humaPoolContract.addCreditApprover(creditApprover.address);
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
-        await humaPoolContract.setMinMaxBorrowAmt(10, 100);
+        await humaPoolContract.setMinMaxBorrowAmount(10, 100);
         await humaPoolContract.enablePool();
         await humaPoolContract.setFees(10, 0, 0, 0, 0, 0);
 
@@ -184,7 +184,7 @@ describe("Huma Pool", function () {
         });
 
         it("Should be able to set min and max credit size", async function () {
-            await humaPoolContract.setMinMaxBorrowAmt(10, 100);
+            await humaPoolContract.setMinMaxBorrowAmount(10, 100);
             var [token, interest, min, max] =
                 await humaPoolContract.getPoolSummary();
 
@@ -192,14 +192,7 @@ describe("Huma Pool", function () {
             expect(max).to.equal(100);
         });
 
-        it("Should not allow users other than pool owner or super admin to set fees", async function () {
-            await expect(
-                humaPoolContract.connect(lender).setFees(20, 0, 0, 0, 0, 0)
-            ).to.be.revertedWith("HumaPool:PERMISSION_DENIED_NOT_ADMIN");
-        });
-
         it("Set pool fees and parameters", async function () {
-            await humaPoolContract.connect(owner).setFees(10, 0, 0, 0, 0, 0);
             var [interest, f1, f2, f3, f4, f5, f6] =
                 await humaPoolContract.getPoolFees();
             expect(f1).to.equal(10);
