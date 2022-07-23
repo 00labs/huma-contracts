@@ -102,7 +102,7 @@ describe("Huma Invoice Financing", function () {
             owner
         );
 
-        await humaPoolContract.setMinMaxBorrowAmount(10, 100);
+        await humaPoolContract.setMinMaxBorrowAmt(10, 100);
         await humaPoolContract.addCreditApprover(creditApprover.address);
 
         await humaPoolContract.enablePool();
