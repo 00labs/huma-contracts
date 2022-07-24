@@ -152,7 +152,7 @@ contract HumaIF is IHumaCredit {
         InvoiceInfo storage ii = invoiceInfo;
         if (ii.factoring_fee_flat != 0) fees = ii.factoring_fee_flat;
         if (ii.factoring_fee_bps != 0)
-            fees += ii.loanAmt.mul(ii.factoring_fee_bps).div(100);
+            fees += ii.loanAmt.mul(ii.factoring_fee_bps).div(10000);
 
         return (ii.loanAmt - fees, fees);
     }
@@ -292,6 +292,21 @@ contract HumaIF is IHumaCredit {
             ii.late_fee_flat,
             ii.late_fee_bps
         );
+    }
+
+    /**
+     * @notice Gets the balance of principal
+     * @return amount the amount of the balance
+     */
+    function getCreditBalance()
+        external
+        view
+        virtual
+        override
+        returns (uint256 amount)
+    {
+        InvoiceInfo storage ii = invoiceInfo;
+        amount = ii.loanAmt;
     }
 
     function protoNotPaused() internal view {

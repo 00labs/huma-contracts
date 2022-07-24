@@ -353,14 +353,27 @@ contract HumaPool is HDT, Ownable {
             "HumaPool:CREDIT_NOT_APPROVED"
         );
 
-        (uint256 amtForBorrower, uint256 amtForTreasury) = humaCreditContract
+        // Split the fee between treasury and the pool
+        uint256 protocolFee = HumaConfig(humaConfig)
+            .getTreasuryFee()
+            .mul(humaCreditContract.getCreditBalance())
+            .div(10000);
+
+        (uint256 amtForBorrower, uint256 totalFees) = humaCreditContract
             .originateCredit();
+
+        assert(totalFees >= protocolFee);
+
+        uint256 poolIncome = totalFees.sub(protocolFee);
+
+        distributeIncome(poolIncome);
 
         //CRITICAL: Funding the loan
         address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
-        locker.transfer(treasuryAddress, amtForTreasury);
+        locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(msg.sender, amtForBorrower);
+
         return true;
     }
 
@@ -532,6 +545,10 @@ contract HumaPool is HDT, Ownable {
         uint256 _early_payoff_fee_flat,
         uint256 _early_payoff_fee_bps
     ) public {
+        require(
+            _platform_fee_bps > HumaConfig(humaConfig).getTreasuryFee(),
+            "HumaPool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
+        );
         platform_fee_flat = _platform_fee_flat;
         platform_fee_bps = _platform_fee_bps;
         late_fee_flat = _late_fee_flat;
