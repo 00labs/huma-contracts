@@ -1,6 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+enum CreditType {
+    Loan,
+    InvoiceFactoring,
+    X_to_own
+}
+
 /** @notice HumaConfig maintains all the global configurations supported by Huma protocol.
  */
 contract HumaConfig {
