@@ -125,8 +125,6 @@ describe("Huma Invoice Financing", function () {
     // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
     // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
 
-    // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
-    // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
     describe("Post Approved Invoice Factoring", function () {
         // Makes sure there is liquidity in the pool for borrowing
         beforeEach(async function () {
@@ -222,7 +220,7 @@ describe("Huma Invoice Financing", function () {
                 await humaConfigContract.setProtocolPaused(true);
                 await expect(
                     humaPoolContract.connect(borrower).originateCredit()
-                ).to.be.reverted;
+                ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
             });
 
             // todo This test throw VM Exception. More investigation needed
@@ -249,11 +247,9 @@ describe("Huma Invoice Financing", function () {
                     await testTokenContract.balanceOf(borrower.address)
                 ).to.equal(178);
 
-                // Check the amount in the treasury.
-                // todo this does not work, not sure if it is test error or contract error.
-                // expect(await testTokenContract.balanceOf(owner.address)).to.equal(
-                //   10
-                // );
+                expect(
+                    await testTokenContract.balanceOf(treasury.address)
+                ).to.equal(22);
 
                 expect(await humaPoolContract.getPoolLiquidity()).to.equal(0);
             });
