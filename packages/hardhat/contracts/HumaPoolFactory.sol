@@ -33,7 +33,7 @@ contract HumaPoolFactory {
     address[] public pools;
 
     // Minimum liquidity deposit needed to create a Huma Pool
-    uint256 public minimumLiquidityNeeded = 100;
+    // uint256 public minimumLiquidityNeeded = 100;
 
     event PoolDeployed(address _poolAddress);
 
@@ -51,29 +51,14 @@ contract HumaPoolFactory {
         humaAPIClient = _humaAPIClient;
     }
 
-    function setMinimumLiquidityNeeded(uint256 _minimumLiquidityNeeded)
-        external
-    {
-        require(
-            IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender),
-            "HumaPoolFactory:NOT_MASTER_ADMIN"
-        );
-        minimumLiquidityNeeded = _minimumLiquidityNeeded;
-    }
-
-    function deployNewPool(address _poolTokenAddress, uint256 _initialLiquidity)
+    function deployNewPool(address _poolTokenAddress)
         external
         returns (address payable humaPool)
     {
         require(
-            _initialLiquidity >= minimumLiquidityNeeded,
-            "HumaPoolFactory:ERR_LIQUIDITY_REQUIREMENT"
-        );
-        require(
             IHumaPoolAdmins(humaPoolAdmins).isApprovedAdmin(msg.sender),
             "HumaPoolFactory:CALLER_NOT_APPROVED"
         );
-
         humaPool = payable(
             new HumaPool(
                 _poolTokenAddress,
@@ -84,20 +69,18 @@ contract HumaPoolFactory {
             )
         );
 
-        HumaPool(humaPool).setPoolLocker(
+        pools.push(humaPool);
+
+        HumaPool pool = HumaPool(humaPool);
+
+        pool.setPoolLocker(
             IHumaPoolLockerFactory(humaPoolLockerFactory).deployNewLocker(
                 humaPool,
                 _poolTokenAddress
             )
         );
 
-        HumaPool(humaPool).transferOwnership(msg.sender);
-
-        pools.push(humaPool);
-
-        IERC20 poolToken = IERC20(_poolTokenAddress);
-        // TODO, check that this contract has allowance from msg.sender for _initialLiquidity
-        poolToken.safeTransferFrom(msg.sender, humaPool, _initialLiquidity);
+        pool.transferOwnership(msg.sender);
 
         emit PoolDeployed(humaPool);
 

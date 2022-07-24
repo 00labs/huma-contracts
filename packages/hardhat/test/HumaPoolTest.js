@@ -82,8 +82,7 @@ describe("Huma Pool", function () {
 
         await testTokenContract.approve(humaPoolFactoryContract.address, 99999);
         const tx = await humaPoolFactoryContract.deployNewPool(
-            testTokenContract.address,
-            100
+            testTokenContract.address
         );
         const receipt = await tx.wait();
         let poolAddress;
@@ -100,25 +99,28 @@ describe("Huma Pool", function () {
             owner
         );
 
+        await testTokenContract.approve(humaPoolContract.address, 100);
+
+        await humaPoolContract.makeInitialDeposit(100);
+        await humaPoolContract.enablePool();
+
+        const lenderInfo = await humaPoolContract
+            .connect(owner)
+            .getLenderInfo(owner.address);
+        expect(lenderInfo.amount).to.equal(100);
+        expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+        expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+
         await humaPoolContract.addCreditApprover(creditApprover.address);
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
         await humaPoolContract.setMinMaxBorrowAmt(10, 100);
-        await humaPoolContract.enablePool();
         await humaPoolContract.setFees(10, 0, 0, 0, 0, 0);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
             .connect(lender)
-            .approve(humaPoolContract.address, 99999);
-    });
-
-    // Transfers the 100 initial liquidity provided by owner back to the owner
-    afterEach(async function () {
-        // todo The right way to reset for the next iteration is to allow owner to withdraw 100
-        // Right now, HumaPoolFactory does not track the initialLiquidity. Need to fix it.
-        //await humaPoolContract.connect(owner).withdraw(100);
-        //await testTokenContract.connect(owner).give100To(owner.address);
+            .approve(humaPoolContract.address, 300);
     });
 
     // Test all the pool admin functions
@@ -253,7 +255,7 @@ describe("Huma Pool", function () {
             expect(lenderInfo.amount).to.equal(100);
             expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
             // todo update 100 to 200 once the bug for HumaPoolFactory bookkeeps initialLiquidity
-            expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(200);
         });
     });
 
@@ -534,7 +536,7 @@ describe("Huma Pool", function () {
                 //   10
                 // );
 
-                expect(await humaPoolContract.getPoolLiquidity()).to.equal(1);
+                expect(await humaPoolContract.getPoolLiquidity()).to.equal(101);
             });
         });
 
