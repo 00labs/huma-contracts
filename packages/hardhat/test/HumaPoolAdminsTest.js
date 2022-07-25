@@ -14,7 +14,7 @@ describe("Base Contracts", function () {
     let humaPoolFactoryContract;
     let humaPoolContract;
     let humaConfigContract;
-    let humaLoanFactoryContract;
+    let humaCreditFactoryContract;
     let humaPoolLockerFactoryContract;
     let humaAPIClientContract;
     let testTokenContract;
@@ -37,10 +37,10 @@ describe("Base Contracts", function () {
             owner.address
         );
 
-        const HumaLoanFactory = await ethers.getContractFactory(
-            "HumaLoanFactory"
+        const HumaCreditFactory = await ethers.getContractFactory(
+            "HumaCreditFactory"
         );
-        humaLoanFactoryContract = await HumaLoanFactory.deploy();
+        humaCreditFactoryContract = await HumaCreditFactory.deploy();
 
         const HumaPoolLockerFactory = await ethers.getContractFactory(
             "HumaPoolLockerFactory"
@@ -56,7 +56,7 @@ describe("Base Contracts", function () {
         humaPoolFactoryContract = await HumaPoolFactory.deploy(
             humaPoolAdminsContract.address,
             humaConfigContract.address,
-            humaLoanFactoryContract.address,
+            humaCreditFactoryContract.address,
             humaPoolLockerFactoryContract.address,
             humaAPIClientContract.address
         );
@@ -80,7 +80,10 @@ describe("Base Contracts", function () {
                 99999
             );
             await expect(
-                humaPoolFactoryContract.deployNewPool(testTokenContract.address)
+                humaPoolFactoryContract.deployNewPool(
+                    testTokenContract.address,
+                    0
+                ) // Pool type: Loan
             ).to.emit(humaPoolFactoryContract, "PoolDeployed");
         });
 
@@ -95,7 +98,7 @@ describe("Base Contracts", function () {
             await expect(
                 humaPoolFactoryContract
                     .connect(borrower)
-                    .deployNewPool(testTokenContract.address)
+                    .deployNewPool(testTokenContract.address, 0) // pool type: Loan
             ).to.be.revertedWith("HumaPoolFactory:CALLER_NOT_APPROVED");
         });
     });

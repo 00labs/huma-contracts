@@ -3,10 +3,12 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "./interfaces/IHumaCredit.sol";
 import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLockerFactory.sol";
 
 import "./HumaPool.sol";
+import "./HumaConfig.sol";
 
 // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol
 
@@ -51,7 +53,7 @@ contract HumaPoolFactory {
         humaAPIClient = _humaAPIClient;
     }
 
-    function deployNewPool(address _poolTokenAddress)
+    function deployNewPool(address _poolTokenAddress, CreditType _type)
         external
         returns (address payable humaPool)
     {
@@ -65,7 +67,8 @@ contract HumaPoolFactory {
                 humaPoolAdmins,
                 humaConfig,
                 humaLoanFactory,
-                humaAPIClient
+                humaAPIClient,
+                _type
             )
         );
 
