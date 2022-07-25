@@ -118,59 +118,6 @@ describe("Huma Pool", function () {
             .approve(humaPoolContract.address, 300);
     });
 
-    // Test all the pool admin functions
-    describe("Huma Pool Admin", function () {
-        it("Pool loan helper can only be approved by master admin", async function () {
-            await humaPoolContract.setHumaPoolLoanHelper(
-                "0x0000000000000000000000000000000000000001"
-            );
-
-            // Cannot deposit while helper not approved
-            await expect(
-                humaPoolContract.connect(lender).deposit(100)
-            ).to.be.revertedWith("HumaPool:POOL_LOAN_HELPER_NOT_APPROVED");
-
-            // Pool cannot be approved by non-master admin
-            await expect(
-                humaPoolContract
-                    .connect(lender)
-                    .setHumaPoolLoanHelperApprovalStatus(true)
-            ).to.be.revertedWith("HumaPool:PERMISSION_DENIED_NOT_MASTER_ADMIN");
-
-            // Approval by master admin should work
-            await humaPoolContract.setHumaPoolLoanHelperApprovalStatus(true);
-
-            // Deposit should work
-            await humaPoolContract.connect(lender).deposit(100);
-        });
-
-        it("Only pool owner and master admin can edit pool settings", async function () {
-            // Transfer ownership of pool to other account
-            await humaPoolContract.transferOwnership(lender.address);
-
-            // Master admin should succeed
-            await humaPoolContract.setHumaPoolLoanHelper(
-                "0x0000000000000000000000000000000000000000"
-            );
-
-            // Owner should succeed
-            await humaPoolContract
-                .connect(lender)
-                .setHumaPoolLoanHelper(
-                    "0x0000000000000000000000000000000000000000"
-                );
-
-            // Non-owner should fail
-            await expect(
-                humaPoolContract
-                    .connect(borrower)
-                    .setHumaPoolLoanHelper(
-                        "0x0000000000000000000000000000000000000000"
-                    )
-            ).to.be.revertedWith("HumaPool:PERMISSION_DENIED_NOT_ADMIN");
-        });
-    });
-
     describe("Huma Pool Settings", function () {
         it("Should have correct liquidity post beforeEach() run", async function () {
             const lenderInfo = await humaPoolContract
