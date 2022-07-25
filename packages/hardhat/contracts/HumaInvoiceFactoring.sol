@@ -57,7 +57,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
         uint32 collateralAmt; // likely 1 due to NFT
         address collateralAsset; // paymentNFT
         uint48 dueDate;
-        uint32 id;
         bool paidOff;
     }
 
@@ -66,7 +65,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
 
     /**
      * @notice the initiation of a loan
-     * @param _id the unique id for this loan
      * @param _poolLocker the address of pool locker that holds the liquidity asset
      * @param _treasury the address of the treasury that accepts fees
      * @param _borrower the address of the borrower
@@ -84,7 +82,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
      */
     function initiate(
         address payable _pool,
-        uint256 _id,
         address _poolLocker,
         address _humaConfig,
         address _treasury,
@@ -114,7 +111,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
         ii.loanAmt = uint32(liquidityAmt);
         ii.collateralAsset = collateralAsset;
         ii.collateralAmt = uint32(collateralAmt);
-        ii.id = uint32(_id);
         ii.paidOff = false;
 
         approved = false;
@@ -269,7 +265,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
         external
         view
         returns (
-            uint256 _id,
             address _borrower,
             address _collateralAsset,
             uint32 _amount,
@@ -282,7 +277,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
     {
         InvoiceInfo storage ii = invoiceInfo;
         return (
-            ii.id,
             borrower,
             ii.collateralAsset,
             ii.loanAmt,
