@@ -352,7 +352,6 @@ contract HumaPool is HDT, Ownable {
             creditMapping[msg.sender] != address(0),
             "HumaPool:NO_EXISTING_LOAN_REQUESTS"
         );
-        //HumaLoan humaLoanContract = HumaLoan(creditMapping[msg.sender]);
         IHumaCredit humaCreditContract = IHumaCredit(creditMapping[msg.sender]);
 
         require(
@@ -380,7 +379,6 @@ contract HumaPool is HDT, Ownable {
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
         locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(msg.sender, amtForBorrower);
-
         return true;
     }
 

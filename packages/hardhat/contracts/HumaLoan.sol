@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "./HumaConfig.sol";
+import "./HumaPool.sol";
+import "./HDT/HDT.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLoanHelper.sol";
@@ -232,6 +234,10 @@ contract HumaLoan is IHumaCredit {
         // the next payment and all the outstanding fees.
         require(amount >= totalAmount, "HumaLoan:AMOUNT_TOO_LOW");
 
+        // Handle overpayment towards principal.
+        principal += (amount - totalAmount);
+        totalAmount = amount;
+
         if (ls.remainingPayments == 1) {
             ls.principalPaidBack = li.loanAmount; // avoids penny difference
             ls.feesDue = 0;
@@ -249,10 +255,16 @@ contract HumaLoan is IHumaCredit {
             ls.remainingPayments -= 1;
         }
 
-        // todo, use config to get treasury address
+        console.log("Before paying, totalAmount=", totalAmount);
+        console.log("Before paying, principal=", principal);
+        console.log("Before paying, interest=", interest);
+        console.log("Before paying, fees=", fees);
+
+        uint256 poolIncome = interest.add(fees);
+        HumaPool(pool).distributeIncome(poolIncome);
+
         IERC20 assetIERC20 = IERC20(li.liquidityAsset);
-        assetIERC20.transferFrom(msg.sender, treasury, fees);
-        assetIERC20.transferFrom(msg.sender, poolLocker, totalAmount);
+        assetIERC20.transferFrom(msg.sender, poolLocker, amount);
 
         return true;
     }
