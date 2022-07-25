@@ -255,11 +255,6 @@ contract HumaLoan is IHumaCredit {
             ls.remainingPayments -= 1;
         }
 
-        console.log("Before paying, totalAmount=", totalAmount);
-        console.log("Before paying, principal=", principal);
-        console.log("Before paying, interest=", interest);
-        console.log("Before paying, fees=", fees);
-
         uint256 poolIncome = interest.add(fees);
         HumaPool(pool).distributeIncome(poolIncome);
 

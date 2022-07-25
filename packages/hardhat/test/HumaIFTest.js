@@ -16,9 +16,12 @@ const getInvoiceContractFromAddress = async function (address, signer) {
 // In beforeEach() of "Huma Pool", we deploy a new HumaPool with initial
 // liquidity 100 from the owner
 //
-// In afterEach() of "Huma Pool", we should return the 100 initial liquidity
-// to the owner so that owner has enough balance for future tests.
-// Right now, due to a bug with initial liquidity, we mint 100 to owner.
+// The full testing scenario is designed as:
+// 1. Lender contributes 300, together with owner's 100, the pool size is 400
+// 2. Factoring fee is 10 flat and 100 bps. Protocol fee is 50 bps.
+// 3. Borrower borrows 400. 14 fee charged (2 to treasury, 12 to the pool). Borrower get 386
+// 4. Payback 500. Borrower balance becomes 486.
+// 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
 describe("Huma Invoice Financing", function () {
     let humaPoolAdminsContract;
     let humaPoolFactoryContract;
@@ -117,12 +120,12 @@ describe("Huma Invoice Financing", function () {
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
         await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
-        await humaPoolContract.setFees(20, 100, 0, 0, 0, 0);
+        await humaPoolContract.setFees(10, 100, 0, 0, 0, 0);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
             .connect(lender)
-            .approve(humaPoolContract.address, 200);
+            .approve(humaPoolContract.address, 400);
     });
 
     // Transfers the 100 initial liquidity provided by owner back to the owner
@@ -139,7 +142,7 @@ describe("Huma Invoice Financing", function () {
     describe("Post Approved Invoice Factoring", function () {
         // Makes sure there is liquidity in the pool for borrowing
         beforeEach(async function () {
-            await humaPoolContract.connect(lender).deposit(100);
+            await humaPoolContract.connect(lender).deposit(300);
             await testTokenContract
                 .connect(borrower)
                 .approve(humaPoolContract.address, 99999);
@@ -153,7 +156,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 humaPoolContract
                     .connect(lender)
-                    .postApprovedCreditRequest(borrower.address, 200, 30, 1)
+                    .postApprovedCreditRequest(borrower.address, 400, 30, 1)
             ).to.be.revertedWith("HumaPool:ILLEGAL_CREDIT_POSTER");
         });
 
@@ -162,7 +165,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(borrower.address, 200, 30, 1)
+                    .postApprovedCreditRequest(borrower.address, 400, 30, 1)
             ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
         });
 
@@ -171,7 +174,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(borrower.address, 200, 30, 1)
+                    .postApprovedCreditRequest(borrower.address, 400, 30, 1)
             ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
         });
 
@@ -200,7 +203,7 @@ describe("Huma Invoice Financing", function () {
 
             await humaPoolContract
                 .connect(creditApprover)
-                .postApprovedCreditRequest(borrower.address, 200, 30, 1);
+                .postApprovedCreditRequest(borrower.address, 400, 30, 1);
 
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
@@ -213,18 +216,18 @@ describe("Huma Invoice Financing", function () {
 
             const invoiceInfo = await invoiceContract.getInvoiceInfo();
 
-            expect(invoiceInfo._amount).to.equal(200);
+            expect(invoiceInfo._amount).to.equal(400);
         });
     });
 
     describe("Invoice Factoring Funding", function () {
         // Makes sure there is liquidity in the pool for borrowing
         beforeEach(async function () {
-            await humaPoolContract.connect(lender).deposit(100);
+            await humaPoolContract.connect(lender).deposit(300);
 
             await humaPoolContract
                 .connect(creditApprover)
-                .postApprovedCreditRequest(borrower.address, 200, 30, 1);
+                .postApprovedCreditRequest(borrower.address, 400, 30, 1);
         });
 
         afterEach(async function () {
@@ -260,24 +263,24 @@ describe("Huma Invoice Financing", function () {
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
-            ).to.equal(178); // principal: 200, flat fee: 20, bps fee: 2
+            ).to.equal(386); // principal: 400, flat fee: 20, bps fee: 4
 
             expect(
                 await testTokenContract.balanceOf(treasury.address)
-            ).to.equal(1);
+            ).to.equal(2);
 
-            expect(await humaPoolContract.getPoolLiquidity()).to.equal(21);
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(12);
         });
     });
 
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", function () {
         beforeEach(async function () {
-            await humaPoolContract.connect(lender).deposit(100);
-            await humaPoolContract.connect(owner).setFees(20, 100, 0, 0, 0, 0);
+            await humaPoolContract.connect(lender).deposit(300);
+            await humaPoolContract.connect(owner).setFees(10, 100, 0, 0, 0, 0);
             await humaPoolContract
                 .connect(creditApprover)
-                .postApprovedCreditRequest(borrower.address, 200, 30, 1);
+                .postApprovedCreditRequest(borrower.address, 400, 30, 1);
 
             loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
@@ -288,6 +291,8 @@ describe("Huma Invoice Financing", function () {
             );
             await invoiceContract.approve();
             await humaPoolContract.connect(borrower).originateCredit();
+
+            await testTokenContract.give1000To(payer.address);
         });
 
         afterEach(async function () {
@@ -319,17 +324,32 @@ describe("Huma Invoice Financing", function () {
             //     .connect(borrower)
             //     .approve(humaPoolContract.getPoolLockerAddress(), 210);
 
+            await testTokenContract
+                .connect(payer)
+                .transfer(humaPoolContract.getPoolLockerAddress(), 500);
+
             await invoiceContract
                 .connect(borrower)
-                .makePayment(testTokenContract.address, 210);
+                .makePayment(testTokenContract.address, 500);
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
-            ).to.equal(188);
+            ).to.equal(486);
             expect(
                 await testTokenContract.balanceOf(treasury.address)
-            ).to.equal(1);
-            expect(await humaPoolContract.getPoolLiquidity()).to.equal(11); // should be 221 only we fix the test
+            ).to.equal(2);
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(412);
+
+            // test withdraw to make sure the income is allocated properly.
+            expect(await humaPoolContract.balanceOf(lender.address)).to.equal(
+                300
+            );
+            expect(
+                await humaPoolContract.withdrawableFundsOf(lender.address)
+            ).to.be.within(308, 310); // use within to handle rounding error
+            expect(
+                await humaPoolContract.withdrawableFundsOf(owner.address)
+            ).to.be.within(102, 104); // use within to handle rounding error
         });
     });
 });

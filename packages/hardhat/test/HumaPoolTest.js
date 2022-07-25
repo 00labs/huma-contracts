@@ -105,13 +105,6 @@ describe("Huma Pool", function () {
         await humaPoolContract.makeInitialDeposit(100);
         await humaPoolContract.enablePool();
 
-        const lenderInfo = await humaPoolContract
-            .connect(owner)
-            .getLenderInfo(owner.address);
-        expect(lenderInfo.amount).to.equal(100);
-        expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-        expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
-
         await humaPoolContract.addCreditApprover(creditApprover.address);
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
@@ -179,6 +172,20 @@ describe("Huma Pool", function () {
     });
 
     describe("Huma Pool Settings", function () {
+        it("Should have correct liquidity post beforeEach() run", async function () {
+            const lenderInfo = await humaPoolContract
+                .connect(owner)
+                .getLenderInfo(owner.address);
+            expect(lenderInfo.amount).to.equal(100);
+            expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+
+            expect(await humaPoolContract.balanceOf(owner.address)).to.equal(
+                100
+            );
+        });
+
         //setPoolLiquidityCap
         it("Should be able to change pool liquidity cap", async function () {
             await humaPoolContract.setPoolLiquidityCap(1000000);
@@ -258,6 +265,14 @@ describe("Huma Pool", function () {
             expect(lenderInfo.amount).to.equal(100);
             expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
             expect(await humaPoolContract.getPoolLiquidity()).to.equal(200);
+
+            expect(await humaPoolContract.balanceOf(lender.address)).to.equal(
+                100
+            );
+            expect(await humaPoolContract.balanceOf(owner.address)).to.equal(
+                100
+            );
+            expect(await humaPoolContract.totalSupply()).to.equal(200);
         });
     });
 
@@ -312,6 +327,16 @@ describe("Huma Pool", function () {
                 .connect(lender)
                 .getLenderInfo(lender.address);
             expect(lenderInfo.amount).to.equal(0);
+
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+
+            expect(await humaPoolContract.balanceOf(lender.address)).to.equal(
+                0
+            );
+            expect(await humaPoolContract.balanceOf(owner.address)).to.equal(
+                100
+            );
+            expect(await humaPoolContract.totalSupply()).to.equal(100);
         });
     });
 

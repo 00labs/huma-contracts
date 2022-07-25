@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interfaces/IHDT.sol";
 import "../libraries/SafeMathInt.sol";
 import "../libraries/SafeMathUint.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Huma Distribution Token
@@ -177,9 +178,13 @@ contract HDT is IHDT, ERC20 {
     function _mint(address account, uint256 value) internal virtual override {
         super._mint(account, value);
 
-        pointsCorrection[account] = pointsCorrection[account].sub(
-            (pointsPerShare.mul(value)).toInt256Safe()
-        );
+        // todo the reference implementation uses FDT to track earnings only.
+        // Here we want to use it to track net value. As a result, we are not
+        // giving negative pointsCorrection at mint. This is not very intuitive,
+        // need to find a neater solution.
+        // pointsCorrection[account] = pointsCorrection[account].sub(
+        //     (pointsPerShare.mul(value)).toInt256Safe()
+        // );
     }
 
     /**
