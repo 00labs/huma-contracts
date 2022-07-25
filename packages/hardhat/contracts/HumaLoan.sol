@@ -10,7 +10,6 @@ import "./HumaPool.sol";
 import "./HDT/HDT.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./interfaces/IHumaPoolAdmins.sol";
-import "./interfaces/IHumaPoolLoanHelper.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";

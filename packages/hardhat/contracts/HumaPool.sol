@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "./interfaces/IHumaPoolAdmins.sol";
-import "./interfaces/IHumaPoolLoanHelper.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./HumaPoolLocker.sol";
@@ -47,11 +46,6 @@ contract HumaPool is HDT, Ownable {
     // The ERC20 token this pool manages
     IERC20 internal immutable poolToken;
     uint256 internal immutable poolTokenDecimals;
-
-    // An optional utility contract that implements IHumaPoolLoanHelper,
-    // for additional logic on top of the pool's borrow functionality
-    address internal humaPoolLoanHelper;
-    bool internal isHumaPoolLoanHelperApproved = false;
 
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
@@ -293,18 +287,6 @@ contract HumaPool is HDT, Ownable {
             "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
         );
 
-        // Check custom borrowing logic in the loan helper of this pool
-        // TODO add test for this
-        if (humaPoolLoanHelper != address(0)) {
-            require(
-                IHumaPoolLoanHelper(humaPoolLoanHelper).evaluateBorrowRequest(
-                    borrower,
-                    _borrowAmt
-                ),
-                "HumaPool:BORROW_DENIED_POOL_LOAN_HELPER"
-            );
-        }
-
         address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
@@ -334,14 +316,6 @@ contract HumaPool is HDT, Ownable {
         //     _paymentInterval,
         //     "oneMonth"
         // );
-
-        // Run custom post-borrowing logic in the loan helper of this pool
-        if (humaPoolLoanHelper != address(0)) {
-            IHumaPoolLoanHelper(humaPoolLoanHelper).postBorrowRequest(
-                borrower,
-                _borrowAmt
-            );
-        }
 
         return credit;
     }
@@ -440,11 +414,6 @@ contract HumaPool is HDT, Ownable {
             "HumaPool:PROTOCOL_PAUSED"
         );
         require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
-        require(
-            humaPoolLoanHelper == address(0) ||
-                isHumaPoolLoanHelperApproved == true,
-            "HumaPool:POOL_LOAN_HELPER_NOT_APPROVED"
-        );
     }
 
     /**
@@ -494,20 +463,6 @@ contract HumaPool is HDT, Ownable {
         collateralRequired = _collateralRequired;
 
         return true;
-    }
-
-    function setHumaPoolLoanHelper(address _humaPoolLoanHelper) external {
-        onlyOwnerOrHumaMasterAdmin();
-        humaPoolLoanHelper = _humaPoolLoanHelper;
-        // New loan helpers must be reviewed and approved by the Huma team.
-        isHumaPoolLoanHelperApproved = false;
-    }
-
-    function setHumaPoolLoanHelperApprovalStatus(bool _approvalStatus)
-        external
-        onlyHumaMasterAdmin
-    {
-        isHumaPoolLoanHelperApproved = _approvalStatus;
     }
 
     // Allow borrow applications and loans to be processed by this pool.
