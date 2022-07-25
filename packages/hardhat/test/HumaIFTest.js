@@ -20,7 +20,7 @@ const getInvoiceContractFromAddress = async function (address, signer) {
 // 1. Lender contributes 300, together with owner's 100, the pool size is 400
 // 2. Factoring fee is 10 flat and 100 bps. Protocol fee is 50 bps.
 // 3. Borrower borrows 400. 14 fee charged (2 to treasury, 12 to the pool). Borrower get 386
-// 4. Payback 500. Borrower balance becomes 486.
+// 4. Payback 500. The 100 extra will be transferred to the borrower, led to a balance of 486.
 // 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
 describe("Huma Invoice Financing", function () {
     let humaPoolAdminsContract;
@@ -305,7 +305,7 @@ describe("Huma Invoice Financing", function () {
                 invoiceContract
                     .connect(borrower)
                     .makePayment(testTokenContract.address, 5)
-            ).to.be.reverted;
+            ).to.be.revertedWith("HumaLoan:PROTOCOL_PAUSED");
         });
 
         // todo if the pool is stopped, shall we accept payback?
