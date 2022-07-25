@@ -55,7 +55,6 @@ contract HumaLoan is IHumaCredit {
         uint32 loanAmount;
         uint32 collateralAmount;
         address collateralAsset;
-        uint256 id;
     }
 
     /**
@@ -79,7 +78,6 @@ contract HumaLoan is IHumaCredit {
 
     /**
      * @notice the initiation of a loan
-     * @param id the unique id for this loan
      * @param _poolLocker the address of pool locker that holds the liquidity asset
      * @param _treasury the address of the treasury that accepts fees
      * @param _borrower the address of the borrower
@@ -100,7 +98,6 @@ contract HumaLoan is IHumaCredit {
      */
     function initiate(
         address payable _pool,
-        uint256 id,
         address _poolLocker,
         address _humaConfig,
         address _treasury,
@@ -131,7 +128,6 @@ contract HumaLoan is IHumaCredit {
         li.loanAmount = uint32(liquidityAmount);
         li.collateralAsset = collateralAsset;
         li.collateralAmount = uint32(collateralAmount);
-        li.id = id;
 
         LoanState memory ls;
         ls.paymentInterval = uint16(terms[5]);
@@ -499,7 +495,6 @@ contract HumaLoan is IHumaCredit {
         external
         view
         returns (
-            uint256 _id,
             uint32 _amount,
             uint32 _paybackPerInterval,
             uint48 _paybackInterval,
@@ -513,7 +508,6 @@ contract HumaLoan is IHumaCredit {
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
         return (
-            li.id,
             li.loanAmount,
             ls.nextAmountDue,
             ls.paymentInterval,

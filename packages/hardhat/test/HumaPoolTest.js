@@ -305,28 +305,6 @@ describe("Huma Pool", function () {
             await humaConfigContract.setProtocolPaused(false);
         });
 
-        describe("Loan Id", function () {
-            it("LoanId", async function () {
-                await testTokenContract
-                    .connect(borrower2)
-                    .approve(humaPoolContract.address, 10);
-                // Test that id increments
-                await humaPoolContract
-                    .connect(borrower2)
-                    .requestCredit(10, 1000, 10);
-                const loanAddress2 = await humaPoolContract.creditMapping(
-                    borrower2.address
-                );
-                const loanContract2 = await getLoanContractFromAddress(
-                    loanAddress2,
-                    borrower2
-                );
-                const loanInformation2 =
-                    await loanContract2.getLoanInformation();
-                expect(loanInformation2._id).to.equal(3);
-            });
-        });
-
         it("Should not allow loan requests while protocol is paused", async function () {
             await humaConfigContract.setProtocolPaused(true);
             await expect(

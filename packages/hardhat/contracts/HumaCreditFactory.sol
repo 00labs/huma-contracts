@@ -9,9 +9,6 @@ import "./HumaPool.sol";
 import "./interfaces/IHumaCredit.sol";
 
 contract HumaCreditFactory {
-    // Helper counter used to ensure every loan has a unique ID
-    uint256 humaLoanUniqueIdCounter;
-
     constructor() {}
 
     function deployNewCredit(
@@ -68,12 +65,9 @@ contract HumaCreditFactory {
         uint256 _collateralAmount,
         uint256[] memory terms
     ) internal returns (address) {
-        humaLoanUniqueIdCounter += 1;
-
         HumaLoan humaLoan = new HumaLoan();
         humaLoan.initiate(
             _pool,
-            humaLoanUniqueIdCounter,
             _poolLocker,
             _humaConfig,
             _treasury,
@@ -101,12 +95,9 @@ contract HumaCreditFactory {
         uint256 _collateralAmount,
         uint256[] memory terms
     ) internal returns (address) {
-        humaLoanUniqueIdCounter += 1;
-
         HumaInvoiceFactoring humaInvoice = new HumaInvoiceFactoring();
         humaInvoice.initiate(
             _pool,
-            humaLoanUniqueIdCounter,
             _poolLocker,
             _humaConfig,
             _treasury,
