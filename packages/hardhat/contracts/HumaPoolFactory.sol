@@ -34,9 +34,6 @@ contract HumaPoolFactory {
     // Array of all Huma Pools created from this factory
     address[] public pools;
 
-    // Minimum liquidity deposit needed to create a Huma Pool
-    // uint256 public minimumLiquidityNeeded = 100;
-
     event PoolDeployed(address _poolAddress);
 
     constructor(
