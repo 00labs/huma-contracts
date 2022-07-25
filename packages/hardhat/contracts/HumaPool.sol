@@ -140,34 +140,41 @@ contract HumaPool is HDT, Ownable {
      * @notice LP deposits to the pool to earn interest, and share losses
      * @param amount the number of `poolToken` to be deposited
      */
+    function makeInitialDeposit(uint256 amount) external returns (bool) {
+        return _deposit(msg.sender, amount);
+    }
+
     function deposit(uint256 amount) external returns (bool) {
         poolOn();
         // todo (by RL) Need to check if the pool is open to msg.sender to deposit
         // todo (by RL) Need to add maximal pool size support and check if it has reached the size
+        return _deposit(msg.sender, amount);
+    }
 
+    function _deposit(address lender, uint256 amount) internal returns (bool) {
         uint256 amtInPower18 = _toPower18(amount);
 
         // Update weighted deposit date:
         // prevDate + (now - prevDate) * (amount / (balance + amount))
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
-        uint256 prevDate = lenderInfo[msg.sender].weightedDepositDate;
-        uint256 balance = lenderInfo[msg.sender].amount;
+        uint256 prevDate = lenderInfo[lender].weightedDepositDate;
+        uint256 balance = lenderInfo[lender].amount;
         uint256 newDate = (balance + amount) > 0
             ? prevDate.add(
                 block.timestamp.sub(prevDate).mul(amount).div(balance + amount)
             )
             : prevDate;
 
-        lenderInfo[msg.sender].weightedDepositDate = newDate;
-        lenderInfo[msg.sender].amount += amount;
-        lenderInfo[msg.sender].mostRecentLoanTimestamp = block.timestamp;
+        lenderInfo[lender].weightedDepositDate = newDate;
+        lenderInfo[lender].amount += amount;
+        lenderInfo[lender].mostRecentLoanTimestamp = block.timestamp;
 
-        poolToken.safeTransferFrom(msg.sender, poolLocker, amount);
+        poolToken.safeTransferFrom(lender, poolLocker, amount);
 
         // Mint HDT for the LP to claim future income and losses
-        _mint(msg.sender, amtInPower18);
+        _mint(lender, amtInPower18);
 
-        emit LiquidityDeposited(msg.sender, amount);
+        emit LiquidityDeposited(lender, amount);
 
         return true;
     }
@@ -345,7 +352,6 @@ contract HumaPool is HDT, Ownable {
             creditMapping[msg.sender] != address(0),
             "HumaPool:NO_EXISTING_LOAN_REQUESTS"
         );
-        //HumaLoan humaLoanContract = HumaLoan(creditMapping[msg.sender]);
         IHumaCredit humaCreditContract = IHumaCredit(creditMapping[msg.sender]);
 
         require(
@@ -353,13 +359,25 @@ contract HumaPool is HDT, Ownable {
             "HumaPool:CREDIT_NOT_APPROVED"
         );
 
-        (uint256 amtForBorrower, uint256 amtForTreasury) = humaCreditContract
+        // Split the fee between treasury and the pool
+        uint256 protocolFee = HumaConfig(humaConfig)
+            .getTreasuryFee()
+            .mul(humaCreditContract.getCreditBalance())
+            .div(10000);
+
+        (uint256 amtForBorrower, uint256 totalFees) = humaCreditContract
             .originateCredit();
+
+        assert(totalFees >= protocolFee);
+
+        uint256 poolIncome = totalFees.sub(protocolFee);
+
+        distributeIncome(poolIncome);
 
         //CRITICAL: Funding the loan
         address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
-        locker.transfer(treasuryAddress, amtForTreasury);
+        locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(msg.sender, amtForBorrower);
         return true;
     }
@@ -532,6 +550,10 @@ contract HumaPool is HDT, Ownable {
         uint256 _early_payoff_fee_flat,
         uint256 _early_payoff_fee_bps
     ) public {
+        require(
+            _platform_fee_bps > HumaConfig(humaConfig).getTreasuryFee(),
+            "HumaPool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
+        );
         platform_fee_flat = _platform_fee_flat;
         platform_fee_bps = _platform_fee_bps;
         late_fee_flat = _late_fee_flat;

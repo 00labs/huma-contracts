@@ -109,4 +109,6 @@ interface IHumaCredit {
      * @notice Check if the credit is approved or not.
      */
     function isApproved() external view returns (bool);
+
+    function getCreditBalance() external view returns (uint256);
 }

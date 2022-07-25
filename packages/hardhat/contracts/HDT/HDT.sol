@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interfaces/IHDT.sol";
 import "../libraries/SafeMathInt.sol";
 import "../libraries/SafeMathUint.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Huma Distribution Token
@@ -178,7 +179,7 @@ contract HDT is IHDT, ERC20 {
         super._mint(account, value);
 
         pointsCorrection[account] = pointsCorrection[account].sub(
-            (pointsPerShare.mul(value)).toInt256Safe()
+            ((pointsPerShare.sub(pointsMultiplier)).mul(value)).toInt256Safe()
         );
     }
 

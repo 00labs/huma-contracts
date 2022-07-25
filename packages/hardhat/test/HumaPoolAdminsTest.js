@@ -82,9 +82,8 @@ describe("Base Contracts", function () {
             await expect(
                 humaPoolFactoryContract.deployNewPool(
                     testTokenContract.address,
-                    100,
                     0
-                )
+                ) // Pool type: Loan
             ).to.emit(humaPoolFactoryContract, "PoolDeployed");
         });
 
@@ -99,7 +98,7 @@ describe("Base Contracts", function () {
             await expect(
                 humaPoolFactoryContract
                     .connect(borrower)
-                    .deployNewPool(testTokenContract.address, 100, 0)
+                    .deployNewPool(testTokenContract.address, 0) // pool type: Loan
             ).to.be.revertedWith("HumaPoolFactory:CALLER_NOT_APPROVED");
         });
     });

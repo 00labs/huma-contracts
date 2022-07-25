@@ -294,6 +294,21 @@ contract HumaIF is IHumaCredit {
         );
     }
 
+    /**
+     * @notice Gets the balance of principal
+     * @return amount the amount of the balance
+     */
+    function getCreditBalance()
+        external
+        view
+        virtual
+        override
+        returns (uint256 amount)
+    {
+        InvoiceInfo storage ii = invoiceInfo;
+        amount = ii.loanAmt;
+    }
+
     function protoNotPaused() internal view {
         require(
             HumaConfig(humaConfig).isProtocolPaused() == false,

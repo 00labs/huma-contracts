@@ -83,8 +83,7 @@ describe("Huma Pool", function () {
         await testTokenContract.approve(humaPoolFactoryContract.address, 99999);
         const tx = await humaPoolFactoryContract.deployNewPool(
             testTokenContract.address,
-            100,
-            0
+            0 // Pool type: Loan
         );
         const receipt = await tx.wait();
         let poolAddress;
@@ -101,25 +100,22 @@ describe("Huma Pool", function () {
             owner
         );
 
+        await testTokenContract.approve(humaPoolContract.address, 100);
+
+        await humaPoolContract.makeInitialDeposit(100);
+        await humaPoolContract.enablePool();
+
         await humaPoolContract.addCreditApprover(creditApprover.address);
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
-        await humaPoolContract.setMinMaxBorrowAmt(10, 100);
+        await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
         await humaPoolContract.enablePool();
-        await humaPoolContract.setFees(10, 0, 0, 0, 0, 0);
+        await humaPoolContract.setFees(20, 100, 0, 0, 0, 0);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
             .connect(lender)
-            .approve(humaPoolContract.address, 99999);
-    });
-
-    // Transfers the 100 initial liquidity provided by owner back to the owner
-    afterEach(async function () {
-        // todo The right way to reset for the next iteration is to allow owner to withdraw 100
-        // Right now, HumaPoolFactory does not track the initialLiquidity. Need to fix it.
-        //await humaPoolContract.connect(owner).withdraw(100);
-        //await testTokenContract.connect(owner).give100To(owner.address);
+            .approve(humaPoolContract.address, 300);
     });
 
     // Test all the pool admin functions
@@ -176,6 +172,20 @@ describe("Huma Pool", function () {
     });
 
     describe("Huma Pool Settings", function () {
+        it("Should have correct liquidity post beforeEach() run", async function () {
+            const lenderInfo = await humaPoolContract
+                .connect(owner)
+                .getLenderInfo(owner.address);
+            expect(lenderInfo.amount).to.equal(100);
+            expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+
+            expect(await humaPoolContract.balanceOf(owner.address)).to.equal(
+                100
+            );
+        });
+
         //setPoolLiquidityCap
         it("Should be able to change pool liquidity cap", async function () {
             await humaPoolContract.setPoolLiquidityCap(1000000);
@@ -192,19 +202,27 @@ describe("Huma Pool", function () {
         });
 
         it("Should be able to set min and max credit size", async function () {
-            await humaPoolContract.setMinMaxBorrowAmt(10, 100);
+            await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
             var [token, interest, min, max] =
                 await humaPoolContract.getPoolSummary();
 
             expect(min).to.equal(10);
-            expect(max).to.equal(100);
+            expect(max).to.equal(1000);
+        });
+
+        it("Should disallow platform fee bps lower than protocol fee bps", async function () {
+            await expect(
+                humaPoolContract.setFees(20, 10, 0, 0, 0, 0)
+            ).to.be.revertedWith(
+                "HumaPool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
+            );
         });
 
         it("Set pool fees and parameters", async function () {
             var [interest, f1, f2, f3, f4, f5, f6] =
                 await humaPoolContract.getPoolFees();
-            expect(f1).to.equal(10);
-            expect(f2).to.equal(0);
+            expect(f1).to.equal(20);
+            expect(f2).to.equal(100);
             expect(f3).to.equal(0);
             expect(f4).to.equal(0);
             expect(f5).to.equal(0);
@@ -246,8 +264,15 @@ describe("Huma Pool", function () {
                 .getLenderInfo(lender.address);
             expect(lenderInfo.amount).to.equal(100);
             expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-            // todo update 100 to 200 once the bug for HumaPoolFactory bookkeeps initialLiquidity
-            expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(200);
+
+            expect(await humaPoolContract.balanceOf(lender.address)).to.equal(
+                100
+            );
+            expect(await humaPoolContract.balanceOf(owner.address)).to.equal(
+                100
+            );
+            expect(await humaPoolContract.totalSupply()).to.equal(200);
         });
     });
 
@@ -302,6 +327,16 @@ describe("Huma Pool", function () {
                 .connect(lender)
                 .getLenderInfo(lender.address);
             expect(lenderInfo.amount).to.equal(0);
+
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+
+            expect(await humaPoolContract.balanceOf(lender.address)).to.equal(
+                0
+            );
+            expect(await humaPoolContract.balanceOf(owner.address)).to.equal(
+                100
+            );
+            expect(await humaPoolContract.totalSupply()).to.equal(100);
         });
     });
 
@@ -313,7 +348,7 @@ describe("Huma Pool", function () {
     describe("Borrowing request", function () {
         // Makes sure there is liquidity in the pool for borrowing
         beforeEach(async function () {
-            await humaPoolContract.connect(lender).deposit(101);
+            await humaPoolContract.connect(lender).deposit(100);
             await testTokenContract
                 .connect(borrower)
                 .approve(humaPoolContract.address, 99999);
@@ -321,6 +356,28 @@ describe("Huma Pool", function () {
 
         afterEach(async function () {
             await humaConfigContract.setProtocolPaused(false);
+        });
+
+        describe("Loan Id", function () {
+            it("LoanId", async function () {
+                await testTokenContract
+                    .connect(borrower2)
+                    .approve(humaPoolContract.address, 10);
+                // Test that id increments
+                await humaPoolContract
+                    .connect(borrower2)
+                    .requestCredit(10, 1000, 10);
+                const loanAddress2 = await humaPoolContract.creditMapping(
+                    borrower2.address
+                );
+                const loanContract2 = await getLoanContractFromAddress(
+                    loanAddress2,
+                    borrower2
+                );
+                const loanInformation2 =
+                    await loanContract2.getLoanInformation();
+                expect(loanInformation2._id).to.equal(3);
+            });
         });
 
         it("Should not allow loan requests while protocol is paused", async function () {
@@ -364,7 +421,7 @@ describe("Huma Pool", function () {
                 .connect(borrower)
                 .approve(humaPoolContract.address, 999999);
 
-            await humaPoolContract.connect(borrower).requestCredit(100, 30, 12);
+            await humaPoolContract.connect(borrower).requestCredit(200, 30, 12);
 
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
@@ -376,7 +433,7 @@ describe("Huma Pool", function () {
 
             const loanInformation = await loanContract.getLoanInformation();
             //expect(loanInformation._id).to.equal(1);
-            expect(loanInformation._amount).to.equal(100);
+            expect(loanInformation._amount).to.equal(200);
             expect(loanInformation._paybackPerInterval).to.equal(0);
             expect(loanInformation._paybackInterval).to.equal(30);
             expect(loanInformation._interestRateBasis).to.equal(1200);
@@ -386,7 +443,7 @@ describe("Huma Pool", function () {
             await expect(
                 humaPoolContract
                     .connect(lender)
-                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+                    .postApprovedCreditRequest(borrower.address, 200, 30, 12)
             ).to.be.revertedWith("HumaPool:ILLEGAL_CREDIT_POSTER");
         });
 
@@ -395,7 +452,7 @@ describe("Huma Pool", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+                    .postApprovedCreditRequest(borrower.address, 200, 30, 12)
             ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
         });
 
@@ -404,7 +461,7 @@ describe("Huma Pool", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+                    .postApprovedCreditRequest(borrower.address, 200, 30, 12)
             ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
         });
 
@@ -433,7 +490,7 @@ describe("Huma Pool", function () {
 
             await humaPoolContract
                 .connect(creditApprover)
-                .postApprovedCreditRequest(borrower.address, 100, 30, 12);
+                .postApprovedCreditRequest(borrower.address, 200, 30, 12);
 
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
@@ -446,39 +503,17 @@ describe("Huma Pool", function () {
 
             const loanInformation = await loanContract.getLoanInformation();
             //expect(loanInformation._id).to.equal(2);
-            expect(loanInformation._amount).to.equal(100);
+            expect(loanInformation._amount).to.equal(200);
             expect(loanInformation._paybackPerInterval).to.equal(0);
             expect(loanInformation._paybackInterval).to.equal(30);
             expect(loanInformation._interestRateBasis).to.equal(1200);
-        });
-
-        describe("Loan Id", function () {
-            it("LoanId", async function () {
-                await testTokenContract
-                    .connect(borrower2)
-                    .approve(humaPoolContract.address, 10);
-                // Test that id increments
-                await humaPoolContract
-                    .connect(borrower2)
-                    .requestCredit(10, 1000, 10);
-                const loanAddress2 = await humaPoolContract.creditMapping(
-                    borrower2.address
-                );
-                const loanContract2 = await getLoanContractFromAddress(
-                    loanAddress2,
-                    borrower2
-                );
-                const loanInformation2 =
-                    await loanContract2.getLoanInformation();
-                expect(loanInformation2._id).to.equal(3);
-            });
         });
 
         describe("Loan Funding", function () {
             beforeEach(async function () {
                 await humaPoolContract
                     .connect(borrower)
-                    .requestCredit(100, 30, 12);
+                    .requestCredit(200, 30, 12);
             });
 
             afterEach(async function () {
@@ -495,9 +530,7 @@ describe("Huma Pool", function () {
             //Borrowing with existing loans should fail
             it("Should not allow repeated loans for the same wallet", async function () {
                 await expect(
-                    humaPoolContract
-                        .connect(borrower)
-                        .requestCredit(10, 1000, 10)
+                    humaPoolContract.connect(borrower).requestCredit(10, 60, 10)
                 ).to.be.revertedWith("HumaPool:DENY_BORROW_EXISTING_LOAN");
             });
 
@@ -517,21 +550,19 @@ describe("Huma Pool", function () {
                     borrower
                 );
                 await loanContract.approve();
-                // expect(await loanContract.isApproved()).to.equal(true);
+                expect(await loanContract.isApproved()).to.equal(true);
 
                 await humaPoolContract.connect(borrower).originateCredit();
 
                 expect(
                     await testTokenContract.balanceOf(borrower.address)
-                ).to.equal(90);
+                ).to.equal(178); // fees: 22. flat: 20, bps: 2
 
-                // Check the amount in the treasury.
-                // todo this does not work, not sure if it is test error or contract error.
-                // expect(await testTokenContract.balanceOf(owner.address)).to.equal(
-                //   10
-                // );
+                expect(
+                    await testTokenContract.balanceOf(treasury.address)
+                ).to.equal(1);
 
-                expect(await humaPoolContract.getPoolLiquidity()).to.equal(1);
+                expect(await humaPoolContract.getPoolLiquidity()).to.equal(21);
             });
         });
 
