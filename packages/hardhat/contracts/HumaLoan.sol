@@ -185,6 +185,8 @@ contract HumaLoan is IHumaCredit {
         if (li.platform_fee_bps != 0)
             fees += li.loanAmount.mul(li.platform_fee_bps).div(10000);
 
+        assert(li.loanAmount > fees);
+
         // CRITICAL: Transfer fees to treasury, remaining proceeds to the borrower
         return (li.loanAmount - fees, fees);
     }
@@ -521,10 +523,16 @@ contract HumaLoan is IHumaCredit {
      * @notice Gets the balance of principal
      * @return amount the amount of the balance
      */
-    function getPrincipalBalance() external view returns (uint256 amount) {
+    function getCreditBalance()
+        external
+        view
+        virtual
+        override
+        returns (uint256 amount)
+    {
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
-        return li.loanAmount.sub(ls.principalPaidBack);
+        amount = li.loanAmount.sub(ls.principalPaidBack);
     }
 
     function protoNotPaused() internal view {

@@ -116,7 +116,8 @@ describe("Huma Pool", function () {
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
         await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
-        await humaPoolContract.setFees(10, 100, 0, 0, 0, 0);
+        await humaPoolContract.enablePool();
+        await humaPoolContract.setFees(20, 100, 0, 0, 0, 0);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
@@ -194,18 +195,26 @@ describe("Huma Pool", function () {
         });
 
         it("Should be able to set min and max credit size", async function () {
-            await humaPoolContract.setMinMaxBorrowAmt(10, 100);
+            await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
             var [token, interest, min, max] =
                 await humaPoolContract.getPoolSummary();
 
             expect(min).to.equal(10);
-            expect(max).to.equal(100);
+            expect(max).to.equal(1000);
+        });
+
+        it("Should disallow platform fee bps lower than protocol fee bps", async function () {
+            await expect(
+                humaPoolContract.setFees(20, 10, 0, 0, 0, 0)
+            ).to.be.revertedWith(
+                "HumaPool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
+            );
         });
 
         it("Set pool fees and parameters", async function () {
             var [interest, f1, f2, f3, f4, f5, f6] =
                 await humaPoolContract.getPoolFees();
-            expect(f1).to.equal(10);
+            expect(f1).to.equal(20);
             expect(f2).to.equal(100);
             expect(f3).to.equal(0);
             expect(f4).to.equal(0);
@@ -387,7 +396,7 @@ describe("Huma Pool", function () {
                 .connect(borrower)
                 .approve(humaPoolContract.address, 999999);
 
-            await humaPoolContract.connect(borrower).requestCredit(100, 30, 12);
+            await humaPoolContract.connect(borrower).requestCredit(200, 30, 12);
 
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
@@ -399,7 +408,7 @@ describe("Huma Pool", function () {
 
             const loanInformation = await loanContract.getLoanInformation();
             //expect(loanInformation._id).to.equal(1);
-            expect(loanInformation._amount).to.equal(100);
+            expect(loanInformation._amount).to.equal(200);
             expect(loanInformation._paybackPerInterval).to.equal(0);
             expect(loanInformation._paybackInterval).to.equal(30);
             expect(loanInformation._interestRateBasis).to.equal(1200);
@@ -409,7 +418,7 @@ describe("Huma Pool", function () {
             await expect(
                 humaPoolContract
                     .connect(lender)
-                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+                    .postApprovedCreditRequest(borrower.address, 200, 30, 12)
             ).to.be.revertedWith("HumaPool:ILLEGAL_CREDIT_POSTER");
         });
 
@@ -418,7 +427,7 @@ describe("Huma Pool", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+                    .postApprovedCreditRequest(borrower.address, 200, 30, 12)
             ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
         });
 
@@ -427,7 +436,7 @@ describe("Huma Pool", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(borrower.address, 100, 30, 12)
+                    .postApprovedCreditRequest(borrower.address, 200, 30, 12)
             ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
         });
 
@@ -456,7 +465,7 @@ describe("Huma Pool", function () {
 
             await humaPoolContract
                 .connect(creditApprover)
-                .postApprovedCreditRequest(borrower.address, 100, 30, 12);
+                .postApprovedCreditRequest(borrower.address, 200, 30, 12);
 
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
@@ -469,7 +478,7 @@ describe("Huma Pool", function () {
 
             const loanInformation = await loanContract.getLoanInformation();
             //expect(loanInformation._id).to.equal(2);
-            expect(loanInformation._amount).to.equal(100);
+            expect(loanInformation._amount).to.equal(200);
             expect(loanInformation._paybackPerInterval).to.equal(0);
             expect(loanInformation._paybackInterval).to.equal(30);
             expect(loanInformation._interestRateBasis).to.equal(1200);
@@ -479,7 +488,7 @@ describe("Huma Pool", function () {
             beforeEach(async function () {
                 await humaPoolContract
                     .connect(borrower)
-                    .requestCredit(100, 30, 12);
+                    .requestCredit(200, 30, 12);
             });
 
             afterEach(async function () {
@@ -522,13 +531,13 @@ describe("Huma Pool", function () {
 
                 expect(
                     await testTokenContract.balanceOf(borrower.address)
-                ).to.equal(89);
+                ).to.equal(178); // fees: 22. flat: 20, bps: 2
 
                 expect(
                     await testTokenContract.balanceOf(treasury.address)
-                ).to.equal(11);
+                ).to.equal(1);
 
-                expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
+                expect(await humaPoolContract.getPoolLiquidity()).to.equal(21);
             });
         });
 
