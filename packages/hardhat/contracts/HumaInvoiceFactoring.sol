@@ -18,8 +18,9 @@ import "hardhat/console.sol";
 
 /**
  * @notice Invoice Financing
+ * @dev please note abbreviation HumaIF is used in error messages to shorten the length of error msg.
  */
-contract HumaIF is IHumaCredit {
+contract HumaInvoiceFactoring is IHumaCredit {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
     using SafeMath for uint16;

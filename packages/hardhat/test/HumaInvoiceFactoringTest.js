@@ -6,7 +6,7 @@ const { solidity } = require("ethereum-waffle");
 use(solidity);
 
 const getInvoiceContractFromAddress = async function (address, signer) {
-    return ethers.getContractAt("HumaIF", address, signer);
+    return ethers.getContractAt("HumaInvoiceFactoring", address, signer);
 };
 
 // Let us limit the depth of describe to be 2.

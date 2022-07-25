@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./HumaIF.sol";
+import "./HumaInvoiceFactoring.sol";
 import "./HumaLoan.sol";
 import "./HumaPool.sol";
 import "./interfaces/IHumaCredit.sol";
@@ -103,7 +103,7 @@ contract HumaCreditFactory {
     ) internal returns (address) {
         humaLoanUniqueIdCounter += 1;
 
-        HumaIF humaInvoice = new HumaIF();
+        HumaInvoiceFactoring humaInvoice = new HumaInvoiceFactoring();
         humaInvoice.initiate(
             _pool,
             humaLoanUniqueIdCounter,
