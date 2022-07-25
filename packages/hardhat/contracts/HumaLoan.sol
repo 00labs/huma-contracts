@@ -183,7 +183,7 @@ contract HumaLoan is IHumaCredit {
         LoanInfo storage li = loanInfo;
         if (li.platform_fee_flat != 0) fees = li.platform_fee_flat;
         if (li.platform_fee_bps != 0)
-            fees += li.loanAmount.mul(li.platform_fee_bps).div(100);
+            fees += li.loanAmount.mul(li.platform_fee_bps).div(10000);
 
         // CRITICAL: Transfer fees to treasury, remaining proceeds to the borrower
         return (li.loanAmount - fees, fees);
@@ -421,6 +421,7 @@ contract HumaLoan is IHumaCredit {
     {
         fees = assessLateFee();
         LoanInfo storage li = loanInfo;
+
         interest = li.loanAmount.mul(li.apr_in_bps).div(120000); //120000 = 10000 * 12
         return (interest + fees, 0, interest, fees, block.timestamp);
     }

@@ -115,8 +115,8 @@ describe("Huma Pool", function () {
         await humaPoolContract.addCreditApprover(creditApprover.address);
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
-        await humaPoolContract.setMinMaxBorrowAmt(10, 100);
-        await humaPoolContract.setFees(10, 0, 0, 0, 0, 0);
+        await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
+        await humaPoolContract.setFees(10, 100, 0, 0, 0, 0);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
@@ -206,7 +206,7 @@ describe("Huma Pool", function () {
             var [interest, f1, f2, f3, f4, f5, f6] =
                 await humaPoolContract.getPoolFees();
             expect(f1).to.equal(10);
-            expect(f2).to.equal(0);
+            expect(f2).to.equal(100);
             expect(f3).to.equal(0);
             expect(f4).to.equal(0);
             expect(f5).to.equal(0);
@@ -248,7 +248,6 @@ describe("Huma Pool", function () {
                 .getLenderInfo(lender.address);
             expect(lenderInfo.amount).to.equal(100);
             expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-            // todo update 100 to 200 once the bug for HumaPoolFactory bookkeeps initialLiquidity
             expect(await humaPoolContract.getPoolLiquidity()).to.equal(200);
         });
     });
@@ -315,7 +314,7 @@ describe("Huma Pool", function () {
     describe("Borrowing request", function () {
         // Makes sure there is liquidity in the pool for borrowing
         beforeEach(async function () {
-            await humaPoolContract.connect(lender).deposit(101);
+            await humaPoolContract.connect(lender).deposit(100);
             await testTokenContract
                 .connect(borrower)
                 .approve(humaPoolContract.address, 99999);
@@ -323,6 +322,28 @@ describe("Huma Pool", function () {
 
         afterEach(async function () {
             await humaConfigContract.setProtocolPaused(false);
+        });
+
+        describe("Loan Id", function () {
+            it("LoanId", async function () {
+                await testTokenContract
+                    .connect(borrower2)
+                    .approve(humaPoolContract.address, 10);
+                // Test that id increments
+                await humaPoolContract
+                    .connect(borrower2)
+                    .requestCredit(10, 1000, 10);
+                const loanAddress2 = await humaPoolContract.creditMapping(
+                    borrower2.address
+                );
+                const loanContract2 = await getLoanContractFromAddress(
+                    loanAddress2,
+                    borrower2
+                );
+                const loanInformation2 =
+                    await loanContract2.getLoanInformation();
+                expect(loanInformation2._id).to.equal(3);
+            });
         });
 
         it("Should not allow loan requests while protocol is paused", async function () {
@@ -454,28 +475,6 @@ describe("Huma Pool", function () {
             expect(loanInformation._interestRateBasis).to.equal(1200);
         });
 
-        describe("Loan Id", function () {
-            it("LoanId", async function () {
-                await testTokenContract
-                    .connect(borrower2)
-                    .approve(humaPoolContract.address, 10);
-                // Test that id increments
-                await humaPoolContract
-                    .connect(borrower2)
-                    .requestCredit(10, 1000, 10);
-                const loanAddress2 = await humaPoolContract.creditMapping(
-                    borrower2.address
-                );
-                const loanContract2 = await getLoanContractFromAddress(
-                    loanAddress2,
-                    borrower2
-                );
-                const loanInformation2 =
-                    await loanContract2.getLoanInformation();
-                expect(loanInformation2._id).to.equal(3);
-            });
-        });
-
         describe("Loan Funding", function () {
             beforeEach(async function () {
                 await humaPoolContract
@@ -497,9 +496,7 @@ describe("Huma Pool", function () {
             //Borrowing with existing loans should fail
             it("Should not allow repeated loans for the same wallet", async function () {
                 await expect(
-                    humaPoolContract
-                        .connect(borrower)
-                        .requestCredit(10, 1000, 10)
+                    humaPoolContract.connect(borrower).requestCredit(10, 60, 10)
                 ).to.be.revertedWith("HumaPool:DENY_BORROW_EXISTING_LOAN");
             });
 
@@ -519,21 +516,19 @@ describe("Huma Pool", function () {
                     borrower
                 );
                 await loanContract.approve();
-                // expect(await loanContract.isApproved()).to.equal(true);
+                expect(await loanContract.isApproved()).to.equal(true);
 
                 await humaPoolContract.connect(borrower).originateCredit();
 
                 expect(
                     await testTokenContract.balanceOf(borrower.address)
-                ).to.equal(90);
+                ).to.equal(89);
 
-                // Check the amount in the treasury.
-                // todo this does not work, not sure if it is test error or contract error.
-                // expect(await testTokenContract.balanceOf(owner.address)).to.equal(
-                //   10
-                // );
+                expect(
+                    await testTokenContract.balanceOf(treasury.address)
+                ).to.equal(11);
 
-                expect(await humaPoolContract.getPoolLiquidity()).to.equal(101);
+                expect(await humaPoolContract.getPoolLiquidity()).to.equal(100);
             });
         });
 
