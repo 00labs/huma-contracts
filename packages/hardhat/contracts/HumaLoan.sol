@@ -168,7 +168,9 @@ contract HumaLoan is IHumaCredit {
         LoanState storage ls = loanState;
         ls.principalPaidBack = 0;
         ls.lastLateFeeTimestamp = 0;
-        ls.nextDueDate = uint48(block.timestamp + uint256(ls.paymentInterval));
+        ls.nextDueDate = uint48(
+            block.timestamp + uint256(ls.paymentInterval) * 24 * 3600
+        );
         // todo Calculate the next payment for different payback interval.
         ls.nextAmountDue = uint16(calcInterestOnlyMonthlyPayment());
         ls.remainingPayments = ls.numOfPayments;

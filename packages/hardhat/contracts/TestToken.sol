@@ -13,4 +13,12 @@ contract TestToken is ERC20 {
     function give1000To(address _to) external {
         _mint(_to, 1000);
     }
+
+    function mint(address _to, uint256 amount) external {
+        _mint(_to, amount);
+    }
+
+    function burn(address _from, uint256 amount) external {
+        _mint(_from, amount);
+    }
 }

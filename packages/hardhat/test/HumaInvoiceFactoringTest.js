@@ -120,24 +120,14 @@ describe("Huma Invoice Financing", function () {
 
         await humaPoolContract.setInterestRateBasis(1200); //bps
         await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
-        await humaPoolContract.setFees(10, 100, 0, 0, 0, 0);
+        // set fees (factoring_fat, factoring_bps, late_flat, late_bps, early_falt, early_bps)
+        await humaPoolContract.setFees(10, 100, 20, 100, 30, 100);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
             .connect(lender)
             .approve(humaPoolContract.address, 400);
     });
-
-    // Transfers the 100 initial liquidity provided by owner back to the owner
-    afterEach(async function () {
-        // todo The right way to reset for the next iteration is to allow owner to withdraw 100
-        // Right now, HumaPoolFactory does not track the initialLiquidity. Need to fix it.
-        //await humaPoolContract.connect(owner).withdraw(100);
-        //await testTokenContract.connect(owner).give100To(owner.address);
-    });
-
-    // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
-    // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
 
     describe("Post Approved Invoice Factoring", function () {
         // Makes sure there is liquidity in the pool for borrowing
