@@ -171,6 +171,22 @@ describe("Huma Pool", function () {
             expect(f5).to.equal(0);
             expect(f6).to.equal(0);
         });
+
+        it("Shall have the default grace period if a credit defaults", async function () {
+            let poolDefaultGracePeriod =
+                await humaPoolContract.getDefaultGracePeriod();
+            expect(await humaConfigContract.getDefaultGracePeriod()).to.equal(
+                poolDefaultGracePeriod
+            );
+        });
+
+        it("Shall be able to set new value for the default grace period", async function () {
+            await humaPoolContract.setDefaultGracePeriod(30 * 24 * 3600);
+
+            expect(await humaPoolContract.getDefaultGracePeriod()).to.equal(
+                30 * 24 * 3600
+            );
+        });
     });
 
     describe("Deposit", function () {

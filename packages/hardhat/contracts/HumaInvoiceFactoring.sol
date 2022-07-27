@@ -56,7 +56,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         uint16 late_fee_bps;
         uint32 collateralAmt; // likely 1 due to NFT
         address collateralAsset; // paymentNFT
-        uint48 dueDate;
+        uint64 dueDate;
         bool paidOff;
     }
 
@@ -107,7 +107,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         ii.factoring_fee_bps = uint16(terms[2]);
         ii.late_fee_flat = uint16(terms[3]);
         ii.late_fee_bps = uint16(terms[4]);
-        ii.dueDate = uint48((block.timestamp + uint256(terms[5] * 24 * 3600)));
+        ii.dueDate = uint64((block.timestamp + uint256(terms[5] * 24 * 3600)));
         ii.loanAmt = uint32(liquidityAmt);
         ii.collateralAsset = collateralAsset;
         ii.collateralAmt = uint32(collateralAmt);
@@ -183,6 +183,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         // Sends the remainder to the borrower
         ii.paidOff = true;
         uint256 lateFee = assessLateFee();
+
         HumaPool(pool).processRefund(borrower, amount - ii.loanAmt - lateFee);
 
         return true;
@@ -225,7 +226,24 @@ contract HumaInvoiceFactoring is IHumaCredit {
         override
         returns (uint256 losses)
     {
-        // TODO implement default logic.
+        HumaPool poolContract = HumaPool(pool);
+
+        // check to make sure the default grace period has passed.
+        uint256 gracePeriod = poolContract.getDefaultGracePeriod();
+        require(
+            block.timestamp > invoiceInfo.dueDate + gracePeriod,
+            "HumaIF:DEFAULT_TRIGGERED_TOO_EARLY"
+        );
+
+        // FeatureRequest: add pool cover logic
+
+        // FeatureRequest: add staking logic
+
+        // Trigger loss process
+        losses = invoiceInfo.loanAmt;
+        poolContract.distributeLosses(losses);
+
+        return losses;
     }
 
     function getPayoffInfo()
@@ -268,7 +286,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
             address _borrower,
             address _collateralAsset,
             uint32 _amount,
-            uint48 _dueDate,
+            uint64 _dueDate,
             uint16 _factoring_fee_flat,
             uint16 _factoring_fee_bps,
             uint16 _late_fee_flat,

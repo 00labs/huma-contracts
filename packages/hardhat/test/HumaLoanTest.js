@@ -325,9 +325,9 @@ describe("Huma Loan", function () {
             // todo if the pool is stopped, shall we accept payback?
 
             it("Process payback", async function () {
-                await ethers.provider.send("evm_increaseTime", [
-                    30 * 24 * 3600 - 10,
-                ]);
+                // await ethers.provider.send("evm_increaseTime", [
+                //     30 * 24 * 3600 - 10,
+                // ]);
 
                 await testTokenContract
                     .connect(borrower)

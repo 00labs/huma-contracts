@@ -15,6 +15,9 @@ import "./HumaConfig.sol";
 import "./HumaCreditFactory.sol";
 
 contract HumaPool is HDT, Ownable {
+    // The default value for default grace period.
+    uint256 private constant DEFAULT_GRACE_PERIOD = 5 days;
+
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -85,6 +88,8 @@ contract HumaPool is HDT, Ownable {
 
     CreditType poolCreditType;
 
+    uint256 private defaultGracePeriod;
+
     // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
         uint256 amount;
@@ -115,6 +120,7 @@ contract HumaPool is HDT, Ownable {
         humaCreditFactory = _humaCreditFactory;
         humaAPIClient = _humaAPIClient;
         poolCreditType = _poolCreditType;
+        defaultGracePeriod = DEFAULT_GRACE_PERIOD;
     }
 
     modifier onlyHumaMasterAdmin() {
@@ -471,6 +477,15 @@ contract HumaPool is HDT, Ownable {
         status = PoolStatus.On;
     }
 
+    /**
+     * Sets the default grace period for this pool.
+     * @param gracePeriod the desired grace period in seconds.
+     */
+    function setDefaultGracePeriod(uint256 gracePeriod) external {
+        onlyOwnerOrHumaMasterAdmin();
+        defaultGracePeriod = gracePeriod;
+    }
+
     // Reject all future borrow applications and loans. Note that existing
     // loans will still be processed as expected.
     function disablePool() external {
@@ -590,5 +605,9 @@ contract HumaPool is HDT, Ownable {
 
     function getPoolLockerAddress() external view returns (address) {
         return poolLocker;
+    }
+
+    function getDefaultGracePeriod() external view returns (uint256) {
+        return defaultGracePeriod;
     }
 }

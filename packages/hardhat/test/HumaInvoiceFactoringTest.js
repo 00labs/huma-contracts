@@ -127,6 +127,18 @@ describe("Huma Invoice Financing", function () {
         await testTokenContract
             .connect(lender)
             .approve(humaPoolContract.address, 400);
+
+        let lenderBalance = await testTokenContract.balanceOf(lender.address);
+        if (lenderBalance < 1000)
+            await testTokenContract.mint(lender.address, 1000 - lenderBalance);
+
+        let borrowerBalance = await testTokenContract.balanceOf(
+            borrower.address
+        );
+        if (lenderBalance > 0)
+            await testTokenContract
+                .connect(borrower)
+                .burn(borrower.address, borrowerBalance);
     });
 
     describe("Post Approved Invoice Factoring", function () {
@@ -264,7 +276,7 @@ describe("Huma Invoice Financing", function () {
     });
 
     // In "Payback".beforeEach(), make sure there is a loan funded.
-    describe("Payback", function () {
+    describe("Payback", async function () {
         beforeEach(async function () {
             await humaPoolContract.connect(lender).deposit(300);
             await humaPoolContract.connect(owner).setFees(10, 100, 0, 0, 0, 0);
@@ -301,7 +313,9 @@ describe("Huma Invoice Financing", function () {
         // todo if the pool is stopped, shall we accept payback?
 
         it("Process payback", async function () {
-            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+            await ethers.provider.send("evm_increaseTime", [
+                30 * 24 * 3600 - 10,
+            ]);
 
             // await testTokenContract
             //     .connect(payer)
@@ -340,6 +354,29 @@ describe("Huma Invoice Financing", function () {
             expect(
                 await humaPoolContract.withdrawableFundsOf(owner.address)
             ).to.be.within(102, 104); // use within to handle rounding error
+        });
+
+        it("Default flow", async function () {
+            await expect(invoiceContract.triggerDefault()).to.be.revertedWith(
+                "HumaIF:DEFAULT_TRIGGERED_TOO_EARLY"
+            );
+            const invoiceInfo = await invoiceContract.getInvoiceInfo();
+            let gracePeriod = await humaPoolContract.getDefaultGracePeriod();
+            let dueDate = invoiceInfo._dueDate;
+            let current = Date.now();
+
+            let timeNeeded = dueDate + gracePeriod - current;
+
+            await ethers.provider.send("evm_increaseTime", [timeNeeded]);
+
+            await invoiceContract.triggerDefault();
+
+            expect(
+                await humaPoolContract.withdrawableFundsOf(owner.address)
+            ).to.be.within(2, 4);
+            expect(
+                await humaPoolContract.withdrawableFundsOf(lender.address)
+            ).to.be.within(8, 10);
         });
     });
 });
