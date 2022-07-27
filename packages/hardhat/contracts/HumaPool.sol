@@ -15,9 +15,6 @@ import "./HumaConfig.sol";
 import "./HumaCreditFactory.sol";
 
 contract HumaPool is HDT, Ownable {
-    // The default value for default grace period.
-    uint256 private constant DEFAULT_GRACE_PERIOD = 5 days;
-
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -26,8 +23,9 @@ contract HumaPool is HDT, Ownable {
     // HumaPoolAdmins
     address internal immutable humaPoolAdmins;
 
-    // HumaConfig
-    address internal immutable humaConfig;
+    // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
+    // but we need to retrieve the defaultGracePeriod in the constructor.
+    address internal humaConfig;
 
     // Liquidity holder proxy contract for this pool
     address internal poolLocker;
@@ -120,7 +118,7 @@ contract HumaPool is HDT, Ownable {
         humaCreditFactory = _humaCreditFactory;
         humaAPIClient = _humaAPIClient;
         poolCreditType = _poolCreditType;
-        defaultGracePeriod = DEFAULT_GRACE_PERIOD;
+        defaultGracePeriod = HumaConfig(humaConfig).getDefaultGracePeriod();
     }
 
     modifier onlyHumaMasterAdmin() {
