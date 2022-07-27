@@ -332,7 +332,24 @@ contract HumaLoan is IHumaCredit {
         override
         returns (uint256 losses)
     {
-        // TODO implement default logic.
+        HumaPool poolContract = HumaPool(pool);
+
+        // check to make sure the default grace period has passed.
+        uint256 gracePeriod = poolContract.getDefaultGracePeriod();
+        require(
+            block.timestamp > loanState.nextDueDate + gracePeriod,
+            "HumaIF:DEFAULT_TRIGGERED_TOO_EARLY"
+        );
+
+        // FeatureRequest: add pool cover logic
+
+        // FeatureRequest: add staking logic
+
+        // Trigger loss process
+        losses = loanInfo.loanAmount - loanState.principalPaidBack;
+        poolContract.distributeLosses(losses);
+
+        return losses;
     }
 
     /**
