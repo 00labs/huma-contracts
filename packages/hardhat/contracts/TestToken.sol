@@ -19,6 +19,6 @@ contract TestToken is ERC20 {
     }
 
     function burn(address _from, uint256 amount) external {
-        _mint(_from, amount);
+        _burn(_from, amount);
     }
 }

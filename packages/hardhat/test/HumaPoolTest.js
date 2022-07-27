@@ -172,18 +172,18 @@ describe("Huma Pool", function () {
             expect(f6).to.equal(0);
         });
 
-        it("Shall have the default grace period if a credit defaults", async function () {
+        it("Shall have the protocol-level default-grace-period", async function () {
             let poolDefaultGracePeriod =
-                await humaPoolContract.getDefaultGracePeriod();
-            expect(await humaConfigContract.getDefaultGracePeriod()).to.equal(
-                poolDefaultGracePeriod
-            );
+                await humaPoolContract.getPoolDefaultGracePeriod();
+            expect(
+                await humaConfigContract.getProtocolDefaultGracePeriod()
+            ).to.equal(poolDefaultGracePeriod);
         });
 
         it("Shall be able to set new value for the default grace period", async function () {
-            await humaPoolContract.setDefaultGracePeriod(30 * 24 * 3600);
+            await humaPoolContract.setPoolDefaultGracePeriod(30 * 24 * 3600);
 
-            expect(await humaPoolContract.getDefaultGracePeriod()).to.equal(
+            expect(await humaPoolContract.getPoolDefaultGracePeriod()).to.equal(
                 30 * 24 * 3600
             );
         });

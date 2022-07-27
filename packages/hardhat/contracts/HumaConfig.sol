@@ -10,8 +10,8 @@ enum CreditType {
 /** @notice HumaConfig maintains all the global configurations supported by Huma protocol.
  */
 contract HumaConfig {
-    /// The default value for default grace period.
-    uint256 private constant DEFAULT_DEFAULT_GRACE_PERIOD = 5 days;
+    /// The initial value for default grace period.
+    uint256 private constant PROTOCOL_DEFAULT_GRACE_PERIOD = 5 days;
 
     /// The default treasury fee in bps.
     uint256 private constant DEFAULT_TREASURY_FEE = 50; // 0.5%
@@ -36,7 +36,7 @@ contract HumaConfig {
     mapping(address => bool) private validLiquidityAsset;
 
     /// Seconds passed the due date before trigging a default
-    uint256 private defaultGracePeriod;
+    uint256 private protocolDefaultGracePeriod;
 
     /// Protocol fee of the loan origination (in bps). Other fees are defined at pool level.
     uint256 private treasuryFee;
@@ -61,7 +61,7 @@ contract HumaConfig {
         bool valid
     );
     event TreasuryFeeChanged(uint256 newFee);
-    event DefaultGracePeriodChanged(uint256 gracePeriod);
+    event ProtocolDefaultGracePeriodChanged(uint256 gracePeriod);
 
     event HumaTreasuryChanged(address indexed newTreasuryAddress);
 
@@ -99,7 +99,7 @@ contract HumaConfig {
         );
         governor = _governor;
         protoAdmin = _protoAdmin;
-        defaultGracePeriod = DEFAULT_DEFAULT_GRACE_PERIOD;
+        protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
         // Set governor as default treasury, which can be changed via setHumaTreasury().
         humaTreasury = _governor;
@@ -226,15 +226,18 @@ contract HumaConfig {
     }
 
     /**
-     * @notice Sets the default grace period. Only proto admin can do so.
+     * @notice Sets the default grace period at the protocol level. Only proto admin can do so.
      * @param gracePeriod new default grace period in seconds
      * @dev Rejects any grace period shorter than 1 day to guard against fat finger or attack.
-     * @dev Emits DefaultGracePeriodChanged(uint256 newGracePeriod) event
+     * @dev Emits ProtocolDefaultGracePeriodChanged(uint256 newGracePeriod) event
      */
-    function setDefaultGracePeriod(uint256 gracePeriod) external isprotoAdmin {
+    function setProtocolDefaultGracePeriod(uint256 gracePeriod)
+        external
+        isprotoAdmin
+    {
         require(gracePeriod >= 24 * 3600, "HumaConfig:GRACE_PERIOD_TOO_SHORT");
-        defaultGracePeriod = gracePeriod;
-        emit DefaultGracePeriodChanged(gracePeriod);
+        protocolDefaultGracePeriod = gracePeriod;
+        emit ProtocolDefaultGracePeriodChanged(gracePeriod);
     }
 
     function getGovernor() public view returns (address) {
@@ -257,8 +260,8 @@ contract HumaConfig {
         return validLiquidityAsset[asset];
     }
 
-    function getDefaultGracePeriod() public view returns (uint256) {
-        return defaultGracePeriod;
+    function getProtocolDefaultGracePeriod() public view returns (uint256) {
+        return protocolDefaultGracePeriod;
     }
 
     function getTreasuryFee() public view returns (uint256) {

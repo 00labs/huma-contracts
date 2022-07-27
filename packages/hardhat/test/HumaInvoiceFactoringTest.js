@@ -361,7 +361,8 @@ describe("Huma Invoice Financing", function () {
                 "HumaIF:DEFAULT_TRIGGERED_TOO_EARLY"
             );
             const invoiceInfo = await invoiceContract.getInvoiceInfo();
-            let gracePeriod = await humaPoolContract.getDefaultGracePeriod();
+            let gracePeriod =
+                await humaPoolContract.getPoolDefaultGracePeriod();
             let dueDate = invoiceInfo._dueDate;
             let current = Date.now();
 

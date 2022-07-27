@@ -24,7 +24,7 @@ contract HumaPool is HDT, Ownable {
     address internal immutable humaPoolAdmins;
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
-    // but we need to retrieve the defaultGracePeriod in the constructor.
+    // but we need to retrieve the poolDefaultGracePeriod in the constructor.
     address internal humaConfig;
 
     // Liquidity holder proxy contract for this pool
@@ -86,7 +86,7 @@ contract HumaPool is HDT, Ownable {
 
     CreditType poolCreditType;
 
-    uint256 private defaultGracePeriod;
+    uint256 private poolDefaultGracePeriod;
 
     // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
@@ -118,7 +118,8 @@ contract HumaPool is HDT, Ownable {
         humaCreditFactory = _humaCreditFactory;
         humaAPIClient = _humaAPIClient;
         poolCreditType = _poolCreditType;
-        defaultGracePeriod = HumaConfig(humaConfig).getDefaultGracePeriod();
+        poolDefaultGracePeriod = HumaConfig(humaConfig)
+            .getProtocolDefaultGracePeriod();
     }
 
     modifier onlyHumaMasterAdmin() {
@@ -479,9 +480,9 @@ contract HumaPool is HDT, Ownable {
      * Sets the default grace period for this pool.
      * @param gracePeriod the desired grace period in seconds.
      */
-    function setDefaultGracePeriod(uint256 gracePeriod) external {
+    function setPoolDefaultGracePeriod(uint256 gracePeriod) external {
         onlyOwnerOrHumaMasterAdmin();
-        defaultGracePeriod = gracePeriod;
+        poolDefaultGracePeriod = gracePeriod;
     }
 
     // Reject all future borrow applications and loans. Note that existing
@@ -605,7 +606,7 @@ contract HumaPool is HDT, Ownable {
         return poolLocker;
     }
 
-    function getDefaultGracePeriod() external view returns (uint256) {
-        return defaultGracePeriod;
+    function getPoolDefaultGracePeriod() external view returns (uint256) {
+        return poolDefaultGracePeriod;
     }
 }

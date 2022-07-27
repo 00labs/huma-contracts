@@ -335,7 +335,7 @@ contract HumaLoan is IHumaCredit {
         HumaPool poolContract = HumaPool(pool);
 
         // check to make sure the default grace period has passed.
-        uint256 gracePeriod = poolContract.getDefaultGracePeriod();
+        uint256 gracePeriod = poolContract.getPoolDefaultGracePeriod();
         require(
             block.timestamp > loanState.nextDueDate + gracePeriod,
             "HumaIF:DEFAULT_TRIGGERED_TOO_EARLY"
