@@ -63,8 +63,8 @@ contract HumaLoan is IHumaCredit {
      * @dev most fields in LaonState change as the borrower pays back
      */
     struct LoanState {
-        uint48 lastLateFeeTimestamp;
-        uint48 nextDueDate;
+        uint64 lastLateFeeTimestamp;
+        uint64 nextDueDate;
         uint32 feesDue;
         uint32 principalPaidBack; // remaining principal balance
         uint32 nextAmountDue;
@@ -168,7 +168,8 @@ contract HumaLoan is IHumaCredit {
         LoanState storage ls = loanState;
         ls.principalPaidBack = 0;
         ls.lastLateFeeTimestamp = 0;
-        ls.nextDueDate = uint48(
+
+        ls.nextDueDate = uint64(
             block.timestamp + uint256(ls.paymentInterval) * 24 * 3600
         );
         // todo Calculate the next payment for different payback interval.
@@ -314,7 +315,7 @@ contract HumaLoan is IHumaCredit {
                 newFees += ls.nextAmountDue.mul(li.late_fee_bps).div(120000);
             }
             ls.feesDue.add(newFees);
-            ls.lastLateFeeTimestamp = uint48(block.timestamp);
+            ls.lastLateFeeTimestamp = uint64(block.timestamp);
             loanState = ls;
         }
         return newFees;
@@ -331,7 +332,24 @@ contract HumaLoan is IHumaCredit {
         override
         returns (uint256 losses)
     {
-        // TODO implement default logic.
+        HumaPool poolContract = HumaPool(pool);
+
+        // check to make sure the default grace period has passed.
+        uint256 gracePeriod = poolContract.getPoolDefaultGracePeriod();
+        require(
+            block.timestamp > loanState.nextDueDate + gracePeriod,
+            "HumaIF:DEFAULT_TRIGGERED_TOO_EARLY"
+        );
+
+        // FeatureRequest: add pool cover logic
+
+        // FeatureRequest: add staking logic
+
+        // Trigger loss process
+        losses = loanInfo.loanAmount - loanState.principalPaidBack;
+        poolContract.distributeLosses(losses);
+
+        return losses;
     }
 
     /**
@@ -499,9 +517,9 @@ contract HumaLoan is IHumaCredit {
         returns (
             uint32 _amount,
             uint32 _paybackPerInterval,
-            uint48 _paybackInterval,
+            uint64 _paybackInterval,
             uint32 _interestRateBasis,
-            uint48 _nextDueDate,
+            uint64 _nextDueDate,
             uint32 _principalPaidBack,
             uint16 _remainingPayments,
             uint16 _numOfPayments

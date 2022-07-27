@@ -285,11 +285,7 @@ describe("Huma Loan", function () {
                 let lenderBalance = await testTokenContract.balanceOf(
                     lender.address
                 );
-                await testTokenContract
-                    .connect(lender)
-                    .approve(humaPoolContract.address, 300);
 
-                await humaPoolContract.connect(lender).deposit(300);
                 await humaPoolContract
                     .connect(owner)
                     .setInterestRateBasis(1200);
@@ -325,9 +321,9 @@ describe("Huma Loan", function () {
             // todo if the pool is stopped, shall we accept payback?
 
             it("Process payback", async function () {
-                await ethers.provider.send("evm_increaseTime", [
-                    30 * 24 * 3600 - 10,
-                ]);
+                // await ethers.provider.send("evm_increaseTime", [
+                //     30 * 24 * 3600 - 10,
+                // ]);
 
                 await testTokenContract
                     .connect(borrower)
@@ -341,6 +337,42 @@ describe("Huma Loan", function () {
 
                 expect(loanInfo._principalPaidBack).to.equal(1);
                 expect(loanInfo._remainingPayments).to.equal(11);
+            });
+
+            // Default flow. Designed to include one payment successfully followed by a default.
+            // Having one successful payment to incur some income so that we can cover both income and losses.
+            it("Default flow", async function () {
+                await ethers.provider.send("evm_increaseTime", [
+                    30 * 24 * 3600 - 10,
+                ]);
+                await testTokenContract
+                    .connect(borrower)
+                    .approve(loanContract.address, 4);
+                await loanContract
+                    .connect(borrower)
+                    .makePayment(testTokenContract.address, 4);
+                expect(
+                    await humaPoolContract.withdrawableFundsOf(owner.address)
+                ).to.be.within(102, 104); // target 3
+                expect(
+                    await humaPoolContract.withdrawableFundsOf(lender.address)
+                ).to.be.within(308, 311); // target 9
+
+                await expect(loanContract.triggerDefault()).to.be.revertedWith(
+                    "HumaIF:DEFAULT_TRIGGERED_TOO_EARLY"
+                );
+
+                await ethers.provider.send("evm_increaseTime", [
+                    36 * 24 * 3600,
+                ]);
+                await loanContract.triggerDefault();
+
+                expect(
+                    await humaPoolContract.withdrawableFundsOf(owner.address)
+                ).to.be.within(3, 5); // target 4
+                expect(
+                    await humaPoolContract.withdrawableFundsOf(lender.address)
+                ).to.be.within(11, 13); // target 12
             });
         });
     });
