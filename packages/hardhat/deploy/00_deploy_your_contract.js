@@ -25,14 +25,14 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 
     const HumaPoolAdmins = await ethers.getContract("HumaPoolAdmins", deployer);
 
-    await deploy("HumaLoanFactory", {
+    await deploy("HumaCreditFactory", {
         from: deployer,
         log: true,
         waitConfirmations: 5,
     });
 
-    const HumaLoanFactory = await ethers.getContract(
-        "HumaLoanFactory",
+    const HumaCreditFactory = await ethers.getContract(
+        "HumaCreditFactory",
         deployer
     );
 
@@ -61,7 +61,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
         args: [
             HumaPoolAdmins.address,
             ethers.constants.AddressZero,
-            HumaLoanFactory.address,
+            HumaCreditFactory.address,
             HumaPoolLockerFactory.address,
             HumaAPIClient.address,
         ],
@@ -69,6 +69,25 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     });
 
     await deploy("TestToken", {
+        from: deployer,
+        log: true,
+        waitConfirmations: 5,
+    });
+
+    const TestToken = await ethers.getContract("TestToken", deployer);
+
+    const HumaPoolFactory = await ethers.getContract(
+        "HumaPoolFactory",
+        deployer
+    );
+
+    await HumaPoolFactory.deployNewPool(TestToken.address, 0);
+
+    const poolAddr = HumaPoolFactory.pools(0);
+
+    const HumaPool = await ethers.getContractAt("HumaPool", poolAddr);
+
+    await deploy("TestInvoice", {
         from: deployer,
         log: true,
         waitConfirmations: 5,
