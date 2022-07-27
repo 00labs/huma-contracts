@@ -87,7 +87,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 
     const HumaPool = await ethers.getContractAt("HumaPool", poolAddr);
 
-    await deploy("TestInvoice", {
+    await deploy("InvoiceNFT", {
         from: deployer,
         log: true,
         waitConfirmations: 5,

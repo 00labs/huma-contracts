@@ -19,7 +19,6 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
 
     function mintNFT(address recipient, string memory tokenURI)
         public
-        onlyOwner
         returns (uint256)
     {
         emit Mint(recipient, tokenURI);
