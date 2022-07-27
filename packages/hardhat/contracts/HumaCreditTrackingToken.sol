@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "hardhat/console.sol";
@@ -17,7 +18,7 @@ import "hardhat/console.sol";
  * The list of attributes to be tracked can grow over time.
  *
  */
-contract HumaCreditTrackingToken is ERC721URIStorage {
+contract HumaCreditTrackingToken is ERC721URIStorage, Ownable {
     constructor(string memory _name, string memory _symbol)
         ERC721(_name, _symbol)
     {}
@@ -94,7 +95,7 @@ contract HumaCreditTrackingToken is ERC721URIStorage {
      *
      * Emits a {Transfer} event.
      */
-    function safeMint(address to, uint256 tokenId) external {
+    function safeMint(address to, uint256 tokenId) external onlyOwner {
         _safeMint(to, tokenId, "");
     }
 
