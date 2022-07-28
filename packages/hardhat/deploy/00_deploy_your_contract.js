@@ -17,6 +17,14 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     const { deployer } = await getNamedAccounts();
     const chainId = await getChainId();
 
+    await deploy("TestToken", {
+        from: deployer,
+        log: true,
+        waitConfirmations: 5,
+    });
+
+    const TestToken = await ethers.getContract("TestToken", deployer);
+
     await deploy("HumaPoolAdmins", {
         from: deployer,
         log: true,
@@ -24,6 +32,16 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     });
 
     const HumaPoolAdmins = await ethers.getContract("HumaPoolAdmins", deployer);
+
+    await deploy("HumaConfig", {
+        from: deployer,
+        log: true,
+        args: [deployer, deployer],
+        waitConfirmations: 5,
+    });
+
+    const HumaConfig = await ethers.getContract("HumaConfig", deployer);
+    await HumaConfig.setLiquidityAsset(TestToken.address, true);
 
     await deploy("HumaCreditFactory", {
         from: deployer,
@@ -60,7 +78,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
         log: true,
         args: [
             HumaPoolAdmins.address,
-            ethers.constants.AddressZero,
+            HumaConfig.address,
             HumaCreditFactory.address,
             HumaPoolLockerFactory.address,
             HumaAPIClient.address,
@@ -68,24 +86,12 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
         waitConfirmations: 5,
     });
 
-    await deploy("TestToken", {
-        from: deployer,
-        log: true,
-        waitConfirmations: 5,
-    });
-
-    const TestToken = await ethers.getContract("TestToken", deployer);
-
     const HumaPoolFactory = await ethers.getContract(
         "HumaPoolFactory",
         deployer
     );
 
-    await HumaPoolFactory.deployNewPool(TestToken.address, 0);
-
-    const poolAddr = HumaPoolFactory.pools(0);
-
-    const HumaPool = await ethers.getContractAt("HumaPool", poolAddr);
+    await HumaPoolFactory.deployNewPool(TestToken.address, 1);
 
     await deploy("InvoiceNFT", {
         from: deployer,
