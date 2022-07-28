@@ -251,17 +251,17 @@ describe("Huma Loan", function () {
             it("Should not allow loan funding while protocol is paused", async function () {
                 await humaConfigContract.setProtocolPaused(true);
                 await expect(
-                    humaPoolContract.connect(borrower).originateCredit()
+                    humaPoolContract.connect(borrower).originateCredit(400)
                 ).to.be.reverted;
             });
 
             it("Prevent loan funding before approval", async function () {
                 await expect(
-                    humaPoolContract.connect(borrower).originateCredit()
+                    humaPoolContract.connect(borrower).originateCredit(400)
                 ).to.be.revertedWith("HumaPool:CREDIT_NOT_APPROVED");
             });
 
-            it("Funding", async function () {
+            it("Borrow less than approved amount", async function () {
                 const loanAddress = await humaPoolContract.creditMapping(
                     borrower.address
                 );
@@ -272,7 +272,31 @@ describe("Huma Loan", function () {
                 await loanContract.approve();
                 expect(await loanContract.isApproved()).to.equal(true);
 
-                await humaPoolContract.connect(borrower).originateCredit();
+                await humaPoolContract.connect(borrower).originateCredit(200);
+
+                expect(
+                    await testTokenContract.balanceOf(borrower.address)
+                ).to.equal(188); // fees: 12. pool: 11, protocol: 1
+
+                expect(
+                    await testTokenContract.balanceOf(treasury.address)
+                ).to.equal(1);
+
+                expect(await humaPoolContract.getPoolLiquidity()).to.equal(211);
+            });
+
+            it("Borrow full amount that has been approved", async function () {
+                const loanAddress = await humaPoolContract.creditMapping(
+                    borrower.address
+                );
+                const loanContract = await getLoanContractFromAddress(
+                    loanAddress,
+                    borrower
+                );
+                await loanContract.approve();
+                expect(await loanContract.isApproved()).to.equal(true);
+
+                await humaPoolContract.connect(borrower).originateCredit(400);
 
                 expect(
                     await testTokenContract.balanceOf(borrower.address)
@@ -309,7 +333,7 @@ describe("Huma Loan", function () {
                 );
 
                 await loanContract.approve();
-                await humaPoolContract.connect(borrower).originateCredit();
+                await humaPoolContract.connect(borrower).originateCredit(400);
             });
 
             afterEach(async function () {
