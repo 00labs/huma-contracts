@@ -91,7 +91,7 @@ contract HumaPool is HDT, Ownable {
 
     uint256 private poolDefaultGracePeriod;
 
-    // HumaLoanFactory
+    // reputationTrackerFactory
     address internal reputationTrackerFactory;
 
     address internal reputationTrackerContractAddress;
@@ -390,8 +390,9 @@ contract HumaPool is HDT, Ownable {
 
     function requestReputationTracking(
         address borrower,
-        ReputationTracker.TrackingMode mode
+        IReputationTracker.TrackingMode mode
     ) public {
+        // To make sure only IHumaCredit implementors (e.g. HumaLoan) can call this function for reputation tracking.
         require(
             creditMapping[borrower] == msg.sender,
             "HumaPool:ILLEGAL_REPUTATION_TRACKING_REQUESTER"
@@ -400,6 +401,10 @@ contract HumaPool is HDT, Ownable {
             borrower,
             mode
         );
+        // For payoff, remove the credit record so that the borrower can borrow again.
+        if (mode == IReputationTracker.TrackingMode.Payoff) {
+            creditMapping[borrower] = address(0);
+        }
     }
 
     /**

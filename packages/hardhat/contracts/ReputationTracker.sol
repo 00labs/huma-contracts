@@ -57,14 +57,13 @@ contract ReputationTracker is IReputationTracker, Ownable {
         if (tokenId == 0) {
             _tokenCounter.increment();
             tokenId = _tokenCounter.current();
-            ReputationTrackingRecord memory rtr = ReputationTrackingRecord(
+            _records[borrower] = ReputationTrackingRecord(
                 tokenId,
                 true,
                 0,
                 0,
                 0
             );
-            _records[borrower] = rtr;
             tokenContract.safeMint(borrower, tokenId);
         }
     }
