@@ -4,6 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLocker.sol";
@@ -20,6 +21,7 @@ import "./interfaces/IReputationTracker.sol";
 contract HumaPool is HDT, Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
+    using ERC165Checker for address;
 
     uint256 constant POWER18 = 10**18;
 
@@ -339,6 +341,15 @@ contract HumaPool is HDT, Ownable {
     }
 
     function originateCredit(uint256 borrowAmt) external returns (bool) {
+        return originateCreditWithCollateral(borrowAmt, address(0), 0, 0);
+    }
+
+    function originateCreditWithCollateral(
+        uint256 borrowAmt,
+        address collateralAsset,
+        uint256 collateralParam,
+        uint256 collateralCount
+    ) public returns (bool) {
         poolOn();
         require(
             creditMapping[msg.sender] != address(0),
@@ -366,7 +377,33 @@ contract HumaPool is HDT, Ownable {
 
         distributeIncome(poolIncome);
 
-        //CRITICAL: Funding the loan
+        console.log("In pool.originateCredit, before collateral handling");
+
+        //CRITICAL: Transfer collateral and funding the loan
+        // Transfer collateral
+        // InterfaceId_ERC721 = 0x80ac58cd;
+        if (collateralAsset != address(0)) {
+            if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
+                console.log("In IERC721 branch");
+                IERC721(collateralAsset).safeTransferFrom(
+                    msg.sender,
+                    poolLocker,
+                    collateralParam
+                );
+            } else if (
+                collateralAsset.supportsInterface(type(IERC20).interfaceId)
+            ) {
+                console.log("In IERC20 branch");
+                IERC20(collateralAsset).safeTransferFrom(
+                    msg.sender,
+                    poolLocker,
+                    collateralCount
+                );
+            } else {
+                revert("HumaPool:COLLATERAL_ASSET_NOT_SUPPORTED");
+            }
+        }
+        // Transfer liquidity asset
         address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
         locker.transfer(treasuryAddress, protocolFee);
