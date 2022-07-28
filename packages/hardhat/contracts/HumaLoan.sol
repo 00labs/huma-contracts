@@ -190,7 +190,7 @@ contract HumaLoan is IHumaCredit {
 
         HumaPool(pool).requestReputationTracking(
             borrower,
-            IReputationTracker.TrackingMode.Borrowing
+            IReputationTracker.TrackingType.Borrowing
         );
 
         // CRITICAL: Transfer fees to treasury, remaining proceeds to the borrower
@@ -267,7 +267,7 @@ contract HumaLoan is IHumaCredit {
         if (ls.remainingPayments == 0) {
             HumaPool(pool).requestReputationTracking(
                 borrower,
-                IReputationTracker.TrackingMode.Payoff
+                IReputationTracker.TrackingType.Payoff
             );
         }
 
@@ -368,7 +368,7 @@ contract HumaLoan is IHumaCredit {
         // Retutation reporting
         poolContract.requestReputationTracking(
             borrower,
-            IReputationTracker.TrackingMode.Default
+            IReputationTracker.TrackingType.Default
         );
 
         return losses;

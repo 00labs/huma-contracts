@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IReputationTracker {
-    enum TrackingMode {
+    enum TrackingType {
         Borrowing,
         Payoff,
         Default
@@ -11,11 +11,11 @@ interface IReputationTracker {
     event ReputationReported(
         address reporter,
         address borrower,
-        TrackingMode mode
+        TrackingType mode
     );
     event ReputationTrackingRevoked(address reporter, address borrower);
 
-    function report(address borrower, TrackingMode mode) external;
+    function report(address borrower, TrackingType mode) external;
 
     function revokeTracking(address borrower) external;
 }

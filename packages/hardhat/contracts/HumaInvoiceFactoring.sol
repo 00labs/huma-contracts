@@ -153,7 +153,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
 
         HumaPool(pool).requestReputationTracking(
             borrower,
-            IReputationTracker.TrackingMode.Borrowing
+            IReputationTracker.TrackingType.Borrowing
         );
 
         return (ii.loanAmt - fees, fees);
@@ -195,7 +195,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         // Reputation reporting
         HumaPool(pool).requestReputationTracking(
             borrower,
-            IReputationTracker.TrackingMode.Payoff
+            IReputationTracker.TrackingType.Payoff
         );
 
         return true;
@@ -258,7 +258,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         // Reputation reporting
         poolContract.requestReputationTracking(
             borrower,
-            IReputationTracker.TrackingMode.Default
+            IReputationTracker.TrackingType.Default
         );
 
         return losses;

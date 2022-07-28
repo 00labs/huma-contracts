@@ -73,20 +73,20 @@ contract ReputationTracker is IReputationTracker, Ownable {
      * @param borrower the wallet address of the borrower
      * @param mode indicates whether it is a Borrowing, Payoff, or Default.
      */
-    function report(address borrower, IReputationTracker.TrackingMode mode)
+    function report(address borrower, IReputationTracker.TrackingType mode)
         external
         virtual
         override
     {
         require(
-            mode >= IReputationTracker.TrackingMode.Borrowing &&
-                mode <= IReputationTracker.TrackingMode.Default,
+            mode >= IReputationTracker.TrackingType.Borrowing &&
+                mode <= IReputationTracker.TrackingType.Default,
             "ReputationTracker:INCORRECT_TRACKING_MODE"
         );
 
         if (
-            mode == IReputationTracker.TrackingMode.Payoff ||
-            mode == IReputationTracker.TrackingMode.Default
+            mode == IReputationTracker.TrackingType.Payoff ||
+            mode == IReputationTracker.TrackingType.Default
         ) {
             require(
                 _records[borrower].numOfOutstandingLoans > 0,
@@ -96,12 +96,12 @@ contract ReputationTracker is IReputationTracker, Ownable {
 
         uint256 tokenId = getReputationTrackingTokenId(borrower);
 
-        if (mode == IReputationTracker.TrackingMode.Borrowing) {
+        if (mode == IReputationTracker.TrackingType.Borrowing) {
             _records[borrower].numOfOutstandingLoans += 1;
-        } else if (mode == IReputationTracker.TrackingMode.Payoff) {
+        } else if (mode == IReputationTracker.TrackingType.Payoff) {
             _records[borrower].numOfPayoffs += 1;
             _records[borrower].numOfOutstandingLoans -= 1;
-        } else if (mode == IReputationTracker.TrackingMode.Default) {
+        } else if (mode == IReputationTracker.TrackingType.Default) {
             _records[borrower].numOfDefaults += 1;
             _records[borrower].numOfOutstandingLoans -= 1;
         }
