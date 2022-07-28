@@ -156,7 +156,7 @@ contract HumaLoan is IHumaCredit {
     /**
      * @notice
      */
-    function originateCredit()
+    function originateCredit(uint256 borrowAmt)
         external
         virtual
         override
@@ -164,6 +164,8 @@ contract HumaLoan is IHumaCredit {
     {
         protoNotPaused();
         require(approved, "HumaLoan:LOAN_NOT_APPROVED");
+
+        loanInfo.loanAmount = uint32(borrowAmt);
 
         LoanState storage ls = loanState;
         ls.principalPaidBack = 0;

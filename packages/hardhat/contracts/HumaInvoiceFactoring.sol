@@ -134,7 +134,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
     /**
      * @notice Takes collateral and transfers funds to the borrower
      */
-    function originateCredit()
+    function originateCredit(uint256 borrowAmt)
         external
         virtual
         override
@@ -146,6 +146,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         // Calculate platform fee due
         uint256 fees;
         InvoiceInfo storage ii = invoiceInfo;
+        ii.loanAmt = uint32(borrowAmt);
         if (ii.factoring_fee_flat != 0) fees = ii.factoring_fee_flat;
         if (ii.factoring_fee_bps != 0)
             fees += ii.loanAmt.mul(ii.factoring_fee_bps).div(10000);
