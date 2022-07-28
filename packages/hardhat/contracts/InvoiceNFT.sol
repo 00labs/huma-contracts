@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "hardhat/console.sol";
 
 contract InvoiceNFT is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
@@ -29,6 +30,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
         _setTokenURI(newItemId, tokenURI);
 
         emit TokenGenerated(newItemId);
+        console.log("Before exit, newItemId=", newItemId);
         return newItemId;
     }
 

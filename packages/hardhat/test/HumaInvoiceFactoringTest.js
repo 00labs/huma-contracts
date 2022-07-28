@@ -31,6 +31,7 @@ describe("Huma Invoice Financing", function () {
     let humaPoolLockerFactoryContract;
     let humaAPIClientContract;
     let testTokenContract;
+    let invoiceNFTContract;
     let owner;
     let lender;
     let borrower;
@@ -84,6 +85,9 @@ describe("Huma Invoice Financing", function () {
             humaAPIClientContract.address,
             reputationTrackerFactoryContract.address
         );
+
+        const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
+        invoiceNFTContract = await InvoiceNFT.deploy();
     });
 
     beforeEach(async function () {
@@ -257,7 +261,7 @@ describe("Huma Invoice Financing", function () {
             // ).to.be.revertedWith("HumaPool:CREDIT_NOT_APPROVED");
         });
 
-        it("Should be able to borrow amount less than approved", async function () {
+        it.only("Should be able to borrow amount less than approved", async function () {
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
             );
@@ -268,7 +272,26 @@ describe("Huma Invoice Financing", function () {
             await invoiceContract.approve();
             // expect(await invoiceContract.isApproved()).to.equal(true);
 
-            await humaPoolContract.connect(borrower).originateCredit(200);
+            const nftTokenId = await invoiceNFTContract.mintNFT(
+                borrower.address,
+                ""
+            );
+
+            console.log("in test, nftTokenId=", nftTokenId);
+
+            console.log(
+                "In test, invoiceNFTContract.address=",
+                invoiceNFTContract.address
+            );
+
+            await humaPoolContract
+                .connect(borrower)
+                .originateCreditWithCollateral(
+                    200,
+                    invoiceNFTContract.address,
+                    nftTokenId,
+                    1
+                );
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
@@ -292,7 +315,18 @@ describe("Huma Invoice Financing", function () {
             await invoiceContract.approve();
             // expect(await invoiceContract.isApproved()).to.equal(true);
 
-            await humaPoolContract.connect(borrower).originateCredit(400);
+            let nftTokenId = await invoiceNFTContract.mintNFT(
+                borrower.address,
+                ""
+            );
+            await humaPoolContract
+                .connect(borrower)
+                .originateCreditWithCollateral(
+                    400,
+                    invoiceNFTContract.address,
+                    nftTokenId,
+                    1
+                );
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
@@ -323,7 +357,18 @@ describe("Huma Invoice Financing", function () {
                 borrower
             );
             await invoiceContract.approve();
-            await humaPoolContract.connect(borrower).originateCredit(400);
+            let nftTokenId = await invoiceNFTContract.mintNFT(
+                borrower.address,
+                ""
+            );
+            await humaPoolContract
+                .connect(borrower)
+                .originateCreditWithCollateral(
+                    400,
+                    invoiceNFTContract.address,
+                    nftTokenId,
+                    1
+                );
 
             await testTokenContract.give1000To(payer.address);
         });
