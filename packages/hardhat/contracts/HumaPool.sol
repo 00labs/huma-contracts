@@ -325,7 +325,7 @@ contract HumaPool is HDT, Ownable {
         return credit;
     }
 
-    function originateCredit() external returns (bool) {
+    function originateCredit(uint256 borrowAmt) external returns (bool) {
         poolOn();
         require(
             creditMapping[msg.sender] != address(0),
@@ -338,14 +338,14 @@ contract HumaPool is HDT, Ownable {
             "HumaPool:CREDIT_NOT_APPROVED"
         );
 
+        (uint256 amtForBorrower, uint256 totalFees) = humaCreditContract
+            .originateCredit(borrowAmt);
+
         // Split the fee between treasury and the pool
         uint256 protocolFee = HumaConfig(humaConfig)
             .getTreasuryFee()
             .mul(humaCreditContract.getCreditBalance())
             .div(10000);
-
-        (uint256 amtForBorrower, uint256 totalFees) = humaCreditContract
-            .originateCredit();
 
         assert(totalFees >= protocolFee);
 
