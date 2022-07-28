@@ -188,7 +188,7 @@ contract HumaLoan is IHumaCredit {
 
         assert(li.loanAmount > fees);
 
-        HumaPool(pool).requestReputationTracking(
+        HumaPool(pool).reportReputationTracking(
             borrower,
             IReputationTracker.TrackingType.Borrowing
         );
@@ -265,7 +265,7 @@ contract HumaLoan is IHumaCredit {
 
         // Reputation reporting
         if (ls.remainingPayments == 0) {
-            HumaPool(pool).requestReputationTracking(
+            HumaPool(pool).reportReputationTracking(
                 borrower,
                 IReputationTracker.TrackingType.Payoff
             );
@@ -366,7 +366,7 @@ contract HumaLoan is IHumaCredit {
         poolContract.distributeLosses(losses);
 
         // Retutation reporting
-        poolContract.requestReputationTracking(
+        poolContract.reportReputationTracking(
             borrower,
             IReputationTracker.TrackingType.Default
         );

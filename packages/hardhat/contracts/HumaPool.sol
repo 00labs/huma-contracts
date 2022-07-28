@@ -388,7 +388,7 @@ contract HumaPool is HDT, Ownable {
         return true;
     }
 
-    function requestReputationTracking(
+    function reportReputationTracking(
         address borrower,
         IReputationTracker.TrackingType mode
     ) public {

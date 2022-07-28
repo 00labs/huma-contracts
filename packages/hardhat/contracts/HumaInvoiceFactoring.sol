@@ -151,7 +151,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         if (ii.factoring_fee_bps != 0)
             fees += ii.loanAmt.mul(ii.factoring_fee_bps).div(10000);
 
-        HumaPool(pool).requestReputationTracking(
+        HumaPool(pool).reportReputationTracking(
             borrower,
             IReputationTracker.TrackingType.Borrowing
         );
@@ -193,7 +193,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         HumaPool(pool).processRefund(borrower, amount - ii.loanAmt - lateFee);
 
         // Reputation reporting
-        HumaPool(pool).requestReputationTracking(
+        HumaPool(pool).reportReputationTracking(
             borrower,
             IReputationTracker.TrackingType.Payoff
         );
@@ -256,7 +256,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
         poolContract.distributeLosses(losses);
 
         // Reputation reporting
-        poolContract.requestReputationTracking(
+        poolContract.reportReputationTracking(
             borrower,
             IReputationTracker.TrackingType.Default
         );
