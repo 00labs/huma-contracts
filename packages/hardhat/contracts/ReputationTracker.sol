@@ -79,8 +79,6 @@ contract ReputationTracker is IReputationTracker, Ownable {
         virtual
         override
     {
-        console.log("In report, mode=", uint256(mode));
-
         require(
             mode >= IReputationTracker.TrackingMode.Borrowing &&
                 mode <= IReputationTracker.TrackingMode.Default,
