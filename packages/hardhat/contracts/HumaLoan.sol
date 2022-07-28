@@ -163,6 +163,10 @@ contract HumaLoan is IHumaCredit {
         returns (uint256 amtForBorrower, uint256 amtForTreasury)
     {
         protoNotPaused();
+        require(
+            msg.sender == address(pool),
+            "HumaLoan:ONLY_POOL_CAN_ORIGINATE_CREDIT"
+        );
         require(approved, "HumaLoan:LOAN_NOT_APPROVED");
 
         loanInfo.loanAmount = uint32(borrowAmt);

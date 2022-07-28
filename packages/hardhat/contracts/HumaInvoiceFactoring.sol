@@ -141,6 +141,10 @@ contract HumaInvoiceFactoring is IHumaCredit {
         returns (uint256 amtForBorrower, uint256 amtForTreasury)
     {
         protoNotPaused();
+        require(
+            msg.sender == address(pool),
+            "HumaLoan:ONLY_POOL_CAN_ORIGINATE_CREDIT"
+        );
         require(approved, "HumaIF:INVOICE_FINANCING_NOT_APPROVED");
 
         // Calculate platform fee due

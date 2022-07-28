@@ -265,7 +265,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
-            ).to.equal(188); // principal: 400, flat fee: 20, bps fee: 4
+            ).to.equal(188); // borrower: 188, pool: 11, protocol: 1
 
             expect(
                 await testTokenContract.balanceOf(treasury.address)
@@ -273,6 +273,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(await humaPoolContract.getPoolLiquidity()).to.equal(211);
         });
+
         it("Should be able to borrow the full approved amount", async function () {
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
