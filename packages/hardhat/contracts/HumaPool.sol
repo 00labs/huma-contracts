@@ -13,6 +13,9 @@ import "./HumaAPIClient.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./HumaCreditFactory.sol";
+import "./ReputationTrackerFactory.sol";
+import "./ReputationTracker.sol";
+import "./interfaces/IReputationTracker.sol";
 
 contract HumaPool is HDT, Ownable {
     using SafeERC20 for IERC20;
@@ -88,6 +91,11 @@ contract HumaPool is HDT, Ownable {
 
     uint256 private poolDefaultGracePeriod;
 
+    // HumaLoanFactory
+    address internal reputationTrackerFactory;
+
+    address internal reputationTrackerContractAddress;
+
     // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
         uint256 amount;
@@ -109,6 +117,7 @@ contract HumaPool is HDT, Ownable {
         address _humaConfig,
         address _humaCreditFactory,
         address _humaAPIClient,
+        address _reputationTrackerFactory,
         CreditType _poolCreditType
     ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
@@ -117,9 +126,13 @@ contract HumaPool is HDT, Ownable {
         humaConfig = _humaConfig;
         humaCreditFactory = _humaCreditFactory;
         humaAPIClient = _humaAPIClient;
+        reputationTrackerFactory = _reputationTrackerFactory;
         poolCreditType = _poolCreditType;
         poolDefaultGracePeriod = HumaConfig(humaConfig)
             .getProtocolDefaultGracePeriod();
+        reputationTrackerContractAddress = ReputationTrackerFactory(
+            reputationTrackerFactory
+        ).deployReputationTracker("Huma Pool", "HumaRTT");
     }
 
     modifier onlyHumaMasterAdmin() {
@@ -373,6 +386,20 @@ contract HumaPool is HDT, Ownable {
         locker.transfer(receiver, amount);
 
         return true;
+    }
+
+    function requestReputationTracking(
+        address borrower,
+        ReputationTracker.TrackingMode mode
+    ) public {
+        require(
+            creditMapping[borrower] == msg.sender,
+            "HumaPool:ILLEGAL_REPUTATION_TRACKING_REQUESTER"
+        );
+        IReputationTracker(reputationTrackerContractAddress).report(
+            borrower,
+            mode
+        );
     }
 
     /**

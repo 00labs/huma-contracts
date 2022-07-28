@@ -7,18 +7,18 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "hardhat/console.sol";
 
 /**
- * @notice HumaCTT (Huma Credit Tracking Token) is a non-transferrable token
- * that is issued to the borrower to capture people's borrowing and payback record.
+ * @notice Reputation Tracking Token is a non-transferrable token issued to the
+ * borrower to capture their borrowing and payback record and help them to build
+ * their reputation in the decentralized borrowing network.
  * It is a SBT. The user cannot transfer away the token. If they do not want the
  * token, they can only request the contract to revoke it if there is no outstanding balance.
  *
- * The CTT is impelmented as an NFT that can be viewed on Opensea.
- * Each wallet can have up to one CTT. In the metadata, it is currently tracking
- * # of successful payoffs, # of defaults, # of outstanding loans.
- * The list of attributes to be tracked can grow over time.
+ * The RTT is impelmented as an NFT that can be viewed on Opensea.
+ * In the metadata, it is currently tracking # of successful payoffs, # of defaults,
+ * # of outstanding loans. The list of attributes to be tracked can grow over time.
  *
  */
-contract HumaCreditTrackingToken is ERC721URIStorage, Ownable {
+contract ReputationTrackingToken is ERC721URIStorage, Ownable {
     constructor(string memory _name, string memory _symbol)
         ERC721(_name, _symbol)
     {}
