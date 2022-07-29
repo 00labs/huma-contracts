@@ -13,12 +13,12 @@ interface IHumaCredit {
      * @param _treasury the address of the treasury that accepts fees
      * @param _borrower the address of the borrower
      * @param liquidityAsset the address of the liquidity asset that the borrower obtains
-     * @param liquidityAmount the amount of the liquidity asset that the borrower obtains
+     * @param liquidityAmt the amount of the liquidity asset that the borrower obtains
      * @param collateralAsset the address of the collateral asset. `Collateral` is a broader
      * term than a classical collateral in finance term. It can be the NFT that represents
      * the invoice payment in the Invoice Factoring use case. It can be the game asset
      * in the x-to-own use case.
-     * @param collateralAmount the amount of the collateral asset
+     * @param collateralAmt the amount of the collateral asset
      */
     function initiate(
         address payable pool,
@@ -27,9 +27,9 @@ interface IHumaCredit {
         address _treasury,
         address _borrower,
         address liquidityAsset,
-        uint256 liquidityAmount,
+        uint256 liquidityAmt,
         address collateralAsset,
-        uint256 collateralAmount,
+        uint256 collateralAmt,
         uint256[] calldata terms
     ) external;
 
