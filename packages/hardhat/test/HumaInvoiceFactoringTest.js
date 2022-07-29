@@ -296,9 +296,10 @@ describe("Huma Invoice Financing", function () {
                 );
 
             expect(
-                await testTokenContract.balanceOf(borrower.address)
-            ).to.equal(188); // borrower: 188, pool: 11, protocol: 1
+                await invoiceNFTContract.ownerOf(invoiceNFTTokenId)
+            ).to.equal(await humaPoolContract.getPoolLockerAddress());
 
+            expect(await invoiceNFTContract.balanceOf);
             expect(
                 await testTokenContract.balanceOf(treasury.address)
             ).to.equal(1);
