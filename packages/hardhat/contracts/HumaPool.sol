@@ -198,21 +198,20 @@ contract HumaPool is HDT, Ownable {
      * @dev Withdrawals are not allowed when 1) the pool withdraw is paused or
      *      2) the LP has not reached lockout period since their last depisit
      *      3) the requested amount is higher than the LP's remaining principal
-     * @dev the `amount` is total amount to withdraw. It will deivided by pointsPerShare to get
-     *      the number of HDTs to reduct from msg.sender's account.
-     * @dev Error checking sequence: 1) is the pool on 2) is the amount right 3)
+     * @dev the `amount` is principal amount. It does not include interest or losses accrued. The amount
+     *      withdrawn will be the `amount` plus associated interest and losses.
      */
     function withdraw(uint256 amount) public returns (bool) {
         poolOn();
+        require(
+            amount <= lenderInfo[msg.sender].amount,
+            "HumaPool:WITHDRAW_AMT_TOO_GREAT"
+        );
         require(
             block.timestamp >=
                 lenderInfo[msg.sender].mostRecentLoanTimestamp +
                     loanWithdrawalLockoutPeriod,
             "HumaPool:WITHDRAW_TOO_SOON"
-        );
-        require(
-            amount <= lenderInfo[msg.sender].amount,
-            "HumaPool:WITHDRAW_AMT_TOO_GREAT"
         );
 
         uint256 amtInPower18 = _toPower18(amount);
