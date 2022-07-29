@@ -4,10 +4,11 @@ pragma solidity >=0.8.0 <0.9.0;
 import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "hardhat/console.sol";
 
-contract HumaPoolLocker {
+contract HumaPoolLocker is IERC721Receiver {
     using SafeERC20 for IERC20;
 
     address public immutable pool;
@@ -26,5 +27,14 @@ contract HumaPoolLocker {
     function transfer(address to, uint256 amount) external isPool {
         require(to != address(0), "HumaPoolLocker:NULL_ADDR");
         poolToken.safeTransfer(to, amount);
+    }
+
+    function onERC721Received(
+        address, /*operator*/
+        address, /*from*/
+        uint256, /*tokenId*/
+        bytes calldata /*data*/
+    ) external virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

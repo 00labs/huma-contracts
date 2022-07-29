@@ -377,14 +377,11 @@ contract HumaPool is HDT, Ownable {
 
         distributeIncome(poolIncome);
 
-        console.log("In pool.originateCredit, before collateral handling");
-
         //CRITICAL: Transfer collateral and funding the loan
         // Transfer collateral
         // InterfaceId_ERC721 = 0x80ac58cd;
         if (collateralAsset != address(0)) {
             if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
-                console.log("In IERC721 branch");
                 IERC721(collateralAsset).safeTransferFrom(
                     msg.sender,
                     poolLocker,
@@ -393,7 +390,6 @@ contract HumaPool is HDT, Ownable {
             } else if (
                 collateralAsset.supportsInterface(type(IERC20).interfaceId)
             ) {
-                console.log("In IERC20 branch");
                 IERC20(collateralAsset).safeTransferFrom(
                     msg.sender,
                     poolLocker,

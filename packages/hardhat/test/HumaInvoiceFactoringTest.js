@@ -38,6 +38,7 @@ describe("Huma Invoice Financing", function () {
     let borrower2;
     let treasury;
     let creditApprover;
+    let invoiceNFTTokenId;
 
     before(async function () {
         [owner, lender, borrower, treasury, creditApprover, payer] =
@@ -241,6 +242,20 @@ describe("Huma Invoice Financing", function () {
             await humaPoolContract
                 .connect(creditApprover)
                 .postApprovedCreditRequest(borrower.address, 400, 30, 1);
+
+            // Mint InvoiceNFT to the borrower
+            const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
+            const receipt = await tx.wait();
+            // eslint-disable-next-line no-restricted-syntax
+            for (const evt of receipt.events) {
+                if (evt.event === "TokenGenerated") {
+                    invoiceNFTTokenId = evt.args[0];
+                }
+            }
+
+            await invoiceNFTContract
+                .connect(borrower)
+                .approve(humaPoolContract.address, invoiceNFTTokenId);
         });
 
         afterEach(async function () {
@@ -261,7 +276,7 @@ describe("Huma Invoice Financing", function () {
             // ).to.be.revertedWith("HumaPool:CREDIT_NOT_APPROVED");
         });
 
-        it.only("Should be able to borrow amount less than approved", async function () {
+        it("Should be able to borrow amount less than approved", async function () {
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
             );
@@ -270,26 +285,13 @@ describe("Huma Invoice Financing", function () {
                 borrower
             );
             await invoiceContract.approve();
-            // expect(await invoiceContract.isApproved()).to.equal(true);
-
-            const nftTokenId = await invoiceNFTContract.mintNFT(
-                borrower.address,
-                ""
-            );
-
-            console.log("in test, nftTokenId=", nftTokenId);
-
-            console.log(
-                "In test, invoiceNFTContract.address=",
-                invoiceNFTContract.address
-            );
 
             await humaPoolContract
                 .connect(borrower)
                 .originateCreditWithCollateral(
                     200,
                     invoiceNFTContract.address,
-                    nftTokenId,
+                    invoiceNFTTokenId,
                     1
                 );
 
@@ -315,16 +317,12 @@ describe("Huma Invoice Financing", function () {
             await invoiceContract.approve();
             // expect(await invoiceContract.isApproved()).to.equal(true);
 
-            let nftTokenId = await invoiceNFTContract.mintNFT(
-                borrower.address,
-                ""
-            );
             await humaPoolContract
                 .connect(borrower)
                 .originateCreditWithCollateral(
                     400,
                     invoiceNFTContract.address,
-                    nftTokenId,
+                    invoiceNFTTokenId,
                     1
                 );
 
@@ -356,17 +354,27 @@ describe("Huma Invoice Financing", function () {
                 loanAddress,
                 borrower
             );
-            await invoiceContract.approve();
-            let nftTokenId = await invoiceNFTContract.mintNFT(
-                borrower.address,
-                ""
-            );
+
+            // Mint InvoiceNFT to the borrower
+            const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
+            const receipt = await tx.wait();
+            // eslint-disable-next-line no-restricted-syntax
+            for (const evt of receipt.events) {
+                if (evt.event === "TokenGenerated") {
+                    invoiceNFTTokenId = evt.args[0];
+                }
+            }
+
+            await invoiceNFTContract
+                .connect(borrower)
+                .approve(humaPoolContract.address, invoiceNFTTokenId);
+
             await humaPoolContract
                 .connect(borrower)
                 .originateCreditWithCollateral(
                     400,
                     invoiceNFTContract.address,
-                    nftTokenId,
+                    invoiceNFTTokenId,
                     1
                 );
 
