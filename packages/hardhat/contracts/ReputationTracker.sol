@@ -71,22 +71,21 @@ contract ReputationTracker is IReputationTracker, Ownable {
     /**
      * @notice Tracks a reputation reporting
      * @param borrower the wallet address of the borrower
-     * @param mode indicates whether it is a Borrowing, Payoff, or Default.
+     * @param trackingType indicates whether it is a Borrowing, Payoff, or Default.
      */
-    function report(address borrower, IReputationTracker.TrackingType mode)
-        external
-        virtual
-        override
-    {
+    function report(
+        address borrower,
+        IReputationTracker.TrackingType trackingType
+    ) external virtual override {
         require(
-            mode >= IReputationTracker.TrackingType.Borrowing &&
-                mode <= IReputationTracker.TrackingType.Default,
+            trackingType >= IReputationTracker.TrackingType.Borrowing &&
+                trackingType <= IReputationTracker.TrackingType.Default,
             "ReputationTracker:INCORRECT_TRACKING_MODE"
         );
 
         if (
-            mode == IReputationTracker.TrackingType.Payoff ||
-            mode == IReputationTracker.TrackingType.Default
+            trackingType == IReputationTracker.TrackingType.Payoff ||
+            trackingType == IReputationTracker.TrackingType.Default
         ) {
             require(
                 _records[borrower].numOfOutstandingLoans > 0,
@@ -96,12 +95,12 @@ contract ReputationTracker is IReputationTracker, Ownable {
 
         uint256 tokenId = getReputationTrackingTokenId(borrower);
 
-        if (mode == IReputationTracker.TrackingType.Borrowing) {
+        if (trackingType == IReputationTracker.TrackingType.Borrowing) {
             _records[borrower].numOfOutstandingLoans += 1;
-        } else if (mode == IReputationTracker.TrackingType.Payoff) {
+        } else if (trackingType == IReputationTracker.TrackingType.Payoff) {
             _records[borrower].numOfPayoffs += 1;
             _records[borrower].numOfOutstandingLoans -= 1;
-        } else if (mode == IReputationTracker.TrackingType.Default) {
+        } else if (trackingType == IReputationTracker.TrackingType.Default) {
             _records[borrower].numOfDefaults += 1;
             _records[borrower].numOfOutstandingLoans -= 1;
         }
@@ -109,7 +108,7 @@ contract ReputationTracker is IReputationTracker, Ownable {
         string memory newTokenUri = _getURI(borrower, _records[borrower]);
 
         tokenContract.setTokenURI(tokenId, newTokenUri);
-        emit ReputationReported(address(this), borrower, mode);
+        emit ReputationReported(address(this), borrower, trackingType);
     }
 
     /**
