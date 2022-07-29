@@ -24,6 +24,8 @@ contract HumaPoolFactory {
     // HumaPoolLockerFactory
     address public immutable humaPoolLockerFactory;
 
+    address internal reputationTrackerFactory;
+
     // HumaAPIClient
     // TODO: Do we need to build an upgrade path for this?
     address public humaAPIClient;
@@ -41,13 +43,15 @@ contract HumaPoolFactory {
         address _humaConfig,
         address _humaLoanFactory,
         address _humaPoolLockerFactory,
-        address _humaAPIClient
+        address _humaAPIClient,
+        address _reputationTrackerFactory
     ) {
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
         humaLoanFactory = _humaLoanFactory;
         humaPoolLockerFactory = _humaPoolLockerFactory;
         humaAPIClient = _humaAPIClient;
+        reputationTrackerFactory = _reputationTrackerFactory;
     }
 
     function deployNewPool(address _poolTokenAddress, CreditType _type)
@@ -65,6 +69,7 @@ contract HumaPoolFactory {
                 humaConfig,
                 humaLoanFactory,
                 humaAPIClient,
+                reputationTrackerFactory,
                 _type
             )
         );
