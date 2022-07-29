@@ -30,7 +30,6 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
         _setTokenURI(newItemId, tokenURI);
 
         emit TokenGenerated(newItemId);
-        console.log("Before exit, newItemId=", newItemId);
         return newItemId;
     }
 
