@@ -267,16 +267,21 @@ describe("Huma Pool", function () {
             // to do. HumaPool.Withdraw shall reject with a code.
         });
 
-        it("Should reject if the withdraw amount is higher than deposit", async function () {
-            await expect(
-                humaPoolContract.connect(lender).withdraw(500)
-            ).to.be.revertedWith("HumaPool:WITHDRAW_AMT_TOO_GREAT");
-        });
-
         it("Should reject when withdraw too early", async function () {
             await expect(
                 humaPoolContract.connect(lender).withdraw(100)
             ).to.be.revertedWith("HumaPool:WITHDRAW_TOO_SOON");
+        });
+
+        it("Should reject if the withdraw amount is higher than deposit", async function () {
+            const loanWithdrawalLockout =
+                await humaPoolContract.getLoanWithdrawalLockoutPeriod();
+            await ethers.provider.send("evm_increaseTime", [
+                loanWithdrawalLockout.toNumber(),
+            ]);
+            await expect(
+                humaPoolContract.connect(lender).withdraw(500)
+            ).to.be.revertedWith("HumaPool:WITHDRAW_AMT_TOO_GREAT");
         });
 
         it("Pool withdrawal works correctly", async function () {
