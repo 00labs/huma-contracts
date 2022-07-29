@@ -11,11 +11,11 @@ interface IReputationTracker {
     event ReputationReported(
         address reporter,
         address borrower,
-        TrackingType mode
+        TrackingType trackingType
     );
     event ReputationTrackingRevoked(address reporter, address borrower);
 
-    function report(address borrower, TrackingType mode) external;
+    function report(address borrower, TrackingType trackingType) external;
 
     function revokeTracking(address borrower) external;
 }

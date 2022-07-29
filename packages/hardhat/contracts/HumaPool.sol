@@ -390,7 +390,7 @@ contract HumaPool is HDT, Ownable {
 
     function reportReputationTracking(
         address borrower,
-        IReputationTracker.TrackingType mode
+        IReputationTracker.TrackingType trackingType
     ) public {
         // To make sure only IHumaCredit implementors (e.g. HumaLoan) can call this function for reputation tracking.
         require(
@@ -399,10 +399,10 @@ contract HumaPool is HDT, Ownable {
         );
         IReputationTracker(reputationTrackerContractAddress).report(
             borrower,
-            mode
+            trackingType
         );
         // For payoff, remove the credit record so that the borrower can borrow again.
-        if (mode == IReputationTracker.TrackingType.Payoff) {
+        if (trackingType == IReputationTracker.TrackingType.Payoff) {
             creditMapping[borrower] = address(0);
         }
     }
