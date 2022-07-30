@@ -10,7 +10,7 @@ import "./HumaPool.sol";
 
 contract HumaPoolAdmins is Ownable {
     // A map of addresses which are allowed to create new Huma Pools.
-    mapping(address => bool) public approvedAdmins;
+    mapping(address => bool) private approvedAdmins;
 
     constructor() {
         // Initialize approvedAdmins with the creator
