@@ -21,7 +21,7 @@ contract HumaCreditFactory {
         address _poolToken,
         uint256 _amount,
         address _collateralAsset,
-        uint256 _collateralAmount,
+        uint256 _collateralAmt,
         uint256[] memory terms
     ) external returns (address credit) {
         if (_type == CreditType.Loan)
@@ -34,7 +34,7 @@ contract HumaCreditFactory {
                 _poolToken,
                 _amount,
                 _collateralAsset,
-                _collateralAmount,
+                _collateralAmt,
                 terms
             );
         else if (_type == CreditType.InvoiceFactoring)
@@ -47,7 +47,7 @@ contract HumaCreditFactory {
                 _poolToken,
                 _amount,
                 _collateralAsset,
-                _collateralAmount,
+                _collateralAmt,
                 terms
             );
     }
@@ -62,7 +62,7 @@ contract HumaCreditFactory {
         address _poolToken,
         uint256 _amount,
         address _collateralAsset,
-        uint256 _collateralAmount,
+        uint256 _collateralAmt,
         uint256[] memory terms
     ) internal returns (address) {
         HumaLoan humaLoan = new HumaLoan();
@@ -75,7 +75,7 @@ contract HumaCreditFactory {
             _poolToken,
             _amount,
             _collateralAsset,
-            _collateralAmount,
+            _collateralAmt,
             terms
         );
 
@@ -92,7 +92,7 @@ contract HumaCreditFactory {
         address _poolToken,
         uint256 _amount,
         address _collateralAsset,
-        uint256 _collateralAmount,
+        uint256 _collateralAmt,
         uint256[] memory terms
     ) internal returns (address) {
         HumaInvoiceFactoring humaInvoice = new HumaInvoiceFactoring();
@@ -105,7 +105,7 @@ contract HumaCreditFactory {
             _poolToken,
             _amount,
             _collateralAsset,
-            _collateralAmount,
+            _collateralAmt,
             terms
         );
 

@@ -53,8 +53,8 @@ contract HumaLoan is IHumaCredit {
         uint16 late_fee_bps;
         uint16 early_payoff_fee_flat;
         uint16 early_payoff_fee_bps;
-        uint32 loanAmount;
-        uint32 collateralAmount;
+        uint32 loanAmt;
+        uint32 collateralAmt;
         address collateralAsset;
     }
 
@@ -68,7 +68,7 @@ contract HumaLoan is IHumaCredit {
         uint64 nextDueDate;
         uint32 feesDue;
         uint32 principalPaidBack; // remaining principal balance
-        uint32 nextAmountDue;
+        uint32 nextAmtDue;
         uint16 remainingPayments;
         uint16 paymentInterval; // in days
         uint16 numOfPayments;
@@ -83,9 +83,9 @@ contract HumaLoan is IHumaCredit {
      * @param _treasury the address of the treasury that accepts fees
      * @param _borrower the address of the borrower
      * @param liquidityAsset the address of the liquidity asset that the borrower obtains
-     * @param liquidityAmount the amount of the liquidity asset that the borrower obtains
+     * @param liquidityAmt the amount of the liquidity asset that the borrower obtains
      * @param collateralAsset the address of the collateral asset.
-     * @param collateralAmount the amount of the collateral asset
+     * @param collateralAmt the amount of the collateral asset
      * @param terms[] the terms for the loan.
      *                [0] apr_in_bps
      *                [1] platform_fee_flat
@@ -104,9 +104,9 @@ contract HumaLoan is IHumaCredit {
         address _treasury,
         address _borrower,
         address liquidityAsset,
-        uint256 liquidityAmount,
+        uint256 liquidityAmt,
         address collateralAsset,
-        uint256 collateralAmount,
+        uint256 collateralAmt,
         uint256[] memory terms
     ) external virtual override {
         pool = _pool;
@@ -126,9 +126,9 @@ contract HumaLoan is IHumaCredit {
         li.late_fee_bps = uint16(terms[4]);
         li.early_payoff_fee_flat = uint16(terms[7]);
         li.early_payoff_fee_bps = uint16(terms[8]);
-        li.loanAmount = uint32(liquidityAmount);
+        li.loanAmt = uint32(liquidityAmt);
         li.collateralAsset = collateralAsset;
-        li.collateralAmount = uint32(collateralAmount);
+        li.collateralAmt = uint32(collateralAmt);
 
         LoanState memory ls;
         ls.paymentInterval = uint16(terms[5]);
@@ -170,7 +170,7 @@ contract HumaLoan is IHumaCredit {
         );
         require(approved, "HumaLoan:LOAN_NOT_APPROVED");
 
-        loanInfo.loanAmount = uint32(borrowAmt);
+        loanInfo.loanAmt = uint32(borrowAmt);
 
         LoanState storage ls = loanState;
         ls.principalPaidBack = 0;
@@ -180,7 +180,7 @@ contract HumaLoan is IHumaCredit {
             block.timestamp + uint256(ls.paymentInterval) * 24 * 3600
         );
         // todo Calculate the next payment for different payback interval.
-        ls.nextAmountDue = uint16(calcInterestOnlyMonthlyPayment());
+        ls.nextAmtDue = uint16(calcInterestOnlyMonthlyPayment());
         ls.remainingPayments = ls.numOfPayments;
 
         loanState = ls;
@@ -190,9 +190,9 @@ contract HumaLoan is IHumaCredit {
         LoanInfo storage li = loanInfo;
         if (li.platform_fee_flat != 0) fees = li.platform_fee_flat;
         if (li.platform_fee_bps != 0)
-            fees += li.loanAmount.mul(li.platform_fee_bps).div(10000);
+            fees += li.loanAmt.mul(li.platform_fee_bps).div(10000);
 
-        assert(li.loanAmount > fees);
+        assert(li.loanAmt > fees);
 
         HumaPool(pool).reportReputationTracking(
             borrower,
@@ -200,7 +200,7 @@ contract HumaLoan is IHumaCredit {
         );
 
         // CRITICAL: Transfer fees to treasury, remaining proceeds to the borrower
-        return (li.loanAmount - fees, fees);
+        return (li.loanAmt - fees, fees);
     }
 
     /**
@@ -224,15 +224,15 @@ contract HumaLoan is IHumaCredit {
 
         require(ls.remainingPayments > 0, "HumaLoan:LOAN_PAID_OFF_ALREADY");
 
-        uint256 totalAmount;
+        uint256 totalAmt;
         uint256 principal;
         uint256 interest;
         uint256 fees;
         if (ls.remainingPayments == 1) {
-            (totalAmount, principal, interest, fees, ) = getPayoffInfo();
+            (totalAmt, principal, interest, fees, ) = getPayoffInfo();
         } else {
             (
-                totalAmount,
+                totalAmt,
                 principal,
                 interest,
                 fees,
@@ -242,16 +242,16 @@ contract HumaLoan is IHumaCredit {
 
         // Do not accept partial payments. Requires amount to be able to cover
         // the next payment and all the outstanding fees.
-        require(amount >= totalAmount, "HumaLoan:AMOUNT_TOO_LOW");
+        require(amount >= totalAmt, "HumaLoan:AMOUNT_TOO_LOW");
 
         // Handle overpayment towards principal.
-        principal += (amount - totalAmount);
-        totalAmount = amount;
+        principal += (amount - totalAmt);
+        totalAmt = amount;
 
         if (ls.remainingPayments == 1) {
-            ls.principalPaidBack = li.loanAmount; // avoids penny difference
+            ls.principalPaidBack = li.loanAmt; // avoids penny difference
             ls.feesDue = 0;
-            ls.nextAmountDue = 0;
+            ls.nextAmtDue = 0;
             ls.nextDueDate = 0;
             ls.remainingPayments = 0;
         } else {
@@ -293,7 +293,7 @@ contract HumaLoan is IHumaCredit {
         uint256 penalty;
         if (li.early_payoff_fee_flat > 0) penalty = li.early_payoff_fee_flat;
         if (li.early_payoff_fee_bps > 0) {
-            uint32 remainingPrincipal = li.loanAmount - ls.principalPaidBack;
+            uint32 remainingPrincipal = li.loanAmt - ls.principalPaidBack;
             penalty.add(
                 remainingPrincipal.mul(li.early_payoff_fee_bps).div(120000)
             ); //120000 = 10000(due to bps) * 12 (convert rate to monthly)
@@ -334,7 +334,7 @@ contract HumaLoan is IHumaCredit {
             if (li.late_fee_flat > 0) newFees = li.late_fee_flat;
             if (li.late_fee_bps > 0) {
                 // 120000 = 10000 (due to bps) * 12 (convert to monthly), combined for gas opt.
-                newFees += ls.nextAmountDue.mul(li.late_fee_bps).div(120000);
+                newFees += ls.nextAmtDue.mul(li.late_fee_bps).div(120000);
             }
             ls.feesDue.add(newFees);
             ls.lastLateFeeTimestamp = uint64(block.timestamp);
@@ -368,7 +368,7 @@ contract HumaLoan is IHumaCredit {
         // FeatureRequest: add staking logic
 
         // Trigger loss process
-        losses = loanInfo.loanAmount - loanState.principalPaidBack;
+        losses = loanInfo.loanAmt - loanState.principalPaidBack;
         poolContract.distributeLosses(losses);
 
         // Retutation reporting
@@ -397,7 +397,7 @@ contract HumaLoan is IHumaCredit {
         LoanState storage ls = loanState;
         uint256 monthlyRateBP = li.apr_in_bps / 12;
         monthlyPayment = li
-            .loanAmount
+            .loanAmt
             .mul(monthlyRateBP.mul(monthlyRateBP.add(10000)) ^ ls.numOfPayments)
             .div(monthlyRateBP.add(10000) ^ ls.numOfPayments.sub(10000));
     }
@@ -411,12 +411,12 @@ contract HumaLoan is IHumaCredit {
         returns (uint256 amount)
     {
         LoanInfo storage li = loanInfo;
-        return li.loanAmount.mul(li.apr_in_bps).div(120000); //1200=10000*12
+        return li.loanAmt.mul(li.apr_in_bps).div(120000); //1200=10000*12
     }
 
     /**
      * @notice Gets the information of the next payment due
-     * @return totalAmount the full amount due for the next payment
+     * @return totalAmt the full amount due for the next payment
      * @return principal the amount towards principal
      * @return interest the amount towards interest
      * @return fees the amount towards fees
@@ -427,7 +427,7 @@ contract HumaLoan is IHumaCredit {
         virtual
         override
         returns (
-            uint256 totalAmount,
+            uint256 totalAmt,
             uint256 principal,
             uint256 interest,
             uint256 fees,
@@ -440,9 +440,9 @@ contract HumaLoan is IHumaCredit {
         // For loans w/ fixed payments, the portion towards interest is this month's interest charge,
         // which is remaining principal times monthly interest rate. The difference b/w the total amount
         // and the interest payment pays down principal.
-        uint256 remainingPrincipal = li.loanAmount - ls.principalPaidBack;
+        uint256 remainingPrincipal = li.loanAmt - ls.principalPaidBack;
         interest = remainingPrincipal.mul(li.apr_in_bps).div(120000); // 120000=10000*12
-        principal = ls.nextAmountDue - interest;
+        principal = ls.nextAmtDue - interest;
         return (
             principal + interest + fees,
             principal,
@@ -454,7 +454,7 @@ contract HumaLoan is IHumaCredit {
 
     /**
      * @notice Gets the information of the next payment due for interest only
-     * @return totalAmount the full amount due for the next payment
+     * @return totalAmt the full amount due for the next payment
      * @return principal the amount towards principal
      * @return interest the amount towards interest
      * @return fees the amount towards fees
@@ -464,7 +464,7 @@ contract HumaLoan is IHumaCredit {
         public
         virtual
         returns (
-            uint256 totalAmount,
+            uint256 totalAmt,
             uint256 principal,
             uint256 interest,
             uint256 fees,
@@ -474,7 +474,7 @@ contract HumaLoan is IHumaCredit {
         fees = assessLateFee();
         LoanInfo storage li = loanInfo;
 
-        interest = li.loanAmount.mul(li.apr_in_bps).div(120000); //120000 = 10000 * 12
+        interest = li.loanAmt.mul(li.apr_in_bps).div(120000); //120000 = 10000 * 12
         return (interest + fees, 0, interest, fees, block.timestamp);
     }
 
@@ -500,7 +500,7 @@ contract HumaLoan is IHumaCredit {
     {
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
-        principal = li.loanAmount - ls.principalPaidBack;
+        principal = li.loanAmt - ls.principalPaidBack;
         interest = principal.mul(li.apr_in_bps).div(1200); //1200=100*12
         fees = assessLateFee();
         fees.add(assessEarlyPayoffFees());
@@ -528,7 +528,7 @@ contract HumaLoan is IHumaCredit {
         )
     {
         LoanInfo storage li = loanInfo;
-        principal = li.loanAmount;
+        principal = li.loanAmt;
         interest = principal.mul(li.apr_in_bps).div(120000); //1200=10000*12
         fees = assessLateFee();
         fees.add(assessEarlyPayoffFees());
@@ -556,8 +556,8 @@ contract HumaLoan is IHumaCredit {
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
         return (
-            li.loanAmount,
-            ls.nextAmountDue,
+            li.loanAmt,
+            ls.nextAmtDue,
             ls.paymentInterval,
             li.apr_in_bps,
             ls.nextDueDate,
@@ -580,7 +580,7 @@ contract HumaLoan is IHumaCredit {
     {
         LoanInfo storage li = loanInfo;
         LoanState storage ls = loanState;
-        amount = li.loanAmount.sub(ls.principalPaidBack);
+        amount = li.loanAmt.sub(ls.principalPaidBack);
     }
 
     function protoNotPaused() internal view {
