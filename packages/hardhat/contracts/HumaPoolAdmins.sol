@@ -8,9 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./HumaPool.sol";
 
+// todo Combine this into HumaConfig, streamline key roles: SuperAdmin, Pausers, PoolAdmins.
 contract HumaPoolAdmins is Ownable {
     // A map of addresses which are allowed to create new Huma Pools.
-    mapping(address => bool) public approvedAdmins;
+    mapping(address => bool) private approvedAdmins;
 
     constructor() {
         // Initialize approvedAdmins with the creator
