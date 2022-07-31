@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-
 import "./HumaInvoiceFactoring.sol";
 import "./HumaLoan.sol";
 import "./HumaPool.sol";

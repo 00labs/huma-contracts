@@ -10,31 +10,29 @@ import "./interfaces/IHumaPoolLockerFactory.sol";
 import "./HumaPool.sol";
 import "./HumaConfig.sol";
 
-// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol
-
 contract HumaPoolFactory {
     using SafeERC20 for IERC20;
 
     // HumaPoolAdmins
-    address public immutable humaPoolAdmins;
+    address internal immutable humaPoolAdmins;
 
     // HumaLoanFactory
-    address public immutable humaLoanFactory;
+    address internal immutable humaLoanFactory;
 
     // HumaPoolLockerFactory
-    address public immutable humaPoolLockerFactory;
+    address internal immutable humaPoolLockerFactory;
 
     address internal reputationTrackerFactory;
 
     // HumaAPIClient
     // TODO: Do we need to build an upgrade path for this?
-    address public humaAPIClient;
+    address internal humaAPIClient;
 
     // HumaConfig
-    address public immutable humaConfig;
+    address internal immutable humaConfig;
 
     // Array of all Huma Pools created from this factory
-    address[] public pools;
+    address[] internal pools;
 
     event PoolDeployed(address _poolAddress);
 

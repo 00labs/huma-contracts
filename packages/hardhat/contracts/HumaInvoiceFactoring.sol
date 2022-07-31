@@ -33,10 +33,10 @@ contract HumaInvoiceFactoring is IHumaCredit {
     address payable private pool;
     address private poolLocker;
     address private humaConfig;
-    address public treasury;
-    address public borrower;
-    bool public approved;
-    InvoiceInfo public invoiceInfo;
+    address private treasury;
+    address private borrower;
+    bool private approved;
+    InvoiceInfo private invoiceInfo;
 
     /**
      * @notice InvoiceInfo stores the overall info about an invoice.

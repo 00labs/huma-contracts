@@ -128,6 +128,7 @@ contract ReputationTracker is IReputationTracker, Ownable {
         emit ReputationTrackingRevoked(address(this), borrower);
     }
 
+    // todo look for more efficient way to implement this.
     function _getURI(address borrower, ReputationTrackingRecord storage ctr)
         private
         view

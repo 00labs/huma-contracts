@@ -29,11 +29,11 @@ contract HumaLoan is IHumaCredit {
     address payable pool;
     address private poolLocker;
     address private humaConfig;
-    address public treasury;
-    address public borrower;
-    bool public approved;
-    LoanInfo public loanInfo;
-    LoanState public loanState;
+    address private treasury;
+    address private borrower;
+    bool private approved;
+    LoanInfo private loanInfo;
+    LoanState private loanState;
 
     /**
      * @notice LoanInfo stores the overall info about a loan.
