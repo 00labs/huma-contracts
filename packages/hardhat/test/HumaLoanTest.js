@@ -50,7 +50,6 @@ describe("Huma Loan", function () {
     let humaConfigContract;
     let humaCreditFactoryContract;
     let humaPoolLockerFactoryContract;
-    let humaAPIClientContract;
     let testTokenContract;
     let owner;
     let lender;
@@ -85,9 +84,6 @@ describe("Huma Loan", function () {
         );
         humaPoolLockerFactoryContract = await HumaPoolLockerFactory.deploy();
 
-        const HumaAPIClient = await ethers.getContractFactory("HumaAPIClient");
-        humaAPIClientContract = await HumaAPIClient.deploy();
-
         const ReputationTrackerFactory = await ethers.getContractFactory(
             "ReputationTrackerFactory"
         );
@@ -102,7 +98,6 @@ describe("Huma Loan", function () {
             humaConfigContract.address,
             humaCreditFactoryContract.address,
             humaPoolLockerFactoryContract.address,
-            humaAPIClientContract.address,
             reputationTrackerFactoryContract.address
         );
     });

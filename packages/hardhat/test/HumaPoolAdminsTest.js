@@ -16,7 +16,6 @@ describe("Base Contracts", function () {
     let humaConfigContract;
     let humaCreditFactoryContract;
     let humaPoolLockerFactoryContract;
-    let humaAPIClientContract;
     let testTokenContract;
     let owner;
     let lender;
@@ -47,9 +46,6 @@ describe("Base Contracts", function () {
         );
         humaPoolLockerFactoryContract = await HumaPoolLockerFactory.deploy();
 
-        const HumaAPIClient = await ethers.getContractFactory("HumaAPIClient");
-        humaAPIClientContract = await HumaAPIClient.deploy();
-
         const ReputationTrackerFactory = await ethers.getContractFactory(
             "ReputationTrackerFactory"
         );
@@ -64,7 +60,6 @@ describe("Base Contracts", function () {
             humaConfigContract.address,
             humaCreditFactoryContract.address,
             humaPoolLockerFactoryContract.address,
-            humaAPIClientContract.address,
             reputationTrackerFactoryContract.address
         );
 

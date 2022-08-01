@@ -24,10 +24,6 @@ contract HumaPoolFactory {
 
     address internal reputationTrackerFactory;
 
-    // HumaAPIClient
-    // TODO: Do we need to build an upgrade path for this?
-    address internal humaAPIClient;
-
     // HumaConfig
     address internal immutable humaConfig;
 
@@ -41,14 +37,12 @@ contract HumaPoolFactory {
         address _humaConfig,
         address _humaLoanFactory,
         address _humaPoolLockerFactory,
-        address _humaAPIClient,
         address _reputationTrackerFactory
     ) {
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
         humaLoanFactory = _humaLoanFactory;
         humaPoolLockerFactory = _humaPoolLockerFactory;
-        humaAPIClient = _humaAPIClient;
         reputationTrackerFactory = _reputationTrackerFactory;
     }
 
@@ -66,7 +60,6 @@ contract HumaPoolFactory {
                 humaPoolAdmins,
                 humaConfig,
                 humaLoanFactory,
-                humaAPIClient,
                 reputationTrackerFactory,
                 _type
             )

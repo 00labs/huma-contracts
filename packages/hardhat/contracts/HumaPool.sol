@@ -10,7 +10,6 @@ import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./HumaPoolLocker.sol";
-import "./HumaAPIClient.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./HumaCreditFactory.sol";
@@ -34,9 +33,6 @@ contract HumaPool is HDT, Ownable {
 
     // Liquidity holder proxy contract for this pool
     address internal poolLocker;
-
-    // API client used to connect with huma's risk service
-    address internal humaAPIClient;
 
     // HumaLoanFactory
     address internal humaCreditFactory;
@@ -118,7 +114,6 @@ contract HumaPool is HDT, Ownable {
         address _humaPoolAdmins,
         address _humaConfig,
         address _humaCreditFactory,
-        address _humaAPIClient,
         address _reputationTrackerFactory,
         CreditType _poolCreditType
     ) HDT("Huma", "Huma", _poolToken) {
@@ -127,7 +122,6 @@ contract HumaPool is HDT, Ownable {
         humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
         humaCreditFactory = _humaCreditFactory;
-        humaAPIClient = _humaAPIClient;
         reputationTrackerFactory = _reputationTrackerFactory;
         poolCreditType = _poolCreditType;
         poolDefaultGracePeriod = HumaConfig(humaConfig)
@@ -326,17 +320,6 @@ contract HumaPool is HDT, Ownable {
             terms
         );
         creditMapping[borrower] = credit;
-
-        // todo grab real loan id and fix term
-        // HumaAPIClient(humaAPIClient).requestRiskApproval(
-        //     HumaConfig(humaConfig).network(),
-        //     msg.sender,
-        //     0,
-        //     _borrowAmt,
-        //     terms[2],
-        //     _paymentInterval,
-        //     "oneMonth"
-        // );
 
         return credit;
     }
