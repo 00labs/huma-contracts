@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0 <0.9.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 enum CreditType {
     Loan,
     InvoiceFactoring,
@@ -9,220 +11,97 @@ enum CreditType {
 
 /** @notice HumaConfig maintains all the global configurations supported by Huma protocol.
  */
-contract HumaConfig {
+contract HumaConfig is Ownable {
     /// The initial value for default grace period.
-    uint256 private constant PROTOCOL_DEFAULT_GRACE_PERIOD = 5 days;
+    uint32 private constant PROTOCOL_DEFAULT_GRACE_PERIOD = 5 days;
 
     /// The default treasury fee in bps.
-    uint256 private constant DEFAULT_TREASURY_FEE = 50; // 0.5%
+    uint16 private constant DEFAULT_TREASURY_FEE = 50; // 0.5%
 
-    // The network the pools in this config are under (e.g. mainnet, rinkeby)
-    // Used for risk API integration
-    string public network;
+    /// The default treasury fee in bps.
+    uint16 private constant TREASURY_FEE_UPPER_BOUND = 5000; // 0.5%
 
-    /// The Governor is repsonsible for managing all protocol-level configs.
-    address private governor;
-
-    /// pendingGovernor is set to become the new governor after accepting the transfer.
-    address private pendingGovernor;
-
-    /// The protocol admin operate the protocol, incl. turning it on or off.
-    address private protoAdmin;
-
+    /// Expect to pack the next five fields in one storage slot.
     /// Flag that shows whether the protocol is paused or not
     bool private protocolPaused;
 
-    /// List of assets supported by the protocol for investing and borrowing
-    mapping(address => bool) private validLiquidityAsset;
-
-    /// Seconds passed the due date before trigging a default
-    uint256 private protocolDefaultGracePeriod;
+    /// Seconds passed the due date before trigging a default.
+    uint32 private protocolDefaultGracePeriod;
 
     /// Protocol fee of the loan origination (in bps). Other fees are defined at pool level.
-    uint256 private treasuryFee;
+    uint16 private treasuryFee;
 
     /// humaTreasury is the protocol treasury
     address private humaTreasury;
 
-    //TODO: Add configs related to staking
-    //TODO: Add configs related to collateral
-    //TODO: Gas optimization of the storage variables after finaling the variables
+    // The network the pools in this config are under (e.g. mainnet, rinkeby)
+    // Used for risk API integration
+    string private network;
 
-    event ProtocolInitialized();
-    event NewGovernorNominated(address indexed newGovernor);
-    event NewGovernorAccepted(address indexed newGovernor);
-    event ProtoAdminSet(address indexed newprotoAdmin);
-    event ProtocolPausedChanged(bool pause);
+    /// pausers can pause the pool.
+    mapping(address => bool) private pausers;
 
-    event LiquidityAssetSet(
-        address asset,
-        uint256 decimals,
-        string symbol,
-        bool valid
-    );
-    event TreasuryFeeChanged(uint256 newFee);
-    event ProtocolDefaultGracePeriodChanged(uint256 gracePeriod);
+    // poolAdmins has the list of approved pool admins / pool owners.
+    mapping(address => bool) private poolAdmins;
+
+    /// List of assets supported by the protocol for investing and borrowing
+    mapping(address => bool) private validLiquidityAssets;
+
+    event ProtocolInitialized(address by);
+
+    event ProtocolPaused(address by);
+    event ProtocolUnpaused(address by);
+
+    event PauserAdded(address indexed pauser, address by);
+    event PauserRemoved(address indexed pauser, address by);
+
+    event PoolAdminAdded(address indexed pauser, address by);
+    event PoolAdminRemoved(address indexed pauser, address by);
+
+    event LiquidityAssetAdded(address asset, address by);
+    event LiquidityAssetRemoved(address asset, address by);
 
     event HumaTreasuryChanged(address indexed newTreasuryAddress);
+    event TreasuryFeeChanged(uint256 oldFee, uint256 newFee);
 
-    /// Makes sure the msg.sender is the governor
-    modifier isGovernor() {
-        require(msg.sender == governor, "HumaConfig:GOVERNOR_REQUIRED");
-        _;
-    }
-
-    /// Makes sure the msg.sender is the protocol admin
-    modifier isprotoAdmin() {
-        require(msg.sender == protoAdmin, "HumaConfig:PROTO_ADMIN_REQUIRED");
-        _;
-    }
+    event ProtocolDefaultGracePeriodChanged(uint256 gracePeriod);
 
     /**
-     * @notice Initiates the config with the provided governor and proto admin addresses.
-     * Only governor can appoint new governor, proto admin, or change the treasury address
-     * Only proto admin can turn on or off the proto after initiation.
-     * Only proto admin can change the default grace period, treasury fee, add or remove
-     * assets to be supported by the protocol.
-     * Set the default grace period and treasury fee to the default values.
-     * Set the default Huma Tresury to the governor. It is expected to be changed immediately after.
-     * @param _governor address of Governor
-     * @param _protoAdmin address the Protocol Admin
-     * @dev Reverts w/ msg "HumaConfig:ZERO_ADDRESS_GOVERNOR" for address(0) for governor
-     * @dev Reverts w/ msg "HumaConfig:ZERO_ADDRESS_PROTO_ADMIN" for address(0) for admin
+     * @notice Initiates the config. Only owner can appoint set the treasury
+     * address, add pausers and pool admins, change the default grace period,
+     * treasury fee, add or remove assets to be supported by the protocol.
+     * @param treasury the address to be used as Huma treasury
      * @dev Emits an ProtocolInitialized event.
      */
-    constructor(address _governor, address _protoAdmin) {
-        require(_governor != address(0), "HumaConfig:ZERO_ADDRESS_GOVERNOR");
-        require(
-            _protoAdmin != address(0),
-            "HumaConfig:ZERO_ADDRESS_PROTO_ADMIN"
-        );
-        governor = _governor;
-        protoAdmin = _protoAdmin;
-        protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
+    constructor(address treasury) {
+        pausers[owner()] = true;
 
-        // Set governor as default treasury, which can be changed via setHumaTreasury().
-        humaTreasury = _governor;
-        treasuryFee = DEFAULT_TREASURY_FEE;
-
-        emit ProtocolInitialized();
-    }
-
-    // ********************************************
-    // Configs related to protocol management roles
-    // ********************************************
-
-    /**
-     * @notice Nominates a new Governor. This address can become Governor if they accept.
-     * Only the Governor can call this function.
-     * @param newGovernor Address of the newly nominated Governor.
-     * @dev If the nominee is address(0), revert with message "HumaConfig:GOVERNOR_ZERO_ADDR"
-     * @dev if the nominee is the governor, revert w/ msg "HumaConfig:NOMINEE_CANNOT_BE_GOVERNOR"
-     * @dev Emits a NewGovernorNominated event.
-     */
-    function nominateNewGovernor(address newGovernor) external isGovernor {
-        require(newGovernor != address(0), "HumaConfig:GOVERNOR_ZERO_ADDR");
-        require(
-            newGovernor != governor,
-            "HumaConfig:NOMINEE_CANNOT_BE_GOVERNOR"
-        );
-        pendingGovernor = newGovernor;
-        emit NewGovernorNominated(newGovernor);
-    }
-
-    /**
-     * @notice Accepts the Governor position. Only the nominated governor can call this function.
-     * Otherwise, reverts w/ msg "HumaConfig:GOVERNOR_NOMINEE_NEEDED".
-     * @dev Emits a NewGovernorAccepted(addreww newGovernor) event.
-     */
-    function acceptGovernor() external {
-        require(
-            msg.sender == pendingGovernor,
-            "HumaConfig:GOVERNOR_NOMINEE_NEEDED"
-        );
-        governor = msg.sender;
-        pendingGovernor = address(0);
-        emit NewGovernorAccepted(msg.sender);
-    }
-
-    /**
-     * @notice Sets the address of Huma Treasury. Only governor can make the change.
-     * @param treasury the new Huma Treasury address
-     * @dev If address(0) is provided, revert with "HumaConfig:TREASURY_ADDRESS_ZERO"
-     * @dev If the current treasury address is provided, revert w/ "HumaConfig:TREASURY_ADDRESS_UNCHANGED"
-     * @dev emit HumaTreasuryChanged(address newTreasury) event
-     */
-    function setHumaTreasury(address treasury) external isGovernor {
-        require(treasury != address(0), "HumaConfig:TREASURY_ADDRESS_ZERO");
-        require(
-            treasury != humaTreasury,
-            "HumaConfig:TREASURY_ADDRESS_UNCHANGED"
-        );
         humaTreasury = treasury;
 
+        protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
+
+        treasuryFee = DEFAULT_TREASURY_FEE;
+
+        emit ProtocolInitialized(msg.sender);
         emit HumaTreasuryChanged(treasury);
     }
 
     /**
-     * @notice Sets the Protocol Admin. Only Governor can do so.
-     * @param _protoAdmin Address of the new protocol admin
-     * @dev If address(0) is provided, revert with "HumaConfig:ADMIN_ADDRESS_ZERO"
-     * @dev If the current admin address is provided, revert w/ "HumaConfig:PROTOADMIN_ADDRESS_UNCHANGED"
-     * @dev Emits a protoAdminSet event.
-     */
-    function setProtoAdmin(address _protoAdmin) external isGovernor {
-        require(_protoAdmin != address(0), "HumaConfig:ADMIN_ADDRESS_ZERO");
-        require(
-            protoAdmin != _protoAdmin,
-            "HumaConfig:PROTOADMIN_ADDRESS_UNCHANGED"
-        );
-
-        protoAdmin = _protoAdmin;
-
-        emit ProtoAdminSet(protoAdmin);
-    }
-
-    /**
-     * @notice Flips the pause state of the protocol. Only the protocol Admin can do so.
-     * @param pause the new pause state
+     * @notice Pauses the entire protocol. Used in extreme cases by the pausers.
      * @dev Emits a ProtocolPausedChanged event.
      */
-    function setProtocolPaused(bool pause) external isprotoAdmin {
-        protocolPaused = pause;
-        emit ProtocolPausedChanged(pause);
+    function pauseProtocol() external onlyPausers {
+        protocolPaused = true;
+        emit ProtocolPaused(msg.sender);
     }
 
     /**
-     * @notice Sets the validity of an asset for liquidity in Huma. Only the proto admin can do so.
-     * @param asset Address of the valid asset.
-     * @param valid The new validity status a Liquidity Asset in Pools.
-     * @dev Emits a LiquidityAssetSet event.
+     * @notice Unpause the entire protocol.
+     * @dev Emits a ProtocolPausedChanged event.
      */
-    function setLiquidityAsset(address asset, bool valid)
-        external
-        isprotoAdmin
-    {
-        if (valid) validLiquidityAsset[asset] = valid;
-        else delete validLiquidityAsset[asset];
-
-        emit LiquidityAssetSet(
-            asset,
-            uint256(0), // TODO: need to get decimals of asset
-            "", // TODO: need to get symbol of asset through IERC20Detailed
-            valid
-        );
-    }
-
-    /**
-     * @notice Sets the treasury fee (in basis points). Only proto admin can do so.
-     * @param fee the new treasury fee (in bps)
-     * @dev Treasury fee cannot exceed 5000 bps, i.e. 50%
-     * @dev Emits a TreasuryFeeChanged(uint256 fee) event
-     */
-    function setTreasuryFee(uint256 fee) external isprotoAdmin {
-        require(fee <= 5000, "HumaConfig:TREASURY_FEE_TOO_HIGH");
-        treasuryFee = fee;
-        emit TreasuryFeeChanged(fee);
+    function unpauseProtocol() external onlyOwner {
+        protocolPaused = true;
+        emit ProtocolUnpaused(msg.sender);
     }
 
     /**
@@ -233,31 +112,133 @@ contract HumaConfig {
      */
     function setProtocolDefaultGracePeriod(uint256 gracePeriod)
         external
-        isprotoAdmin
+        onlyOwner
     {
         require(gracePeriod >= 24 * 3600, "HumaConfig:GRACE_PERIOD_TOO_SHORT");
-        protocolDefaultGracePeriod = gracePeriod;
+        protocolDefaultGracePeriod = uint32(gracePeriod);
         emit ProtocolDefaultGracePeriodChanged(gracePeriod);
     }
 
-    function getGovernor() public view returns (address) {
-        return governor;
+    /**
+     * @notice Sets the treasury fee (in basis points). Only proto admin can do so.
+     * @param fee the new treasury fee (in bps)
+     * @dev Treasury fee cannot exceed 5000 bps, i.e. 50%
+     * @dev Emits a TreasuryFeeChanged(uint256 fee) event
+     */
+    function setTreasuryFee(uint256 fee) external onlyOwner {
+        require(
+            fee <= TREASURY_FEE_UPPER_BOUND,
+            "HumaConfig:TREASURY_FEE_TOO_HIGH"
+        );
+        uint256 oldFee = treasuryFee;
+        treasuryFee = uint16(fee);
+        emit TreasuryFeeChanged(oldFee, fee);
     }
 
-    function getProtoAdmin() public view returns (address) {
-        return protoAdmin;
+    /**
+     * @notice Sets the address of Huma Treasury. Only superAdmin can make the change.
+     * @param treasury the new Huma Treasury address
+     * @dev If address(0) is provided, revert with "HumaConfig:TREASURY_ADDRESS_ZERO"
+     * @dev If the current treasury address is provided, revert w/ "HumaConfig:TREASURY_ADDRESS_UNCHANGED"
+     * @dev emit HumaTreasuryChanged(address newTreasury) event
+     */
+    function setHumaTreasury(address treasury) external onlyOwner {
+        require(treasury != address(0), "HumaConfig:TREASURY_ADDRESS_ZERO");
+        require(
+            treasury != humaTreasury,
+            "HumaConfig:TREASURY_ADDRESS_UNCHANGED"
+        );
+        humaTreasury = treasury;
+
+        emit HumaTreasuryChanged(treasury);
+    }
+
+    function setNetwork(string memory newNetwork) external onlyOwner {
+        network = newNetwork;
+    }
+
+    /**
+     * @notice Adds a pauser.
+     * @param _pauser Address to be added to the pauser list
+     * @dev If address(0) is provided, revert with "HumaConfig:PAUSER_ADDRESS_ZERO"
+     * @dev If the address is already a pauser, revert w/ "HumaConfig:ALREADY_A_PAUSER"
+     * @dev Emits a PauserAdded event.
+     */
+    function addPauser(address _pauser) external onlyOwner {
+        require(_pauser != address(0), "HumaConfig:PAUSER_ADDRESS_ZERO");
+        require(!pausers[_pauser], "HumaConfig:ALREADY_A_PAUSER");
+
+        pausers[_pauser] = true;
+
+        emit PauserAdded(_pauser, owner());
+    }
+
+    /**
+     * @notice Removes a pauser.
+     * @param _pauser Address to be removed from the pauser list
+     * @dev If address(0) is provided, revert with "HumaConfig:PAUSER_ADDRESS_ZERO"
+     * @dev If the address is not currently a pauser, revert w/ "HumaConfig:NOT_A_PAUSER"
+     * @dev Emits a PauserRemoved event.
+     */
+    function removePauser(address _pauser) external onlyOwner {
+        require(_pauser != address(0), "HumaConfig:PAUSER_ADDRESS_ZERO");
+        require(pausers[_pauser], "HumaConfig:NOT_A_PAUSER");
+
+        pausers[_pauser] = false;
+
+        emit PauserRemoved(_pauser, owner());
+    }
+
+    /**
+     * @notice Adds a pool admin.
+     * @param _poolAdmin Address to be added as a pool admin
+     * @dev If address(0) is provided, revert with "HumaConfig:POOL_ADMIN_ADDRESS_ZERO"
+     * @dev If the address is already a poolAdmin, revert w/ "HumaConfig:ALREADY_A_POOL_ADMIN"
+     * @dev Emits a PauserAdded event.
+     */
+    function addPoolAdmin(address _poolAdmin) external onlyOwner {
+        require(_poolAdmin != address(0), "HumaConfig:POOL_ADMIN_ADDRESS_ZERO");
+        require(!poolAdmins[_poolAdmin], "HumaConfig:ALREADY_A_POOL_ADMIN");
+
+        poolAdmins[_poolAdmin] = true;
+
+        emit PoolAdminAdded(_poolAdmin, owner());
+    }
+
+    /**
+     * @notice Removes a poolAdmin.
+     * @param _poolAdmin Address to be removed from the poolAdmin list
+     * @dev If address(0) is provided, revert with "HumaConfig:POOL_ADMIN_ADDRESS_ZERO"
+     * @dev If the address is not currently a poolAdmin, revert w/ "HumaConfig:NOT_A_POOL_ADMIN"
+     * @dev Emits a PauserRemoved event.
+     */
+    function removePoolAdmin(address _poolAdmin) external onlyOwner {
+        require(_poolAdmin != address(0), "HumaConfig:POOL_ADMIN_ADDRESS_ZERO");
+        require(poolAdmins[_poolAdmin], "HumaConfig:NOT_A_POOL_ADMIN");
+
+        poolAdmins[_poolAdmin] = false;
+
+        emit PoolAdminRemoved(_poolAdmin, owner());
+    }
+
+    /**
+     * @notice Sets the validity of an asset for liquidity in Huma. Only owner can do so.
+     * @param asset Address of the valid asset.
+     * @param valid The new validity status a Liquidity Asset in Pools.
+     * @dev Emits a LiquidityAssetSet event.
+     */
+    function setLiquidityAsset(address asset, bool valid) external onlyOwner {
+        if (valid) {
+            validLiquidityAssets[asset] = true;
+            emit LiquidityAssetAdded(asset, owner());
+        } else {
+            validLiquidityAssets[asset] = false;
+            emit LiquidityAssetRemoved(asset, owner());
+        }
     }
 
     function getHumaTreasury() public view returns (address) {
         return humaTreasury;
-    }
-
-    function isProtocolPaused() public view returns (bool) {
-        return protocolPaused;
-    }
-
-    function isAssetValid(address asset) public view returns (bool) {
-        return validLiquidityAsset[asset];
     }
 
     function getProtocolDefaultGracePeriod() public view returns (uint256) {
@@ -268,7 +249,30 @@ contract HumaConfig {
         return treasuryFee;
     }
 
-    function setNetwork(string memory newNetwork) external isGovernor {
-        network = newNetwork;
+    function isAssetValid(address asset) public view returns (bool) {
+        return validLiquidityAssets[asset];
+    }
+
+    function isPauser(address account) external view returns (bool) {
+        return pausers[account];
+    }
+
+    function isPoolAdmin(address account) external view returns (bool) {
+        return poolAdmins[account];
+    }
+
+    function isProtocolPaused() public view returns (bool) {
+        return protocolPaused;
+    }
+
+    /// Makes sure the msg.sender is one of the pausers
+    modifier onlyPausers() {
+        require(pausers[msg.sender] == true, "HumaConfig:PAUSERS_REQUIRED");
+        _;
+    }
+
+    modifier onlyOwner() virtual override {
+        require(owner() == _msgSender(), "HumaConfig:NOT_OWNER");
+        _;
     }
 }
