@@ -12,30 +12,32 @@ describe("Huma Config", function () {
     let treasury;
 
     before(async function () {
-        [origOwner, origAdmin, treasury, newOwner, newAdmin] =
-            await ethers.getSigners();
+        [
+            origOwner,
+            pauser,
+            poolAdmin,
+            treasury,
+            newOwner,
+            newTreasury,
+            randomUser,
+        ] = await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
-        configContract = await HumaConfig.deploy(
-            origOwner.address,
-            origAdmin.address
-        );
+        configContract = await HumaConfig.deploy(treasury.address);
     });
 
     describe("Initial Value", function () {
-        it("Should have the right initial governor", async function () {
-            expect(await configContract.getGovernor()).to.equal(
-                origOwner.address
+        it("Should have the right initial owner", async function () {
+            expect(await configContract.owner()).to.equal(origOwner.address);
+        });
+
+        it("Should have the right initial treasury", async function () {
+            expect(await configContract.getHumaTreasury()).to.equal(
+                treasury.address
             );
         });
 
-        it("Should have the right initial proto admin", async function () {
-            expect(await configContract.getProtoAdmin()).to.equal(
-                origAdmin.address
-            );
-        });
-
-        it("Should have the right default treasury fee", async function () {
+        it("Should have the right treasury fee", async function () {
             expect(await configContract.getTreasuryFee()).to.equal(50);
         });
 
@@ -44,107 +46,70 @@ describe("Huma Config", function () {
                 await configContract.getProtocolDefaultGracePeriod()
             ).to.equal(5 * 3600 * 24);
         });
-
-        it("Should have the right initial Huma Treasury", async function () {
-            expect(await configContract.getHumaTreasury()).to.equal(
-                origOwner.address
-            );
-        });
     });
 
-    describe("Update Governor", function () {
-        it("Should disallow non-governor to nominate new governor", async function () {
+    describe("Update owner", function () {
+        it("Should disallow non-owner to change ownership", async function () {
             await expect(
                 configContract
                     .connect(newOwner)
-                    .nominateNewGovernor(newOwner.address)
-            ).to.be.revertedWith("HumaConfig:GOVERNOR_REQUIRED");
+                    .transferOwnership(newOwner.address)
+            ).to.be.revertedWith("HumaConfig:NOT_OWNER");
         });
 
-        it("Should require nominee to be different from the governor", async function () {
+        it("Should reject 0 address to be the new owner", async function () {
             await expect(
-                configContract
-                    .connect(origOwner)
-                    .nominateNewGovernor(origOwner.address)
-            ).to.be.revertedWith("HumaConfig:NOMINEE_CANNOT_BE_GOVERNOR");
+                configContract.connect(origOwner).transferOwnership(address(0))
+            ).to.be.revertedWith("Ownable: new owner is the zero address");
         });
 
-        it("Should be able to nominate new governor", async function () {
+        it("Should be able to transfer ownership to new owner", async function () {
             await configContract
                 .connect(origOwner)
-                .nominateNewGovernor(newOwner.address);
-            expect(await configContract.getGovernor()).to.equal(
-                origOwner.address
-            );
-            expect(await configContract.getGovernor()).to.not.equal(
-                newOwner.address
-            );
-        });
+                .transferOwnership(newOwner.address);
+            expect(await configContract.owner()).to.equal(newOwner.address);
 
-        it("Should disallow anyone other than the nominee to accept governor role", async function () {
-            await expect(
-                configContract.connect(origOwner).acceptGovernor()
-            ).to.be.revertedWith("HumaConfig:GOVERNOR_NOMINEE_NEEDED");
-            await expect(
-                configContract.connect(origAdmin).acceptGovernor()
-            ).to.be.revertedWith("HumaConfig:GOVERNOR_NOMINEE_NEEDED");
-            await expect(
-                configContract.connect(treasury).acceptGovernor()
-            ).to.be.revertedWith("HumaConfig:GOVERNOR_NOMINEE_NEEDED");
-        });
-
-        it("Should allow the nominee to accept governor role", async function () {
-            await configContract.connect(newOwner).acceptGovernor();
-            expect(await configContract.getGovernor()).to.equal(
-                newOwner.address
-            );
-            expect(await configContract.getGovernor()).to.not.equal(
-                origOwner.address
-            );
+            // change back to orgOwner to continue the testing flow.
+            await configContract
+                .connect(newOwner)
+                .transferOwnership(origOwner.address);
+            expect(await configContract.owner()).to.equal(origOwner.address);
         });
     });
 
-    /// From on, governor === newOwner. Intentionally not to reset governor to be the original
-    /// governor in case setGovernor() was a false success.
     describe("Update Huma Treasury Address", function () {
-        it("Should disallow non-governor to change huma treasury", async function () {
+        it("Should disallow non-owner to change huma treasury", async function () {
             await expect(
                 configContract
-                    .connect(origOwner)
+                    .connect(randomUser)
                     .setHumaTreasury(treasury.address)
-            ).to.be.revertedWith("HumaConfig:GOVERNOR_REQUIRED");
+            ).to.be.revertedWith("HumaConfig:NOT_OWNER");
+        });
+
+        it("Should disallow non-owner to change huma treasury", async function () {
+            await expect(
+                configContract.connect(origOwner).setHumaTreasury(address(0))
+            ).to.be.revertedWith("HumaConfig:TREASURY_ADDRESS_ZERO");
+        });
+
+        it("Should reject treasury change to the current treasury", async function () {
             await expect(
                 configContract
                     .connect(origAdmin)
                     .setHumaTreasury(treasury.address)
-            ).to.be.revertedWith("HumaConfig:GOVERNOR_REQUIRED");
-        });
-
-        // The default treasury was the old governor, origOwner.
-        it("Should require treasury address to be new and non-zero", async function () {
-            // todo Figure out how to represent address(0) and uncomment the next line.
-            //await expect(configContract.connect(newOwner).setHumaTreasury(constants.AddressZero)).to.be.revertedWith('HumaConfig:TREASURY_ADDRESS_ZERO');
-            await expect(
-                configContract
-                    .connect(newOwner)
-                    .setHumaTreasury(origOwner.address)
             ).to.be.revertedWith("HumaConfig:TREASURY_ADDRESS_UNCHANGED");
         });
 
-        it("Should allow treasury address to be updated by governor", async function () {
+        it("Should allow treasury to be changed", async function () {
+            await configContract
+                .connect(origAdmin)
+                .setHumaTreasury(newTreasury.address);
+
             await expect(
                 configContract
-                    .connect(newOwner)
-                    .setHumaTreasury(treasury.address)
-            )
-                .to.emit(configContract, "HumaTreasuryChanged")
-                .withArgs(treasury.address);
-            expect(await configContract.getHumaTreasury()).to.equal(
-                treasury.address
-            );
-            expect(await configContract.getHumaTreasury()).to.not.equal(
-                origOwner.address
-            );
+                    .connect(origAdmin)
+                    .getHumaTreasury(newTreasury.address)
+            ).to.equal(newTreasury.address);
         });
     });
 
@@ -185,8 +150,6 @@ describe("Huma Config", function () {
         });
     });
 
-    /// By now, newOwner and newAdmin are the governor and protoAdmin.
-    // Test suite for pause and unpause the entire protocol
     describe("Pause Protocol", function () {
         it("Should disallow non-proto-admin to pause the protocol", async function () {
             await expect(
