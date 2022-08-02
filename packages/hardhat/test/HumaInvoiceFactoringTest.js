@@ -50,10 +50,7 @@ describe("Huma Invoice Financing", function () {
         humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
-        humaConfigContract = await HumaConfig.deploy(
-            owner.address,
-            owner.address
-        );
+        humaConfigContract = await HumaConfig.deploy(treasury.address);
         humaConfigContract.setHumaTreasury(treasury.address);
 
         const HumaCreditFactory = await ethers.getContractFactory(
@@ -163,7 +160,7 @@ describe("Huma Invoice Financing", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.setProtocolPaused(false);
+            await humaConfigContract.connect(owner).unpauseProtocol();
         });
 
         it("Should only allow credit approvers to post approved loan requests", async function () {
@@ -175,7 +172,7 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Should not allow posting approved loans while protocol is paused", async function () {
-            await humaConfigContract.setProtocolPaused(true);
+            await humaConfigContract.connect(owner).pauseProtocol();
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
@@ -259,11 +256,11 @@ describe("Huma Invoice Financing", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.setProtocolPaused(false);
+            await humaConfigContract.connect(owner).unpauseProtocol();
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
-            await humaConfigContract.setProtocolPaused(true);
+            await humaConfigContract.connect(owner).pauseProtocol();
             await expect(
                 humaPoolContract.connect(borrower).originateCredit(400)
             ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
@@ -383,11 +380,11 @@ describe("Huma Invoice Financing", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.setProtocolPaused(false);
+            await humaConfigContract.unpauseProtocol();
         });
 
         it("Should not allow payback while protocol is paused", async function () {
-            await humaConfigContract.setProtocolPaused(true);
+            await humaConfigContract.connect(owner).pauseProtocol();
             await expect(
                 invoiceContract
                     .connect(borrower)

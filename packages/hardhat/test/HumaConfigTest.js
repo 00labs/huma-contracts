@@ -7,9 +7,13 @@ use(solidity);
 
 describe("Huma Config", function () {
     let configContract;
-    let origOwner;
-    let origAdmin;
-    let treasury;
+    let origOwner,
+        pauser,
+        poolAdmin,
+        treasury,
+        newOwner,
+        newTreasury,
+        randomUser;
 
     before(async function () {
         [
@@ -46,6 +50,12 @@ describe("Huma Config", function () {
                 await configContract.getProtocolDefaultGracePeriod()
             ).to.equal(5 * 3600 * 24);
         });
+
+        it("Should have set owner as a pauser", async function () {
+            expect(await configContract.isPauser(origOwner.address)).to.equal(
+                true
+            );
+        });
     });
 
     describe("Update owner", function () {
@@ -54,12 +64,14 @@ describe("Huma Config", function () {
                 configContract
                     .connect(newOwner)
                     .transferOwnership(newOwner.address)
-            ).to.be.revertedWith("HumaConfig:NOT_OWNER");
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("Should reject 0 address to be the new owner", async function () {
             await expect(
-                configContract.connect(origOwner).transferOwnership(address(0))
+                configContract
+                    .connect(origOwner)
+                    .transferOwnership(ethers.constants.AddressZero)
             ).to.be.revertedWith("Ownable: new owner is the zero address");
         });
 
@@ -83,136 +95,299 @@ describe("Huma Config", function () {
                 configContract
                     .connect(randomUser)
                     .setHumaTreasury(treasury.address)
-            ).to.be.revertedWith("HumaConfig:NOT_OWNER");
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("Should disallow non-owner to change huma treasury", async function () {
             await expect(
-                configContract.connect(origOwner).setHumaTreasury(address(0))
+                configContract
+                    .connect(origOwner)
+                    .setHumaTreasury(ethers.constants.AddressZero)
             ).to.be.revertedWith("HumaConfig:TREASURY_ADDRESS_ZERO");
         });
 
-        it("Should reject treasury change to the current treasury", async function () {
+        it("Should not change treasury if try to set it to the current treasury", async function () {
             await expect(
                 configContract
-                    .connect(origAdmin)
+                    .connect(origOwner)
                     .setHumaTreasury(treasury.address)
-            ).to.be.revertedWith("HumaConfig:TREASURY_ADDRESS_UNCHANGED");
+            ).not.emit(configContract, "HumaTreasuryChanged");
         });
-
         it("Should allow treasury to be changed", async function () {
-            await configContract
-                .connect(origAdmin)
-                .setHumaTreasury(newTreasury.address);
-
-            await expect(
-                configContract
-                    .connect(origAdmin)
-                    .getHumaTreasury(newTreasury.address)
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .setHumaTreasury(newTreasury.address)
+            )
+                .to.emit(configContract, "HumaTreasuryChanged")
+                .withArgs(newTreasury.address);
+            expect(
+                await configContract.connect(origOwner).getHumaTreasury()
             ).to.equal(newTreasury.address);
         });
     });
 
-    describe("Update Protocol Admin", function () {
-        it("Should disallow non-governor to change protocol admin", async function () {
+    describe("Add and Remove Pausers", function () {
+        it("Should disallow non-owner to add pausers", async function () {
             await expect(
-                configContract.connect(newAdmin).setProtoAdmin(newAdmin.address)
-            ).to.be.revertedWith("HumaConfig:GOVERNOR_REQUIRED");
-            await expect(
-                configContract
-                    .connect(origAdmin)
-                    .setProtoAdmin(newAdmin.address)
-            ).to.be.revertedWith("HumaConfig:GOVERNOR_REQUIRED");
+                configContract.connect(randomUser).addPauser(pauser.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
-        it("Should require protocol admin address to be new and non-zero", async function () {
-            // todo Figure out how to represent address(0) and uncomment the next line.
-            //await expect(configContract.connect(newOwner).setProtoAdmin(constants.AddressZero)).to.be.revertedWith('HumaConfig:ADMIN_ADDRESS_ZERO');
+        it("Should reject 0 address pauser", async function () {
             await expect(
                 configContract
-                    .connect(newOwner)
-                    .setProtoAdmin(origAdmin.address)
-            ).to.be.revertedWith("HumaConfig:PROTOADMIN_ADDRESS_UNCHANGED");
+                    .connect(origOwner)
+                    .addPauser(ethers.constants.AddressZero)
+            ).to.be.revertedWith("HumaConfig:PAUSER_ADDRESS_ZERO");
         });
 
-        it("Should allow protol admin address to be updated by governor", async function () {
-            await expect(
-                configContract.connect(newOwner).setProtoAdmin(newAdmin.address)
+        it("Should allow pauser to be added", async function () {
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .addPauser(pauser.address)
             )
-                .to.emit(configContract, "ProtoAdminSet")
-                .withArgs(newAdmin.address);
-            expect(await configContract.getProtoAdmin()).to.equal(
-                newAdmin.address
-            );
-            expect(await configContract.getProtoAdmin()).to.not.equal(
-                origAdmin.address
-            );
+                .to.emit(configContract, "PauserAdded")
+                .withArgs(pauser.address, origOwner.address);
+
+            expect(
+                await configContract.connect(origOwner).isPauser(pauser.address)
+            ).to.equal(true);
+        });
+
+        it("Should reject add-pauser request if it is already a pauser", async function () {
+            await expect(
+                configContract.connect(origOwner).addPauser(pauser.address)
+            ).to.be.revertedWith("HumaConfig:ALREADY_A_PAUSER");
+        });
+
+        it("Should disallow non-owner to remove a pauser", async function () {
+            await expect(
+                configContract.connect(randomUser).removePauser(pauser.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+
+            await expect(
+                configContract.connect(pauser).removePauser(pauser.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should disallow removal of pauser using zero address", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .removePauser(ethers.constants.AddressZero)
+            ).to.be.revertedWith("HumaConfig:PAUSER_ADDRESS_ZERO");
+        });
+
+        it("Should reject attemp to removal a pauser who is not a pauser", async function () {
+            await expect(
+                configContract.connect(origOwner).removePauser(treasury.address)
+            ).to.be.revertedWith("HumaConfig:NOT_A_PAUSER");
+        });
+
+        it("Should remove a pauser successfully", async function () {
+            await expect(
+                configContract.connect(origOwner).removePauser(pauser.address)
+            )
+                .to.emit(configContract, "PauserRemoved")
+                .withArgs(pauser.address, origOwner.address);
+
+            expect(
+                await configContract.connect(origOwner).isPauser(pauser.address)
+            ).to.equal(false);
+        });
+
+        it("Should allow removed pauser to be added back", async function () {
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .addPauser(pauser.address)
+            )
+                .to.emit(configContract, "PauserAdded")
+                .withArgs(pauser.address, origOwner.address);
+
+            expect(
+                await configContract.connect(origOwner).isPauser(pauser.address)
+            ).to.equal(true);
         });
     });
 
-    describe("Pause Protocol", function () {
-        it("Should disallow non-proto-admin to pause the protocol", async function () {
+    describe("Pause and Unpause Protocol", function () {
+        it("Should disallow non-pauser to pause the protocol", async function () {
             await expect(
-                configContract.connect(origAdmin).setProtocolPaused(true)
-            ).to.be.revertedWith("HumaConfig:PROTO_ADMIN_REQUIRED");
+                configContract.connect(randomUser).pauseProtocol()
+            ).to.be.revertedWith("HumaConfig:PAUSERS_REQUIRED");
             await expect(
-                configContract
-                    .connect(treasury)
-                    .setProtocolPaused(newAdmin.address)
-            ).to.be.revertedWith("HumaConfig:PROTO_ADMIN_REQUIRED");
+                configContract.connect(treasury).pauseProtocol()
+            ).to.be.revertedWith("HumaConfig:PAUSERS_REQUIRED");
         });
 
         it("Should be able to pause the protol", async function () {
-            await expect(
-                configContract.connect(newAdmin).setProtocolPaused(true)
-            )
-                .to.emit(configContract, "ProtocolPausedChanged")
-                .withArgs(true);
+            await expect(configContract.connect(pauser).pauseProtocol())
+                .to.emit(configContract, "ProtocolPaused")
+                .withArgs(pauser.address);
             expect(await configContract.isProtocolPaused()).to.equal(true);
         });
 
-        it("Should be able to unpause the protol", async function () {
+        it("Should allow owner to pause", async function () {
+            await expect(configContract.connect(origOwner).pauseProtocol())
+                .to.emit(configContract, "ProtocolPaused")
+                .withArgs(origOwner.address);
+            expect(await configContract.isProtocolPaused()).to.equal(true);
+        });
+
+        it("Should disallow non-owner to unpause", async function () {
             await expect(
-                configContract.connect(newAdmin).setProtocolPaused(false)
-            )
-                .to.emit(configContract, "ProtocolPausedChanged")
-                .withArgs(false);
+                configContract.connect(pauser).unpauseProtocol()
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should allow owner to unpause", async function () {
+            expect(await configContract.connect(origOwner).unpauseProtocol())
+                .to.emit(configContract, "ProtocolUnpaused")
+                .withArgs(origOwner.address);
+
             expect(await configContract.isProtocolPaused()).to.equal(false);
         });
     });
 
-    // Test suites for changing default grace period
-    describe("Change Default Grace Period", function () {
-        it("Should disallow non-proto-admin to change default grace period", async function () {
+    describe("Add and Remove Pool Admins", function () {
+        it("Should disallow non-owner to add pool admins", async function () {
             await expect(
                 configContract
-                    .connect(origAdmin)
-                    .setProtocolDefaultGracePeriod(10 * 24 * 3600)
-            ).to.be.revertedWith("HumaConfig:PROTO_ADMIN_REQUIRED");
+                    .connect(randomUser)
+                    .addPoolAdmin(poolAdmin.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should reject 0 address pool admin", async function () {
             await expect(
                 configContract
-                    .connect(treasury)
+                    .connect(origOwner)
+                    .addPoolAdmin(ethers.constants.AddressZero)
+            ).to.be.revertedWith("HumaConfig:POOL_ADMIN_ADDRESS_ZERO");
+        });
+
+        it("Should allow pool admin to be added", async function () {
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .addPoolAdmin(poolAdmin.address)
+            )
+                .to.emit(configContract, "PoolAdminAdded")
+                .withArgs(poolAdmin.address, origOwner.address);
+
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .isPoolAdmin(poolAdmin.address)
+            ).to.equal(true);
+        });
+
+        it("Should reject add-pool-admin request if it is already a pool admin", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .addPoolAdmin(poolAdmin.address)
+            ).to.be.revertedWith("HumaConfig:ALREADY_A_POOL_ADMIN");
+        });
+
+        it("Should disallow non-owner to remove a pool admin", async function () {
+            await expect(
+                configContract
+                    .connect(randomUser)
+                    .removePoolAdmin(poolAdmin.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+
+            await expect(
+                configContract
+                    .connect(poolAdmin)
+                    .removePoolAdmin(poolAdmin.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should disallow removal of pool admin using zero address", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .removePoolAdmin(ethers.constants.AddressZero)
+            ).to.be.revertedWith("HumaConfig:POOL_ADMIN_ADDRESS_ZERO");
+        });
+
+        it("Should reject attemp to removal a pool admin who is not a pool admin", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .removePoolAdmin(treasury.address)
+            ).to.be.revertedWith("HumaConfig:NOT_A_POOL_ADMIN");
+        });
+
+        it("Should remove a pool admin successfully", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .removePoolAdmin(poolAdmin.address)
+            )
+                .to.emit(configContract, "PoolAdminRemoved")
+                .withArgs(poolAdmin.address, origOwner.address);
+
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .isPoolAdmin(poolAdmin.address)
+            ).to.equal(false);
+        });
+
+        it("Should allow removed pool admin to be added back", async function () {
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .addPoolAdmin(poolAdmin.address)
+            )
+                .to.emit(configContract, "PoolAdminAdded")
+                .withArgs(poolAdmin.address, origOwner.address);
+
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .isPoolAdmin(poolAdmin.address)
+            ).to.equal(true);
+        });
+    });
+
+    // Test suites for changing protocol grace period
+    describe("Change Protocol Grace Period", function () {
+        it("Should disallow non-owner to change protocol grace period", async function () {
+            await expect(
+                configContract
+                    .connect(randomUser)
                     .setProtocolDefaultGracePeriod(10 * 24 * 3600)
-            ).to.be.revertedWith("HumaConfig:PROTO_ADMIN_REQUIRED");
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+            await expect(
+                configContract
+                    .connect(pauser)
+                    .setProtocolDefaultGracePeriod(10 * 24 * 3600)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("Should disallow default grace period to be shorten than one day", async function () {
             await expect(
                 configContract
-                    .connect(newAdmin)
+                    .connect(origOwner)
                     .setProtocolDefaultGracePeriod(12 * 3600)
             ).to.be.revertedWith("HumaConfig:GRACE_PERIOD_TOO_SHORT");
             await expect(
                 configContract
-                    .connect(newAdmin)
+                    .connect(origOwner)
                     .setProtocolDefaultGracePeriod(0)
             ).to.be.revertedWith("HumaConfig:GRACE_PERIOD_TOO_SHORT");
         });
 
-        it("Should be able to reset default grace period to be longer than 1 day", async function () {
+        it("Should be able to reset default grace period", async function () {
             await expect(
                 configContract
-                    .connect(newAdmin)
+                    .connect(origOwner)
                     .setProtocolDefaultGracePeriod(10 * 24 * 3600)
             )
                 .to.emit(configContract, "ProtocolDefaultGracePeriodChanged")
@@ -225,25 +400,25 @@ describe("Huma Config", function () {
 
     // Test suites for changing treasury fee
     describe("Change Treasury Fee", function () {
-        it("Should disallow non-proto-admin to change treasury fee", async function () {
+        it("Should disallow non-owner to change treasury fee", async function () {
             await expect(
-                configContract.connect(origAdmin).setTreasuryFee(200)
-            ).to.be.revertedWith("HumaConfig:PROTO_ADMIN_REQUIRED");
+                configContract.connect(randomUser).setTreasuryFee(200)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
             await expect(
                 configContract.connect(treasury).setTreasuryFee(200)
-            ).to.be.revertedWith("HumaConfig:PROTO_ADMIN_REQUIRED");
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("Should disallow treasury fee to be higher than 5000 bps, i.e. 50%", async function () {
             await expect(
-                configContract.connect(newAdmin).setTreasuryFee(6000)
+                configContract.connect(origOwner).setTreasuryFee(6000)
             ).to.be.revertedWith("HumaConfig:TREASURY_FEE_TOO_HIGH");
         });
 
-        it("Should be able to change treasury fee to be less than or equal to 5000 bps", async function () {
-            await expect(configContract.connect(newAdmin).setTreasuryFee(2000))
+        it("Should be able to change treasury fee", async function () {
+            await expect(configContract.connect(origOwner).setTreasuryFee(2000))
                 .to.emit(configContract, "TreasuryFeeChanged")
-                .withArgs(2000);
+                .withArgs(50, 2000);
             expect(await configContract.getTreasuryFee()).to.equal(2000);
         });
     });
@@ -252,7 +427,7 @@ describe("Huma Config", function () {
     // TODO Figure out how to pass legit address and re-enable this test.
     // describe("Change Liquidity Assets", function () {
     //   it("Should disallow non-proto-admin to change liquidity asset", async function () {
-    //     await expect(configContract.connect(origAdmin).setLiquidityAsset(0x1, false)).to.be.revertedWith('HumaConfig:PROTO_ADMIN_REQUIRED');
+    //     await expect(configContract.connect(origOwner).setLiquidityAsset(0x1, false)).to.be.revertedWith('HumaConfig:PROTO_ADMIN_REQUIRED');
     //     await expect(configContract.connect(treasury).setLiquidityAsset(0x1, false)).to.be.revertedWith('HumaConfig:PROTO_ADMIN_REQUIRED');
     //   });
 

@@ -69,10 +69,7 @@ describe("Huma Loan", function () {
         humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
-        humaConfigContract = await HumaConfig.deploy(
-            owner.address,
-            owner.address
-        );
+        humaConfigContract = await HumaConfig.deploy(treasury.address);
         humaConfigContract.setHumaTreasury(treasury.address);
 
         const HumaCreditFactory = await ethers.getContractFactory(
@@ -176,11 +173,11 @@ describe("Huma Loan", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.setProtocolPaused(false);
+            await humaConfigContract.connect(owner).unpauseProtocol();
         });
 
         it("Should not allow loan requests while protocol is paused", async function () {
-            await humaConfigContract.setProtocolPaused(true);
+            await humaConfigContract.connect(owner).pauseProtocol();
             await expect(
                 humaPoolContract.connect(borrower).requestCredit(400, 30, 12)
             ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
@@ -245,11 +242,11 @@ describe("Huma Loan", function () {
             });
 
             afterEach(async function () {
-                await humaConfigContract.setProtocolPaused(false);
+                await humaConfigContract.connect(owner).unpauseProtocol();
             });
 
             it("Should not allow loan funding while protocol is paused", async function () {
-                await humaConfigContract.setProtocolPaused(true);
+                await humaConfigContract.connect(owner).pauseProtocol();
                 await expect(
                     humaPoolContract.connect(borrower).originateCredit(400)
                 ).to.be.reverted;
@@ -337,11 +334,11 @@ describe("Huma Loan", function () {
             });
 
             afterEach(async function () {
-                await humaConfigContract.setProtocolPaused(false);
+                await humaConfigContract.connect(owner).unpauseProtocol();
             });
 
             it("Should not allow payback while protocol is paused", async function () {
-                await humaConfigContract.setProtocolPaused(true);
+                await humaConfigContract.connect(owner).pauseProtocol();
                 await expect(
                     loanContract
                         .connect(borrower)
