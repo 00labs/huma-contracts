@@ -113,6 +113,7 @@ describe("Huma Config", function () {
                     .setHumaTreasury(treasury.address)
             ).not.emit(configContract, "HumaTreasuryChanged");
         });
+
         it("Should allow treasury to be changed", async function () {
             expect(
                 await configContract
@@ -223,7 +224,7 @@ describe("Huma Config", function () {
             ).to.be.revertedWith("HumaConfig:PAUSERS_REQUIRED");
         });
 
-        it("Should be able to pause the protol", async function () {
+        it("Should be able to pause the protocol", async function () {
             await expect(configContract.connect(pauser).pauseProtocol())
                 .to.emit(configContract, "ProtocolPaused")
                 .withArgs(pauser.address);
@@ -315,7 +316,7 @@ describe("Huma Config", function () {
             ).to.be.revertedWith("HumaConfig:POOL_ADMIN_ADDRESS_ZERO");
         });
 
-        it("Should reject attemp to removal a pool admin who is not a pool admin", async function () {
+        it("Should reject attempt to remove a pool admin who is not a pool admin", async function () {
             await expect(
                 configContract
                     .connect(origOwner)
