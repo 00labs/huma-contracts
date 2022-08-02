@@ -27,16 +27,16 @@ contract HumaConfig is Ownable {
 
     /// Expect to pack the next five fields in one storage slot.
     /// Flag that shows whether the protocol is paused or not
-    bool private protocolPaused;
+    bool public protocolPaused;
 
     /// Seconds passed the due date before trigging a default.
-    uint32 private protocolDefaultGracePeriod;
+    uint32 public protocolDefaultGracePeriod;
 
     /// Protocol fee of the loan origination (in bps). Other fees are defined at pool level.
-    uint16 private treasuryFee;
+    uint16 public treasuryFee;
 
     /// humaTreasury is the protocol treasury
-    address private humaTreasury;
+    address public humaTreasury;
 
     /// pausers can pause the pool.
     mapping(address => bool) private pausers;
@@ -76,7 +76,8 @@ contract HumaConfig is Ownable {
     constructor(address treasury) {
         humaTreasury = treasury;
 
-        pausers[owner()] = true;
+        // Add protocol owner as a pauser.
+        pausers[msg.sender] = true;
 
         protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
@@ -231,18 +232,6 @@ contract HumaConfig is Ownable {
             validLiquidityAssets[asset] = false;
             emit LiquidityAssetRemoved(asset, owner());
         }
-    }
-
-    function getHumaTreasury() public view returns (address) {
-        return humaTreasury;
-    }
-
-    function getProtocolDefaultGracePeriod() public view returns (uint256) {
-        return protocolDefaultGracePeriod;
-    }
-
-    function getTreasuryFee() public view returns (uint256) {
-        return treasuryFee;
     }
 
     function isAssetValid(address asset) public view returns (bool) {

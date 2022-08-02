@@ -79,7 +79,7 @@ contract HumaPool is HDT, Ownable {
     PoolStatus public status = PoolStatus.Off;
 
     // List of credit approvers who can approve credit requests.
-    mapping(address => bool) internal creditApprovers;
+    mapping(address => bool) public creditApprovers;
 
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
@@ -87,12 +87,12 @@ contract HumaPool is HDT, Ownable {
 
     CreditType poolCreditType;
 
-    uint256 private poolDefaultGracePeriod;
+    uint256 public poolDefaultGracePeriod;
 
     // reputationTrackerFactory
-    address internal reputationTrackerFactory;
+    address public reputationTrackerFactory;
 
-    address internal reputationTrackerContractAddress;
+    address public reputationTrackerContractAddress;
 
     // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
@@ -125,7 +125,7 @@ contract HumaPool is HDT, Ownable {
         reputationTrackerFactory = _reputationTrackerFactory;
         poolCreditType = _poolCreditType;
         poolDefaultGracePeriod = HumaConfig(humaConfig)
-            .getProtocolDefaultGracePeriod();
+            .protocolDefaultGracePeriod();
         reputationTrackerContractAddress = ReputationTrackerFactory(
             reputationTrackerFactory
         ).deployReputationTracker("Huma Pool", "HumaRTT");
@@ -302,7 +302,7 @@ contract HumaPool is HDT, Ownable {
             "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
         );
 
-        address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
+        address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         //todo Add real collateral info
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
 
@@ -350,8 +350,7 @@ contract HumaPool is HDT, Ownable {
             .originateCredit(borrowAmt);
 
         // Split the fee between treasury and the pool
-        uint256 protocolFee = HumaConfig(humaConfig)
-            .getTreasuryFee()
+        uint256 protocolFee = uint256(HumaConfig(humaConfig).treasuryFee())
             .mul(humaCreditContract.getCreditBalance())
             .div(10000);
 
@@ -384,7 +383,7 @@ contract HumaPool is HDT, Ownable {
             }
         }
         // Transfer liquidity asset
-        address treasuryAddress = HumaConfig(humaConfig).getHumaTreasury();
+        address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
         locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(msg.sender, amtForBorrower);
@@ -569,7 +568,7 @@ contract HumaPool is HDT, Ownable {
         uint256 _early_payoff_fee_bps
     ) public {
         require(
-            _platform_fee_bps > HumaConfig(humaConfig).getTreasuryFee(),
+            _platform_fee_bps > HumaConfig(humaConfig).treasuryFee(),
             "HumaPool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
         );
         platform_fee_flat = _platform_fee_flat;

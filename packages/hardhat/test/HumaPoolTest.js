@@ -173,9 +173,9 @@ describe("Huma Pool", function () {
 
         it("Shall have the protocol-level default-grace-period", async function () {
             let poolDefaultGracePeriod =
-                await humaPoolContract.getPoolDefaultGracePeriod();
+                await humaPoolContract.poolDefaultGracePeriod();
             expect(
-                await humaConfigContract.getProtocolDefaultGracePeriod()
+                await humaConfigContract.protocolDefaultGracePeriod()
             ).to.equal(poolDefaultGracePeriod);
         });
 
