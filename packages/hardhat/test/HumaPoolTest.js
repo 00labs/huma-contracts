@@ -16,7 +16,6 @@ const getLoanContractFromAddress = async function (address, signer) {
 // In beforeEach() of "Huma Pool", we deploy a new HumaPool with initial
 // liquidity 100 from the owner
 describe("Huma Pool", function () {
-    let humaPoolAdminsContract;
     let humaPoolFactoryContract;
     let humaPoolContract;
     let humaConfigContract;
@@ -33,11 +32,6 @@ describe("Huma Pool", function () {
     before(async function () {
         [owner, lender, borrower, borrower2, treasury, creditApprover] =
             await ethers.getSigners();
-
-        const HumaPoolAdmins = await ethers.getContractFactory(
-            "HumaPoolAdmins"
-        );
-        humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         humaConfigContract = await HumaConfig.deploy(treasury.address);
@@ -63,7 +57,6 @@ describe("Huma Pool", function () {
             "HumaPoolFactory"
         );
         humaPoolFactoryContract = await HumaPoolFactory.deploy(
-            humaPoolAdminsContract.address,
             humaConfigContract.address,
             humaCreditFactoryContract.address,
             humaPoolLockerFactoryContract.address,
@@ -114,6 +107,8 @@ describe("Huma Pool", function () {
     });
 
     describe("Huma Pool Settings", function () {
+        // todo Verify only pool admins can deployNewPool
+
         it("Should have correct liquidity post beforeEach() run", async function () {
             const lenderInfo = await humaPoolContract
                 .connect(owner)

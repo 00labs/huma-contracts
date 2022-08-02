@@ -23,7 +23,6 @@ const getInvoiceContractFromAddress = async function (address, signer) {
 // 4. Payback 500. The 100 extra will be transferred to the borrower, led to a balance of 486.
 // 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
 describe("Huma Invoice Financing", function () {
-    let humaPoolAdminsContract;
     let humaPoolFactoryContract;
     let humaPoolContract;
     let humaConfigContract;
@@ -42,11 +41,6 @@ describe("Huma Invoice Financing", function () {
     before(async function () {
         [owner, lender, borrower, treasury, creditApprover, payer] =
             await ethers.getSigners();
-
-        const HumaPoolAdmins = await ethers.getContractFactory(
-            "HumaPoolAdmins"
-        );
-        humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         humaConfigContract = await HumaConfig.deploy(treasury.address);
@@ -72,7 +66,6 @@ describe("Huma Invoice Financing", function () {
             "HumaPoolFactory"
         );
         humaPoolFactoryContract = await HumaPoolFactory.deploy(
-            humaPoolAdminsContract.address,
             humaConfigContract.address,
             humaCreditFactoryContract.address,
             humaPoolLockerFactoryContract.address,

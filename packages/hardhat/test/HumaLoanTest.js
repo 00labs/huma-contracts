@@ -44,7 +44,6 @@ const getLoanContractFromAddress = async function (address, signer) {
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
 describe("Huma Loan", function () {
-    let humaPoolAdminsContract;
     let humaPoolFactoryContract;
     let humaPoolContract;
     let humaConfigContract;
@@ -61,11 +60,6 @@ describe("Huma Loan", function () {
     before(async function () {
         [owner, lender, borrower, borrower2, treasury, creditApprover] =
             await ethers.getSigners();
-
-        const HumaPoolAdmins = await ethers.getContractFactory(
-            "HumaPoolAdmins"
-        );
-        humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         humaConfigContract = await HumaConfig.deploy(treasury.address);
@@ -91,7 +85,6 @@ describe("Huma Loan", function () {
             "HumaPoolFactory"
         );
         humaPoolFactoryContract = await HumaPoolFactory.deploy(
-            humaPoolAdminsContract.address,
             humaConfigContract.address,
             humaCreditFactoryContract.address,
             humaPoolLockerFactoryContract.address,
