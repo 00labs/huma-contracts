@@ -56,6 +56,12 @@ describe("Huma Config", function () {
                 true
             );
         });
+
+        it("Should have set owner as a pool admin", async function () {
+            expect(
+                await configContract.isPoolAdmin(origOwner.address)
+            ).to.equal(true);
+        });
     });
 
     describe("Update owner", function () {

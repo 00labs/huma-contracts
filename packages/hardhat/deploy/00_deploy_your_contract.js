@@ -14,7 +14,7 @@ const localChainId = "31337";
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     const { deploy } = deployments;
-    const { deployer } = await getNamedAccounts();
+    const { deployer, treasury } = await getNamedAccounts();
     const chainId = await getChainId();
 
     await deploy("TestToken", {
@@ -25,18 +25,10 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 
     const TestToken = await ethers.getContract("TestToken", deployer);
 
-    await deploy("HumaPoolAdmins", {
-        from: deployer,
-        log: true,
-        waitConfirmations: 5,
-    });
-
-    const HumaPoolAdmins = await ethers.getContract("HumaPoolAdmins", deployer);
-
     await deploy("HumaConfig", {
         from: deployer,
         log: true,
-        args: [deployer, deployer],
+        args: [treasury],
         waitConfirmations: 5,
     });
 
@@ -88,7 +80,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
         from: deployer,
         log: true,
         args: [
-            HumaPoolAdmins.address,
             HumaConfig.address,
             HumaCreditFactory.address,
             HumaPoolLockerFactory.address,
