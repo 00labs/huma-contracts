@@ -40,10 +40,7 @@ describe("Huma Pool", function () {
         humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
-        humaConfigContract = await HumaConfig.deploy(
-            owner.address,
-            owner.address
-        );
+        humaConfigContract = await HumaConfig.deploy(treasury.address);
         humaConfigContract.setHumaTreasury(treasury.address);
 
         const HumaCreditFactory = await ethers.getContractFactory(
@@ -193,11 +190,11 @@ describe("Huma Pool", function () {
 
     describe("Deposit", function () {
         afterEach(async function () {
-            await humaConfigContract.setProtocolPaused(false);
+            await humaConfigContract.connect(owner).unpauseProtocol();
         });
 
         it("Cannot deposit while protocol is paused", async function () {
-            await humaConfigContract.setProtocolPaused(true);
+            await humaConfigContract.connect(owner).pauseProtocol();
             await expect(
                 humaPoolContract.connect(lender).deposit(100)
             ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
@@ -244,11 +241,11 @@ describe("Huma Pool", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.setProtocolPaused(false);
+            await humaConfigContract.connect(owner).unpauseProtocol();
         });
 
         it("Should not withdraw while protocol is paused", async function () {
-            await humaConfigContract.setProtocolPaused(true);
+            await humaConfigContract.connect(owner).pauseProtocol();
             await expect(
                 humaPoolContract.connect(lender).withdraw(100)
             ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");

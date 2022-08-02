@@ -21,9 +21,11 @@ describe("Base Contracts", function () {
     let lender;
     let borrower;
     let borrower2;
+    let treasury;
 
     before(async function () {
-        [owner, lender, borrower, borrower2] = await ethers.getSigners();
+        [owner, lender, borrower, borrower2, treasury] =
+            await ethers.getSigners();
 
         const HumaPoolAdmins = await ethers.getContractFactory(
             "HumaPoolAdmins"
@@ -31,10 +33,7 @@ describe("Base Contracts", function () {
         humaPoolAdminsContract = await HumaPoolAdmins.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
-        humaConfigContract = await HumaConfig.deploy(
-            owner.address,
-            owner.address
-        );
+        humaConfigContract = await HumaConfig.deploy(treasury.address);
 
         const HumaCreditFactory = await ethers.getContractFactory(
             "HumaCreditFactory"

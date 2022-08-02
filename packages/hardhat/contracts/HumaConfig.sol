@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
 
 enum CreditType {
     Loan,
@@ -12,6 +13,9 @@ enum CreditType {
 /** @notice HumaConfig maintains all the global configurations supported by Huma protocol.
  */
 contract HumaConfig is Ownable {
+    /// Lower bound of protocol default grace period.
+    uint32 private constant MIN_DEFAULT_GRACE_PERIOD = 1 days;
+
     /// The initial value for default grace period.
     uint32 private constant PROTOCOL_DEFAULT_GRACE_PERIOD = 5 days;
 
@@ -33,10 +37,6 @@ contract HumaConfig is Ownable {
 
     /// humaTreasury is the protocol treasury
     address private humaTreasury;
-
-    // The network the pools in this config are under (e.g. mainnet, rinkeby)
-    // Used for risk API integration
-    string private network;
 
     /// pausers can pause the pool.
     mapping(address => bool) private pausers;
@@ -74,9 +74,9 @@ contract HumaConfig is Ownable {
      * @dev Emits an ProtocolInitialized event.
      */
     constructor(address treasury) {
-        pausers[owner()] = true;
-
         humaTreasury = treasury;
+
+        pausers[owner()] = true;
 
         protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
@@ -100,7 +100,7 @@ contract HumaConfig is Ownable {
      * @dev Emits a ProtocolPausedChanged event.
      */
     function unpauseProtocol() external onlyOwner {
-        protocolPaused = true;
+        protocolPaused = false;
         emit ProtocolUnpaused(msg.sender);
     }
 
@@ -114,7 +114,10 @@ contract HumaConfig is Ownable {
         external
         onlyOwner
     {
-        require(gracePeriod >= 24 * 3600, "HumaConfig:GRACE_PERIOD_TOO_SHORT");
+        require(
+            gracePeriod >= MIN_DEFAULT_GRACE_PERIOD,
+            "HumaConfig:GRACE_PERIOD_TOO_SHORT"
+        );
         protocolDefaultGracePeriod = uint32(gracePeriod);
         emit ProtocolDefaultGracePeriodChanged(gracePeriod);
     }
@@ -144,17 +147,10 @@ contract HumaConfig is Ownable {
      */
     function setHumaTreasury(address treasury) external onlyOwner {
         require(treasury != address(0), "HumaConfig:TREASURY_ADDRESS_ZERO");
-        require(
-            treasury != humaTreasury,
-            "HumaConfig:TREASURY_ADDRESS_UNCHANGED"
-        );
-        humaTreasury = treasury;
-
-        emit HumaTreasuryChanged(treasury);
-    }
-
-    function setNetwork(string memory newNetwork) external onlyOwner {
-        network = newNetwork;
+        if (treasury != humaTreasury) {
+            humaTreasury = treasury;
+            emit HumaTreasuryChanged(treasury);
+        }
     }
 
     /**
@@ -268,11 +264,6 @@ contract HumaConfig is Ownable {
     /// Makes sure the msg.sender is one of the pausers
     modifier onlyPausers() {
         require(pausers[msg.sender] == true, "HumaConfig:PAUSERS_REQUIRED");
-        _;
-    }
-
-    modifier onlyOwner() virtual override {
-        require(owner() == _msgSender(), "HumaConfig:NOT_OWNER");
         _;
     }
 }
