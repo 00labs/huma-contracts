@@ -28,7 +28,7 @@ contract HumaPool is HDT, Ownable {
     address internal humaConfig;
 
     // Liquidity holder proxy contract for this pool
-    address internal poolLocker;
+    address public poolLocker;
 
     // HumaLoanFactory
     address internal humaCreditFactory;
@@ -37,8 +37,12 @@ contract HumaPool is HDT, Ownable {
     mapping(address => LenderInfo) internal lenderInfo;
 
     // Tracks currently issued loans from this pool
+<<<<<<< HEAD
     // Maps from wallet adress to Loan address
     // todo need to change to internal
+=======
+    // Maps from wallet to Loan
+>>>>>>> master
     mapping(address => address) public creditMapping;
 
     // The ERC20 token this pool manages
@@ -663,5 +667,13 @@ contract HumaPool is HDT, Ownable {
 
     function getPoolDefaultGracePeriod() external view returns (uint256) {
         return poolDefaultGracePeriod;
+    }
+
+    function getApprovalStatusForBorrower(address borrower)
+        external
+        view
+        returns (bool)
+    {
+        return IHumaCredit(creditMapping[borrower]).isApproved();
     }
 }

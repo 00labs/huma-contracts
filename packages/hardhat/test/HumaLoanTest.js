@@ -257,6 +257,12 @@ describe("Huma Loan", function () {
                 await loanContract.approve();
                 expect(await loanContract.isApproved()).to.equal(true);
 
+                expect(
+                    await humaPoolContract.getApprovalStatusForBorrower(
+                        borrower.address
+                    )
+                ).to.equal(true);
+
                 await humaPoolContract.connect(borrower).originateCredit(200);
 
                 expect(
