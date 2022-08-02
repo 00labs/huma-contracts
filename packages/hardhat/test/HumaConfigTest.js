@@ -36,19 +36,19 @@ describe("Huma Config", function () {
         });
 
         it("Should have the right initial treasury", async function () {
-            expect(await configContract.getHumaTreasury()).to.equal(
+            expect(await configContract.humaTreasury()).to.equal(
                 treasury.address
             );
         });
 
         it("Should have the right treasury fee", async function () {
-            expect(await configContract.getTreasuryFee()).to.equal(50);
+            expect(await configContract.treasuryFee()).to.equal(50);
         });
 
         it("Should have the right protocol default grace period", async function () {
-            expect(
-                await configContract.getProtocolDefaultGracePeriod()
-            ).to.equal(5 * 3600 * 24);
+            expect(await configContract.protocolDefaultGracePeriod()).to.equal(
+                5 * 3600 * 24
+            );
         });
 
         it("Should have set owner as a pauser", async function () {
@@ -119,6 +119,7 @@ describe("Huma Config", function () {
                     .setHumaTreasury(treasury.address)
             ).not.emit(configContract, "HumaTreasuryChanged");
         });
+
         it("Should allow treasury to be changed", async function () {
             expect(
                 await configContract
@@ -128,7 +129,7 @@ describe("Huma Config", function () {
                 .to.emit(configContract, "HumaTreasuryChanged")
                 .withArgs(newTreasury.address);
             expect(
-                await configContract.connect(origOwner).getHumaTreasury()
+                await configContract.connect(origOwner).humaTreasury()
             ).to.equal(newTreasury.address);
         });
     });
@@ -229,7 +230,7 @@ describe("Huma Config", function () {
             ).to.be.revertedWith("HumaConfig:PAUSERS_REQUIRED");
         });
 
-        it("Should be able to pause the protol", async function () {
+        it("Should be able to pause the protocol", async function () {
             await expect(configContract.connect(pauser).pauseProtocol())
                 .to.emit(configContract, "ProtocolPaused")
                 .withArgs(pauser.address);
@@ -321,7 +322,7 @@ describe("Huma Config", function () {
             ).to.be.revertedWith("HumaConfig:POOL_ADMIN_ADDRESS_ZERO");
         });
 
-        it("Should reject attemp to removal a pool admin who is not a pool admin", async function () {
+        it("Should reject attempt to remove a pool admin who is not a pool admin", async function () {
             await expect(
                 configContract
                     .connect(origOwner)
@@ -398,9 +399,9 @@ describe("Huma Config", function () {
             )
                 .to.emit(configContract, "ProtocolDefaultGracePeriodChanged")
                 .withArgs(10 * 24 * 3600);
-            expect(
-                await configContract.getProtocolDefaultGracePeriod()
-            ).to.equal(10 * 24 * 3600);
+            expect(await configContract.protocolDefaultGracePeriod()).to.equal(
+                10 * 24 * 3600
+            );
         });
     });
 
@@ -425,7 +426,7 @@ describe("Huma Config", function () {
             await expect(configContract.connect(origOwner).setTreasuryFee(2000))
                 .to.emit(configContract, "TreasuryFeeChanged")
                 .withArgs(50, 2000);
-            expect(await configContract.getTreasuryFee()).to.equal(2000);
+            expect(await configContract.treasuryFee()).to.equal(2000);
         });
     });
 
