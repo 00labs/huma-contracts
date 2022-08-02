@@ -620,15 +620,22 @@ contract HumaPool is HDT, Ownable {
             uint256 apr,
             uint256 minCreditAmt,
             uint256 maxCreditAmt,
-            uint256 liquiditycap
+            uint256 liquiditycap,
+            string memory name,
+            string memory symbol,
+            uint8 decimal
         )
     {
+        ERC20 erc20Contract = ERC20(address(poolToken));
         return (
             address(poolToken),
             interestRateBasis,
             minBorrowAmt,
             maxBorrowAmt,
-            liquidityCap
+            liquidityCap,
+            erc20Contract.name(),
+            erc20Contract.symbol(),
+            erc20Contract.decimals()
         );
     }
 
