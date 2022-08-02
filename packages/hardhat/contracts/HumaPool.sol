@@ -28,7 +28,7 @@ contract HumaPool is HDT, Ownable {
     address internal humaConfig;
 
     // Liquidity holder proxy contract for this pool
-    address internal poolLocker;
+    address public poolLocker;
 
     // HumaLoanFactory
     address internal humaCreditFactory;
