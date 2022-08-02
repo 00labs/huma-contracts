@@ -37,12 +37,8 @@ contract HumaPool is HDT, Ownable {
     mapping(address => LenderInfo) internal lenderInfo;
 
     // Tracks currently issued loans from this pool
-<<<<<<< HEAD
     // Maps from wallet adress to Loan address
     // todo need to change to internal
-=======
-    // Maps from wallet to Loan
->>>>>>> master
     mapping(address => address) public creditMapping;
 
     // The ERC20 token this pool manages
