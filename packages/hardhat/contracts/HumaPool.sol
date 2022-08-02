@@ -46,7 +46,6 @@ contract HumaPool is HDT, Ownable {
 
     // Tracks currently issued loans from this pool
     // Maps from wallet to Loan
-    // todo need to change to internal
     mapping(address => address) public creditMapping;
 
     // The ERC20 token this pool manages
@@ -674,5 +673,13 @@ contract HumaPool is HDT, Ownable {
 
     function getPoolDefaultGracePeriod() external view returns (uint256) {
         return poolDefaultGracePeriod;
+    }
+
+    function getApprovalStatusForBorrower(address borrower)
+        external
+        view
+        returns (bool)
+    {
+        return IHumaCredit(creditMapping[borrower]).isApproved();
     }
 }
