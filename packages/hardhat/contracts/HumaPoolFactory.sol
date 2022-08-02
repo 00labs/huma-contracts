@@ -32,7 +32,7 @@ contract HumaPoolFactory {
     address internal immutable humaConfig;
 
     // Array of all Huma Pools created from this factory
-    address[] internal pools;
+    address[] public pools;
 
     event PoolDeployed(address _poolAddress);
 

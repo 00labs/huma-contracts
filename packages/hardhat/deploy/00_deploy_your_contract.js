@@ -105,6 +105,12 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 
     await HumaPoolFactory.deployNewPool(TestToken.address, 1);
 
+    const poolAddr = await HumaPoolFactory.pools(0);
+    const humaPool = await ethers.getContractAt("HumaPool", poolAddr);
+    await humaPool.enablePool();
+    await humaPool.addCreditApprover(process.env.INITIAL_HUMA_CREDIT_APPROVER);
+    await humaPool.setMinMaxBorrowAmt(1, 1000000);
+
     await deploy("InvoiceNFT", {
         from: deployer,
         log: true,

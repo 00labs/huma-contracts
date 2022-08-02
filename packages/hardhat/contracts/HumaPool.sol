@@ -50,8 +50,8 @@ contract HumaPool is HDT, Ownable {
     mapping(address => address) public creditMapping;
 
     // The ERC20 token this pool manages
-    IERC20 internal immutable poolToken;
-    uint256 internal immutable poolTokenDecimals;
+    IERC20 public immutable poolToken;
+    uint256 public immutable poolTokenDecimals;
 
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
