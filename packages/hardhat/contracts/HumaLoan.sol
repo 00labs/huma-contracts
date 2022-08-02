@@ -9,7 +9,6 @@ import "./HumaConfig.sol";
 import "./HumaPool.sol";
 import "./HDT/HDT.sol";
 import "./interfaces/IHumaCredit.sol";
-import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 import "./interfaces/IReputationTracker.sol";
 import "./libraries/SafeMathInt.sol";

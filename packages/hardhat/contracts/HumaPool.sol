@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-import "./interfaces/IHumaPoolAdmins.sol";
 import "./interfaces/IHumaPoolLocker.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./HumaPoolLocker.sol";
@@ -23,9 +22,6 @@ contract HumaPool is HDT, Ownable {
     using ERC165Checker for address;
 
     uint256 constant POWER18 = 10**18;
-
-    // HumaPoolAdmins
-    address internal immutable humaPoolAdmins;
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
@@ -111,7 +107,6 @@ contract HumaPool is HDT, Ownable {
 
     constructor(
         address _poolToken,
-        address _humaPoolAdmins,
         address _humaConfig,
         address _humaCreditFactory,
         address _reputationTrackerFactory,
@@ -119,7 +114,6 @@ contract HumaPool is HDT, Ownable {
     ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
-        humaPoolAdmins = _humaPoolAdmins;
         humaConfig = _humaConfig;
         humaCreditFactory = _humaCreditFactory;
         reputationTrackerFactory = _reputationTrackerFactory;
@@ -132,9 +126,8 @@ contract HumaPool is HDT, Ownable {
     }
 
     modifier onlyHumaMasterAdmin() {
-        // TODO integrate humaconfig once its ready
         require(
-            IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) == true,
+            msg.sender == HumaConfig(humaConfig).owner(),
             "HumaPool:PERMISSION_DENIED_NOT_MASTER_ADMIN"
         );
         _;
@@ -454,8 +447,7 @@ contract HumaPool is HDT, Ownable {
     function onlyOwnerOrHumaMasterAdmin() private view {
         require(
             (msg.sender == owner() ||
-                IHumaPoolAdmins(humaPoolAdmins).isMasterAdmin(msg.sender) ==
-                true),
+                msg.sender == HumaConfig(humaConfig).owner()),
             "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
         );
     }
@@ -568,6 +560,7 @@ contract HumaPool is HDT, Ownable {
         uint256 _early_payoff_fee_flat,
         uint256 _early_payoff_fee_bps
     ) public {
+        onlyOwnerOrHumaMasterAdmin();
         require(
             _platform_fee_bps > HumaConfig(humaConfig).getTreasuryFee(),
             "HumaPool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
