@@ -36,7 +36,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     await deploy("HumaConfig", {
         from: deployer,
         log: true,
-        args: [deployer, deployer],
+        args: [deployer],
         waitConfirmations: 5,
     });
 
