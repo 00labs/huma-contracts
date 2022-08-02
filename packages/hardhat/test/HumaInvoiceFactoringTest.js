@@ -255,6 +255,27 @@ describe("Huma Invoice Financing", function () {
         });
     });
 
+    describe("Invalidate Approved Invoice Factoring", function () {
+        it("Should disallow non-credit-approver to invalidate an approved invoice factoring record", async function () {
+            await expect(
+                humaPoolContract
+                    .connect(payer)
+                    .invalidateApprovedCredit(borrower.address)
+            ).to.be.revertedWith("HumaPool:ILLEGAL_CREDIT_POSTER");
+        });
+
+        it("Should allow credit approver to invalidate an approved invoice factoring record", async function () {
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .invalidateApprovedCredit(borrower.address)
+            );
+            expect(
+                await humaPoolContract.creditMapping(borrower.address)
+            ).to.equal(ethers.constants.AddressZero);
+        });
+    });
+
     describe("Invoice Factoring Funding", function () {
         // Makes sure there is liquidity in the pool for borrowing
         beforeEach(async function () {

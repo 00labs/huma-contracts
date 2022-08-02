@@ -322,6 +322,12 @@ contract HumaPool is HDT, Ownable {
     }
 
     function invalidateApprovedCredit(address _borrower) external {
+        poolOn();
+        require(
+            creditApprovers[msg.sender] == true,
+            "HumaPool:ILLEGAL_CREDIT_POSTER"
+        );
+
         creditMapping[_borrower] = address(0);
     }
 
