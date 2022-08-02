@@ -24,6 +24,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     });
 
     const TestToken = await ethers.getContract("TestToken", deployer);
+    await TestToken.give1000To(deployer);
 
     await deploy("HumaPoolAdmins", {
         from: deployer,
@@ -109,13 +110,20 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     const humaPool = await ethers.getContractAt("HumaPool", poolAddr);
     await humaPool.enablePool();
     await humaPool.addCreditApprover(process.env.INITIAL_HUMA_CREDIT_APPROVER);
-    await humaPool.setMinMaxBorrowAmt(1, 1000000);
+    const maxBorrowAmt = 1000000000000000000000000;
+    await humaPool.setMinMaxBorrowAmt(
+        1,
+        maxBorrowAmt.toLocaleString("fullwide", { useGrouping: false })
+    );
 
     await deploy("InvoiceNFT", {
         from: deployer,
         log: true,
         waitConfirmations: 5,
     });
+
+    await TestToken.approve(humaPool.address, 1000);
+    await humaPool.deposit(1000);
 
     // Getting a previously deployed contract
     // const TestToken = await ethers.getContract("TestToken", deployer);

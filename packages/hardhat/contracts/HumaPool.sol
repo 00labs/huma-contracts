@@ -33,7 +33,7 @@ contract HumaPool is HDT, Ownable {
     address internal humaConfig;
 
     // Liquidity holder proxy contract for this pool
-    address internal poolLocker;
+    address public poolLocker;
 
     // API client used to connect with huma's risk service
     address internal humaAPIClient;
