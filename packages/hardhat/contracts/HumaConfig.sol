@@ -77,6 +77,7 @@ contract HumaConfig is Ownable {
         humaTreasury = treasury;
 
         pausers[owner()] = true;
+        poolAdmins[owner()] = true;
 
         protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
