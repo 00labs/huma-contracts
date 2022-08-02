@@ -37,7 +37,7 @@ contract HumaPool is HDT, Ownable {
     mapping(address => LenderInfo) internal lenderInfo;
 
     // Tracks currently issued loans from this pool
-    // Maps from wallet to Loan
+    // Maps from wallet adress to Loan address
     // todo need to change to internal
     mapping(address => address) public creditMapping;
 
@@ -241,11 +241,13 @@ contract HumaPool is HDT, Ownable {
         uint256 _numOfPayments
     ) external returns (bool) {
         poolOn();
+        uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
         _requestCredit(
             msg.sender,
             _borrowAmt,
             _paymentInterval,
-            _numOfPayments
+            _numOfPayments,
+            terms
         );
         return true;
     }
@@ -254,7 +256,8 @@ contract HumaPool is HDT, Ownable {
         address borrower,
         uint256 _borrowAmt,
         uint256 _paymentInterval,
-        uint256 _numOfPayments
+        uint256 _numOfPayments,
+        uint256[] memory _terms
     ) public returns (address) {
         poolOn();
         require(
@@ -265,7 +268,8 @@ contract HumaPool is HDT, Ownable {
             borrower,
             _borrowAmt,
             _paymentInterval,
-            _numOfPayments
+            _numOfPayments,
+            _terms
         );
         IHumaCredit(loanAddress).approve();
         return loanAddress;
@@ -275,7 +279,8 @@ contract HumaPool is HDT, Ownable {
         address borrower,
         uint256 _borrowAmt,
         uint256 _paymentInterval,
-        uint256 _numOfPayments
+        uint256 _numOfPayments,
+        uint256[] memory terms
     ) internal returns (address credit) {
         // Borrowers must not have existing loans from this pool
         require(
@@ -297,7 +302,6 @@ contract HumaPool is HDT, Ownable {
 
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         //todo Add real collateral info
-        uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
 
         credit = HumaCreditFactory(humaCreditFactory).deployNewCredit(
             payable(address(this)),
@@ -315,6 +319,10 @@ contract HumaPool is HDT, Ownable {
         creditMapping[borrower] = credit;
 
         return credit;
+    }
+
+    function invalidateApprovedCredit(address _borrower) external {
+        creditMapping[_borrower] = address(0);
     }
 
     function originateCredit(uint256 borrowAmt) external returns (bool) {
