@@ -78,6 +78,7 @@ contract HumaConfig is Ownable {
 
         // Add protocol owner as a pauser.
         pausers[msg.sender] = true;
+        poolAdmins[msg.sender] = true;
 
         protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
