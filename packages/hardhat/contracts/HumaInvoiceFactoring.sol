@@ -78,7 +78,7 @@ contract HumaInvoiceFactoring is IHumaCredit {
      *                [2] factoring_fee_bps
      *                [3] late_fee_flat
      *                [4] late_fee_bps
-     *                [5] dueDate
+     *                [5] duration   // # of days
      */
     function initiate(
         address payable _pool,
