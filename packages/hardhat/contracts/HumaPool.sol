@@ -25,7 +25,7 @@ contract HumaPool is HDT, Ownable {
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
-    address internal humaConfig;
+    address public humaConfig;
 
     // Liquidity holder proxy contract for this pool
     address public poolLocker;
