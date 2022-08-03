@@ -4,7 +4,18 @@ pragma solidity >=0.8.0 <0.9.0;
 import "./IReputationTracker.sol";
 
 interface ICredit {
-    function initiate(address _borrower, uint256 liquidityAmt) external;
+    function initiate(
+        address payable _pool,
+        address _poolLocker,
+        address _humaConfig,
+        address _treasury,
+        address _borrower,
+        address liquidityAsset,
+        uint256 liquidityAmt,
+        address collateralAsset,
+        uint256 collateralAmt,
+        uint256[] memory terms
+    ) external;
 
     function initiateWithCollateral(
         address _borrower,
@@ -13,12 +24,7 @@ interface ICredit {
         uint256 collateralAmt
     ) external;
 
-    function approve(
-        address borrower,
-        uint256 liquidityAmt,
-        address collateralAsset,
-        uint256 collateralAmt
-    ) external;
+    function approve() external returns (bool);
 
     function originateCredit(address _borrower, uint256 _borrowAmt) external;
 
