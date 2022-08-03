@@ -2,7 +2,7 @@
 
 const { ethers } = require("hardhat");
 
-const localChainId = "31337";
+// const localChainId = "31337";
 
 // const sleep = (ms) =>
 //   new Promise((r) =>
@@ -12,10 +12,11 @@ const localChainId = "31337";
 //     }, ms)
 //   );
 
-module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
+module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy } = deployments;
-    const { deployer, treasury } = await getNamedAccounts();
-    const chainId = await getChainId();
+    const { deployer } = await getNamedAccounts();
+    // const chainId = await getChainId();
+    const [treasury] = await ethers.getSigners();
 
     await deploy("TestToken", {
         from: deployer,
@@ -24,7 +25,6 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     });
 
     const TestToken = await ethers.getContract("TestToken", deployer);
-    await TestToken.give1000To(deployer);
 
     await deploy("HumaConfig", {
         from: deployer,
@@ -35,6 +35,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
 
     const HumaConfig = await ethers.getContract("HumaConfig", deployer);
     await HumaConfig.setLiquidityAsset(TestToken.address, true);
+    await HumaConfig.setHumaTreasury(treasury.address);
 
     await deploy("HumaCreditFactory", {
         from: deployer,
@@ -97,6 +98,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
         1,
         maxBorrowAmt.toLocaleString("fullwide", { useGrouping: false })
     );
+    await humaPool.setFees(10, 100, 20, 100, 30, 100);
 
     await deploy("InvoiceNFT", {
         from: deployer,
@@ -104,6 +106,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
         waitConfirmations: 5,
     });
 
+    if ((await TestToken.balanceOf(deployer)) < 1000) {
+        await TestToken.give1000To(deployer);
+    }
     await TestToken.approve(humaPool.address, 1000);
     await humaPool.deposit(1000);
 
