@@ -6,19 +6,18 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-import "./interfaces/IHumaPoolLocker.sol";
-import "./interfaces/IHumaCredit.sol";
-import "./HumaPoolLocker.sol";
+import "./interfaces/IPoolLocker.sol";
+import "./interfaces/IPool.sol";
+import "./PoolLocker.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
-import "./HumaCreditFactory.sol";
+import "./PoolLocker.sol";
 import "./ReputationTrackerFactory.sol";
 import "./ReputationTracker.sol";
 import "./interfaces/IReputationTracker.sol";
 
-contract HumaPool is HDT, Ownable {
+abstract contract BasePool is IPool, HDT, Ownable {
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
     using ERC165Checker for address;
 
     uint256 constant POWER18 = 10**18;
@@ -30,16 +29,8 @@ contract HumaPool is HDT, Ownable {
     // Liquidity holder proxy contract for this pool
     address public poolLocker;
 
-    // HumaLoanFactory
-    address internal humaCreditFactory;
-
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => LenderInfo) internal lenderInfo;
-
-    // Tracks currently issued loans from this pool
-    // Maps from wallet adress to Loan address
-    // todo need to change to internal
-    mapping(address => address) public creditMapping;
 
     // The ERC20 token this pool manages
     IERC20 public immutable poolToken;
@@ -69,8 +60,6 @@ contract HumaPool is HDT, Ownable {
     // Early payoff fee, charged when the borrow pays off prematurely
     uint256 early_payoff_fee_flat;
     uint256 early_payoff_fee_bps;
-    // Helper counter used to ensure every loan has a unique ID
-    uint256 humaLoanUniqueIdCounter;
 
     PoolStatus public status = PoolStatus.Off;
 
@@ -79,9 +68,7 @@ contract HumaPool is HDT, Ownable {
 
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
-    uint256 loanWithdrawalLockoutPeriod = 2630000;
-
-    CreditType poolCreditType;
+    uint256 withdrawalLockoutPeriod = 2630000;
 
     uint256 public poolDefaultGracePeriod;
 
@@ -108,16 +95,12 @@ contract HumaPool is HDT, Ownable {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _humaCreditFactory,
-        address _reputationTrackerFactory,
-        CreditType _poolCreditType
+        address _reputationTrackerFactory
     ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
         humaConfig = _humaConfig;
-        humaCreditFactory = _humaCreditFactory;
         reputationTrackerFactory = _reputationTrackerFactory;
-        poolCreditType = _poolCreditType;
         poolDefaultGracePeriod = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
         reputationTrackerContractAddress = ReputationTrackerFactory(
@@ -128,7 +111,7 @@ contract HumaPool is HDT, Ownable {
     modifier onlyHumaMasterAdmin() {
         require(
             msg.sender == HumaConfig(humaConfig).owner(),
-            "HumaPool:PERMISSION_DENIED_NOT_MASTER_ADMIN"
+            "BasePool:PERMISSION_DENIED_NOT_MASTER_ADMIN"
         );
         _;
     }
@@ -141,18 +124,18 @@ contract HumaPool is HDT, Ownable {
      * @notice LP deposits to the pool to earn interest, and share losses
      * @param amount the number of `poolToken` to be deposited
      */
-    function makeInitialDeposit(uint256 amount) external returns (bool) {
+    function makeInitialDeposit(uint256 amount) external virtual override {
         return _deposit(msg.sender, amount);
     }
 
-    function deposit(uint256 amount) external returns (bool) {
+    function deposit(uint256 amount) external virtual override {
         poolOn();
         // todo (by RL) Need to check if the pool is open to msg.sender to deposit
         // todo (by RL) Need to add maximal pool size support and check if it has reached the size
         return _deposit(msg.sender, amount);
     }
 
-    function _deposit(address lender, uint256 amount) internal returns (bool) {
+    function _deposit(address lender, uint256 amount) internal {
         uint256 amtInPower18 = _toPower18(amount);
 
         // Update weighted deposit date:
@@ -161,9 +144,8 @@ contract HumaPool is HDT, Ownable {
         uint256 prevDate = lenderInfo[lender].weightedDepositDate;
         uint256 balance = lenderInfo[lender].amount;
         uint256 newDate = (balance + amount) > 0
-            ? prevDate.add(
-                block.timestamp.sub(prevDate).mul(amount).div(balance + amount)
-            )
+            ? prevDate +
+                (((block.timestamp - prevDate) * amount) / balance + amount)
             : prevDate;
 
         lenderInfo[lender].weightedDepositDate = newDate;
@@ -176,8 +158,6 @@ contract HumaPool is HDT, Ownable {
         _mint(lender, amtInPower18);
 
         emit LiquidityDeposited(lender, amount);
-
-        return true;
     }
 
     /**
@@ -189,17 +169,17 @@ contract HumaPool is HDT, Ownable {
      *      the number of HDTs to reduct from msg.sender's account.
      * @dev Error checking sequence: 1) is the pool on 2) is the amount right 3)
      */
-    function withdraw(uint256 amount) public returns (bool) {
+    function withdraw(uint256 amount) public virtual override {
         poolOn();
         require(
             block.timestamp >=
                 lenderInfo[msg.sender].mostRecentLoanTimestamp +
-                    loanWithdrawalLockoutPeriod,
-            "HumaPool:WITHDRAW_TOO_SOON"
+                    withdrawalLockoutPeriod,
+            "BasePool:WITHDRAW_TOO_SOON"
         );
         require(
             amount <= lenderInfo[msg.sender].amount,
-            "HumaPool:WITHDRAW_AMT_TOO_GREAT"
+            "BasePool:WITHDRAW_AMT_TOO_GREAT"
         );
 
         uint256 amtInPower18 = _toPower18(amount);
@@ -210,281 +190,43 @@ contract HumaPool is HDT, Ownable {
         // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
         // number of poolToken, incl. principal,income and losses.
         // then get the portion that msg.sender wants to withdraw (amount / total principal)
-        uint256 amountToWithdraw = withdrawableFundsOf(msg.sender)
-            .mul(amount)
-            .div(balanceOf(msg.sender));
+        uint256 amountToWithdraw = (withdrawableFundsOf(msg.sender) * amount) /
+            balanceOf(msg.sender);
 
         _burn(msg.sender, amtInPower18);
 
-        IHumaPoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
+        //IPoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
+        PoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
 
         emit LiquidityWithdrawn(msg.sender, amount, amountToWithdraw);
-
-        return true;
     }
 
     /**
      * @notice Withdraw all balance from the pool.
      */
-    function withdrawAll() external returns (bool) {
+    function withdrawAll() external virtual override {
         return withdraw(lenderInfo[msg.sender].amount);
-    }
-
-    //********************************************/
-    //         Borrower Functions                //
-    //********************************************/
-    // Apply to borrow from the pool. Borrowing is subject to interest,
-    // collateral, and maximum loan requirements as dictated by the pool
-    function requestCredit(
-        uint256 _borrowAmt,
-        uint256 _paymentInterval,
-        uint256 _numOfPayments
-    ) external returns (bool) {
-        poolOn();
-        uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
-        _requestCredit(
-            msg.sender,
-            _borrowAmt,
-            _paymentInterval,
-            _numOfPayments,
-            terms
-        );
-        return true;
-    }
-
-    function postApprovedCreditRequest(
-        address borrower,
-        uint256 _borrowAmt,
-        uint256 _paymentInterval,
-        uint256 _numOfPayments,
-        uint256[] memory _terms
-    ) public returns (address) {
-        poolOn();
-        require(
-            creditApprovers[msg.sender] == true,
-            "HumaPool:ILLEGAL_CREDIT_POSTER"
-        );
-        address loanAddress = _requestCredit(
-            borrower,
-            _borrowAmt,
-            _paymentInterval,
-            _numOfPayments,
-            _terms
-        );
-        IHumaCredit(loanAddress).approve();
-        return loanAddress;
-    }
-
-    function _requestCredit(
-        address borrower,
-        uint256 _borrowAmt,
-        uint256 _paymentInterval,
-        uint256 _numOfPayments,
-        uint256[] memory terms
-    ) internal returns (address credit) {
-        // Borrowers must not have existing loans from this pool
-        require(
-            creditMapping[borrower] == address(0),
-            "HumaPool:DENY_BORROW_EXISTING_LOAN"
-        );
-
-        // Borrowing amount needs to be higher than min for the pool.
-        require(
-            _borrowAmt >= minBorrowAmt,
-            "HumaPool:DENY_BORROW_SMALLER_THAN_LIMIT"
-        );
-
-        // Borrowing amount needs to be lower than max for the pool.
-        require(
-            maxBorrowAmt >= _borrowAmt,
-            "HumaPool:DENY_BORROW_GREATER_THAN_LIMIT"
-        );
-
-        address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
-        //todo Add real collateral info
-
-        credit = HumaCreditFactory(humaCreditFactory).deployNewCredit(
-            payable(address(this)),
-            poolCreditType,
-            poolLocker,
-            humaConfig,
-            treasuryAddress,
-            borrower,
-            address(poolToken),
-            _borrowAmt,
-            address(0),
-            0,
-            terms
-        );
-        creditMapping[borrower] = credit;
-
-        return credit;
-    }
-
-    function invalidateApprovedCredit(address _borrower) external {
-        poolOn();
-        require(
-            creditApprovers[msg.sender] == true,
-            "HumaPool:ILLEGAL_CREDIT_POSTER"
-        );
-
-        creditMapping[_borrower] = address(0);
-    }
-
-    function originateCredit(uint256 borrowAmt) external returns (bool) {
-        return originateCreditWithCollateral(borrowAmt, address(0), 0, 0);
-    }
-
-    function originateCreditWithCollateral(
-        uint256 borrowAmt,
-        address collateralAsset,
-        uint256 collateralParam,
-        uint256 collateralCount
-    ) public returns (bool) {
-        poolOn();
-        require(
-            creditMapping[msg.sender] != address(0),
-            "HumaPool:NO_EXISTING_LOAN_REQUESTS"
-        );
-        IHumaCredit humaCreditContract = IHumaCredit(creditMapping[msg.sender]);
-
-        require(
-            humaCreditContract.isApproved(),
-            "HumaPool:CREDIT_NOT_APPROVED"
-        );
-
-        (uint256 amtForBorrower, uint256 totalFees) = humaCreditContract
-            .originateCredit(borrowAmt);
-
-        // Split the fee between treasury and the pool
-        uint256 protocolFee = uint256(HumaConfig(humaConfig).treasuryFee())
-            .mul(humaCreditContract.getCreditBalance())
-            .div(10000);
-
-        assert(totalFees >= protocolFee);
-
-        uint256 poolIncome = totalFees.sub(protocolFee);
-
-        distributeIncome(poolIncome);
-
-        //CRITICAL: Transfer collateral and funding the loan
-        // Transfer collateral
-        // InterfaceId_ERC721 = 0x80ac58cd;
-        if (collateralAsset != address(0)) {
-            if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
-                IERC721(collateralAsset).safeTransferFrom(
-                    msg.sender,
-                    poolLocker,
-                    collateralParam
-                );
-            } else if (
-                collateralAsset.supportsInterface(type(IERC20).interfaceId)
-            ) {
-                IERC20(collateralAsset).safeTransferFrom(
-                    msg.sender,
-                    poolLocker,
-                    collateralCount
-                );
-            } else {
-                revert("HumaPool:COLLATERAL_ASSET_NOT_SUPPORTED");
-            }
-        }
-        // Transfer liquidity asset
-        address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
-        HumaPoolLocker locker = HumaPoolLocker(poolLocker);
-        locker.transfer(treasuryAddress, protocolFee);
-        locker.transfer(msg.sender, amtForBorrower);
-        return true;
-    }
-
-    function processRefund(address receiver, uint256 amount)
-        external
-        returns (bool)
-    {
-        require(
-            creditMapping[receiver] == msg.sender,
-            "HumaPool:ILLEGAL_REFUND_REQUESTER"
-        );
-        HumaPoolLocker locker = HumaPoolLocker(poolLocker);
-        locker.transfer(receiver, amount);
-
-        return true;
-    }
-
-    function reportReputationTracking(
-        address borrower,
-        IReputationTracker.TrackingType trackingType
-    ) public {
-        // To make sure only IHumaCredit implementors (e.g. HumaLoan) can call this function for reputation tracking.
-        require(
-            creditMapping[borrower] == msg.sender,
-            "HumaPool:ILLEGAL_REPUTATION_TRACKING_REQUESTER"
-        );
-        IReputationTracker(reputationTrackerContractAddress).report(
-            borrower,
-            trackingType
-        );
-        // For payoff, remove the credit record so that the borrower can borrow again.
-        if (trackingType == IReputationTracker.TrackingType.Payoff) {
-            creditMapping[borrower] = address(0);
-        }
-    }
-
-    /**
-     * Retrieve loan terms from pool config. 
-     //todo It is hard-coded right now. Need to call poll config to get the real data
-    */
-    function getLoanTerms(uint256 _paymentInterval, uint256 _numOfPayments)
-        private
-        view
-        returns (uint256[] memory terms)
-    {
-        terms = new uint256[](9);
-        terms[0] = interestRateBasis; //apr_in_bps
-        terms[1] = platform_fee_flat;
-        terms[2] = platform_fee_bps;
-        terms[3] = late_fee_flat;
-        terms[4] = late_fee_bps;
-        terms[5] = _paymentInterval; //payment_interval, in days
-        terms[6] = _numOfPayments; //numOfPayments
-        terms[7] = early_payoff_fee_flat;
-        terms[8] = early_payoff_fee_bps;
     }
 
     /********************************************/
     //                Settings                  //
     /********************************************/
 
-    // Allow for sensitive pool functions only to be called by
-    // the pool owner and the huma master admin
-    function onlyOwnerOrHumaMasterAdmin() private view {
-        require(
-            (msg.sender == owner() ||
-                msg.sender == HumaConfig(humaConfig).owner()),
-            "HumaPool:PERMISSION_DENIED_NOT_ADMIN"
-        );
-    }
-
-    // In order for a pool to issue new loans, it must be turned on by an admin
-    // and its custom loan helper must be approved by the Huma team
-    function poolOn() private view {
-        require(
-            HumaConfig(humaConfig).isProtocolPaused() == false,
-            "HumaPool:PROTOCOL_PAUSED"
-        );
-        require(status == PoolStatus.On, "HumaPool:POOL_NOT_ON");
-    }
-
     /**
      * @notice Adds an approver to the list who can approve loans.
      * @param approver the approver to be added
      */
-    function addCreditApprover(address approver) external {
+    function addCreditApprover(address approver) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         creditApprovers[approver] = true;
     }
 
-    function setPoolLocker(address _poolLocker) external returns (bool) {
+    function setPoolLocker(address _poolLocker)
+        external
+        virtual
+        override
+        returns (bool)
+    {
         onlyOwnerOrHumaMasterAdmin();
         poolLocker = _poolLocker;
 
@@ -494,10 +236,14 @@ contract HumaPool is HDT, Ownable {
     /**
      * @notice Sets the min and max of each loan/credit allowed by the pool.
      */
-    function setMinMaxBorrowAmt(uint256 minAmt, uint256 maxAmt) external {
+    function setMinMaxBorrowAmt(uint256 minAmt, uint256 maxAmt)
+        external
+        virtual
+        override
+    {
         onlyOwnerOrHumaMasterAdmin();
-        require(minAmt > 0, "HumaPool:MINAMT_IS_ZERO");
-        require(maxAmt >= minAmt, "HumaPool:MAXAMIT_LESS_THAN_MINAMT");
+        require(minAmt > 0, "BasePool:MINAMT_IS_ZERO");
+        require(maxAmt >= minAmt, "BasePool:MAXAMIT_LESS_THAN_MINAMT");
         minBorrowAmt = minAmt;
         maxBorrowAmt = maxAmt;
     }
@@ -513,19 +259,18 @@ contract HumaPool is HDT, Ownable {
         return true;
     }
 
-    function setCollateralRequired(uint256 _collateralRequired)
+    function setCollateralRateInBps(uint256 _collateralRequired)
         external
-        returns (bool)
+        virtual
+        override
     {
         onlyOwnerOrHumaMasterAdmin();
         require(_collateralRequired >= 0);
         collateralRequired = _collateralRequired;
-
-        return true;
     }
 
     // Allow borrow applications and loans to be processed by this pool.
-    function enablePool() external {
+    function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.On;
     }
@@ -534,35 +279,45 @@ contract HumaPool is HDT, Ownable {
      * Sets the default grace period for this pool.
      * @param gracePeriod the desired grace period in seconds.
      */
-    function setPoolDefaultGracePeriod(uint256 gracePeriod) external {
+    function setPoolDefaultGracePeriod(uint256 gracePeriod)
+        external
+        virtual
+        override
+    {
         onlyOwnerOrHumaMasterAdmin();
         poolDefaultGracePeriod = gracePeriod;
     }
 
     // Reject all future borrow applications and loans. Note that existing
     // loans will still be processed as expected.
-    function disablePool() external {
+    function disablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.Off;
     }
 
-    function getLoanWithdrawalLockoutPeriod() public view returns (uint256) {
-        return loanWithdrawalLockoutPeriod;
+    function getWithdrawalLockoutPeriod() public view returns (uint256) {
+        return withdrawalLockoutPeriod;
     }
 
-    function setLoanWithdrawalLockoutPeriod(
-        uint256 _loanWithdrawalLockoutPeriod
-    ) external {
+    function setWithdrawalLockoutPeriod(uint256 _withdrawalLockoutPeriod)
+        external
+        virtual
+        override
+    {
         onlyOwnerOrHumaMasterAdmin();
-        loanWithdrawalLockoutPeriod = _loanWithdrawalLockoutPeriod;
+        withdrawalLockoutPeriod = _withdrawalLockoutPeriod;
     }
 
     /**
      * @notice Sets the cap of the pool liquidity.
      */
-    function setPoolLiquidityCap(uint256 cap) external {
+    function setPoolLiquidityCap(uint256 cap) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         liquidityCap = cap;
+    }
+
+    function setAPR(uint256 _interestRateBasis) external virtual override {
+        interestRateBasis = _interestRateBasis;
     }
 
     function setFees(
@@ -572,11 +327,11 @@ contract HumaPool is HDT, Ownable {
         uint256 _late_fee_bps,
         uint256 _early_payoff_fee_flat,
         uint256 _early_payoff_fee_bps
-    ) public {
+    ) public virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(
             _platform_fee_bps > HumaConfig(humaConfig).treasuryFee(),
-            "HumaPool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
+            "BasePool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
         );
         platform_fee_flat = _platform_fee_flat;
         platform_fee_bps = _platform_fee_bps;
@@ -599,7 +354,7 @@ contract HumaPool is HDT, Ownable {
     }
 
     function _toPower18(uint256 amt) internal view returns (uint256) {
-        return amt.mul(POWER18).div(10**poolTokenDecimals);
+        return (amt * POWER18) / (10**poolTokenDecimals);
     }
 
     // Function to receive Ether. msg.data must be empty
@@ -615,6 +370,8 @@ contract HumaPool is HDT, Ownable {
     function getPoolSummary()
         public
         view
+        virtual
+        override
         returns (
             address token,
             uint256 apr,
@@ -643,6 +400,8 @@ contract HumaPool is HDT, Ownable {
     function getPoolFees()
         public
         view
+        virtual
+        override
         returns (
             uint256,
             uint256,
@@ -677,6 +436,28 @@ contract HumaPool is HDT, Ownable {
         view
         returns (bool)
     {
-        return IHumaCredit(creditMapping[borrower]).isApproved();
+        //return IHumaCredit(creditMapping[borrower]).isApproved();
+        // todo
+        return true;
+    }
+
+    // Allow for sensitive pool functions only to be called by
+    // the pool owner and the huma master admin
+    function onlyOwnerOrHumaMasterAdmin() internal view {
+        require(
+            (msg.sender == owner() ||
+                msg.sender == HumaConfig(humaConfig).owner()),
+            "BasePool:PERMISSION_DENIED_NOT_ADMIN"
+        );
+    }
+
+    // In order for a pool to issue new loans, it must be turned on by an admin
+    // and its custom loan helper must be approved by the Huma team
+    function poolOn() internal view {
+        require(
+            HumaConfig(humaConfig).isProtocolPaused() == false,
+            "BasePool:PROTOCOL_PAUSED"
+        );
+        require(status == PoolStatus.On, "BasePool:POOL_NOT_ON");
     }
 }

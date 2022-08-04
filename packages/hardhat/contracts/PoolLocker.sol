@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "hardhat/console.sol";
 
-contract HumaPoolLocker is IERC721Receiver {
+contract PoolLocker is IERC721Receiver {
     using SafeERC20 for IERC20;
 
     address internal immutable pool;

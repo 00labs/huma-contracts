@@ -6,9 +6,9 @@ interface IPool {
 
     function deposit(uint256 amount) external;
 
-    function withdraw(uint256 amount) external returns (bool);
+    function withdraw(uint256 amount) external;
 
-    function withdrawAll() external returns (bool);
+    function withdrawAll() external;
 
     function enablePool() external;
 
@@ -36,6 +36,8 @@ interface IPool {
     function setWithdrawalLockoutPeriod(uint256 _period) external;
 
     function setPoolLiquidityCap(uint256 cap) external;
+
+    function addCreditApprover(address approver) external;
 
     function getPoolSummary()
         external

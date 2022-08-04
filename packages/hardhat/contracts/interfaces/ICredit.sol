@@ -5,28 +5,16 @@ import "./IReputationTracker.sol";
 
 interface ICredit {
     function initiate(
-        address payable _pool,
-        address _poolLocker,
-        address _humaConfig,
-        address _treasury,
         address _borrower,
-        address liquidityAsset,
         uint256 liquidityAmt,
         address collateralAsset,
         uint256 collateralAmt,
         uint256[] memory terms
     ) external;
 
-    function initiateWithCollateral(
-        address _borrower,
-        uint256 liquidityAmt,
-        address collateralAsset,
-        uint256 collateralAmt
-    ) external;
+    function approveCredit(address borrower) external;
 
-    function approve() external returns (bool);
-
-    function originateCredit(address _borrower, uint256 _borrowAmt) external;
+    function originateCredit(uint256 _borrowAmt) external;
 
     function originateCreditWithCollateral(
         address _borrower,
@@ -34,9 +22,9 @@ interface ICredit {
         address collateralAsset,
         uint256 collateralParam,
         uint256 collateralCount
-    ) external returns (bool);
+    ) external;
 
-    function invalidateApprovedCredit(address _borrower) external;
+    function invalidateCreditRecord(address _borrower) external;
 
     function makePayment(
         address _borrower,
@@ -57,17 +45,6 @@ interface ICredit {
     function assessEarlyPayoffFees(address borrower)
         external
         returns (uint256 fees);
-
-    function reportReputationTracking(
-        address borrower,
-        IReputationTracker.TrackingType trackingType
-    ) external;
-
-    function addCreditApprover(address approver) external;
-
-    function removeCreditApprover(address approver) external;
-
-    function getApprovalStatusForBorrower(address borrower) external view;
 
     function getNextPayment(address borrower)
         external
@@ -99,32 +76,5 @@ interface ICredit {
             uint256 dueDate
         );
 
-    function getPayoffInfoInterestOnly(address borrower)
-        external
-        returns (
-            uint256 total,
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            uint256 dueDate
-        );
-
-    function getLoanInformation(address borrower)
-        external
-        view
-        returns (
-            uint32 _amount,
-            uint32 _paybackPerInterval,
-            uint64 _paybackInterval,
-            uint32 _interestRateBasis,
-            uint64 _nextDueDate,
-            uint32 _principalPaidBack,
-            uint16 _remainingPayments,
-            uint16 _numOfPayments
-        );
-
-    function getCreditBalance(address borrower)
-        external
-        view
-        returns (uint256 amount);
+    function isApproved(address borrower) external view returns (bool);
 }
