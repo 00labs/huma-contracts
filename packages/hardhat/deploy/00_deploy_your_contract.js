@@ -16,7 +16,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
     // const chainId = await getChainId();
-    const [treasury] = await ethers.getSigners();
+    const [_deployer, treasury] = await ethers.getSigners();
+
+    const decimalToExpandedString = function (value, decimals) {
+        return Number(value * 10 ** decimals).toLocaleString("fullwide", {
+            useGrouping: false,
+        });
+    };
 
     await deploy("TestToken", {
         from: deployer,
@@ -29,7 +35,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await deploy("HumaConfig", {
         from: deployer,
         log: true,
-        args: [deployer],
+        args: [treasury.address],
         waitConfirmations: 5,
     });
 
@@ -93,12 +99,19 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const humaPool = await ethers.getContractAt("HumaPool", poolAddr);
     await humaPool.enablePool();
     await humaPool.addCreditApprover(process.env.INITIAL_HUMA_CREDIT_APPROVER);
-    const maxBorrowAmt = 1000000000000000000000000;
-    await humaPool.setMinMaxBorrowAmt(
-        1,
-        maxBorrowAmt.toLocaleString("fullwide", { useGrouping: false })
+    const poolTokenDecimals = await TestToken.decimals();
+    const maxBorrowAmt = decimalToExpandedString(10000, poolTokenDecimals);
+    await humaPool.setMinMaxBorrowAmt(1, maxBorrowAmt);
+    await humaPool.setFees(
+        decimalToExpandedString(10, poolTokenDecimals),
+        100,
+        decimalToExpandedString(20, poolTokenDecimals),
+        100,
+        decimalToExpandedString(30, poolTokenDecimals),
+        100
     );
-    await humaPool.setFees(10, 100, 20, 100, 30, 100);
+
+    const poolLocker = await humaPool.poolLocker();
 
     await deploy("InvoiceNFT", {
         from: deployer,
@@ -106,11 +119,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         waitConfirmations: 5,
     });
 
-    if ((await TestToken.balanceOf(deployer)) < 1000) {
-        await TestToken.give1000To(deployer);
-    }
-    await TestToken.approve(humaPool.address, 1000);
-    await humaPool.deposit(1000);
+    await TestToken.give100000To(deployer);
+    await TestToken.approve(
+        humaPool.address,
+        decimalToExpandedString(100000, poolTokenDecimals)
+    );
+    await humaPool.deposit(decimalToExpandedString(100000, poolTokenDecimals));
 
     // Getting a previously deployed contract
     // const TestToken = await ethers.getContract("TestToken", deployer);
