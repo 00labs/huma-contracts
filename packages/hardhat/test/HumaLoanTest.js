@@ -263,6 +263,13 @@ describe("Huma Loan", function () {
                     )
                 ).to.equal(true);
 
+                // Should return false when no loan exists
+                expect(
+                    await humaPoolContract.getApprovalStatusForBorrower(
+                        creditApprover.address
+                    )
+                ).to.equal(false);
+
                 await humaPoolContract.connect(borrower).originateCredit(200);
 
                 expect(

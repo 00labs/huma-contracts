@@ -677,6 +677,7 @@ contract HumaPool is HDT, Ownable {
         view
         returns (bool)
     {
+        if (creditMapping[borrower] == address(0)) return false;
         return IHumaCredit(creditMapping[borrower]).isApproved();
     }
 }
