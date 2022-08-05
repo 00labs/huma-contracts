@@ -402,11 +402,10 @@ contract HumaPool is HDT, Ownable {
         //CRITICAL: Transfer collateral and funding the loan
         // Transfer collateral
         // InterfaceId_ERC721 = 0x80ac58cd;
-        console.log("Before NFT transfer. collateralParam=", collateralParam);
         if (collateralAsset != address(0)) {
             if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
                 IERC721(collateralAsset).safeTransferFrom(
-                    msg.sender,
+                    borrower,
                     poolLocker,
                     collateralParam
                 );
@@ -421,7 +420,6 @@ contract HumaPool is HDT, Ownable {
             } else {
                 revert("HumaPool:COLLATERAL_ASSET_NOT_SUPPORTED");
             }
-            console.log("After NFT transfer.");
         }
         // Transfer liquidity asset
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();

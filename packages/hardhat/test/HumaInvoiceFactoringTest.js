@@ -464,15 +464,6 @@ describe("Huma Invoice Financing", function () {
                 .connect(borrower)
                 .approve(humaPoolContract.address, invoiceNFTTokenId);
 
-            console.log("In test, invoiceNFTTokenId=", invoiceNFTTokenId);
-            console.log("Borrower is=", borrower.address);
-            console.log("pool contract is=", humaPoolContract.address);
-
-            console.log(
-                "NFT approve=",
-                await invoiceNFTContract.getApproved(invoiceNFTTokenId)
-            );
-
             expect(
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
