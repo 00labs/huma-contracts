@@ -156,13 +156,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 humaPoolContract
                     .connect(lender)
-                    .postApprovedCreditRequest(
-                        borrower.address,
-                        400,
-                        30,
-                        1,
-                        terms
-                    )
+                    .postApprovedCreditRequest(borrower.address, 400, terms)
             ).to.be.revertedWith("HumaPool:ILLEGAL_CREDIT_POSTER");
         });
 
@@ -172,13 +166,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(
-                        borrower.address,
-                        400,
-                        30,
-                        1,
-                        terms
-                    )
+                    .postApprovedCreditRequest(borrower.address, 400, terms)
             ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
         });
 
@@ -188,13 +176,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(
-                        borrower.address,
-                        400,
-                        30,
-                        1,
-                        terms
-                    )
+                    .postApprovedCreditRequest(borrower.address, 400, terms)
             ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
         });
 
@@ -203,13 +185,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(
-                        borrower.address,
-                        5,
-                        30,
-                        1,
-                        terms
-                    )
+                    .postApprovedCreditRequest(borrower.address, 5, terms)
             ).to.be.revertedWith("HumaPool:DENY_BORROW_SMALLER_THAN_LIMIT");
         });
 
@@ -218,13 +194,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 humaPoolContract
                     .connect(creditApprover)
-                    .postApprovedCreditRequest(
-                        borrower.address,
-                        9999,
-                        30,
-                        1,
-                        terms
-                    )
+                    .postApprovedCreditRequest(borrower.address, 9999, terms)
             ).to.be.revertedWith("HumaPool:DENY_BORROW_GREATER_THAN_LIMIT");
         });
 
@@ -238,7 +208,7 @@ describe("Huma Invoice Financing", function () {
             const terms = [0, 10, 100, 20, 100, 30];
             await humaPoolContract
                 .connect(creditApprover)
-                .postApprovedCreditRequest(borrower.address, 400, 30, 1, terms);
+                .postApprovedCreditRequest(borrower.address, 400, terms);
 
             const loanAddress = await humaPoolContract.creditMapping(
                 borrower.address
@@ -284,7 +254,7 @@ describe("Huma Invoice Financing", function () {
             const terms = [0, 10, 100, 20, 100, 30];
             await humaPoolContract
                 .connect(creditApprover)
-                .postApprovedCreditRequest(borrower.address, 400, 30, 1, terms);
+                .postApprovedCreditRequest(borrower.address, 400, terms);
 
             // Mint InvoiceNFT to the borrower
             const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
@@ -382,6 +352,170 @@ describe("Huma Invoice Financing", function () {
         });
     });
 
+    describe("Pre-approved Invoice Factoring Request and Origination", function () {
+        // Makes sure there is liquidity in the pool for borrowing
+        beforeEach(async function () {
+            await humaPoolContract.connect(lender).deposit(300);
+            await testTokenContract
+                .connect(borrower)
+                .approve(humaPoolContract.address, 99999);
+        });
+
+        afterEach(async function () {
+            await humaConfigContract.connect(owner).unpauseProtocol();
+        });
+
+        it("Should not allow posting pre-approved IF while protocol is paused", async function () {
+            await humaConfigContract.connect(owner).pauseProtocol();
+            const terms = [0, 10, 100, 20, 100, 30, 1];
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .originateCreditWithPreapproval(
+                        borrower.address,
+                        400,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1,
+                        terms
+                    )
+            ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
+        });
+
+        it("Should not allow posting pre-approved IF while pool is off", async function () {
+            await humaPoolContract.disablePool();
+            const terms = [0, 10, 100, 20, 100, 30, 1];
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .originateCreditWithPreapproval(
+                        borrower.address,
+                        400,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1,
+                        terms
+                    )
+            ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
+        });
+
+        it("Should only allow approvers to post pre-approved IF", async function () {
+            const terms = [0, 10, 100, 20, 100, 30, 1];
+            await expect(
+                humaPoolContract
+                    .connect(lender)
+                    .originateCreditWithPreapproval(
+                        borrower.address,
+                        400,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1,
+                        terms
+                    )
+            ).to.be.revertedWith("HumaPool:ILLEGAL_CREDIT_POSTER");
+        });
+
+        // Should deny if there is existing IF.
+
+        it("Cannot post pre-approved IF with amount lower than limit", async function () {
+            const terms = [0, 10, 100, 20, 100, 30, 1];
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .originateCreditWithPreapproval(
+                        borrower.address,
+                        5,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1,
+                        terms
+                    )
+            ).to.be.revertedWith("HumaPool:DENY_BORROW_SMALLER_THAN_LIMIT");
+        });
+
+        it("Cannot post pre-approved IF with amount greater than limit", async function () {
+            const terms = [0, 10, 100, 20, 100, 30, 1];
+            await expect(
+                humaPoolContract
+                    .connect(creditApprover)
+                    .originateCreditWithPreapproval(
+                        borrower.address,
+                        9999,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1,
+                        terms
+                    )
+            ).to.be.revertedWith("HumaPool:DENY_BORROW_GREATER_THAN_LIMIT");
+        });
+
+        it("Should post pre-approved IF successfully", async function () {
+            // Mint InvoiceNFT to the borrower
+            const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
+            const receipt = await tx.wait();
+            // eslint-disable-next-line no-restricted-syntax
+            for (const evt of receipt.events) {
+                if (evt.event === "TokenGenerated") {
+                    invoiceNFTTokenId = evt.args[0];
+                }
+            }
+
+            await invoiceNFTContract
+                .connect(borrower)
+                .approve(humaPoolContract.address, invoiceNFTTokenId);
+
+            console.log("In test, invoiceNFTTokenId=", invoiceNFTTokenId);
+            console.log("Borrower is=", borrower.address);
+            console.log("pool contract is=", humaPoolContract.address);
+
+            console.log(
+                "NFT approve=",
+                await invoiceNFTContract.getApproved(invoiceNFTTokenId)
+            );
+
+            expect(
+                await testTokenContract.balanceOf(borrower.address)
+            ).to.equal(0);
+
+            await humaPoolContract.connect(owner).setInterestRateBasis(1200);
+
+            const terms = [0, 10, 100, 20, 100, 30, 1];
+            await humaPoolContract
+                .connect(creditApprover)
+                .originateCreditWithPreapproval(
+                    borrower.address,
+                    400,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1,
+                    terms
+                );
+
+            const loanAddress = await humaPoolContract.creditMapping(
+                borrower.address
+            );
+
+            const invoiceContract = await getInvoiceContractFromAddress(
+                loanAddress,
+                borrower
+            );
+
+            const invoiceInfo = await invoiceContract.getInvoiceInfo();
+
+            expect(invoiceInfo._amount).to.equal(400);
+
+            expect(
+                await testTokenContract.balanceOf(borrower.address)
+            ).to.equal(386); // principal: 400, flat fee: 20, bps fee: 4
+
+            expect(
+                await testTokenContract.balanceOf(treasury.address)
+            ).to.equal(2);
+
+            expect(await humaPoolContract.getPoolLiquidity()).to.equal(12);
+        });
+    });
+
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", async function () {
         beforeEach(async function () {
@@ -390,7 +524,7 @@ describe("Huma Invoice Financing", function () {
             const terms = [0, 10, 100, 20, 100, 30];
             await humaPoolContract
                 .connect(creditApprover)
-                .postApprovedCreditRequest(borrower.address, 400, 30, 1, terms);
+                .postApprovedCreditRequest(borrower.address, 400, terms);
 
             loanAddress = await humaPoolContract.creditMapping(
                 borrower.address

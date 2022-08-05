@@ -90,7 +90,8 @@ contract HumaInvoiceFactoring is IHumaCredit {
         uint256 liquidityAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256[] memory terms,
+        bool isPreapproved
     ) external virtual override {
         pool = _pool;
         humaConfig = _humaConfig;
@@ -115,6 +116,8 @@ contract HumaInvoiceFactoring is IHumaCredit {
 
         approved = false;
         invoiceInfo = ii;
+
+        if (isPreapproved) approved = true;
     }
 
     /**
