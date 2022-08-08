@@ -106,7 +106,8 @@ contract HumaLoan is IHumaCredit {
         uint256 liquidityAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256[] memory terms,
+        bool isPreapproved
     ) external virtual override {
         pool = _pool;
         humaConfig = _humaConfig;
@@ -137,6 +138,8 @@ contract HumaLoan is IHumaCredit {
         approved = false;
         loanInfo = li;
         loanState = ls;
+
+        if (isPreapproved) approved = true;
     }
 
     /**

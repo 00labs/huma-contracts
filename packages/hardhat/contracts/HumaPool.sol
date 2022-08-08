@@ -242,21 +242,13 @@ contract HumaPool is HDT, Ownable {
     ) external returns (bool) {
         poolOn();
         uint256[] memory terms = getLoanTerms(_paymentInterval, _numOfPayments);
-        _requestCredit(
-            msg.sender,
-            _borrowAmt,
-            _paymentInterval,
-            _numOfPayments,
-            terms
-        );
+        _requestCredit(msg.sender, _borrowAmt, terms, false);
         return true;
     }
 
     function postApprovedCreditRequest(
         address borrower,
         uint256 _borrowAmt,
-        uint256 _paymentInterval,
-        uint256 _numOfPayments,
         uint256[] memory _terms
     ) public returns (address) {
         poolOn();
@@ -267,9 +259,8 @@ contract HumaPool is HDT, Ownable {
         address loanAddress = _requestCredit(
             borrower,
             _borrowAmt,
-            _paymentInterval,
-            _numOfPayments,
-            _terms
+            _terms,
+            true
         );
         IHumaCredit(loanAddress).approve();
         return loanAddress;
@@ -278,9 +269,8 @@ contract HumaPool is HDT, Ownable {
     function _requestCredit(
         address borrower,
         uint256 _borrowAmt,
-        uint256 _paymentInterval,
-        uint256 _numOfPayments,
-        uint256[] memory terms
+        uint256[] memory terms,
+        bool isPreapproved
     ) internal returns (address credit) {
         // Borrowers must not have existing loans from this pool
         require(
@@ -314,7 +304,8 @@ contract HumaPool is HDT, Ownable {
             _borrowAmt,
             address(0),
             0,
-            terms
+            terms,
+            isPreapproved
         );
         creditMapping[borrower] = credit;
 
@@ -335,19 +326,60 @@ contract HumaPool is HDT, Ownable {
         return originateCreditWithCollateral(borrowAmt, address(0), 0, 0);
     }
 
+    function originateCreditWithPreapproval(
+        address borrower,
+        uint256 borrowAmt,
+        address collateralAsset,
+        uint256 collateralParam,
+        uint256 collateralAmount,
+        uint256[] memory terms
+    ) external {
+        poolOn();
+        // Limits this function to pre-approved approvers to call.
+        require(
+            creditApprovers[msg.sender] == true,
+            "HumaPool:ILLEGAL_CREDIT_POSTER"
+        );
+        _requestCredit(borrower, borrowAmt, terms, true);
+        _processOriginationWithCollateral(
+            borrower,
+            borrowAmt,
+            collateralAsset,
+            collateralParam,
+            collateralAmount
+        );
+    }
+
     function originateCreditWithCollateral(
         uint256 borrowAmt,
         address collateralAsset,
         uint256 collateralParam,
-        uint256 collateralCount
+        uint256 collateralAmount
     ) public returns (bool) {
         poolOn();
         require(
             creditMapping[msg.sender] != address(0),
             "HumaPool:NO_EXISTING_LOAN_REQUESTS"
         );
-        IHumaCredit humaCreditContract = IHumaCredit(creditMapping[msg.sender]);
 
+        _processOriginationWithCollateral(
+            msg.sender,
+            borrowAmt,
+            collateralAsset,
+            collateralParam,
+            collateralAmount
+        );
+        return true;
+    }
+
+    function _processOriginationWithCollateral(
+        address borrower,
+        uint256 borrowAmt,
+        address collateralAsset,
+        uint256 collateralParam,
+        uint256 collateralAmount
+    ) public returns (bool) {
+        IHumaCredit humaCreditContract = IHumaCredit(creditMapping[borrower]);
         require(
             humaCreditContract.isApproved(),
             "HumaPool:CREDIT_NOT_APPROVED"
@@ -373,7 +405,7 @@ contract HumaPool is HDT, Ownable {
         if (collateralAsset != address(0)) {
             if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
                 IERC721(collateralAsset).safeTransferFrom(
-                    msg.sender,
+                    borrower,
                     poolLocker,
                     collateralParam
                 );
@@ -381,9 +413,9 @@ contract HumaPool is HDT, Ownable {
                 collateralAsset.supportsInterface(type(IERC20).interfaceId)
             ) {
                 IERC20(collateralAsset).safeTransferFrom(
-                    msg.sender,
+                    borrower,
                     poolLocker,
-                    collateralCount
+                    collateralAmount
                 );
             } else {
                 revert("HumaPool:COLLATERAL_ASSET_NOT_SUPPORTED");
@@ -393,7 +425,7 @@ contract HumaPool is HDT, Ownable {
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         HumaPoolLocker locker = HumaPoolLocker(poolLocker);
         locker.transfer(treasuryAddress, protocolFee);
-        locker.transfer(msg.sender, amtForBorrower);
+        locker.transfer(borrower, amtForBorrower);
         return true;
     }
 

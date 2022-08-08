@@ -20,7 +20,8 @@ contract HumaCreditFactory {
         uint256 _amount,
         address _collateralAsset,
         uint256 _collateralAmt,
-        uint256[] memory terms
+        uint256[] memory terms,
+        bool isPreapproved
     ) external returns (address credit) {
         if (_type == CreditType.Loan)
             credit = deployNewLoan(
@@ -33,7 +34,8 @@ contract HumaCreditFactory {
                 _amount,
                 _collateralAsset,
                 _collateralAmt,
-                terms
+                terms,
+                isPreapproved
             );
         else if (_type == CreditType.InvoiceFactoring)
             credit = deployNewInvoiceFactoring(
@@ -46,7 +48,8 @@ contract HumaCreditFactory {
                 _amount,
                 _collateralAsset,
                 _collateralAmt,
-                terms
+                terms,
+                isPreapproved
             );
     }
 
@@ -61,7 +64,8 @@ contract HumaCreditFactory {
         uint256 _amount,
         address _collateralAsset,
         uint256 _collateralAmt,
-        uint256[] memory terms
+        uint256[] memory terms,
+        bool isPreapproved
     ) internal returns (address) {
         HumaLoan humaLoan = new HumaLoan();
         humaLoan.initiate(
@@ -74,7 +78,8 @@ contract HumaCreditFactory {
             _amount,
             _collateralAsset,
             _collateralAmt,
-            terms
+            terms,
+            isPreapproved
         );
 
         return address(humaLoan);
@@ -91,7 +96,8 @@ contract HumaCreditFactory {
         uint256 _amount,
         address _collateralAsset,
         uint256 _collateralAmt,
-        uint256[] memory terms
+        uint256[] memory terms,
+        bool isPreapproved
     ) internal returns (address) {
         HumaInvoiceFactoring humaInvoice = new HumaInvoiceFactoring();
         humaInvoice.initiate(
@@ -104,7 +110,8 @@ contract HumaCreditFactory {
             _amount,
             _collateralAsset,
             _collateralAmt,
-            terms
+            terms,
+            isPreapproved
         );
 
         return address(humaInvoice);
