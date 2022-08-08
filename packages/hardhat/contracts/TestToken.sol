@@ -23,4 +23,8 @@ contract TestToken is ERC20 {
     function burn(address _from, uint256 amount) external {
         _burn(_from, amount);
     }
+
+    function decimals() public view virtual override returns (uint8) {
+        return 6;
+    }
 }
