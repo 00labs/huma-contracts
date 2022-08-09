@@ -10,7 +10,6 @@ import "./HumaPool.sol";
 import "./HumaPoolLocker.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./interfaces/IHumaPoolLocker.sol";
-import "./interfaces/IReputationTracker.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
 
@@ -158,11 +157,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
         if (ii.factoring_fee_bps != 0)
             fees += ii.loanAmt.mul(ii.factoring_fee_bps).div(10000);
 
-        HumaPool(pool).reportReputationTracking(
-            borrower,
-            IReputationTracker.TrackingType.Borrowing
-        );
-
         return (ii.loanAmt - fees, fees);
     }
 
@@ -198,12 +192,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
         uint256 lateFee = assessLateFee();
 
         HumaPool(pool).processRefund(borrower, amount - ii.loanAmt - lateFee);
-
-        // Reputation reporting
-        HumaPool(pool).reportReputationTracking(
-            borrower,
-            IReputationTracker.TrackingType.Payoff
-        );
 
         return true;
     }
@@ -261,12 +249,6 @@ contract HumaInvoiceFactoring is IHumaCredit {
         // Trigger loss process
         losses = invoiceInfo.loanAmt;
         poolContract.distributeLosses(losses);
-
-        // Reputation reporting
-        poolContract.reportReputationTracking(
-            borrower,
-            IReputationTracker.TrackingType.Default
-        );
 
         return losses;
     }

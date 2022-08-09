@@ -4,6 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import "./interfaces/IHumaPoolLocker.sol";
@@ -12,9 +13,6 @@ import "./HumaPoolLocker.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./HumaCreditFactory.sol";
-import "./ReputationTrackerFactory.sol";
-import "./ReputationTracker.sol";
-import "./interfaces/IReputationTracker.sol";
 
 contract HumaPool is HDT, Ownable {
     using SafeERC20 for IERC20;
@@ -77,11 +75,6 @@ contract HumaPool is HDT, Ownable {
 
     uint256 public poolDefaultGracePeriod;
 
-    // reputationTrackerFactory
-    address public reputationTrackerFactory;
-
-    address public reputationTrackerContractAddress;
-
     // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
         uint256 amount;
@@ -101,19 +94,14 @@ contract HumaPool is HDT, Ownable {
         address _poolToken,
         address _humaConfig,
         address _humaCreditFactory,
-        address _reputationTrackerFactory,
         CreditType _poolCreditType
     ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
         humaConfig = _humaConfig;
         humaCreditFactory = _humaCreditFactory;
-        reputationTrackerFactory = _reputationTrackerFactory;
         poolCreditType = _poolCreditType;
         poolDefaultGracePeriod = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
-        reputationTrackerContractAddress = ReputationTrackerFactory(
-            reputationTrackerFactory
-        ).deployReputationTracker("Huma Pool", "HumaRTT");
     }
 
     modifier onlyHumaMasterAdmin() {
@@ -388,7 +376,6 @@ contract HumaPool is HDT, Ownable {
 
         //CRITICAL: Transfer collateral and funding the loan
         // Transfer collateral
-        // InterfaceId_ERC721 = 0x80ac58cd;
         if (collateralAsset != address(0)) {
             if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
                 IERC721(collateralAsset).safeTransferFrom(
@@ -428,25 +415,6 @@ contract HumaPool is HDT, Ownable {
         locker.transfer(receiver, amount);
 
         return true;
-    }
-
-    function reportReputationTracking(
-        address borrower,
-        IReputationTracker.TrackingType trackingType
-    ) public {
-        // To make sure only IHumaCredit implementors (e.g. HumaLoan) can call this function for reputation tracking.
-        require(
-            creditMapping[borrower] == msg.sender,
-            "HumaPool:ILLEGAL_REPUTATION_TRACKING_REQUESTER"
-        );
-        IReputationTracker(reputationTrackerContractAddress).report(
-            borrower,
-            trackingType
-        );
-        // For payoff, remove the credit record so that the borrower can borrow again.
-        if (trackingType == IReputationTracker.TrackingType.Payoff) {
-            creditMapping[borrower] = address(0);
-        }
     }
 
     /**
