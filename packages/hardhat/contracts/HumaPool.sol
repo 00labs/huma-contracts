@@ -21,8 +21,6 @@ contract HumaPool is HDT, Ownable {
     using SafeMath for uint256;
     using ERC165Checker for address;
 
-    uint256 constant POWER18 = 10**18;
-
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
     address public humaConfig;
@@ -153,8 +151,6 @@ contract HumaPool is HDT, Ownable {
     }
 
     function _deposit(address lender, uint256 amount) internal returns (bool) {
-        uint256 amtInPower18 = _toPower18(amount);
-
         // Update weighted deposit date:
         // prevDate + (now - prevDate) * (amount / (balance + amount))
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
@@ -173,7 +169,7 @@ contract HumaPool is HDT, Ownable {
         poolToken.safeTransferFrom(lender, poolLocker, amount);
 
         // Mint HDT for the LP to claim future income and losses
-        _mint(lender, amtInPower18);
+        _mint(lender, amount);
 
         emit LiquidityDeposited(lender, amount);
 
@@ -202,8 +198,6 @@ contract HumaPool is HDT, Ownable {
             "HumaPool:WITHDRAW_AMT_TOO_GREAT"
         );
 
-        uint256 amtInPower18 = _toPower18(amount);
-
         lenderInfo[msg.sender].amount -= amount;
 
         // Calculate the amount that msg.sender can actually withdraw.
@@ -214,7 +208,7 @@ contract HumaPool is HDT, Ownable {
             .mul(amount)
             .div(balanceOf(msg.sender));
 
-        _burn(msg.sender, amtInPower18);
+        _burn(msg.sender, amount);
 
         IHumaPoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
 
@@ -628,10 +622,6 @@ contract HumaPool is HDT, Ownable {
 
     function getPoolLiquidity() public view returns (uint256) {
         return poolToken.balanceOf(poolLocker);
-    }
-
-    function _toPower18(uint256 amt) internal view returns (uint256) {
-        return amt.mul(POWER18).div(10**poolTokenDecimals);
     }
 
     // Function to receive Ether. msg.data must be empty
