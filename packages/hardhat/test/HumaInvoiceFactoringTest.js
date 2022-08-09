@@ -118,7 +118,7 @@ describe("Huma Invoice Financing", function () {
         await humaPoolContract.setInterestRateBasis(1200); //bps
         await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
         // set fees (factoring_fat, factoring_bps, late_flat, late_bps, early_falt, early_bps)
-        await humaPoolContract.setFees(10, 100, 20, 100, 30, 100);
+        await humaPoolContract.setFees(10, 100, 20, 100);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
@@ -511,7 +511,7 @@ describe("Huma Invoice Financing", function () {
     describe("Payback", async function () {
         beforeEach(async function () {
             await humaPoolContract.connect(lender).deposit(300);
-            await humaPoolContract.connect(owner).setFees(10, 100, 0, 0, 0, 0);
+            await humaPoolContract.connect(owner).setFees(10, 100, 0, 0);
             const terms = [0, 10, 100, 20, 100, 30];
             await humaPoolContract
                 .connect(creditApprover)

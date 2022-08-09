@@ -106,8 +106,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         decimalToExpandedString(10, poolTokenDecimals),
         100,
         decimalToExpandedString(20, poolTokenDecimals),
-        100,
-        decimalToExpandedString(30, poolTokenDecimals),
         100
     );
 

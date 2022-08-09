@@ -21,8 +21,6 @@ contract HumaPool is HDT, Ownable {
     using SafeMath for uint256;
     using ERC165Checker for address;
 
-    uint256 constant POWER18 = 10**18;
-
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
     address public humaConfig;
@@ -43,7 +41,6 @@ contract HumaPool is HDT, Ownable {
 
     // The ERC20 token this pool manages
     IERC20 public immutable poolToken;
-    uint256 public immutable poolTokenDecimals;
 
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
@@ -66,11 +63,6 @@ contract HumaPool is HDT, Ownable {
     // Late fee, charged when the borrow is late for a pyament.
     uint256 late_fee_flat;
     uint256 late_fee_bps;
-    // Early payoff fee, charged when the borrow pays off prematurely
-    uint256 early_payoff_fee_flat;
-    uint256 early_payoff_fee_bps;
-    // Helper counter used to ensure every loan has a unique ID
-    uint256 humaLoanUniqueIdCounter;
 
     PoolStatus public status = PoolStatus.Off;
 
@@ -113,7 +105,6 @@ contract HumaPool is HDT, Ownable {
         CreditType _poolCreditType
     ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
-        poolTokenDecimals = ERC20(_poolToken).decimals();
         humaConfig = _humaConfig;
         humaCreditFactory = _humaCreditFactory;
         reputationTrackerFactory = _reputationTrackerFactory;
@@ -153,8 +144,6 @@ contract HumaPool is HDT, Ownable {
     }
 
     function _deposit(address lender, uint256 amount) internal returns (bool) {
-        uint256 amtInPower18 = _toPower18(amount);
-
         // Update weighted deposit date:
         // prevDate + (now - prevDate) * (amount / (balance + amount))
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
@@ -173,7 +162,7 @@ contract HumaPool is HDT, Ownable {
         poolToken.safeTransferFrom(lender, poolLocker, amount);
 
         // Mint HDT for the LP to claim future income and losses
-        _mint(lender, amtInPower18);
+        _mint(lender, amount);
 
         emit LiquidityDeposited(lender, amount);
 
@@ -202,8 +191,6 @@ contract HumaPool is HDT, Ownable {
             "HumaPool:WITHDRAW_AMT_TOO_GREAT"
         );
 
-        uint256 amtInPower18 = _toPower18(amount);
-
         lenderInfo[msg.sender].amount -= amount;
 
         // Calculate the amount that msg.sender can actually withdraw.
@@ -214,7 +201,7 @@ contract HumaPool is HDT, Ownable {
             .mul(amount)
             .div(balanceOf(msg.sender));
 
-        _burn(msg.sender, amtInPower18);
+        _burn(msg.sender, amount);
 
         IHumaPoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
 
@@ -479,8 +466,6 @@ contract HumaPool is HDT, Ownable {
         terms[4] = late_fee_bps;
         terms[5] = _paymentInterval; //payment_interval, in days
         terms[6] = _numOfPayments; //numOfPayments
-        terms[7] = early_payoff_fee_flat;
-        terms[8] = early_payoff_fee_bps;
     }
 
     /********************************************/
@@ -601,9 +586,7 @@ contract HumaPool is HDT, Ownable {
         uint256 _platform_fee_flat,
         uint256 _platform_fee_bps,
         uint256 _late_fee_flat,
-        uint256 _late_fee_bps,
-        uint256 _early_payoff_fee_flat,
-        uint256 _early_payoff_fee_bps
+        uint256 _late_fee_bps
     ) public {
         onlyOwnerOrHumaMasterAdmin();
         require(
@@ -614,8 +597,6 @@ contract HumaPool is HDT, Ownable {
         platform_fee_bps = _platform_fee_bps;
         late_fee_flat = _late_fee_flat;
         late_fee_bps = _late_fee_bps;
-        early_payoff_fee_flat = _early_payoff_fee_flat;
-        early_payoff_fee_bps = _early_payoff_fee_bps;
     }
 
     function getLenderInfo(address _lender)
@@ -628,10 +609,6 @@ contract HumaPool is HDT, Ownable {
 
     function getPoolLiquidity() public view returns (uint256) {
         return poolToken.balanceOf(poolLocker);
-    }
-
-    function _toPower18(uint256 amt) internal view returns (uint256) {
-        return amt.mul(POWER18).div(10**poolTokenDecimals);
     }
 
     // Function to receive Ether. msg.data must be empty
@@ -680,8 +657,6 @@ contract HumaPool is HDT, Ownable {
             uint256,
             uint256,
             uint256,
-            uint256,
-            uint256,
             uint256
         )
     {
@@ -690,9 +665,7 @@ contract HumaPool is HDT, Ownable {
             platform_fee_flat,
             platform_fee_bps,
             late_fee_flat,
-            late_fee_bps,
-            early_payoff_fee_flat,
-            early_payoff_fee_bps
+            late_fee_bps
         );
     }
 

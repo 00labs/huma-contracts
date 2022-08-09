@@ -98,7 +98,7 @@ describe("Huma Pool", function () {
         await humaPoolContract.setInterestRateBasis(1200); //bps
         await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
         await humaPoolContract.enablePool();
-        await humaPoolContract.setFees(20, 100, 0, 0, 0, 0);
+        await humaPoolContract.setFees(20, 100, 0, 0);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
@@ -149,21 +149,19 @@ describe("Huma Pool", function () {
 
         it("Should disallow platform fee bps lower than protocol fee bps", async function () {
             await expect(
-                humaPoolContract.setFees(20, 10, 0, 0, 0, 0)
+                humaPoolContract.setFees(20, 10, 0, 0)
             ).to.be.revertedWith(
                 "HumaPool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
             );
         });
 
         it("Set pool fees and parameters", async function () {
-            var [interest, f1, f2, f3, f4, f5, f6] =
+            var [interest, f1, f2, f3, f4] =
                 await humaPoolContract.getPoolFees();
             expect(f1).to.equal(20);
             expect(f2).to.equal(100);
             expect(f3).to.equal(0);
             expect(f4).to.equal(0);
-            expect(f5).to.equal(0);
-            expect(f6).to.equal(0);
         });
 
         it("Shall have the protocol-level default-grace-period", async function () {

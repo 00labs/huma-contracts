@@ -50,8 +50,6 @@ contract HumaLoan is IHumaCredit {
         uint16 platform_fee_bps;
         uint16 late_fee_flat;
         uint16 late_fee_bps;
-        uint16 early_payoff_fee_flat;
-        uint16 early_payoff_fee_bps;
         uint32 loanAmt;
         uint32 collateralAmt;
         address collateralAsset;
@@ -93,8 +91,6 @@ contract HumaLoan is IHumaCredit {
      *                [4] late_fee_bps
      *                [5] payment_interval, in days
      *                [6] numOfPayments
-     *                [7] early_payff_fee_flat
-     *                [8] early_payoff_fee_bps
      */
     function initiate(
         address payable _pool,
@@ -124,8 +120,6 @@ contract HumaLoan is IHumaCredit {
         li.platform_fee_bps = uint16(terms[2]);
         li.late_fee_flat = uint16(terms[3]);
         li.late_fee_bps = uint16(terms[4]);
-        li.early_payoff_fee_flat = uint16(terms[7]);
-        li.early_payoff_fee_bps = uint16(terms[8]);
         li.loanAmt = uint32(liquidityAmt);
         li.collateralAsset = collateralAsset;
         li.collateralAmt = uint32(collateralAmt);
@@ -284,25 +278,6 @@ contract HumaLoan is IHumaCredit {
         assetIERC20.transferFrom(msg.sender, poolLocker, amount);
 
         return true;
-    }
-
-    /**
-     * @notice Assess and charge penalty fee for early payoff.
-     */
-    function assessEarlyPayoffFees() private returns (uint256) {
-        LoanInfo storage li = loanInfo;
-        LoanState storage ls = loanState;
-        uint256 penalty;
-        if (li.early_payoff_fee_flat > 0) penalty = li.early_payoff_fee_flat;
-        if (li.early_payoff_fee_bps > 0) {
-            uint32 remainingPrincipal = li.loanAmt - ls.principalPaidBack;
-            penalty.add(
-                remainingPrincipal.mul(li.early_payoff_fee_bps).div(120000)
-            ); //120000 = 10000(due to bps) * 12 (convert rate to monthly)
-        }
-        ls.feesDue.add(penalty);
-        loanInfo = li;
-        return penalty;
     }
 
     /**
@@ -505,7 +480,6 @@ contract HumaLoan is IHumaCredit {
         principal = li.loanAmt - ls.principalPaidBack;
         interest = principal.mul(li.apr_in_bps).div(1200); //1200=100*12
         fees = assessLateFee();
-        fees.add(assessEarlyPayoffFees());
         total = principal + interest + fees;
         return (total, principal, interest, fees, block.timestamp);
     }
@@ -533,7 +507,6 @@ contract HumaLoan is IHumaCredit {
         principal = li.loanAmt;
         interest = principal.mul(li.apr_in_bps).div(120000); //1200=10000*12
         fees = assessLateFee();
-        fees.add(assessEarlyPayoffFees());
         total = principal + interest + fees;
         return (total, principal, interest, fees, block.timestamp);
     }
