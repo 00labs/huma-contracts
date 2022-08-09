@@ -67,8 +67,6 @@ contract HumaPool is HDT, Ownable {
     // Early payoff fee, charged when the borrow pays off prematurely
     uint256 early_payoff_fee_flat;
     uint256 early_payoff_fee_bps;
-    // Helper counter used to ensure every loan has a unique ID
-    uint256 humaLoanUniqueIdCounter;
 
     PoolStatus public status = PoolStatus.Off;
 
