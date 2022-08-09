@@ -125,7 +125,7 @@ describe("Huma Loan", function () {
         await humaPoolContract.setInterestRateBasis(1200); //bps
         await humaPoolContract.setMinMaxBorrowAmt(10, 1000);
         await humaPoolContract.enablePool();
-        await humaPoolContract.setFees(10, 100, 20, 100, 30, 100);
+        await humaPoolContract.setFees(10, 100, 20, 100);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract

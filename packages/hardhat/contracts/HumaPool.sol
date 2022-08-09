@@ -41,7 +41,6 @@ contract HumaPool is HDT, Ownable {
 
     // The ERC20 token this pool manages
     IERC20 public immutable poolToken;
-    uint256 public immutable poolTokenDecimals;
 
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
@@ -64,9 +63,6 @@ contract HumaPool is HDT, Ownable {
     // Late fee, charged when the borrow is late for a pyament.
     uint256 late_fee_flat;
     uint256 late_fee_bps;
-    // Early payoff fee, charged when the borrow pays off prematurely
-    uint256 early_payoff_fee_flat;
-    uint256 early_payoff_fee_bps;
 
     PoolStatus public status = PoolStatus.Off;
 
@@ -109,7 +105,6 @@ contract HumaPool is HDT, Ownable {
         CreditType _poolCreditType
     ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
-        poolTokenDecimals = ERC20(_poolToken).decimals();
         humaConfig = _humaConfig;
         humaCreditFactory = _humaCreditFactory;
         reputationTrackerFactory = _reputationTrackerFactory;
@@ -471,8 +466,6 @@ contract HumaPool is HDT, Ownable {
         terms[4] = late_fee_bps;
         terms[5] = _paymentInterval; //payment_interval, in days
         terms[6] = _numOfPayments; //numOfPayments
-        terms[7] = early_payoff_fee_flat;
-        terms[8] = early_payoff_fee_bps;
     }
 
     /********************************************/
@@ -593,9 +586,7 @@ contract HumaPool is HDT, Ownable {
         uint256 _platform_fee_flat,
         uint256 _platform_fee_bps,
         uint256 _late_fee_flat,
-        uint256 _late_fee_bps,
-        uint256 _early_payoff_fee_flat,
-        uint256 _early_payoff_fee_bps
+        uint256 _late_fee_bps
     ) public {
         onlyOwnerOrHumaMasterAdmin();
         require(
@@ -606,8 +597,6 @@ contract HumaPool is HDT, Ownable {
         platform_fee_bps = _platform_fee_bps;
         late_fee_flat = _late_fee_flat;
         late_fee_bps = _late_fee_bps;
-        early_payoff_fee_flat = _early_payoff_fee_flat;
-        early_payoff_fee_bps = _early_payoff_fee_bps;
     }
 
     function getLenderInfo(address _lender)
@@ -668,8 +657,6 @@ contract HumaPool is HDT, Ownable {
             uint256,
             uint256,
             uint256,
-            uint256,
-            uint256,
             uint256
         )
     {
@@ -678,9 +665,7 @@ contract HumaPool is HDT, Ownable {
             platform_fee_flat,
             platform_fee_bps,
             late_fee_flat,
-            late_fee_bps,
-            early_payoff_fee_flat,
-            early_payoff_fee_bps
+            late_fee_bps
         );
     }
 
