@@ -18,8 +18,6 @@ contract HumaPoolFactory {
     // HumaPoolLockerFactory
     address internal immutable humaPoolLockerFactory;
 
-    address internal reputationTrackerFactory;
-
     // HumaConfig
     address internal immutable humaConfig;
 
@@ -31,13 +29,11 @@ contract HumaPoolFactory {
     constructor(
         address _humaConfig,
         address _humaLoanFactory,
-        address _humaPoolLockerFactory,
-        address _reputationTrackerFactory
+        address _humaPoolLockerFactory
     ) {
         humaConfig = _humaConfig;
         humaLoanFactory = _humaLoanFactory;
         humaPoolLockerFactory = _humaPoolLockerFactory;
-        reputationTrackerFactory = _reputationTrackerFactory;
     }
 
     function deployNewPool(address _poolTokenAddress, CreditType _type)
@@ -49,13 +45,7 @@ contract HumaPoolFactory {
             "HumaPoolFactory:CALLER_NOT_APPROVED"
         );
         humaPool = payable(
-            new HumaPool(
-                _poolTokenAddress,
-                humaConfig,
-                humaLoanFactory,
-                reputationTrackerFactory,
-                _type
-            )
+            new HumaPool(_poolTokenAddress, humaConfig, humaLoanFactory, _type)
         );
 
         pools.push(humaPool);

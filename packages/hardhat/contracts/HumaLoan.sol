@@ -10,7 +10,6 @@ import "./HumaPool.sol";
 import "./HDT/HDT.sol";
 import "./interfaces/IHumaCredit.sol";
 import "./interfaces/IHumaPoolLocker.sol";
-import "./interfaces/IReputationTracker.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
 
@@ -190,11 +189,6 @@ contract HumaLoan is IHumaCredit {
 
         assert(li.loanAmt > fees);
 
-        HumaPool(pool).reportReputationTracking(
-            borrower,
-            IReputationTracker.TrackingType.Borrowing
-        );
-
         // CRITICAL: Transfer fees to treasury, remaining proceeds to the borrower
         return (li.loanAmt - fees, fees);
     }
@@ -264,14 +258,6 @@ contract HumaLoan is IHumaCredit {
         // Distribute losses
         uint256 poolIncome = interest.add(fees);
         HumaPool(pool).distributeIncome(poolIncome);
-
-        // Reputation reporting
-        if (ls.remainingPayments == 0) {
-            HumaPool(pool).reportReputationTracking(
-                borrower,
-                IReputationTracker.TrackingType.Payoff
-            );
-        }
 
         // Transfer assets from the borrower to pool locker
         IERC20 assetIERC20 = IERC20(li.liquidityAsset);
@@ -347,12 +333,6 @@ contract HumaLoan is IHumaCredit {
         // Trigger loss process
         losses = loanInfo.loanAmt - loanState.principalPaidBack;
         poolContract.distributeLosses(losses);
-
-        // Retutation reporting
-        poolContract.reportReputationTracking(
-            borrower,
-            IReputationTracker.TrackingType.Default
-        );
 
         return losses;
     }

@@ -65,17 +65,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer
     );
 
-    await deploy("ReputationTrackerFactory", {
-        from: deployer,
-        log: true,
-        waitConfirmations: 5,
-    });
-
-    const ReputationTrackerFactory = await ethers.getContract(
-        "ReputationTrackerFactory",
-        deployer
-    );
-
     await deploy("HumaPoolFactory", {
         from: deployer,
         log: true,
@@ -83,7 +72,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             HumaConfig.address,
             HumaCreditFactory.address,
             HumaPoolLockerFactory.address,
-            ReputationTrackerFactory.address,
         ],
         waitConfirmations: 5,
     });

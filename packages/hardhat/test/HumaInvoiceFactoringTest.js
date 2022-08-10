@@ -56,20 +56,13 @@ describe("Huma Invoice Financing", function () {
         );
         humaPoolLockerFactoryContract = await HumaPoolLockerFactory.deploy();
 
-        const ReputationTrackerFactory = await ethers.getContractFactory(
-            "ReputationTrackerFactory"
-        );
-        reputationTrackerFactoryContract =
-            await ReputationTrackerFactory.deploy();
-
         const HumaPoolFactory = await ethers.getContractFactory(
             "HumaPoolFactory"
         );
         humaPoolFactoryContract = await HumaPoolFactory.deploy(
             humaConfigContract.address,
             humaCreditFactoryContract.address,
-            humaPoolLockerFactoryContract.address,
-            reputationTrackerFactoryContract.address
+            humaPoolLockerFactoryContract.address
         );
 
         const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
