@@ -69,26 +69,26 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
         deployer
     );
 
-    await deploy("HumaPoolFactory", {
+    await deploy("HumaInvoiceFactoring", {
         from: deployer,
         log: true,
         args: [
+            testTokenContract.address,
             HumaConfig.address,
-            HumaCreditFactory.address,
-            HumaPoolLockerFactory.address,
             ReputationTrackerFactory.address,
         ],
         waitConfirmations: 5,
     });
+    const poolAddr = await ethers.getContract("HumaInvoiceFactoring", deployer);
 
-    const HumaPoolFactory = await ethers.getContract(
-        "HumaPoolFactory",
-        deployer
-    );
+    // const HumaPoolFactory = await ethers.getContract(
+    //     "HumaPoolFactory",
+    //     deployer
+    // );
 
-    await HumaPoolFactory.deployNewPool(TestToken.address, 1);
+    // await HumaPoolFactory.deployNewPool(TestToken.address, 1);
 
-    const poolAddr = await HumaPoolFactory.pools(0);
+    //const poolAddr = await HumaPoolFactory.pools(0);
     const humaPool = await ethers.getContractAt("HumaPool", poolAddr);
     await humaPool.enablePool();
     await humaPool.addCreditApprover(process.env.INITIAL_HUMA_CREDIT_APPROVER);

@@ -24,7 +24,7 @@ interface ICredit {
         uint256 collateralCount
     ) external;
 
-    function invalidateCreditRecord(address _borrower) external;
+    function invalidateApprovedCredit(address _borrower) external;
 
     function makePayment(
         address _borrower,
@@ -42,19 +42,19 @@ interface ICredit {
 
     function assessLateFee(address borrower) external returns (uint256 fees);
 
-    function assessEarlyPayoffFees(address borrower)
-        external
-        returns (uint256 fees);
+    // function assessEarlyPayoffFees(address borrower)
+    //     external
+    //     returns (uint256 fees);
 
-    function getNextPayment(address borrower)
-        external
-        returns (
-            uint256 totalAmt,
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            uint256 dueDate
-        );
+    // function getNextPayment(address borrower)
+    //     external
+    //     returns (
+    //         uint256 totalAmt,
+    //         uint256 principal,
+    //         uint256 interest,
+    //         uint256 fees,
+    //         uint256 dueDate
+    //     );
 
     function getNextPaymentInterestOnly(address borrower)
         external
@@ -66,7 +66,7 @@ interface ICredit {
             uint256 dueDate
         );
 
-    function getPayoffInfo(address borrower)
+    function getPayoffInfoInterestOnly(address borrower)
         external
         returns (
             uint256 total,

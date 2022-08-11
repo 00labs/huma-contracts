@@ -2,9 +2,10 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "./HumaConfig.sol";
 import "./BasePool.sol";
@@ -14,76 +15,24 @@ import "./interfaces/IPoolLocker.sol";
 import "./interfaces/IReputationTracker.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
+import "./libraries/BaseStructs.sol";
 
 import "hardhat/console.sol";
 
-contract BaseCredit is ICredit, BasePool {
+contract BaseCreditPool is ICredit, BasePool {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 public constant BPS_DIVIDER = 120000;
 
     using SafeERC20 for IERC20;
+    using ERC165Checker for IERC20;
+    using ERC165Checker for IERC721;
+    using BaseStructs for BaseCreditPool;
 
     // The primary mapping of the status of the credit.
-    mapping(address => CreditStatus) internal creditStateMapping;
-    mapping(address => CreditInfo) internal creditInfoMapping;
-    mapping(address => CreditFeeStructure) internal creditFeesMapping;
-
-    /**
-     * @notice CreditInfo stores the overall info about a loan.
-     * @dev amounts are stored in uint32, all counts are stored in uint16
-     * @dev all fields in CreditInfo will not change after initialization.
-     * @dev each struct can have no more than 13 elements. Some fields
-     * are stored in CreditStatus because of space limitation.
-     */
-    struct CreditInfo {
-        // fields related to the overall picture of the loan
-        address collateralAsset;
-        uint32 collateralAmt;
-        uint32 loanAmt;
-        uint16 numOfPayments;
-        bool deleted;
-        uint256 collateralParam;
-    }
-
-    struct CreditFeeStructure {
-        uint16 apr_in_bps; // interest rate in bps
-        uint16 platform_fee_flat;
-        uint16 platform_fee_bps;
-        uint16 late_fee_flat;
-        uint16 late_fee_bps;
-        uint16 early_payoff_fee_flat;
-        uint16 early_payoff_fee_bps;
-        bool deleted;
-    }
-
-    /**
-     * @notice CreditStatus tracks the state such as how much has been paid,
-     * how many payments are remaining.
-     * @dev most fields in LaonState change as the borrower pays back
-     */
-    struct CreditStatus {
-        uint48 nextDueDate;
-        uint32 nextAmtDue;
-        uint32 remainingPrincipal; // remaining principal balance
-        uint16 remainingPayments;
-        uint16 paymentInterval; // in days
-        uint48 lastLateFeeTimestamp;
-        uint32 feesDue;
-        CreditState state;
-        bool deleted;
-    }
-
-    enum CreditState {
-        Deleted,
-        Requested,
-        Approved,
-        Originated,
-        GoodStanding,
-        Delayed,
-        PaidOff,
-        InDefaultGracePeriod,
-        Defaulted
-    }
+    mapping(address => BaseStructs.CreditStatus) internal creditStateMapping;
+    mapping(address => BaseStructs.CreditInfo) internal creditInfoMapping;
+    mapping(address => BaseStructs.CreditFeeStructure)
+        internal creditFeesMapping;
 
     constructor(
         address _poolToken,
@@ -103,15 +52,22 @@ contract BaseCredit is ICredit, BasePool {
 
         // Borrowers must not have existing loans from this pool
         require(
-            creditStateMapping[msg.sender].state == CreditState.Deleted,
-            "BaseCredit:DENY_EXISTING_LOAN"
+            creditStateMapping[msg.sender].state ==
+                BaseStructs.CreditState.Deleted,
+            "BaseCreditPool:DENY_EXISTING_LOAN"
         );
 
         // Borrowing amount needs to be higher than min for the pool.
-        require(_borrowAmt >= minBorrowAmt, "BaseCredit:SMALLER_THAN_LIMIT");
+        require(
+            _borrowAmt >= minBorrowAmt,
+            "BaseCreditPool:SMALLER_THAN_LIMIT"
+        );
 
         // Borrowing amount needs to be lower than max for the pool.
-        require(maxBorrowAmt >= _borrowAmt, "BaseCredit:GREATER_THAN_LIMIT");
+        require(
+            maxBorrowAmt >= _borrowAmt,
+            "BaseCreditPool:GREATER_THAN_LIMIT"
+        );
 
         initiate(msg.sender, _borrowAmt, address(0), 0, terms);
     }
@@ -143,7 +99,7 @@ contract BaseCredit is ICredit, BasePool {
         protoNotPaused();
 
         // Populates basic credit info fields
-        CreditInfo memory ci;
+        BaseStructs.CreditInfo memory ci;
         ci.collateralAsset = collateralAsset;
         ci.collateralAmt = uint32(collateralAmt);
         ci.numOfPayments = uint16(terms[6]);
@@ -151,23 +107,23 @@ contract BaseCredit is ICredit, BasePool {
         creditInfoMapping[_borrower] = ci;
 
         // Populates fields related to fee structure
-        CreditFeeStructure memory cfs;
+        BaseStructs.CreditFeeStructure memory cfs;
         cfs.apr_in_bps = uint16(terms[0]);
         cfs.platform_fee_flat = uint16(terms[1]);
         cfs.platform_fee_bps = uint16(terms[2]);
         cfs.late_fee_flat = uint16(terms[3]);
         cfs.late_fee_bps = uint16(terms[4]);
-        cfs.early_payoff_fee_flat = uint16(terms[7]);
-        cfs.early_payoff_fee_bps = uint16(terms[8]);
+        // cfs.early_payoff_fee_flat = uint16(terms[7]);
+        // cfs.early_payoff_fee_bps = uint16(terms[8]);
         creditFeesMapping[_borrower] = cfs;
 
         // Populates key status fields. Fields nextDueDate, nextAmtDue,
         // lastLateFeeTimestamp, and feesDue are left at initial value.
-        CreditStatus memory cs;
+        BaseStructs.CreditStatus memory cs;
         cs.remainingPrincipal = uint32(liquidityAmt); // remaining principal balance
         cs.remainingPayments = uint16(terms[6]);
         cs.paymentInterval = uint16(terms[5]); // in days
-        cs.state = CreditState.Requested;
+        cs.state = BaseStructs.CreditState.Requested;
         creditStateMapping[_borrower] = cs;
     }
 
@@ -181,19 +137,24 @@ contract BaseCredit is ICredit, BasePool {
             creditApprovers[msg.sender] = true,
             "BasePool:APPROVER_REQUIRED"
         );
-        CreditStatus storage cs = creditStateMapping[borrower];
-        cs.state = CreditState.Approved;
+        BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
+        cs.state = BaseStructs.CreditState.Approved;
         creditStateMapping[borrower] = cs;
     }
 
-    function invalidateCreditRecord(address borrower) public virtual override {
+    function invalidateApprovedCredit(address borrower)
+        public
+        virtual
+        override
+    {
         poolOn();
-        require(
-            creditApprovers[msg.sender] == true,
-            "HumaPool:ILLEGAL_CREDIT_POSTER"
-        );
-
-        creditStateMapping[borrower].state = CreditState.Deleted;
+        // todo need to add back access control if it is calling from outside
+        // require(
+        //     creditApprovers[msg.sender] == true,
+        //     "HumaPool:ILLEGAL_CREDIT_POSTER"
+        // );
+        creditStateMapping[borrower].state = BaseStructs.CreditState.Deleted;
+        creditStateMapping[borrower].deleted = true;
         creditInfoMapping[borrower].deleted = true;
         creditFeesMapping[borrower].deleted = true;
     }
@@ -205,8 +166,10 @@ contract BaseCredit is ICredit, BasePool {
         override
         returns (bool)
     {
-        if (creditStateMapping[borrower].state >= CreditState.Approved)
-            return true;
+        if (
+            creditStateMapping[borrower].state >=
+            BaseStructs.CreditState.Approved
+        ) return true;
         else return false;
     }
 
@@ -229,11 +192,11 @@ contract BaseCredit is ICredit, BasePool {
         uint256 collateralCount
     ) public virtual override {
         poolOn();
-        require(isApproved(borrower), "BaseCredit:CREDIT_NOT_APPROVED");
+        require(isApproved(borrower), "BaseCreditPool:CREDIT_NOT_APPROVED");
 
         //    Updates credit info. Critical to update ci.loanAmt since borrowAmt
         // might be lowered than the approved loan amount
-        CreditInfo storage ci = creditInfoMapping[borrower];
+        BaseStructs.CreditInfo storage ci = creditInfoMapping[borrower];
         ci.loanAmt = uint32(borrowAmt);
         ci.collateralAsset = collateralAsset;
         ci.collateralAmt = uint32(collateralCount);
@@ -241,12 +204,12 @@ contract BaseCredit is ICredit, BasePool {
         creditInfoMapping[borrower] = ci;
 
         // // Calculates next payment amount and due date
-        CreditStatus storage cs = creditStateMapping[borrower];
-        cs.nextDueDate = uint48(
+        BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
+        cs.nextDueDate = uint64(
             block.timestamp + uint256(cs.paymentInterval) * 24 * 3600
         );
         cs.nextAmtDue = uint32(
-            borrowAmt * creditFeesMapping[borrower].apr_in_bps
+            (borrowAmt * creditFeesMapping[borrower].apr_in_bps) / BPS_DIVIDER
         );
         creditStateMapping[borrower] = cs;
 
@@ -258,38 +221,40 @@ contract BaseCredit is ICredit, BasePool {
 
         distributeIncome(poolIncome);
 
-        IReputationTracker(reputationTrackerContractAddress).report(
-            borrower,
-            IReputationTracker.TrackingType.Borrowing
-        );
+        // IReputationTracker(reputationTrackerContractAddress).report(
+        //     borrower,
+        //     IReputationTracker.TrackingType.Borrowing
+        // );
 
         // //CRITICAL: Asset transfers
         // // Transfers collateral asset
-        // if (collateralAsset != address(0)) {
-        //     if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
-        //         IERC721(collateralAsset).safeTransferFrom(
-        //             msg.sender,
-        //             poolLocker,
-        //             collateralParam
-        //         );
-        //     } else if (
-        //         collateralAsset.supportsInterface(type(IERC20).interfaceId)
-        //     ) {
-        //         IERC20(collateralAsset).safeTransferFrom(
-        //             msg.sender,
-        //             poolLocker,
-        //             collateralCount
-        //         );
-        //     } else {
-        //         revert("BaseCredit:COLLATERAL_ASSET_NOT_SUPPORTED");
-        //     }
-        // }
+        if (collateralAsset != address(0)) {
+            // todo not sure why compiler compalined about supportsInterface.
+            // Need to look into it and uncomment to support both ERc721 and ERC20.
+            //if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
+            IERC721(collateralAsset).safeTransferFrom(
+                borrower,
+                poolLocker,
+                collateralParam
+            );
+            // } else if (
+            //     collateralAsset.supportsInterface(type(IERC20).interfaceId)
+            // ) {
+            //     IERC20(collateralAsset).safeTransferFrom(
+            //         msg.sender,
+            //         poolLocker,
+            //         collateralCount
+            //     );
+            // } else {
+            //     revert("BaseCreditPool:COLLATERAL_ASSET_NOT_SUPPORTED");
+            // }
+        }
 
         // Transfer protocole fee and funds the borrower
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         PoolLocker locker = PoolLocker(poolLocker);
         locker.transfer(treasuryAddress, protocolFee);
-        locker.transfer(msg.sender, amtToBorrower);
+        locker.transfer(borrower, amtToBorrower);
     }
 
     function calculateFees(address borrower, uint256 borrowAmt)
@@ -301,7 +266,7 @@ contract BaseCredit is ICredit, BasePool {
             uint256 poolIncome
         )
     {
-        CreditFeeStructure memory cfs = creditFeesMapping[borrower];
+        BaseStructs.CreditFeeStructure memory cfs = creditFeesMapping[borrower];
 
         // Calculate platform fee, which includes protocol fee and pool fee
         uint256 platformFees;
@@ -328,7 +293,7 @@ contract BaseCredit is ICredit, BasePool {
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev "BaseCredit:WRONG_ASSET" reverted when asset address does not match
+     * @dev "BaseCreditPool:WRONG_ASSET" reverted when asset address does not match
      *
      */
     function makePayment(
@@ -337,10 +302,13 @@ contract BaseCredit is ICredit, BasePool {
         uint256 amount
     ) external virtual override {
         protoNotPaused();
-        CreditStatus storage cs = creditStateMapping[msg.sender];
+        BaseStructs.CreditStatus storage cs = creditStateMapping[msg.sender];
 
-        require(asset == address(poolToken), "BaseCredit:WRONG_ASSET");
-        require(cs.remainingPayments > 0, "BaseCredit:LOAN_PAID_OFF_ALREADY");
+        require(asset == address(poolToken), "BaseCreditPool:WRONG_ASSET");
+        require(
+            cs.remainingPayments > 0,
+            "BaseCreditPool:LOAN_PAID_OFF_ALREADY"
+        );
 
         uint256 totalAmt;
         uint256 principal;
@@ -353,7 +321,7 @@ contract BaseCredit is ICredit, BasePool {
                 interest,
                 fees, /*unused*/
 
-            ) = getPayoffInfo(borrower);
+            ) = getPayoffInfoInterestOnly(borrower);
         } else {
             (
                 totalAmt,
@@ -366,7 +334,7 @@ contract BaseCredit is ICredit, BasePool {
 
         // Do not accept partial payments. Requires amount to be able to cover
         // the next payment and all the outstanding fees.
-        require(amount >= totalAmt, "BaseCredit:AMOUNT_TOO_LOW");
+        require(amount >= totalAmt, "BaseCreditPool:AMOUNT_TOO_LOW");
 
         // Handle overpayment towards principal.
         principal += (amount - totalAmt);
@@ -393,40 +361,40 @@ contract BaseCredit is ICredit, BasePool {
 
         if (cs.remainingPayments == 0) {
             // No way to delete entries in mapping, thus mark the deleted field to true.
-            invalidateCreditRecord(borrower);
+            invalidateApprovedCredit(borrower);
 
             // Reputation reporting
-            IReputationTracker(reputationTrackerContractAddress).report(
-                borrower,
-                IReputationTracker.TrackingType.Payoff
-            );
+            // IReputationTracker(reputationTrackerContractAddress).report(
+            //     borrower,
+            //     IReputationTracker.TrackingType.Payoff
+            // );
         }
 
         // Transfer assets from the borrower to pool locker
         IERC20 assetIERC20 = IERC20(poolToken);
-        assetIERC20.transferFrom(msg.sender, poolLocker, amount);
+        assetIERC20.transferFrom(borrower, poolLocker, amount);
     }
 
     /**
      * @notice Assess and charge penalty fee for early payoff.
      */
-    function assessEarlyPayoffFees(address borrower)
-        public
-        virtual
-        override
-        returns (uint256 penalty)
-    {
-        CreditFeeStructure storage cfs = creditFeesMapping[borrower];
-        CreditStatus storage cs = creditStateMapping[borrower];
-        if (cfs.early_payoff_fee_flat > 0) penalty = cfs.early_payoff_fee_flat;
-        if (cfs.early_payoff_fee_bps > 0) {
-            penalty +=
-                (cs.remainingPrincipal *
-                    creditFeesMapping[borrower].early_payoff_fee_bps) /
-                BPS_DIVIDER;
-        }
-        cs.feesDue += uint32(penalty);
-    }
+    // function assessEarlyPayoffFees(address borrower)
+    //     public
+    //     virtual
+    //     override
+    //     returns (uint256 penalty)
+    // {
+    //     BaseStructs.CreditFeeStructure storage cfs = creditFeesMapping[borrower];
+    //     BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
+    //     if (cfs.early_payoff_fee_flat > 0) penalty = cfs.early_payoff_fee_flat;
+    //     if (cfs.early_payoff_fee_bps > 0) {
+    //         penalty +=
+    //             (cs.remainingPrincipal *
+    //                 creditFeesMapping[borrower].early_payoff_fee_bps) /
+    //             BPS_DIVIDER;
+    //     }
+    //     cs.feesDue += uint32(penalty);
+    // }
 
     /**
      * @notice Borrower requests to payoff the credit
@@ -449,11 +417,14 @@ contract BaseCredit is ICredit, BasePool {
         override
         returns (uint256 fees)
     {
-        CreditFeeStructure storage cfs = creditFeesMapping[borrower];
-        CreditStatus storage cs = creditStateMapping[borrower];
+        BaseStructs.CreditFeeStructure storage cfs = creditFeesMapping[
+            borrower
+        ];
+        BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
 
         // Charge a late fee if 1) passed the due date and 2) there is no late fee charged
         // between the due date and the current timestamp.
+
         uint256 newFees;
         if (
             block.timestamp > cs.nextDueDate &&
@@ -464,7 +435,7 @@ contract BaseCredit is ICredit, BasePool {
                 newFees += (cs.nextAmtDue * cfs.late_fee_bps) / BPS_DIVIDER;
             }
             cs.feesDue += uint32(newFees);
-            cs.lastLateFeeTimestamp = uint48(block.timestamp);
+            cs.lastLateFeeTimestamp = uint64(block.timestamp);
             creditStateMapping[borrower] = cs;
         }
         return newFees;
@@ -498,10 +469,10 @@ contract BaseCredit is ICredit, BasePool {
         distributeLosses(losses);
 
         // Retutation reporting
-        IReputationTracker(reputationTrackerContractAddress).report(
-            borrower,
-            IReputationTracker.TrackingType.Default
-        );
+        // IReputationTracker(reputationTrackerContractAddress).report(
+        //     borrower,
+        //     IReputationTracker.TrackingType.Default
+        // );
 
         return losses;
     }
@@ -519,8 +490,8 @@ contract BaseCredit is ICredit, BasePool {
     //     view
     //     returns (uint256 monthlyPayment)
     // {
-    //     CreditInfo storage ci = loanInfo;
-    //     CreditStatus storage cs = creditStateMapping[borrower];
+    //     BaseStructs.CreditInfo storage ci = loanInfo;
+    //     BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
     //     uint256 monthlyRateBP = ci.apr_in_bps / 12;
     //     monthlyPayment = ci
     //         .loanAmt
@@ -528,43 +499,43 @@ contract BaseCredit is ICredit, BasePool {
     //         .div(monthlyRateBP.add(10000) ^ cs.numOfPayments.sub(10000));
     // }
 
-    /**
-     * @notice Gets the information of the next payment due
-     * @return totalAmt the full amount due for the next payment
-     * @return principal the amount towards principal
-     * @return interest the amount towards interest
-     * @return fees the amount towards fees
-     * @return dueDate the datetime of when the next payment is due
-     */
-    function getNextPayment(address borrower)
-        public
-        virtual
-        override
-        returns (
-            uint256 totalAmt,
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            uint256 dueDate
-        )
-    {
-        fees = assessLateFee(borrower);
-        CreditStatus storage cs = creditStateMapping[borrower];
-        // For loans w/ fixed payments, the portion towards interest is this month's interest charge,
-        // which is remaining principal times monthly interest rate. The difference b/w the total amount
-        // and the interest payment pays down principal.
-        interest =
-            (cs.remainingPrincipal * creditFeesMapping[borrower].apr_in_bps) /
-            BPS_DIVIDER;
-        principal = cs.nextAmtDue - interest;
-        return (
-            principal + interest + fees,
-            principal,
-            interest,
-            fees,
-            block.timestamp
-        );
-    }
+    // /**
+    //  * @notice Gets the information of the next payment due
+    //  * @return totalAmt the full amount due for the next payment
+    //  * @return principal the amount towards principal
+    //  * @return interest the amount towards interest
+    //  * @return fees the amount towards fees
+    //  * @return dueDate the datetime of when the next payment is due
+    //  */
+    // function getNextPayment(address borrower)
+    //     public
+    //     virtual
+    //     override
+    //     returns (
+    //         uint256 totalAmt,
+    //         uint256 principal,
+    //         uint256 interest,
+    //         uint256 fees,
+    //         uint256 dueDate
+    //     )
+    // {
+    //     fees = assessLateFee(borrower);
+    //     BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
+    //     // For loans w/ fixed payments, the portion towards interest is this month's interest charge,
+    //     // which is remaining principal times monthly interest rate. The difference b/w the total amount
+    //     // and the interest payment pays down principal.
+    //     interest =
+    //         (cs.remainingPrincipal * creditFeesMapping[borrower].apr_in_bps) /
+    //         BPS_DIVIDER;
+    //     principal = cs.nextAmtDue - interest;
+    //     return (
+    //         principal + interest + fees,
+    //         principal,
+    //         interest,
+    //         fees,
+    //         block.timestamp
+    //     );
+    // }
 
     /**
      * @notice Gets the information of the next payment due for interest only
@@ -595,6 +566,36 @@ contract BaseCredit is ICredit, BasePool {
         return (interest + fees, 0, interest, fees, block.timestamp);
     }
 
+    // /**
+    //  * @notice Gets the payoff information
+    //  * @return total the total amount for the payoff
+    //  * @return principal the remaining principal amount
+    //  * @return interest the interest amount for the last period
+    //  * @return fees fees including early payoff penalty
+    //  * @return dueDate the date that payment needs to be made for this payoff amount
+    //  */
+    // function getPayoffInfo(address borrower)
+    //     public
+    //     virtual
+    //     override
+    //     returns (
+    //         uint256 total,
+    //         uint256 principal,
+    //         uint256 interest,
+    //         uint256 fees,
+    //         uint256 dueDate
+    //     )
+    // {
+    //     principal = creditStateMapping[borrower].remainingPrincipal;
+    //     interest =
+    //         (principal * creditFeesMapping[borrower].apr_in_bps) /
+    //         BPS_DIVIDER;
+    //     fees = assessLateFee(borrower);
+    //     fees += (assessEarlyPayoffFees(borrower));
+    //     total = principal + interest + fees;
+    //     return (total, principal, interest, fees, block.timestamp);
+    // }
+
     /**
      * @notice Gets the payoff information
      * @return total the total amount for the payoff
@@ -603,7 +604,7 @@ contract BaseCredit is ICredit, BasePool {
      * @return fees fees including early payoff penalty
      * @return dueDate the date that payment needs to be made for this payoff amount
      */
-    function getPayoffInfo(address borrower)
+    function getPayoffInfoInterestOnly(address borrower)
         public
         virtual
         override
@@ -620,36 +621,7 @@ contract BaseCredit is ICredit, BasePool {
             (principal * creditFeesMapping[borrower].apr_in_bps) /
             BPS_DIVIDER;
         fees = assessLateFee(borrower);
-        fees += (assessEarlyPayoffFees(borrower));
-        total = principal + interest + fees;
-        return (total, principal, interest, fees, block.timestamp);
-    }
-
-    /**
-     * @notice Gets the payoff information
-     * @return total the total amount for the payoff
-     * @return principal the remaining principal amount
-     * @return interest the interest amount for the last period
-     * @return fees fees including early payoff penalty
-     * @return dueDate the date that payment needs to be made for this payoff amount
-     */
-    function getPayoffInfoInterestOnly(address borrower)
-        public
-        virtual
-        returns (
-            uint256 total,
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            uint256 dueDate
-        )
-    {
-        principal = creditStateMapping[borrower].remainingPrincipal;
-        interest =
-            (principal * creditFeesMapping[borrower].apr_in_bps) /
-            BPS_DIVIDER;
-        fees = assessLateFee(borrower);
-        fees += (assessEarlyPayoffFees(borrower));
+        //fees += (assessEarlyPayoffFees(borrower));
         total = principal + interest + fees;
         return (total, principal, interest, fees, block.timestamp);
     }
@@ -668,12 +640,13 @@ contract BaseCredit is ICredit, BasePool {
             uint64 _nextDueDate,
             uint32 _remainingPrincipal,
             uint16 _remainingPayments,
-            uint16 _numOfPayments
+            uint16 _numOfPayments,
+            bool _deleted
         )
     {
-        CreditInfo storage ci = creditInfoMapping[borrower];
-        CreditStatus storage cs = creditStateMapping[borrower];
-        CreditFeeStructure storage cfs = creditFeesMapping[borrower];
+        BaseStructs.CreditInfo memory ci = creditInfoMapping[borrower];
+        BaseStructs.CreditStatus memory cs = creditStateMapping[borrower];
+        BaseStructs.CreditFeeStructure memory cfs = creditFeesMapping[borrower];
         return (
             ci.loanAmt,
             cs.nextAmtDue,
@@ -682,14 +655,15 @@ contract BaseCredit is ICredit, BasePool {
             cs.nextDueDate,
             cs.remainingPrincipal,
             cs.remainingPayments,
-            ci.numOfPayments
+            ci.numOfPayments,
+            cs.deleted
         );
     }
 
     function protoNotPaused() internal view {
         require(
             HumaConfig(humaConfig).isProtocolPaused() == false,
-            "BaseCredit:PROTOCOL_PAUSED"
+            "BaseCreditPool:PROTOCOL_PAUSED"
         );
     }
 

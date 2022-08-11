@@ -4,7 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./BaseCredit.sol";
+import "./BaseCreditPool.sol";
 import "./PoolLocker.sol";
 import "./interfaces/ICredit.sol";
 import "./interfaces/IPreapprovedCredit.sol";
@@ -12,6 +12,7 @@ import "./interfaces/IPoolLocker.sol";
 import "./interfaces/IReputationTracker.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
+import "./libraries/BaseStructs.sol";
 
 import "hardhat/console.sol";
 
@@ -19,12 +20,14 @@ import "hardhat/console.sol";
  * @notice Invoice Financing
  * @dev please note abbreviation HumaIF is used in error messages to shorten the length of error msg.
  */
-contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCredit {
+contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
+    using BaseStructs for HumaInvoiceFactoring;
+
     constructor(
         address _poolToken,
         address _humaConfig,
         address _reputationTrackerFactory
-    ) BaseCredit(_poolToken, _humaConfig, _reputationTrackerFactory) {}
+    ) BaseCreditPool(_poolToken, _humaConfig, _reputationTrackerFactory) {}
 
     function postPreapprovedCreditRequest(
         address borrower,
@@ -41,7 +44,8 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCredit {
 
         // Borrowers must not have existing loans from this pool
         require(
-            creditStateMapping[msg.sender].state == CreditState.Deleted,
+            creditStateMapping[msg.sender].state ==
+                BaseStructs.CreditState.Deleted,
             "HumaIF:DENY_EXISTING_LOAN"
         );
 
@@ -55,13 +59,77 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCredit {
         approveCredit(borrower);
     }
 
+    /**
+     * @notice Borrower makes one payment. If this is the final payment,
+     * it automatically triggers the payoff process.
+     * @dev "HumaIF:WRONG_ASSET" reverted when asset address does not match
+     * @return status if the payment is successful or not
+     *
+     */
+    function receivedPayment(
+        address borrower,
+        address asset,
+        uint256 amount
+    ) public virtual returns (bool) {
+        // todo Need to  discuss more on whether to accept invoice pyaments from RN
+        // when the protocol is paused.
+        // todo add security control to make sure the caller is either borrower or approver
+        protoNotPaused();
+        BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
+
+        // todo handle multiple payments.
+
+        require(asset == address(poolToken), "HumaIF:WRONG_ASSET");
+
+        // todo decide what to do if the payment amount is insufficient.
+        require(amount >= cs.remainingPrincipal, "HumaIF:AMOUNT_TOO_LOW");
+
+        // todo verify that we have indeeded received the payment.
+
+        uint256 lateFee = assessLateFee(borrower);
+        uint256 refundAmt = amount - cs.remainingPrincipal - lateFee;
+
+        // Sends the remainder to the borrower
+        cs.remainingPrincipal = 0;
+        cs.remainingPayments = 0;
+
+        processRefund(borrower, refundAmt);
+
+        return true;
+    }
+
     function processRefund(address receiver, uint256 amount)
-        internal
+        public
         returns (bool)
     {
         PoolLocker locker = PoolLocker(poolLocker);
         locker.transfer(receiver, amount);
 
         return true;
+    }
+
+    function originateCreditWithPreapproval(
+        address borrower,
+        uint256 borrowAmt,
+        address collateralAsset,
+        uint256 collateralParam,
+        uint256 collateralAmount,
+        uint256[] memory terms
+    ) external {
+        postPreapprovedCreditRequest(
+            borrower,
+            borrowAmt,
+            collateralAsset,
+            collateralAmount,
+            terms
+        );
+
+        originateCreditWithCollateral(
+            borrower,
+            borrowAmt,
+            collateralAsset,
+            collateralParam,
+            collateralAmount
+        );
     }
 }

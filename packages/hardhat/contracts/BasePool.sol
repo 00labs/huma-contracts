@@ -68,7 +68,7 @@ abstract contract BasePool is IPool, HDT, Ownable {
 
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
-    uint256 withdrawalLockoutPeriod = 2630000;
+    uint256 public withdrawalLockoutPeriod = 2630000;
 
     uint256 public poolDefaultGracePeriod;
 
@@ -85,12 +85,13 @@ abstract contract BasePool is IPool, HDT, Ownable {
     }
 
     enum PoolStatus {
-        On,
-        Off
+        Off,
+        On
     }
 
     event LiquidityDeposited(address by, uint256 principal);
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmt);
+    event PoolDeployed(address _poolAddress);
 
     constructor(
         address _poolToken,
@@ -106,6 +107,8 @@ abstract contract BasePool is IPool, HDT, Ownable {
         reputationTrackerContractAddress = ReputationTrackerFactory(
             reputationTrackerFactory
         ).deployReputationTracker("Huma Pool", "HumaRTT");
+
+        emit PoolDeployed(address(this));
     }
 
     modifier onlyHumaMasterAdmin() {
@@ -143,9 +146,10 @@ abstract contract BasePool is IPool, HDT, Ownable {
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
         uint256 prevDate = lenderInfo[lender].weightedDepositDate;
         uint256 balance = lenderInfo[lender].amount;
+
         uint256 newDate = (balance + amount) > 0
             ? prevDate +
-                (((block.timestamp - prevDate) * amount) / balance + amount)
+                (((block.timestamp - prevDate) * amount) / (balance + amount))
             : prevDate;
 
         lenderInfo[lender].weightedDepositDate = newDate;
@@ -425,10 +429,6 @@ abstract contract BasePool is IPool, HDT, Ownable {
 
     function getPoolLockerAddress() external view returns (address) {
         return poolLocker;
-    }
-
-    function getPoolDefaultGracePeriod() external view returns (uint256) {
-        return poolDefaultGracePeriod;
     }
 
     function getApprovalStatusForBorrower(address borrower)
