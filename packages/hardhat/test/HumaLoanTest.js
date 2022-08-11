@@ -125,7 +125,7 @@ describe("Huma Loan", function () {
 
         await poolContract.addCreditApprover(creditApprover.address);
 
-        await poolContract.setInterestRateBasis(1200); //bps
+        await poolContract.setAPR(1200); //bps
         await poolContract.setMinMaxBorrowAmt(10, 1000);
         // set fees (factoring_fat, factoring_bps, late_flat, late_bps, early_falt, early_bps)
         await poolContract.setFees(10, 100, 20, 100, 30, 100);
@@ -196,7 +196,7 @@ describe("Huma Loan", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await poolContract.connect(owner).setInterestRateBasis(1200);
+            await poolContract.connect(owner).setAPR(1200);
 
             await testTokenContract
                 .connect(borrower)
@@ -297,7 +297,7 @@ describe("Huma Loan", function () {
                     lender.address
                 );
 
-                await poolContract.connect(owner).setInterestRateBasis(1200);
+                await poolContract.connect(owner).setAPR(1200);
                 await poolContract.connect(borrower).requestCredit(400, 30, 12);
 
                 await poolContract.approveCredit(borrower.address);

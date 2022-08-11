@@ -55,7 +55,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // Borrowing amount needs to be lower than max for the pool.
         require(maxBorrowAmt >= borrowAmt, "HumaIF:GREATER_THAN_LIMIT");
 
-        initiate(borrower, borrowAmt, address(0), 0, terms);
+        initiate(borrower, borrowAmt, collateralAsset, collateralAmt, terms);
         approveCredit(borrower);
     }
 

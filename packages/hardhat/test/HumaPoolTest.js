@@ -92,7 +92,7 @@ describe("Base Pool - LP and Admin functions", function () {
 
         await poolContract.addCreditApprover(creditApprover.address);
 
-        await poolContract.setInterestRateBasis(1200); //bps
+        await poolContract.setAPR(1200); //bps
         await poolContract.setMinMaxBorrowAmt(10, 1000);
         // set fees (factoring_fat, factoring_bps, late_flat, late_bps, early_falt, early_bps)
         await poolContract.setFees(10, 100, 20, 100, 30, 100);
@@ -145,7 +145,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Should disallow platform fee bps lower than protocol fee bps", async function () {
             await expect(
                 poolContract.setFees(20, 10, 0, 0, 0, 0)
-            ).to.be.revertedWith("PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS");
+            ).to.be.revertedWith("PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE");
         });
 
         it("Set pool fees and parameters", async function () {

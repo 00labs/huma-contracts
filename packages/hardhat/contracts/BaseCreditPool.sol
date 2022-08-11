@@ -677,7 +677,7 @@ contract BaseCreditPool is ICredit, BasePool {
         returns (uint256[] memory terms)
     {
         terms = new uint256[](9);
-        terms[0] = interestRateBasis; //apr_in_bps
+        terms[0] = aprInBps; //apr_in_bps
         terms[1] = platform_fee_flat;
         terms[2] = platform_fee_bps;
         terms[3] = late_fee_flat;

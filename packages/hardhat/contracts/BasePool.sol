@@ -6,17 +6,18 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
+import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPoolLocker.sol";
 import "./interfaces/IPool.sol";
+import "./interfaces/IReputationTracker.sol";
 import "./PoolLocker.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./PoolLocker.sol";
 import "./ReputationTrackerFactory.sol";
 import "./ReputationTracker.sol";
-import "./interfaces/IReputationTracker.sol";
 
-abstract contract BasePool is IPool, HDT, Ownable {
+abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
 
@@ -46,10 +47,10 @@ abstract contract BasePool is IPool, HDT, Ownable {
     uint256 maxBorrowAmt;
 
     // The interest rate this pool charges for loans
-    uint256 interestRateBasis;
+    uint256 aprInBps;
 
     // The collateral basis percentage required from lenders
-    uint256 collateralRequired;
+    uint256 collateralRequiredInBps;
 
     // Platform fee, charged when a loan is originated
     uint256 platform_fee_flat;
@@ -225,6 +226,55 @@ abstract contract BasePool is IPool, HDT, Ownable {
         creditApprovers[approver] = true;
     }
 
+    // function setKeySettings(
+    //     uint256 _apr,
+    //     uint256 _collateralRequiredInBps,
+    //     uint256 _minAmt,
+    //     uint256 _maxAmt,
+    //     uint256 _front_fee_flat,
+    //     uint256 _front_fee_bps,
+    //     uint256 _late_fee_flat,
+    //     uint256 _late_fee_bps,
+    //     uint256 _back_fee_flat,
+    //     uint256 _back_fee_bps,
+    //     uint256 _gracePeriodInDays,
+    //     uint256 _liquidityCap,
+    //     uint256 _lockoutPeriodInDays
+    // ) external virtual override {
+    //     // todo implement it
+    // }
+
+    function setAPR(uint256 _aprInBps) external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        require(_aprInBps >= 0 && _aprInBps <= 10000, "BasePool:INVALID_APR");
+        aprInBps = _aprInBps;
+    }
+
+    function setCollateralRequiredInBps(uint256 _collateralInBps)
+        external
+        virtual
+        override
+    {
+        onlyOwnerOrHumaMasterAdmin();
+        require(_collateralInBps >= 0);
+        collateralRequiredInBps = _collateralInBps;
+    }
+
+    /**
+     * @notice Sets the min and max of each loan/credit allowed by the pool.
+     */
+    function setMinMaxBorrowAmt(uint256 _minBorrowAmt, uint256 _maxBorrowAmt)
+        external
+        virtual
+        override
+    {
+        onlyOwnerOrHumaMasterAdmin();
+        require(_minBorrowAmt > 0, "BasePool:MINAMT_IS_ZERO");
+        require(_maxBorrowAmt >= _minBorrowAmt, "BasePool:MAX_LESS_THAN_MIN");
+        minBorrowAmt = _minBorrowAmt;
+        maxBorrowAmt = _maxBorrowAmt;
+    }
+
     function setPoolLocker(address _poolLocker)
         external
         virtual
@@ -237,42 +287,6 @@ abstract contract BasePool is IPool, HDT, Ownable {
         return true;
     }
 
-    /**
-     * @notice Sets the min and max of each loan/credit allowed by the pool.
-     */
-    function setMinMaxBorrowAmt(uint256 minAmt, uint256 maxAmt)
-        external
-        virtual
-        override
-    {
-        onlyOwnerOrHumaMasterAdmin();
-        require(minAmt > 0, "BasePool:MINAMT_IS_ZERO");
-        require(maxAmt >= minAmt, "BasePool:MAXAMIT_LESS_THAN_MINAMT");
-        minBorrowAmt = minAmt;
-        maxBorrowAmt = maxAmt;
-    }
-
-    function setInterestRateBasis(uint256 _interestRateBasis)
-        external
-        returns (bool)
-    {
-        onlyOwnerOrHumaMasterAdmin();
-        require(_interestRateBasis >= 0);
-        interestRateBasis = _interestRateBasis;
-
-        return true;
-    }
-
-    function setCollateralRateInBps(uint256 _collateralRequired)
-        external
-        virtual
-        override
-    {
-        onlyOwnerOrHumaMasterAdmin();
-        require(_collateralRequired >= 0);
-        collateralRequired = _collateralRequired;
-    }
-
     // Allow borrow applications and loans to be processed by this pool.
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
@@ -281,15 +295,15 @@ abstract contract BasePool is IPool, HDT, Ownable {
 
     /**
      * Sets the default grace period for this pool.
-     * @param gracePeriod the desired grace period in seconds.
+     * @param _gracePeriodInDays the desired grace period in days.
      */
-    function setPoolDefaultGracePeriod(uint256 gracePeriod)
+    function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays)
         external
         virtual
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        poolDefaultGracePeriod = gracePeriod;
+        poolDefaultGracePeriod = _gracePeriodInDays;
     }
 
     // Reject all future borrow applications and loans. Note that existing
@@ -297,10 +311,6 @@ abstract contract BasePool is IPool, HDT, Ownable {
     function disablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.Off;
-    }
-
-    function getWithdrawalLockoutPeriod() public view returns (uint256) {
-        return withdrawalLockoutPeriod;
     }
 
     function setWithdrawalLockoutPeriod(uint256 _withdrawalLockoutPeriod)
@@ -315,13 +325,13 @@ abstract contract BasePool is IPool, HDT, Ownable {
     /**
      * @notice Sets the cap of the pool liquidity.
      */
-    function setPoolLiquidityCap(uint256 cap) external virtual override {
+    function setPoolLiquidityCap(uint256 _liquidityCap)
+        external
+        virtual
+        override
+    {
         onlyOwnerOrHumaMasterAdmin();
-        liquidityCap = cap;
-    }
-
-    function setAPR(uint256 _interestRateBasis) external virtual override {
-        interestRateBasis = _interestRateBasis;
+        liquidityCap = _liquidityCap;
     }
 
     function setFees(
@@ -335,7 +345,7 @@ abstract contract BasePool is IPool, HDT, Ownable {
         onlyOwnerOrHumaMasterAdmin();
         require(
             _platform_fee_bps > HumaConfig(humaConfig).treasuryFee(),
-            "BasePool:PLATFORM_FEE_BPS_LESS_THAN_PROTOCOL_BPS"
+            "BasePool:PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE"
         );
         platform_fee_flat = _platform_fee_flat;
         platform_fee_bps = _platform_fee_bps;
@@ -390,7 +400,7 @@ abstract contract BasePool is IPool, HDT, Ownable {
         ERC20 erc20Contract = ERC20(address(poolToken));
         return (
             address(poolToken),
-            interestRateBasis,
+            aprInBps,
             minBorrowAmt,
             maxBorrowAmt,
             liquidityCap,
@@ -417,7 +427,7 @@ abstract contract BasePool is IPool, HDT, Ownable {
         )
     {
         return (
-            interestRateBasis,
+            aprInBps,
             platform_fee_flat,
             platform_fee_bps,
             late_fee_flat,
@@ -431,11 +441,9 @@ abstract contract BasePool is IPool, HDT, Ownable {
         return poolLocker;
     }
 
-    function getApprovalStatusForBorrower(address borrower)
-        external
-        view
-        returns (bool)
-    {
+    function getApprovalStatusForBorrower(
+        address /*borrower*/
+    ) external pure returns (bool) {
         //return IHumaCredit(creditMapping[borrower]).isApproved();
         // todo
         return true;

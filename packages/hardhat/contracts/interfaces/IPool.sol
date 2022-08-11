@@ -2,48 +2,56 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 interface IPool {
-    function makeInitialDeposit(uint256 amount) external;
-
-    function deposit(uint256 amount) external;
-
-    function withdraw(uint256 amount) external;
-
-    function withdrawAll() external;
-
-    function enablePool() external;
+    function addCreditApprover(address approver) external;
 
     function disablePool() external;
 
-    function setPoolLocker(address _poolLocker) external returns (bool);
+    function enablePool() external;
 
-    function setMinMaxBorrowAmt(uint256 minAmt, uint256 maxAmt) external;
+    // function setKeySettings(
+    //     uint256 _apr,
+    //     uint256 _collateralRateInBps,
+    //     uint256 _minAmt,
+    //     uint256 _maxAmt,
+    //     uint256 _front_fee_flat,
+    //     uint256 _front_fee_bps,
+    //     uint256 _late_fee_flat,
+    //     uint256 _late_fee_bps,
+    //     uint256 _back_fee_flat,
+    //     uint256 _back_fee_bps,
+    //     uint256 _gracePeriodInDays,
+    //     uint256 _liquidityCap,
+    //     uint256 _lockoutPeriodInDays
+    // ) external;
 
-    function setAPR(uint256 _interestRateBasis) external;
+    function setAPR(uint256 _apr) external;
+
+    function setCollateralRequiredInBps(uint256 _collateralRateInBps) external;
+
+    function setMinMaxBorrowAmt(uint256 _minAmt, uint256 _maxAmt) external;
 
     function setFees(
-        uint256 _platform_fee_flat,
-        uint256 _platform_fee_bps,
+        uint256 _front_fee_flat,
+        uint256 _front_fee_bps,
         uint256 _late_fee_flat,
         uint256 _late_fee_bps,
-        uint256 _early_payoff_fee_flat,
-        uint256 _early_payoff_fee_bps
+        uint256 _back_fee_flat,
+        uint256 _back_fee_bps
     ) external;
 
-    function setCollateralRateInBps(uint256 _collateralRequired) external;
+    function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external;
 
-    function setPoolDefaultGracePeriod(uint256 gracePeriod) external;
+    function setPoolLiquidityCap(uint256 _liquidityCap) external;
 
-    function setWithdrawalLockoutPeriod(uint256 _period) external;
+    function setPoolLocker(address _poolLocker) external returns (bool);
 
-    function setPoolLiquidityCap(uint256 cap) external;
-
-    function addCreditApprover(address approver) external;
+    function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays) external;
 
     function getPoolSummary()
         external
         view
         returns (
-            address token,
+            address poolToken,
             uint256 apr,
             uint256 minCreditAmt,
             uint256 maxCreditAmt,
@@ -57,12 +65,12 @@ interface IPool {
         external
         view
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint256 apr,
+            uint256 front_fee_flat,
+            uint256 front_fee_bps,
+            uint256 late_fee_flat,
+            uint256 late_fee_bps,
+            uint256 back_fee_flat,
+            uint256 back_fee_bps
         );
 }

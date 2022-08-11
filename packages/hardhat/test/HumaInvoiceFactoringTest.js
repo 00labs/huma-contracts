@@ -105,7 +105,7 @@ describe("Huma Invoice Financing", function () {
 
         await invoiceContract.addCreditApprover(creditApprover.address);
 
-        await invoiceContract.setInterestRateBasis(1200); //bps
+        await invoiceContract.setAPR(1200); //bps
         await invoiceContract.setMinMaxBorrowAmt(10, 1000);
         // set fees (factoring_fat, factoring_bps, late_flat, late_bps, early_falt, early_bps)
         await invoiceContract.setFees(10, 100, 20, 100, 30, 100);
@@ -223,7 +223,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setInterestRateBasis(1200);
+            await invoiceContract.connect(owner).setAPR(1200);
 
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await invoiceContract
@@ -256,7 +256,7 @@ describe("Huma Invoice Financing", function () {
         // });
 
         it("Should allow credit approver to invalidate an approved invoice factoring record", async function () {
-            await invoiceContract.connect(owner).setInterestRateBasis(1200);
+            await invoiceContract.connect(owner).setAPR(1200);
 
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await invoiceContract
@@ -502,7 +502,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setInterestRateBasis(1200);
+            await invoiceContract.connect(owner).setAPR(1200);
 
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await invoiceContract
