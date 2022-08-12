@@ -94,6 +94,7 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256[] memory terms
     ) public virtual override {
         protoNotPaused();
+        require(terms.length >= 7, "BaseCreditPool:TERMS_INCOMPLETE");
 
         // Populates basic credit info fields
         BaseStructs.CreditInfo memory ci;
@@ -110,8 +111,12 @@ contract BaseCreditPool is ICredit, BasePool {
         cfs.front_loading_fee_bps = uint16(terms[2]);
         cfs.late_fee_flat = uint16(terms[3]);
         cfs.late_fee_bps = uint16(terms[4]);
-        cfs.back_loading_fee_flat = uint16(terms[7]);
-        cfs.back_loading_fee_bps = uint16(terms[8]);
+        // Add a protection in case the client side does not pass these two fields.
+        // will remove this after integration test.
+        if (terms.length >= 9) {
+            cfs.back_loading_fee_flat = uint16(terms[7]);
+            cfs.back_loading_fee_bps = uint16(terms[8]);
+        }
         creditFeesMapping[_borrower] = cfs;
 
         // Populates key status fields. Fields nextDueDate, nextAmtDue,
