@@ -77,14 +77,14 @@ contract BaseCreditPool is ICredit, BasePool {
      * @param collateralAmt the amount of the collateral asset
      * @param terms[] the terms for the loan.
      *                [0] apr_in_bps
-     *                [1] platform_fee_flat
-     *                [2] platform_fee_bps
+     *                [1] front_loading_fee_flat
+     *                [2] front_loading_fee_bps
      *                [3] late_fee_flat
      *                [4] late_fee_bps
      *                [5] payment_interval, in days
      *                [6] numOfPayments
-     *                [7] early_payff_fee_flat
-     *                [8] early_payoff_fee_bps
+     *                [7] back_loading_fee_flat
+     *                [8] back_loading_fee_bps
      */
     function initiate(
         address _borrower,
@@ -106,12 +106,12 @@ contract BaseCreditPool is ICredit, BasePool {
         // Populates fields related to fee structure
         BaseStructs.CreditFeeStructure memory cfs;
         cfs.apr_in_bps = uint16(terms[0]);
-        cfs.platform_fee_flat = uint16(terms[1]);
-        cfs.platform_fee_bps = uint16(terms[2]);
+        cfs.front_loading_fee_flat = uint16(terms[1]);
+        cfs.front_loading_fee_bps = uint16(terms[2]);
         cfs.late_fee_flat = uint16(terms[3]);
         cfs.late_fee_bps = uint16(terms[4]);
-        // cfs.early_payoff_fee_flat = uint16(terms[7]);
-        // cfs.early_payoff_fee_bps = uint16(terms[8]);
+        cfs.back_loading_fee_flat = uint16(terms[7]);
+        cfs.back_loading_fee_bps = uint16(terms[8]);
         creditFeesMapping[_borrower] = cfs;
 
         // Populates key status fields. Fields nextDueDate, nextAmtDue,
@@ -226,7 +226,7 @@ contract BaseCreditPool is ICredit, BasePool {
             //if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
             IERC721(collateralAsset).safeTransferFrom(
                 borrower,
-                poolLocker,
+                poolLockerAddr,
                 collateralParam
             );
             // } else if (
@@ -244,7 +244,7 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Transfer protocole fee and funds the borrower
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
-        PoolLocker locker = PoolLocker(poolLocker);
+        PoolLocker locker = PoolLocker(poolLockerAddr);
         locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(borrower, amtToBorrower);
     }
@@ -262,10 +262,12 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Calculate platform fee, which includes protocol fee and pool fee
         uint256 platformFees;
-        if (cfs.platform_fee_flat != 0) platformFees = cfs.platform_fee_flat;
-        if (cfs.platform_fee_bps != 0)
+        if (cfs.front_loading_fee_flat != 0)
+            platformFees = cfs.front_loading_fee_flat;
+        if (cfs.front_loading_fee_bps != 0)
             platformFees +=
-                (creditInfoMapping[borrower].loanAmt * cfs.platform_fee_bps) /
+                (creditInfoMapping[borrower].loanAmt *
+                    cfs.front_loading_fee_bps) /
                 10000;
 
         // Split the fee between treasury and the pool
@@ -358,7 +360,7 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Transfer assets from the borrower to pool locker
         IERC20 assetIERC20 = IERC20(poolToken);
-        assetIERC20.transferFrom(borrower, poolLocker, amount);
+        assetIERC20.transferFrom(borrower, poolLockerAddr, amount);
     }
 
     /**
@@ -372,11 +374,11 @@ contract BaseCreditPool is ICredit, BasePool {
     // {
     //     BaseStructs.CreditFeeStructure storage cfs = creditFeesMapping[borrower];
     //     BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
-    //     if (cfs.early_payoff_fee_flat > 0) penalty = cfs.early_payoff_fee_flat;
-    //     if (cfs.early_payoff_fee_bps > 0) {
+    //     if (cfs.back_loading_fee_flat > 0) penalty = cfs.back_loading_fee_flat;
+    //     if (cfs.back_loading_fee_bps > 0) {
     //         penalty +=
     //             (cs.remainingPrincipal *
-    //                 creditFeesMapping[borrower].early_payoff_fee_bps) /
+    //                 creditFeesMapping[borrower].back_loading_fee_bps) /
     //             BPS_DIVIDER;
     //     }
     //     cs.feesDue += uint32(penalty);
@@ -664,13 +666,13 @@ contract BaseCreditPool is ICredit, BasePool {
     {
         terms = new uint256[](9);
         terms[0] = aprInBps; //apr_in_bps
-        terms[1] = platform_fee_flat;
-        terms[2] = platform_fee_bps;
+        terms[1] = front_loading_fee_flat;
+        terms[2] = front_loading_fee_bps;
         terms[3] = late_fee_flat;
         terms[4] = late_fee_bps;
         terms[5] = _paymentInterval; //payment_interval, in days
         terms[6] = _numOfPayments; //numOfPayments
-        terms[7] = early_payoff_fee_flat;
-        terms[8] = early_payoff_fee_bps;
+        terms[7] = back_loading_fee_flat;
+        terms[8] = back_loading_fee_bps;
     }
 }

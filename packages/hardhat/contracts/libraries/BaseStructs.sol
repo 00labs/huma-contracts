@@ -24,12 +24,12 @@ library BaseStructs {
 
     struct CreditFeeStructure {
         uint16 apr_in_bps; // interest rate in bps
-        uint16 platform_fee_flat;
-        uint16 platform_fee_bps;
+        uint16 front_loading_fee_flat;
+        uint16 front_loading_fee_bps;
         uint16 late_fee_flat;
         uint16 late_fee_bps;
-        uint16 early_payoff_fee_flat;
-        uint16 early_payoff_fee_bps;
+        uint16 back_loading_fee_flat;
+        uint16 back_loading_fee_bps;
         bool deleted;
     }
 
@@ -78,10 +78,24 @@ library BaseStructs {
         console.log("ci.collateralParam=", ci.collateralParam);
 
         console.log("cfs.apr_in_bps=", uint256(cfs.apr_in_bps));
-        console.log("cfs.platform_fee_flat=", uint256(cfs.platform_fee_flat));
-        console.log("cfs.platform_fee_bps=", uint256(cfs.platform_fee_bps));
+        console.log(
+            "cfs.front_loading_fee_flat=",
+            uint256(cfs.front_loading_fee_flat)
+        );
+        console.log(
+            "cfs.front_loading_fee_bps=",
+            uint256(cfs.front_loading_fee_bps)
+        );
         console.log("cfs.late_fee_flat=", uint256(cfs.late_fee_flat));
         console.log("cfs.late_fee_bps=", uint256(cfs.late_fee_bps));
+        console.log(
+            "cfs.back_loading_fee_flat=",
+            uint256(cfs.back_loading_fee_flat)
+        );
+        console.log(
+            "cfs.back_loading_fee_bps=",
+            uint256(cfs.back_loading_fee_bps)
+        );
         console.log("cfs.deleted=", cfs.deleted);
 
         console.log("cs.nextDueDate=", uint256(cs.nextDueDate));

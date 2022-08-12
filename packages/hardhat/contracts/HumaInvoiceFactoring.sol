@@ -102,7 +102,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         public
         returns (bool)
     {
-        PoolLocker locker = PoolLocker(poolLocker);
+        PoolLocker locker = PoolLocker(poolLockerAddr);
         locker.transfer(receiver, amount);
 
         return true;

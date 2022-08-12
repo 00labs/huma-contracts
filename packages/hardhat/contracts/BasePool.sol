@@ -23,7 +23,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     address internal humaConfig;
 
     // Liquidity holder proxy contract for this pool
-    address public poolLocker;
+    address public poolLockerAddr;
 
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => LenderInfo) internal lenderInfo;
@@ -47,14 +47,14 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 collateralRequiredInBps;
 
     // Platform fee, charged when a loan is originated
-    uint256 platform_fee_flat;
-    uint256 platform_fee_bps;
+    uint256 front_loading_fee_flat;
+    uint256 front_loading_fee_bps;
     // Late fee, charged when the borrow is late for a pyament.
     uint256 late_fee_flat;
     uint256 late_fee_bps;
     // Early payoff fee, charged when the borrow pays off prematurely
-    uint256 early_payoff_fee_flat;
-    uint256 early_payoff_fee_bps;
+    uint256 back_loading_fee_flat;
+    uint256 back_loading_fee_bps;
 
     PoolStatus public status = PoolStatus.Off;
 
@@ -137,7 +137,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         lenderInfo[lender].amount += amount;
         lenderInfo[lender].mostRecentLoanTimestamp = block.timestamp;
 
-        poolToken.safeTransferFrom(lender, poolLocker, amount);
+        poolToken.safeTransferFrom(lender, poolLockerAddr, amount);
 
         // Mint HDT for the LP to claim future income and losses
         _mint(lender, amount);
@@ -178,8 +178,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
         _burn(msg.sender, amount);
 
-        //IPoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
-        PoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
+        PoolLocker(poolLockerAddr).transfer(msg.sender, amountToWithdraw);
 
         emit LiquidityWithdrawn(msg.sender, amount, amountToWithdraw);
     }
@@ -203,24 +202,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         onlyOwnerOrHumaMasterAdmin();
         creditApprovers[approver] = true;
     }
-
-    // function setKeySettings(
-    //     uint256 _apr,
-    //     uint256 _collateralRequiredInBps,
-    //     uint256 _minAmt,
-    //     uint256 _maxAmt,
-    //     uint256 _front_fee_flat,
-    //     uint256 _front_fee_bps,
-    //     uint256 _late_fee_flat,
-    //     uint256 _late_fee_bps,
-    //     uint256 _back_fee_flat,
-    //     uint256 _back_fee_bps,
-    //     uint256 _gracePeriodInDays,
-    //     uint256 _liquidityCap,
-    //     uint256 _lockoutPeriodInDays
-    // ) external virtual override {
-    //     // todo implement it
-    // }
 
     function setAPR(uint256 _aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
@@ -253,16 +234,23 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         maxBorrowAmt = _maxBorrowAmt;
     }
 
-    function setPoolLocker(address _poolLocker)
+    function setPoolLocker(address _poolLockerAddr)
         external
         virtual
         override
         returns (bool)
     {
         onlyOwnerOrHumaMasterAdmin();
-        poolLocker = _poolLocker;
+        poolLockerAddr = _poolLockerAddr;
 
         return true;
+    }
+
+    // Reject all future borrow applications and loans. Note that existing
+    // loans will still be processed as expected.
+    function disablePool() external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        status = PoolStatus.Off;
     }
 
     // Allow borrow applications and loans to be processed by this pool.
@@ -282,13 +270,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     {
         onlyOwnerOrHumaMasterAdmin();
         poolDefaultGracePeriod = _gracePeriodInDays;
-    }
-
-    // Reject all future borrow applications and loans. Note that existing
-    // loans will still be processed as expected.
-    function disablePool() external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        status = PoolStatus.Off;
     }
 
     function setWithdrawalLockoutPeriod(uint256 _withdrawalLockoutPeriod)
@@ -313,24 +294,24 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     function setFees(
-        uint256 _platform_fee_flat,
-        uint256 _platform_fee_bps,
+        uint256 _front_loading_fee_flat,
+        uint256 _front_loading_fee_bps,
         uint256 _late_fee_flat,
         uint256 _late_fee_bps,
-        uint256 _early_payoff_fee_flat,
-        uint256 _early_payoff_fee_bps
+        uint256 _back_platform_fee_flat,
+        uint256 _back_platform_fee_bps
     ) public virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(
-            _platform_fee_bps > HumaConfig(humaConfig).treasuryFee(),
+            _front_loading_fee_bps > HumaConfig(humaConfig).treasuryFee(),
             "BasePool:PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE"
         );
-        platform_fee_flat = _platform_fee_flat;
-        platform_fee_bps = _platform_fee_bps;
+        front_loading_fee_flat = _front_loading_fee_flat;
+        front_loading_fee_bps = _front_loading_fee_bps;
         late_fee_flat = _late_fee_flat;
         late_fee_bps = _late_fee_bps;
-        early_payoff_fee_flat = _early_payoff_fee_flat;
-        early_payoff_fee_bps = _early_payoff_fee_bps;
+        back_loading_fee_flat = _back_platform_fee_flat;
+        back_loading_fee_bps = _back_platform_fee_bps;
     }
 
     function getLenderInfo(address _lender)
@@ -342,7 +323,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     function getPoolLiquidity() public view returns (uint256) {
-        return poolToken.balanceOf(poolLocker);
+        return poolToken.balanceOf(poolLockerAddr);
     }
 
     // Function to receive Ether. msg.data must be empty
@@ -402,17 +383,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     {
         return (
             aprInBps,
-            platform_fee_flat,
-            platform_fee_bps,
+            front_loading_fee_flat,
+            front_loading_fee_bps,
             late_fee_flat,
             late_fee_bps,
-            early_payoff_fee_flat,
-            early_payoff_fee_bps
+            back_loading_fee_flat,
+            back_loading_fee_bps
         );
-    }
-
-    function getPoolLockerAddress() external view returns (address) {
-        return poolLocker;
     }
 
     function getApprovalStatusForBorrower(

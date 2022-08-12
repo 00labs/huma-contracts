@@ -135,7 +135,7 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Should only allow credit approvers to post approved loan requests", async function () {
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(lender)
@@ -151,7 +151,7 @@ describe("Huma Invoice Financing", function () {
 
         it("Should not allow posting approved loans while protocol is paused", async function () {
             await humaConfigContract.connect(owner).pauseProtocol();
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(creditApprover)
@@ -167,7 +167,7 @@ describe("Huma Invoice Financing", function () {
 
         it("Should not allow posting approved laons while pool is off", async function () {
             await invoiceContract.disablePool();
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(creditApprover)
@@ -182,7 +182,7 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Cannot post approved loan with amount lower than limit", async function () {
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(creditApprover)
@@ -197,7 +197,7 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Cannot post approved loan with amount greater than limit", async function () {
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(creditApprover)
@@ -218,7 +218,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract.connect(owner).setAPR(1200);
 
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await invoiceContract
                 .connect(creditApprover)
                 .postPreapprovedCreditRequest(
@@ -251,7 +251,7 @@ describe("Huma Invoice Financing", function () {
         it("Should allow credit approver to invalidate an approved invoice factoring record", async function () {
             await invoiceContract.connect(owner).setAPR(1200);
 
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await invoiceContract
                 .connect(creditApprover)
                 .postPreapprovedCreditRequest(
@@ -280,7 +280,7 @@ describe("Huma Invoice Financing", function () {
         beforeEach(async function () {
             await invoiceContract.connect(lender).deposit(300);
 
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await invoiceContract
                 .connect(creditApprover)
                 .postPreapprovedCreditRequest(
@@ -339,7 +339,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(
                 await invoiceNFTContract.ownerOf(invoiceNFTTokenId)
-            ).to.equal(await invoiceContract.getPoolLockerAddress());
+            ).to.equal(await invoiceContract.poolLockerAddr());
 
             expect(await invoiceNFTContract.balanceOf);
             expect(
@@ -365,7 +365,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(
                 await invoiceNFTContract.ownerOf(invoiceNFTTokenId)
-            ).to.equal(await invoiceContract.getPoolLockerAddress());
+            ).to.equal(await invoiceContract.poolLockerAddr());
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
@@ -408,7 +408,7 @@ describe("Huma Invoice Financing", function () {
 
         it("Should not allow posting pre-approved IF while protocol is paused", async function () {
             await humaConfigContract.connect(owner).pauseProtocol();
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(creditApprover)
@@ -425,7 +425,7 @@ describe("Huma Invoice Financing", function () {
 
         it("Should not allow posting pre-approved IF while pool is off", async function () {
             await invoiceContract.disablePool();
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(creditApprover)
@@ -441,7 +441,7 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Should only allow approvers to post pre-approved IF", async function () {
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(lender)
@@ -459,7 +459,7 @@ describe("Huma Invoice Financing", function () {
         // Should deny if there is existing IF.
 
         it("Cannot post pre-approved IF with amount lower than limit", async function () {
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(creditApprover)
@@ -475,7 +475,7 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Cannot post pre-approved IF with amount greater than limit", async function () {
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await expect(
                 invoiceContract
                     .connect(creditApprover)
@@ -497,7 +497,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract.connect(owner).setAPR(1200);
 
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await invoiceContract
                 .connect(creditApprover)
                 .originateCreditWithPreapproval(
@@ -511,7 +511,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(
                 await invoiceNFTContract.ownerOf(invoiceNFTTokenId)
-            ).to.equal(await invoiceContract.getPoolLockerAddress());
+            ).to.equal(await invoiceContract.poolLockerAddr());
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
@@ -530,7 +530,7 @@ describe("Huma Invoice Financing", function () {
         beforeEach(async function () {
             await invoiceContract.connect(lender).deposit(300);
             await invoiceContract.connect(owner).setFees(10, 100, 0, 0, 0, 0);
-            const terms = [0, 10, 100, 20, 100, 30, 1];
+            const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await invoiceContract
                 .connect(creditApprover)
                 .postPreapprovedCreditRequest(
@@ -597,12 +597,12 @@ describe("Huma Invoice Financing", function () {
 
             // await testTokenContract
             //     .connect(borrower)
-            //     .approve(invoiceContract.getPoolLockerAddress(), 210);
+            //     .approve(invoiceContract.poolLockerAddr(), 210);
 
             // simulates payments from payer.
             await testTokenContract
                 .connect(payer)
-                .transfer(invoiceContract.getPoolLockerAddress(), 500);
+                .transfer(invoiceContract.poolLockerAddr(), 500);
 
             await testTokenContract
                 .connect(borrower)
