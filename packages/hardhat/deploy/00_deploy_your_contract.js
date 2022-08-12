@@ -43,61 +43,59 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await HumaConfig.setLiquidityAsset(TestToken.address, true);
     await HumaConfig.setHumaTreasury(treasury.address);
 
-    await deploy("HumaCreditFactory", {
+    // await deploy("HumaCreditFactory", {
+    //     from: deployer,
+    //     log: true,
+    //     waitConfirmations: 5,
+    // });
+
+    // const HumaCreditFactory = await ethers.getContract(
+    //     "HumaCreditFactory",
+    //     deployer
+    // );
+
+    await deploy("PoolLockerFactory", {
         from: deployer,
         log: true,
         waitConfirmations: 5,
     });
 
-    const HumaCreditFactory = await ethers.getContract(
-        "HumaCreditFactory",
+    const PoolLockerFactory = await ethers.getContract(
+        "PoolLockerFactory",
         deployer
     );
 
-    await deploy("HumaPoolLockerFactory", {
-        from: deployer,
-        log: true,
-        waitConfirmations: 5,
-    });
-
-    const HumaPoolLockerFactory = await ethers.getContract(
-        "HumaPoolLockerFactory",
-        deployer
-    );
-
-    await deploy("HumaPoolFactory", {
+    await deploy("HumaInvoiceFactoring", {
         from: deployer,
         log: true,
         args: [
+            TestToken.address,
             HumaConfig.address,
-            HumaCreditFactory.address,
-            HumaPoolLockerFactory.address,
+            PoolLockerFactory.address,
         ],
         waitConfirmations: 5,
     });
 
-    const HumaPoolFactory = await ethers.getContract(
-        "HumaPoolFactory",
+    const HumaInvoiceFactoring = await ethers.getContract(
+        "HumaInvoiceFactoring",
         deployer
     );
 
-    await HumaPoolFactory.deployNewPool(TestToken.address, 1);
-
-    const poolAddr = await HumaPoolFactory.pools(0);
-    const humaPool = await ethers.getContractAt("HumaPool", poolAddr);
-    await humaPool.enablePool();
-    await humaPool.addCreditApprover(process.env.INITIAL_HUMA_CREDIT_APPROVER);
+    await HumaInvoiceFactoring.enablePool();
+    await HumaInvoiceFactoring.addCreditApprover(
+        process.env.INITIAL_HUMA_CREDIT_APPROVER
+    );
     const poolTokenDecimals = await TestToken.decimals();
     const maxBorrowAmt = decimalToExpandedString(10000, poolTokenDecimals);
-    await humaPool.setMinMaxBorrowAmt(1, maxBorrowAmt);
-    await humaPool.setFees(
+    await HumaInvoiceFactoring.setMinMaxBorrowAmt(10, maxBorrowAmt);
+    await HumaInvoiceFactoring.setFees(
         decimalToExpandedString(10, poolTokenDecimals),
         100,
         decimalToExpandedString(20, poolTokenDecimals),
+        100,
+        decimalToExpandedString(30, poolTokenDecimals),
         100
     );
-
-    const poolLocker = await humaPool.poolLocker();
 
     await deploy("InvoiceNFT", {
         from: deployer,
@@ -106,12 +104,17 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     });
 
     await TestToken.give100000To(deployer);
+
     await TestToken.approve(
-        humaPool.address,
+        HumaInvoiceFactoring.address,
         decimalToExpandedString(100000, poolTokenDecimals)
     );
-    await humaPool.deposit(decimalToExpandedString(100000, poolTokenDecimals));
 
+    await HumaInvoiceFactoring.makeInitialDeposit(
+        decimalToExpandedString(100000, poolTokenDecimals)
+    );
+
+    ////////////////////////////////////////////
     // Getting a previously deployed contract
     // const TestToken = await ethers.getContract("TestToken", deployer);
     /*  await YourContract.setPurpose("Hello");
