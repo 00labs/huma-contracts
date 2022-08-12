@@ -12,7 +12,6 @@ import "./BasePool.sol";
 import "./HDT/HDT.sol";
 import "./interfaces/ICredit.sol";
 import "./interfaces/IPoolLocker.sol";
-import "./interfaces/IReputationTracker.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
 import "./libraries/BaseStructs.sol";
@@ -34,11 +33,9 @@ contract BaseCreditPool is ICredit, BasePool {
     mapping(address => BaseStructs.CreditFeeStructure)
         internal creditFeesMapping;
 
-    constructor(
-        address _poolToken,
-        address _humaConfig,
-        address _reputationTrackerFactory
-    ) BasePool(_poolToken, _humaConfig, _reputationTrackerFactory) {}
+    constructor(address _poolToken, address _humaConfig)
+        BasePool(_poolToken, _humaConfig)
+    {}
 
     // Apply to borrow from the pool. Borrowing is subject to interest,
     // collateral, and maximum loan requirements as dictated by the pool
@@ -221,11 +218,6 @@ contract BaseCreditPool is ICredit, BasePool {
 
         distributeIncome(poolIncome);
 
-        // IReputationTracker(reputationTrackerContractAddress).report(
-        //     borrower,
-        //     IReputationTracker.TrackingType.Borrowing
-        // );
-
         // //CRITICAL: Asset transfers
         // // Transfers collateral asset
         if (collateralAsset != address(0)) {
@@ -362,12 +354,6 @@ contract BaseCreditPool is ICredit, BasePool {
         if (cs.remainingPayments == 0) {
             // No way to delete entries in mapping, thus mark the deleted field to true.
             invalidateApprovedCredit(borrower);
-
-            // Reputation reporting
-            // IReputationTracker(reputationTrackerContractAddress).report(
-            //     borrower,
-            //     IReputationTracker.TrackingType.Payoff
-            // );
         }
 
         // Transfer assets from the borrower to pool locker
@@ -467,12 +453,6 @@ contract BaseCreditPool is ICredit, BasePool {
         // Trigger loss process
         losses = creditStateMapping[borrower].remainingPrincipal;
         distributeLosses(losses);
-
-        // Retutation reporting
-        // IReputationTracker(reputationTrackerContractAddress).report(
-        //     borrower,
-        //     IReputationTracker.TrackingType.Default
-        // );
 
         return losses;
     }

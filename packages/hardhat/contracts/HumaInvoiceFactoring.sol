@@ -9,7 +9,6 @@ import "./PoolLocker.sol";
 import "./interfaces/ICredit.sol";
 import "./interfaces/IPreapprovedCredit.sol";
 import "./interfaces/IPoolLocker.sol";
-import "./interfaces/IReputationTracker.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
 import "./libraries/BaseStructs.sol";
@@ -23,11 +22,9 @@ import "hardhat/console.sol";
 contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
     using BaseStructs for HumaInvoiceFactoring;
 
-    constructor(
-        address _poolToken,
-        address _humaConfig,
-        address _reputationTrackerFactory
-    ) BaseCreditPool(_poolToken, _humaConfig, _reputationTrackerFactory) {}
+    constructor(address _poolToken, address _humaConfig)
+        BaseCreditPool(_poolToken, _humaConfig)
+    {}
 
     function postPreapprovedCreditRequest(
         address borrower,

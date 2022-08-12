@@ -9,13 +9,10 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPoolLocker.sol";
 import "./interfaces/IPool.sol";
-import "./interfaces/IReputationTracker.sol";
 import "./PoolLocker.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./PoolLocker.sol";
-import "./ReputationTrackerFactory.sol";
-import "./ReputationTracker.sol";
 
 abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
@@ -71,11 +68,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     uint256 public poolDefaultGracePeriod;
 
-    // reputationTrackerFactory
-    address public reputationTrackerFactory;
-
-    address public reputationTrackerContractAddress;
-
     // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
         uint256 amount;
@@ -92,20 +84,14 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmt);
     event PoolDeployed(address _poolAddress);
 
-    constructor(
-        address _poolToken,
-        address _humaConfig,
-        address _reputationTrackerFactory
-    ) HDT("Huma", "Huma", _poolToken) {
+    constructor(address _poolToken, address _humaConfig)
+        HDT("Huma", "Huma", _poolToken)
+    {
         poolToken = IERC20(_poolToken);
         poolTokenDecimals = ERC20(_poolToken).decimals();
         humaConfig = _humaConfig;
-        reputationTrackerFactory = _reputationTrackerFactory;
         poolDefaultGracePeriod = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
-        reputationTrackerContractAddress = ReputationTrackerFactory(
-            reputationTrackerFactory
-        ).deployReputationTracker("Huma Pool", "HumaRTT");
 
         emit PoolDeployed(address(this));
     }

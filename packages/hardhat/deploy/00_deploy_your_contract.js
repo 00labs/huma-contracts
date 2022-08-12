@@ -47,24 +47,12 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
         deployer
     );
 
-    await deploy("ReputationTrackerFactory", {
-        from: deployer,
-        log: true,
-        waitConfirmations: 5,
-    });
-
-    const ReputationTrackerFactory = await ethers.getContract(
-        "ReputationTrackerFactory",
-        deployer
-    );
-
     // await deploy("HumaInvoiceFactoring", {
     //     from: deployer,
     //     log: true,
     //     args: [
     //         TestToken.address,
     //         HumaConfig.address,
-    //         ReputationTrackerFactory.address,
     //     ],
     //     waitConfirmations: 5,
     // });

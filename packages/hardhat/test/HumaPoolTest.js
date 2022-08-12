@@ -39,12 +39,6 @@ describe("Base Pool - LP and Admin functions", function () {
             "PoolLockerFactory"
         );
         poolLockerFactoryContract = await poolLockerFactory.deploy();
-
-        const ReputationTrackerFactory = await ethers.getContractFactory(
-            "ReputationTrackerFactory"
-        );
-        reputationTrackerFactoryContract =
-            await ReputationTrackerFactory.deploy();
     });
 
     beforeEach(async function () {
@@ -56,8 +50,7 @@ describe("Base Pool - LP and Admin functions", function () {
         );
         poolContract = await BaseCreditPool.deploy(
             testTokenContract.address,
-            humaConfigContract.address,
-            reputationTrackerFactoryContract.address
+            humaConfigContract.address
         );
         await poolContract.deployed();
 
