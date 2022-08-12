@@ -33,9 +33,11 @@ contract BaseCreditPool is ICredit, BasePool {
     mapping(address => BaseStructs.CreditFeeStructure)
         internal creditFeesMapping;
 
-    constructor(address _poolToken, address _humaConfig)
-        BasePool(_poolToken, _humaConfig)
-    {}
+    constructor(
+        address _poolToken,
+        address _humaConfig,
+        address _poolLockerAddr
+    ) BasePool(_poolToken, _humaConfig, _poolLockerAddr) {}
 
     // Apply to borrow from the pool. Borrowing is subject to interest,
     // collateral, and maximum loan requirements as dictated by the pool

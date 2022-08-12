@@ -22,9 +22,11 @@ import "hardhat/console.sol";
 contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
     using BaseStructs for HumaInvoiceFactoring;
 
-    constructor(address _poolToken, address _humaConfig)
-        BaseCreditPool(_poolToken, _humaConfig)
-    {}
+    constructor(
+        address _poolToken,
+        address _humaConfig,
+        address _poolLockerAddr
+    ) BaseCreditPool(_poolToken, _humaConfig, _poolLockerAddr) {}
 
     function postPreapprovedCreditRequest(
         address borrower,

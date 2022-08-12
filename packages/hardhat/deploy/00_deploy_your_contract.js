@@ -68,7 +68,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await deploy("HumaInvoiceFactoring", {
         from: deployer,
         log: true,
-        args: [TestToken.address, HumaConfig.address],
+        args: [
+            TestToken.address,
+            HumaConfig.address,
+            PoolLockerFactory.address,
+        ],
         waitConfirmations: 5,
     });
 
@@ -77,10 +81,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer
     );
 
-    // await HumaPoolFactory.deployNewPool(TestToken.address, 1);
-
-    // const poolAddr = await HumaPoolFactory.pools(0);
-    // const humaPool = await ethers.getContractAt("HumaPool", poolAddr);
     await HumaInvoiceFactoring.enablePool();
     await HumaInvoiceFactoring.addCreditApprover(
         process.env.INITIAL_HUMA_CREDIT_APPROVER
@@ -97,8 +97,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         100
     );
 
-    const poolLocker = await HumaInvoiceFactoring.poolLocker();
-
     await deploy("InvoiceNFT", {
         from: deployer,
         log: true,
@@ -106,11 +104,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     });
 
     await TestToken.give100000To(deployer);
+
     await TestToken.approve(
         HumaInvoiceFactoring.address,
         decimalToExpandedString(100000, poolTokenDecimals)
     );
-    await HumaInvoiceFactoring.deposit(
+
+    await HumaInvoiceFactoring.makeInitialDeposit(
         decimalToExpandedString(100000, poolTokenDecimals)
     );
 

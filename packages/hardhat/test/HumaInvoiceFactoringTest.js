@@ -63,7 +63,8 @@ describe("Huma Invoice Financing", function () {
         );
         invoiceContract = await HumaInvoiceFactoring.deploy(
             testTokenContract.address,
-            humaConfigContract.address
+            humaConfigContract.address,
+            poolLockerFactoryContract.address
         );
         await invoiceContract.deployed();
 
@@ -71,19 +72,19 @@ describe("Huma Invoice Financing", function () {
 
         await invoiceContract.enablePool();
 
-        const tx = await poolLockerFactoryContract.deployNewLocker(
-            invoiceContract.address,
-            testTokenContract.address
-        );
-        const receipt = await tx.wait();
-        let lockerAddress;
-        for (const evt of receipt.events) {
-            if (evt.event === "PoolLockerDeployed") {
-                lockerAddress = evt.args[0];
-            }
-        }
+        // const tx = await poolLockerFactoryContract.deployNewLocker(
+        //     invoiceContract.address,
+        //     testTokenContract.address
+        // );
+        // const receipt = await tx.wait();
+        // let lockerAddress;
+        // for (const evt of receipt.events) {
+        //     if (evt.event === "PoolLockerDeployed") {
+        //         lockerAddress = evt.args[0];
+        //     }
+        // }
 
-        await invoiceContract.connect(owner).setPoolLocker(lockerAddress);
+        // await invoiceContract.connect(owner).setPoolLocker(lockerAddress);
 
         await testTokenContract.approve(invoiceContract.address, 100);
 

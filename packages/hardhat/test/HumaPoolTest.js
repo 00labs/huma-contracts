@@ -50,7 +50,8 @@ describe("Base Pool - LP and Admin functions", function () {
         );
         poolContract = await BaseCreditPool.deploy(
             testTokenContract.address,
-            humaConfigContract.address
+            humaConfigContract.address,
+            poolLockerFactoryContract.address
         );
         await poolContract.deployed();
 
@@ -58,19 +59,19 @@ describe("Base Pool - LP and Admin functions", function () {
 
         await poolContract.enablePool();
 
-        const tx = await poolLockerFactoryContract.deployNewLocker(
-            poolContract.address,
-            testTokenContract.address
-        );
-        const receipt = await tx.wait();
-        let lockerAddress;
-        for (const evt of receipt.events) {
-            if (evt.event === "PoolLockerDeployed") {
-                lockerAddress = evt.args[0];
-            }
-        }
+        // const tx = await poolLockerFactoryContract.deployNewLocker(
+        //     poolContract.address,
+        //     testTokenContract.address
+        // );
+        // const receipt = await tx.wait();
+        // let lockerAddress;
+        // for (const evt of receipt.events) {
+        //     if (evt.event === "PoolLockerDeployed") {
+        //         lockerAddress = evt.args[0];
+        //     }
+        // }
 
-        await poolContract.connect(owner).setPoolLocker(lockerAddress);
+        // await poolContract.connect(owner).setPoolLocker(lockerAddress);
 
         await testTokenContract.approve(poolContract.address, 100);
 

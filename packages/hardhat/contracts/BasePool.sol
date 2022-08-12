@@ -13,6 +13,7 @@ import "./PoolLocker.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./PoolLocker.sol";
+import "./PoolLockerFactory.sol";
 
 abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
@@ -83,13 +84,20 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmt);
     event PoolDeployed(address _poolAddress);
 
-    constructor(address _poolToken, address _humaConfig)
-        HDT("Huma", "Huma", _poolToken)
-    {
+    constructor(
+        address _poolToken,
+        address _humaConfig,
+        address _poolLockerFactory
+    ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
         humaConfig = _humaConfig;
         poolDefaultGracePeriod = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
+
+        poolLockerAddr = PoolLockerFactory(_poolLockerFactory).deployNewLocker(
+            address(this),
+            _poolToken
+        );
 
         emit PoolDeployed(address(this));
     }
