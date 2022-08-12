@@ -86,7 +86,10 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
 
         // todo verify that we have indeeded received the payment.
 
-        uint256 lateFee = assessLateFee(borrower);
+        uint256 lateFee = BaseStructs.assessLateFee(
+            creditFeesMapping[borrower],
+            creditStateMapping[borrower]
+        );
         uint256 refundAmt = amount - cs.remainingPrincipal - lateFee;
 
         // Sends the remainder to the borrower

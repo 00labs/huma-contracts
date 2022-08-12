@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 
 library BaseStructs {
+    uint256 public constant BPS_DIVIDER = 120000;
+
     /**
      * @notice CreditInfo stores the overall info about a loan.
      * @dev amounts are stored in uint32, all counts are stored in uint16
@@ -95,5 +97,26 @@ library BaseStructs {
         console.log("cs.feesDue=", uint256(cs.feesDue));
         console.log("cs.state=", uint256(cs.state));
         console.log("cs.deleted=", cs.deleted);
+    }
+
+    /**
+     * @notice Checks if a late fee should be charged and charges if needed
+     * @return fees the amount of fees charged
+     */
+    function assessLateFee(
+        CreditFeeStructure storage cfs,
+        CreditStatus storage cs
+    ) internal view returns (uint256 fees) {
+        // Charge a late fee if 1) passed the due date and 2) there is no late fee charged
+        // between the due date and the current timestamp.
+        if (
+            block.timestamp > cs.nextDueDate &&
+            cs.lastLateFeeTimestamp < cs.nextDueDate
+        ) {
+            if (cfs.late_fee_flat > 0) fees = cfs.late_fee_flat;
+            if (cfs.late_fee_bps > 0) {
+                fees += (cs.nextAmtDue * cfs.late_fee_bps) / BPS_DIVIDER;
+            }
+        }
     }
 }

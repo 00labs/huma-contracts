@@ -40,7 +40,7 @@ interface ICredit {
 
     function triggerDefault(address borrower) external returns (uint256 losses);
 
-    function assessLateFee(address borrower) external returns (uint256 fees);
+    // function assessLateFee(address borrower) external returns (uint256 fees);
 
     // function assessEarlyPayoffFees(address borrower)
     //     external

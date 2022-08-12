@@ -21,8 +21,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
 
-    uint256 constant POWER18 = 10**18;
-
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
     address internal humaConfig;
@@ -140,8 +138,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     function _deposit(address lender, uint256 amount) internal {
-        uint256 amtInPower18 = _toPower18(amount);
-
         // Update weighted deposit date:
         // prevDate + (now - prevDate) * (amount / (balance + amount))
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
@@ -160,7 +156,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         poolToken.safeTransferFrom(lender, poolLocker, amount);
 
         // Mint HDT for the LP to claim future income and losses
-        _mint(lender, amtInPower18);
+        _mint(lender, amount);
 
         emit LiquidityDeposited(lender, amount);
     }
@@ -187,8 +183,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
             "BasePool:WITHDRAW_AMT_TOO_GREAT"
         );
 
-        uint256 amtInPower18 = _toPower18(amount);
-
         lenderInfo[msg.sender].amount -= amount;
 
         // Calculate the amount that msg.sender can actually withdraw.
@@ -198,7 +192,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         uint256 amountToWithdraw = (withdrawableFundsOf(msg.sender) * amount) /
             balanceOf(msg.sender);
 
-        _burn(msg.sender, amtInPower18);
+        _burn(msg.sender, amount);
 
         //IPoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
         PoolLocker(poolLocker).transfer(msg.sender, amountToWithdraw);
@@ -365,10 +359,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     function getPoolLiquidity() public view returns (uint256) {
         return poolToken.balanceOf(poolLocker);
-    }
-
-    function _toPower18(uint256 amt) internal view returns (uint256) {
-        return (amt * POWER18) / (10**poolTokenDecimals);
     }
 
     // Function to receive Ether. msg.data must be empty

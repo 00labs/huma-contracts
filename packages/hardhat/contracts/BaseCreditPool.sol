@@ -407,39 +407,39 @@ contract BaseCreditPool is ICredit, BasePool {
         //todo to implement
     }
 
-    /**
-     * @notice Checks if a late fee should be charged and charges if needed
-     * @return fees the amount of fees charged
-     */
-    function assessLateFee(address borrower)
-        public
-        virtual
-        override
-        returns (uint256 fees)
-    {
-        BaseStructs.CreditFeeStructure storage cfs = creditFeesMapping[
-            borrower
-        ];
-        BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
+    // /**
+    //  * @notice Checks if a late fee should be charged and charges if needed
+    //  * @return fees the amount of fees charged
+    //  */
+    // function assessLateFee(address borrower)
+    //     public
+    //     virtual
+    //     override
+    //     returns (uint256 fees)
+    // {
+    //     BaseStructs.CreditFeeStructure storage cfs = creditFeesMapping[
+    //         borrower
+    //     ];
+    //     BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
 
-        // Charge a late fee if 1) passed the due date and 2) there is no late fee charged
-        // between the due date and the current timestamp.
+    //     // Charge a late fee if 1) passed the due date and 2) there is no late fee charged
+    //     // between the due date and the current timestamp.
 
-        uint256 newFees;
-        if (
-            block.timestamp > cs.nextDueDate &&
-            cs.lastLateFeeTimestamp < cs.nextDueDate
-        ) {
-            if (cfs.late_fee_flat > 0) newFees = cfs.late_fee_flat;
-            if (cfs.late_fee_bps > 0) {
-                newFees += (cs.nextAmtDue * cfs.late_fee_bps) / BPS_DIVIDER;
-            }
-            cs.feesDue += uint32(newFees);
-            cs.lastLateFeeTimestamp = uint64(block.timestamp);
-            creditStateMapping[borrower] = cs;
-        }
-        return newFees;
-    }
+    //     uint256 newFees;
+    //     if (
+    //         block.timestamp > cs.nextDueDate &&
+    //         cs.lastLateFeeTimestamp < cs.nextDueDate
+    //     ) {
+    //         if (cfs.late_fee_flat > 0) newFees = cfs.late_fee_flat;
+    //         if (cfs.late_fee_bps > 0) {
+    //             newFees += (cs.nextAmtDue * cfs.late_fee_bps) / BPS_DIVIDER;
+    //         }
+    //         cs.feesDue += uint32(newFees);
+    //         cs.lastLateFeeTimestamp = uint64(block.timestamp);
+    //         creditStateMapping[borrower] = cs;
+    //     }
+    //     return newFees;
+    // }
 
     /**
      * @notice Triggers the default process
@@ -557,7 +557,10 @@ contract BaseCreditPool is ICredit, BasePool {
             uint256 dueDate
         )
     {
-        fees = assessLateFee(borrower);
+        fees = BaseStructs.assessLateFee(
+            creditFeesMapping[borrower],
+            creditStateMapping[borrower]
+        );
 
         interest =
             (creditInfoMapping[borrower].loanAmt *
@@ -620,7 +623,10 @@ contract BaseCreditPool is ICredit, BasePool {
         interest =
             (principal * creditFeesMapping[borrower].apr_in_bps) /
             BPS_DIVIDER;
-        fees = assessLateFee(borrower);
+        fees = BaseStructs.assessLateFee(
+            creditFeesMapping[borrower],
+            creditStateMapping[borrower]
+        );
         //fees += (assessEarlyPayoffFees(borrower));
         total = principal + interest + fees;
         return (total, principal, interest, fees, block.timestamp);
