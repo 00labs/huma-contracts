@@ -24,12 +24,6 @@ library BaseStructs {
 
     struct CreditFeeStructure {
         uint16 apr_in_bps; // interest rate in bps
-        uint16 front_loading_fee_flat;
-        uint16 front_loading_fee_bps;
-        uint16 late_fee_flat;
-        uint16 late_fee_bps;
-        uint16 back_loading_fee_flat;
-        uint16 back_loading_fee_bps;
         bool deleted;
     }
 
@@ -78,24 +72,6 @@ library BaseStructs {
         console.log("ci.collateralParam=", ci.collateralParam);
 
         console.log("cfs.apr_in_bps=", uint256(cfs.apr_in_bps));
-        console.log(
-            "cfs.front_loading_fee_flat=",
-            uint256(cfs.front_loading_fee_flat)
-        );
-        console.log(
-            "cfs.front_loading_fee_bps=",
-            uint256(cfs.front_loading_fee_bps)
-        );
-        console.log("cfs.late_fee_flat=", uint256(cfs.late_fee_flat));
-        console.log("cfs.late_fee_bps=", uint256(cfs.late_fee_bps));
-        console.log(
-            "cfs.back_loading_fee_flat=",
-            uint256(cfs.back_loading_fee_flat)
-        );
-        console.log(
-            "cfs.back_loading_fee_bps=",
-            uint256(cfs.back_loading_fee_bps)
-        );
         console.log("cfs.deleted=", cfs.deleted);
 
         console.log("cs.nextDueDate=", uint256(cs.nextDueDate));
@@ -111,26 +87,5 @@ library BaseStructs {
         console.log("cs.feesDue=", uint256(cs.feesDue));
         console.log("cs.state=", uint256(cs.state));
         console.log("cs.deleted=", cs.deleted);
-    }
-
-    /**
-     * @notice Checks if a late fee should be charged and charges if needed
-     * @return fees the amount of fees charged
-     */
-    function assessLateFee(
-        CreditFeeStructure storage cfs,
-        CreditStatus storage cs
-    ) internal view returns (uint256 fees) {
-        // Charge a late fee if 1) passed the due date and 2) there is no late fee charged
-        // between the due date and the current timestamp.
-        if (
-            block.timestamp > cs.nextDueDate &&
-            cs.lastLateFeeTimestamp < cs.nextDueDate
-        ) {
-            if (cfs.late_fee_flat > 0) fees = cfs.late_fee_flat;
-            if (cfs.late_fee_bps > 0) {
-                fees += (cs.nextAmtDue * cfs.late_fee_bps) / BPS_DIVIDER;
-            }
-        }
     }
 }

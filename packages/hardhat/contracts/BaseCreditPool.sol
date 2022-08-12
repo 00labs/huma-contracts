@@ -525,9 +525,11 @@ contract BaseCreditPool is ICredit, BasePool {
             uint256 dueDate
         )
     {
-        fees = BaseStructs.assessLateFee(
-            creditFeesMapping[borrower],
-            creditStateMapping[borrower]
+        fees = IFeeManager(feeManagerAddr).calcLateFee(
+            creditStateMapping[borrower].nextAmtDue,
+            creditStateMapping[borrower].nextDueDate,
+            creditStateMapping[borrower].lastLateFeeTimestamp,
+            creditStateMapping[borrower].paymentInterval
         );
 
         interest =
@@ -591,10 +593,13 @@ contract BaseCreditPool is ICredit, BasePool {
         interest =
             (principal * creditFeesMapping[borrower].apr_in_bps) /
             BPS_DIVIDER;
-        fees = BaseStructs.assessLateFee(
-            creditFeesMapping[borrower],
-            creditStateMapping[borrower]
+        fees = IFeeManager(feeManagerAddr).calcLateFee(
+            creditStateMapping[borrower].nextAmtDue,
+            creditStateMapping[borrower].nextDueDate,
+            creditStateMapping[borrower].lastLateFeeTimestamp,
+            creditStateMapping[borrower].paymentInterval
         );
+
         // todo need to call with the original principal amount
         fees += IFeeManager(feeManagerAddr).calcBackLoandingFee(principal);
         total = principal + interest + fees;
