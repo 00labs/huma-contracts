@@ -321,7 +321,7 @@ describe("Huma Invoice Financing", function () {
         it("Prevent loan funding before approval", async function () {
             // expect(
             //     await invoiceContract.connect(borrower).originateCredit()
-            // ).to.be.revertedWith("HumaPool:CREDIT_NOT_APPROVED");
+            // ).to.be.revertedWith("CREDIT_NOT_APPROVED");
         });
 
         it("Should be able to borrow amount less than approved", async function () {
@@ -528,10 +528,10 @@ describe("Huma Invoice Financing", function () {
     describe("Pre-approved Invoice Factoring Request and Origination", function () {
         // Makes sure there is liquidity in the pool for borrowing
         beforeEach(async function () {
-            await humaPoolContract.connect(lender).deposit(300);
+            await invoiceContract.connect(lender).deposit(300);
             await testTokenContract
                 .connect(borrower)
-                .approve(humaPoolContract.address, 99999);
+                .approve(invoiceContract.address, 99999);
         });
 
         afterEach(async function () {
@@ -542,7 +542,7 @@ describe("Huma Invoice Financing", function () {
             await humaConfigContract.connect(owner).pauseProtocol();
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await expect(
-                humaPoolContract
+                invoiceContract
                     .connect(creditApprover)
                     .originateCreditWithPreapproval(
                         borrower.address,
@@ -552,14 +552,14 @@ describe("Huma Invoice Financing", function () {
                         1,
                         terms
                     )
-            ).to.be.revertedWith("HumaPool:PROTOCOL_PAUSED");
+            ).to.be.revertedWith("PROTOCOL_PAUSED");
         });
 
         it("Should not allow posting pre-approved IF while pool is off", async function () {
-            await humaPoolContract.disablePool();
+            await invoiceContract.disablePool();
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await expect(
-                humaPoolContract
+                invoiceContract
                     .connect(creditApprover)
                     .originateCreditWithPreapproval(
                         borrower.address,
@@ -569,13 +569,13 @@ describe("Huma Invoice Financing", function () {
                         1,
                         terms
                     )
-            ).to.be.revertedWith("HumaPool:POOL_NOT_ON");
+            ).to.be.revertedWith("POOL_NOT_ON");
         });
 
         it("Should only allow approvers to post pre-approved IF", async function () {
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await expect(
-                humaPoolContract
+                invoiceContract
                     .connect(lender)
                     .originateCreditWithPreapproval(
                         borrower.address,
@@ -585,7 +585,7 @@ describe("Huma Invoice Financing", function () {
                         1,
                         terms
                     )
-            ).to.be.revertedWith("HumaPool:ILLEGAL_CREDIT_POSTER");
+            ).to.be.revertedWith("ILLEGAL_CREDIT_POSTER");
         });
 
         // Should deny if there is existing IF.
@@ -593,7 +593,7 @@ describe("Huma Invoice Financing", function () {
         it("Cannot post pre-approved IF with amount lower than limit", async function () {
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await expect(
-                humaPoolContract
+                invoiceContract
                     .connect(creditApprover)
                     .originateCreditWithPreapproval(
                         borrower.address,
@@ -603,13 +603,13 @@ describe("Huma Invoice Financing", function () {
                         1,
                         terms
                     )
-            ).to.be.revertedWith("HumaPool:DENY_BORROW_SMALLER_THAN_LIMIT");
+            ).to.be.revertedWith("SMALLER_THAN_LIMIT");
         });
 
         it("Cannot post pre-approved IF with amount greater than limit", async function () {
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await expect(
-                humaPoolContract
+                invoiceContract
                     .connect(creditApprover)
                     .originateCreditWithPreapproval(
                         borrower.address,
@@ -619,7 +619,7 @@ describe("Huma Invoice Financing", function () {
                         1,
                         terms
                     )
-            ).to.be.revertedWith("HumaPool:DENY_BORROW_GREATER_THAN_LIMIT");
+            ).to.be.revertedWith("GREATER_THAN_LIMIT");
         });
 
         it("Should post pre-approved IF successfully", async function () {
@@ -635,16 +635,16 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceNFTContract
                 .connect(borrower)
-                .approve(humaPoolContract.address, invoiceNFTTokenId);
+                .approve(invoiceContract.address, invoiceNFTTokenId);
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await humaPoolContract.connect(owner).setInterestRateBasis(1200);
+            await invoiceContract.connect(owner).setAPR(1200);
 
             const terms = [0, 10, 100, 20, 100, 30, 1];
-            await humaPoolContract
+            await invoiceContract
                 .connect(creditApprover)
                 .originateCreditWithPreapproval(
                     borrower.address,
@@ -655,16 +655,9 @@ describe("Huma Invoice Financing", function () {
                     terms
                 );
 
-            const loanAddress = await humaPoolContract.creditMapping(
+            const invoiceInfo = await invoiceContract.getCreditInformation(
                 borrower.address
             );
-
-            const invoiceContract = await getInvoiceContractFromAddress(
-                loanAddress,
-                borrower
-            );
-
-            const invoiceInfo = await invoiceContract.getInvoiceInfo();
 
             expect(invoiceInfo._amount).to.equal(400);
 
@@ -676,7 +669,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(treasury.address)
             ).to.equal(2);
 
-            expect(await humaPoolContract.getPoolLiquidity()).to.equal(12);
+            expect(await invoiceContract.getPoolLiquidity()).to.equal(12);
         });
     });
 

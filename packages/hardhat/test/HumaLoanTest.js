@@ -122,7 +122,7 @@ describe("Huma Loan", function () {
         await poolContract.setMinMaxBorrowAmt(10, 1000);
         // set fees (front_fat, front_bps, late_flat, late_bps, back_falt, back_bps)
         await poolContract.setFees(10, 100, 20, 100, 30, 100);
-        await humaPoolContract.enablePool();
+        await poolContract.enablePool();
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
@@ -247,12 +247,12 @@ describe("Huma Loan", function () {
 
                 // Should return false when no loan exists
                 expect(
-                    await humaPoolContract.getApprovalStatusForBorrower(
+                    await poolContract.getApprovalStatusForBorrower(
                         creditApprover.address
                     )
                 ).to.equal(false);
 
-                await humaPoolContract.connect(borrower).originateCredit(200);
+                await poolContract.connect(borrower).originateCredit(200);
 
                 expect(
                     await testTokenContract.balanceOf(borrower.address)
