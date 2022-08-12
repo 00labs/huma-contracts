@@ -392,14 +392,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         );
     }
 
-    function getApprovalStatusForBorrower(
-        address /*borrower*/
-    ) external pure returns (bool) {
-        //return IHumaCredit(creditMapping[borrower]).isApproved();
-        // todo
-        return true;
-    }
-
     // Allow for sensitive pool functions only to be called by
     // the pool owner and the huma master admin
     function onlyOwnerOrHumaMasterAdmin() internal view {

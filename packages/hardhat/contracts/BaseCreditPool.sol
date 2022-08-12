@@ -675,4 +675,14 @@ contract BaseCreditPool is ICredit, BasePool {
         terms[7] = back_loading_fee_flat;
         terms[8] = back_loading_fee_bps;
     }
+
+    function getApprovalStatusForBorrower(address borrower)
+        external
+        view
+        returns (bool)
+    {
+        return
+            creditStateMapping[borrower].state >=
+            BaseStructs.CreditState.Approved;
+    }
 }
