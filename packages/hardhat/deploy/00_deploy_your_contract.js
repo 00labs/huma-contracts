@@ -46,7 +46,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await deploy("BaseFeeManager", {
         from: deployer,
         log: true,
-        args: [treasury.address],
+        args: [],
         waitConfirmations: 5,
     });
 
