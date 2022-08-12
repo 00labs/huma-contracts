@@ -16,6 +16,7 @@ import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
 import "./libraries/BaseStructs.sol";
 import "./interfaces/IFeeManager.sol";
+import "./interfaces/IFeeManager.sol";
 import "./BaseFeeManager.sol";
 
 import "hardhat/console.sol";
@@ -84,6 +85,7 @@ contract BaseCreditPool is ICredit, BasePool {
      *                [0] apr_in_bps
      *                [1] payment_interval, in days
      *                [2] numOfPayments
+     * todo remove dynamic array, need to coordinate with client for that change.
      */
     function initiate(
         address _borrower,
@@ -207,7 +209,7 @@ contract BaseCreditPool is ICredit, BasePool {
             uint256 amtToBorrower,
             uint256 protocolFee,
             uint256 poolIncome
-        ) = calculateFees(borrowAmt);
+        ) = IFeeManager(feeManagerAddr).distBorrowingAmt(borrowAmt, humaConfig);
 
         distributeIncome(poolIncome);
 
@@ -240,34 +242,6 @@ contract BaseCreditPool is ICredit, BasePool {
         PoolLocker locker = PoolLocker(poolLockerAddr);
         locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(borrower, amtToBorrower);
-    }
-
-    function calculateFees(uint256 borrowAmt)
-        internal
-        returns (
-            uint256 amtToBorrower,
-            uint256 protocolFee,
-            uint256 poolIncome
-        )
-    {
-        // Calculate platform fee, which includes protocol fee and pool fee
-        uint256 platformFees = IFeeManager(feeManagerAddr).calcFrontLoadingFee(
-            borrowAmt
-        );
-        console.log("platformFees=", platformFees);
-
-        // Split the fee between treasury and the pool
-        protocolFee =
-            (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmt) /
-            10000;
-
-        assert(platformFees >= protocolFee);
-
-        poolIncome = platformFees - protocolFee;
-
-        amtToBorrower = borrowAmt - platformFees;
-
-        return (amtToBorrower, protocolFee, poolIncome);
     }
 
     /**
@@ -589,15 +563,17 @@ contract BaseCreditPool is ICredit, BasePool {
             uint256 dueDate
         )
     {
-        principal = creditStateMapping[borrower].remainingPrincipal;
+        BaseStructs.CreditStatus memory cs = creditStateMapping[borrower];
+        principal = cs.remainingPrincipal;
         interest =
             (principal * creditFeesMapping[borrower].apr_in_bps) /
             BPS_DIVIDER;
+        // todo
         fees = IFeeManager(feeManagerAddr).calcLateFee(
-            creditStateMapping[borrower].nextAmtDue,
-            creditStateMapping[borrower].nextDueDate,
-            creditStateMapping[borrower].lastLateFeeTimestamp,
-            creditStateMapping[borrower].paymentInterval
+            cs.nextAmtDue,
+            cs.nextDueDate,
+            cs.lastLateFeeTimestamp,
+            cs.paymentInterval
         );
 
         // todo need to call with the original principal amount

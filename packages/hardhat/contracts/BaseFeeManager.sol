@@ -2,6 +2,7 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import "./interfaces/IFeeManager.sol";
+import "./HumaConfig.sol";
 import "hardhat/console.sol";
 
 contract BaseFeeManager is IFeeManager {
@@ -35,7 +36,7 @@ contract BaseFeeManager is IFeeManager {
     }
 
     function calcFrontLoadingFee(uint256 _amount)
-        external
+        public
         virtual
         override
         returns (uint256 fees)
@@ -77,5 +78,32 @@ contract BaseFeeManager is IFeeManager {
         fees = back_loading_fee_flat;
         if (back_loading_fee_bps > 0)
             fees += (_amount * back_loading_fee_bps) / BPS_DIVIDER;
+    }
+
+    function distBorrowingAmt(uint256 borrowAmt, address humaConfig)
+        external
+        virtual
+        override
+        returns (
+            uint256 amtToBorrower,
+            uint256 protocolFee,
+            uint256 poolIncome
+        )
+    {
+        // Calculate platform fee, which includes protocol fee and pool fee
+        uint256 platformFees = calcFrontLoadingFee(borrowAmt);
+
+        // Split the fee between treasury and the pool
+        protocolFee =
+            (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmt) /
+            10000;
+
+        assert(platformFees >= protocolFee);
+
+        poolIncome = platformFees - protocolFee;
+
+        amtToBorrower = borrowAmt - platformFees;
+
+        return (amtToBorrower, protocolFee, poolIncome);
     }
 }

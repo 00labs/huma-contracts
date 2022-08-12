@@ -18,4 +18,12 @@ interface IFeeManager {
     function calcBackLoandingFee(uint256 _amount)
         external
         returns (uint256 fees);
+
+    function distBorrowingAmt(uint256 borrowAmt, address humaConfig)
+        external
+        returns (
+            uint256 amtToBorrower,
+            uint256 protocolFee,
+            uint256 poolIncome
+        );
 }

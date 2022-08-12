@@ -82,7 +82,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // when the protocol is paused.
         // todo add security control to make sure the caller is either borrower or approver
         protoNotPaused();
-        BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
+        BaseStructs.CreditStatus memory cs = creditStateMapping[borrower];
 
         // todo handle multiple payments.
 

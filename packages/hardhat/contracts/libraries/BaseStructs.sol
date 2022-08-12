@@ -23,6 +23,7 @@ library BaseStructs {
     }
 
     struct CreditFeeStructure {
+        // todo, with the removal of the fee fields, the structs need to be reorganized.
         uint16 apr_in_bps; // interest rate in bps
         bool deleted;
     }
