@@ -20,16 +20,16 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
-    address internal humaConfig;
+    address public humaConfig;
 
     // Liquidity holder proxy contract for this pool
     address public poolLockerAddr;
 
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
-    mapping(address => LenderInfo) internal lenderInfo;
+    mapping(address => LenderInfo) public lenderInfo;
 
     // The ERC20 token this pool manages
-    IERC20 public immutable poolToken;
+    IERC20 internal immutable poolToken;
 
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
@@ -38,13 +38,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 internal minBorrowAmt;
 
     // The maximum amount of poolTokens that this pool allows in a single loan
-    uint256 maxBorrowAmt;
+    uint256 internal maxBorrowAmt;
 
     // The interest rate this pool charges for loans
-    uint256 aprInBps;
+    uint256 internal aprInBps;
 
     // The collateral basis percentage required from lenders
-    uint256 collateralRequiredInBps;
+    uint256 internal collateralRequiredInBps;
 
     // Platform fee, charged when a loan is originated
     uint256 front_loading_fee_flat;
