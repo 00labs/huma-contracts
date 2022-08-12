@@ -30,7 +30,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     // The ERC20 token this pool manages
     IERC20 public immutable poolToken;
-    uint256 public immutable poolTokenDecimals;
 
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
@@ -88,7 +87,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         HDT("Huma", "Huma", _poolToken)
     {
         poolToken = IERC20(_poolToken);
-        poolTokenDecimals = ERC20(_poolToken).decimals();
         humaConfig = _humaConfig;
         poolDefaultGracePeriod = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
