@@ -43,6 +43,15 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await HumaConfig.setLiquidityAsset(TestToken.address, true);
     await HumaConfig.setHumaTreasury(treasury.address);
 
+    await deploy("BaseFeeManager", {
+        from: deployer,
+        log: true,
+        args: [treasury.address],
+        waitConfirmations: 5,
+    });
+
+    const BaseFeeManager = await ethers.getContract("BaseFeeManager", deployer);
+
     // await deploy("HumaCreditFactory", {
     //     from: deployer,
     //     log: true,
@@ -72,6 +81,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             TestToken.address,
             HumaConfig.address,
             PoolLockerFactory.address,
+            BaseFeeManager.address,
         ],
         waitConfirmations: 5,
     });

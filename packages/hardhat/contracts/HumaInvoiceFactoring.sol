@@ -25,8 +25,16 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerAddr
-    ) BaseCreditPool(_poolToken, _humaConfig, _poolLockerAddr) {}
+        address _poolLockerAddr,
+        address _feeManagerAddr
+    )
+        BaseCreditPool(
+            _poolToken,
+            _humaConfig,
+            _poolLockerAddr,
+            _feeManagerAddr
+        )
+    {}
 
     function postPreapprovedCreditRequest(
         address borrower,

@@ -20,6 +20,7 @@ describe("Base Pool - LP and Admin functions", function () {
     let humaConfigContract;
     let humaPoolLockerFactoryContract;
     let testTokenContract;
+    let feeManagerContract;
     let owner;
     let lender;
     let borrower;
@@ -34,6 +35,13 @@ describe("Base Pool - LP and Admin functions", function () {
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         humaConfigContract = await HumaConfig.deploy(treasury.address);
         humaConfigContract.setHumaTreasury(treasury.address);
+
+        const feeManagerFactory = await ethers.getContractFactory(
+            "BaseFeeManager"
+        );
+        feeManagerContract = await feeManagerFactory.deploy();
+
+        await feeManagerContract.setFees(10, 100, 20, 100, 30, 100);
 
         const poolLockerFactory = await ethers.getContractFactory(
             "PoolLockerFactory"
@@ -51,7 +59,8 @@ describe("Base Pool - LP and Admin functions", function () {
         poolContract = await BaseCreditPool.deploy(
             testTokenContract.address,
             humaConfigContract.address,
-            poolLockerFactoryContract.address
+            poolLockerFactoryContract.address,
+            feeManagerContract.address
         );
         await poolContract.deployed();
 

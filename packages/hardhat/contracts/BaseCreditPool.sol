@@ -15,6 +15,8 @@ import "./interfaces/IPoolLocker.sol";
 import "./libraries/SafeMathInt.sol";
 import "./libraries/SafeMathUint.sol";
 import "./libraries/BaseStructs.sol";
+import "./interfaces/IFeeManager.sol";
+import "./BaseFeeManager.sol";
 
 import "hardhat/console.sol";
 
@@ -36,8 +38,9 @@ contract BaseCreditPool is ICredit, BasePool {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerAddr
-    ) BasePool(_poolToken, _humaConfig, _poolLockerAddr) {}
+        address _poolLockerAddr,
+        address _feeManagerAddr
+    ) BasePool(_poolToken, _humaConfig, _poolLockerAddr, _feeManagerAddr) {}
 
     // Apply to borrow from the pool. Borrowing is subject to interest,
     // collateral, and maximum loan requirements as dictated by the pool
@@ -79,14 +82,8 @@ contract BaseCreditPool is ICredit, BasePool {
      * @param collateralAmt the amount of the collateral asset
      * @param terms[] the terms for the loan.
      *                [0] apr_in_bps
-     *                [1] front_loading_fee_flat
-     *                [2] front_loading_fee_bps
-     *                [3] late_fee_flat
-     *                [4] late_fee_bps
-     *                [5] payment_interval, in days
-     *                [6] numOfPayments
-     *                [7] back_loading_fee_flat
-     *                [8] back_loading_fee_bps
+     *                [1] payment_interval, in days
+     *                [2] numOfPayments
      */
     function initiate(
         address _borrower,
@@ -96,7 +93,6 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256[] memory terms
     ) public virtual override {
         protoNotPaused();
-        require(terms.length >= 7, "BaseCreditPool:TERMS_INCOMPLETE");
 
         // Populates basic credit info fields
         BaseStructs.CreditInfo memory ci;
@@ -109,16 +105,6 @@ contract BaseCreditPool is ICredit, BasePool {
         // Populates fields related to fee structure
         BaseStructs.CreditFeeStructure memory cfs;
         cfs.apr_in_bps = uint16(terms[0]);
-        cfs.front_loading_fee_flat = uint16(terms[1]);
-        cfs.front_loading_fee_bps = uint16(terms[2]);
-        cfs.late_fee_flat = uint16(terms[3]);
-        cfs.late_fee_bps = uint16(terms[4]);
-        // Add a protection in case the client side does not pass these two fields.
-        // will remove this after integration test.
-        if (terms.length >= 9) {
-            cfs.back_loading_fee_flat = uint16(terms[7]);
-            cfs.back_loading_fee_bps = uint16(terms[8]);
-        }
         creditFeesMapping[_borrower] = cfs;
 
         // Populates key status fields. Fields nextDueDate, nextAmtDue,
@@ -221,7 +207,7 @@ contract BaseCreditPool is ICredit, BasePool {
             uint256 amtToBorrower,
             uint256 protocolFee,
             uint256 poolIncome
-        ) = calculateFees(borrower, borrowAmt);
+        ) = calculateFees(borrowAmt);
 
         distributeIncome(poolIncome);
 
@@ -256,26 +242,19 @@ contract BaseCreditPool is ICredit, BasePool {
         locker.transfer(borrower, amtToBorrower);
     }
 
-    function calculateFees(address borrower, uint256 borrowAmt)
+    function calculateFees(uint256 borrowAmt)
         internal
-        view
         returns (
             uint256 amtToBorrower,
             uint256 protocolFee,
             uint256 poolIncome
         )
     {
-        BaseStructs.CreditFeeStructure memory cfs = creditFeesMapping[borrower];
-
         // Calculate platform fee, which includes protocol fee and pool fee
-        uint256 platformFees;
-        if (cfs.front_loading_fee_flat != 0)
-            platformFees = cfs.front_loading_fee_flat;
-        if (cfs.front_loading_fee_bps != 0)
-            platformFees +=
-                (creditInfoMapping[borrower].loanAmt *
-                    cfs.front_loading_fee_bps) /
-                10000;
+        uint256 platformFees = IFeeManager(feeManagerAddr).calcFrontLoadingFee(
+            borrowAmt
+        );
+        console.log("platformFees=", platformFees);
 
         // Split the fee between treasury and the pool
         protocolFee =
@@ -616,7 +595,8 @@ contract BaseCreditPool is ICredit, BasePool {
             creditFeesMapping[borrower],
             creditStateMapping[borrower]
         );
-        //fees += (assessEarlyPayoffFees(borrower));
+        // todo need to call with the original principal amount
+        fees += IFeeManager(feeManagerAddr).calcBackLoandingFee(principal);
         total = principal + interest + fees;
         return (total, principal, interest, fees, block.timestamp);
     }

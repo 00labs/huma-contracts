@@ -29,6 +29,7 @@ describe("Huma Invoice Financing", function () {
     let poolLockerFactoryContract;
     let testTokenContract;
     let invoiceNFTContract;
+    let feeManagerContract;
     let owner;
     let lender;
     let borrower;
@@ -50,6 +51,13 @@ describe("Huma Invoice Financing", function () {
         );
         poolLockerFactoryContract = await poolLockerFactory.deploy();
 
+        const feeManagerFactory = await ethers.getContractFactory(
+            "BaseFeeManager"
+        );
+        feeManagerContract = await feeManagerFactory.deploy();
+
+        await feeManagerContract.setFees(10, 100, 20, 100, 30, 100);
+
         const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
         invoiceNFTContract = await InvoiceNFT.deploy();
     });
@@ -64,7 +72,8 @@ describe("Huma Invoice Financing", function () {
         invoiceContract = await HumaInvoiceFactoring.deploy(
             testTokenContract.address,
             humaConfigContract.address,
-            poolLockerFactoryContract.address
+            poolLockerFactoryContract.address,
+            feeManagerContract.address
         );
         await invoiceContract.deployed();
 
