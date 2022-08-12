@@ -87,8 +87,9 @@ describe("Base Pool - LP and Admin functions", function () {
 
         await poolContract.setAPR(1200); //bps
         await poolContract.setMinMaxBorrowAmt(10, 1000);
-        // set fees (factoring_fat, factoring_bps, late_flat, late_bps, early_falt, early_bps)
+        // set fees (front_fat, front_bps, late_flat, late_bps, back_falt, back_bps)
         await poolContract.setFees(10, 100, 20, 100, 30, 100);
+        await humaPoolContract.enablePool();
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract

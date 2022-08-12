@@ -30,7 +30,8 @@ interface IHumaCredit {
         uint256 liquidityAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] calldata terms
+        uint256[] calldata terms,
+        bool isPreapproved
     ) external;
 
     /**
