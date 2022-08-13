@@ -1,19 +1,9 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity >=0.8.4 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./interfaces/IPreapprovedCredit.sol";
 
 import "./BaseCreditPool.sol";
-import "./PoolLocker.sol";
-import "./interfaces/ICredit.sol";
-import "./interfaces/IPreapprovedCredit.sol";
-import "./interfaces/IPoolLocker.sol";
-import "./libraries/SafeMathInt.sol";
-import "./libraries/SafeMathUint.sol";
-import "./libraries/BaseStructs.sol";
-
-import "hardhat/console.sol";
 
 /**
  * @notice Invoice Financing
