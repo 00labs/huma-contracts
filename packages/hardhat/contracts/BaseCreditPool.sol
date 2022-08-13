@@ -1,23 +1,14 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity >=0.8.4 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import "./HumaConfig.sol";
-import "./BasePool.sol";
-import "./HDT/HDT.sol";
 import "./interfaces/ICredit.sol";
-import "./interfaces/IPoolLocker.sol";
-import "./libraries/SafeMathInt.sol";
-import "./libraries/SafeMathUint.sol";
+import "./interfaces/IFeeManager.sol";
 import "./libraries/BaseStructs.sol";
-import "./interfaces/IFeeManager.sol";
-import "./interfaces/IFeeManager.sol";
+
 import "./BaseFeeManager.sol";
+import "./BasePool.sol";
 
 import "hardhat/console.sol";
 
