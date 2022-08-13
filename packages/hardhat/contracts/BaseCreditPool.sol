@@ -19,8 +19,7 @@ contract BaseCreditPool is ICredit, BasePool {
     uint256 public constant SECONDS_IN_A_DAY = 86400;
 
     using SafeERC20 for IERC20;
-    using ERC165Checker for IERC20;
-    using ERC165Checker for IERC721;
+    using ERC165Checker for address;
     using BaseStructs for BaseCreditPool;
 
     // mapping from wallet address to the credit record
@@ -218,25 +217,23 @@ contract BaseCreditPool is ICredit, BasePool {
         // //CRITICAL: Asset transfers
         // // Transfers collateral asset
         if (_collateralAsset != address(0)) {
-            // todo not sure why compiler compalined about supportsInterface.
-            // Need to look into it and uncomment to support both ERc721 and ERC20.
-            //if (_collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
+            if (_collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
             IERC721(_collateralAsset).safeTransferFrom(
                 _borrower,
                 poolLockerAddr,
                 _collateralParam
             );
-            // } else if (
-            //     _collateralAsset.supportsInterface(type(IERC20).interfaceId)
-            // ) {
-            //     IERC20(_collateralAsset).safeTransferFrom(
-            //         msg.sender,
-            //         poolLocker,
-            //         _collateralCount
-            //     );
-            // } else {
-            //     revert("COLLATERAL_ASSET_NOT_SUPPORTED");
-            // }
+            } else if (
+                _collateralAsset.supportsInterface(type(IERC20).interfaceId)
+            ) {
+                IERC20(_collateralAsset).safeTransferFrom(
+                    msg.sender,
+                    poolLockerAddr,
+                    _collateralCount
+                );
+            } else {
+                revert("COLLATERAL_ASSET_NOT_SUPPORTED");
+            }
         }
 
         // Transfer protocole fee and funds the _borrower
