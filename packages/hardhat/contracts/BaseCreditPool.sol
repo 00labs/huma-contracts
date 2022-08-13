@@ -75,7 +75,7 @@ contract BaseCreditPool is ICredit, BasePool {
             _borrowAmt,
             address(0),
             0,
-            aprInBps,
+            poolAprInBps,
             _paymentIntervalInDays,
             _numOfPayments
         );
@@ -104,7 +104,7 @@ contract BaseCreditPool is ICredit, BasePool {
         BaseStructs.CreditRecord memory cr;
         cr.loanAmt = uint96(liquidityAmt);
         cr.remainingPrincipal = uint96(liquidityAmt);
-        require(_aprInBps >= aprInBps, "APR_LOWER_THAN_POOL_REQUIREMENT");
+        require(_aprInBps >= poolAprInBps, "APR_LOWER_THAN_POOL_REQUIREMENT");
         cr.aprInBps = uint16(_aprInBps);
         cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
         cr.remainingPayments = uint16(_remainingPayments);
