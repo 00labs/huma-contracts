@@ -51,7 +51,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
 
         // Borrowers must not have existing loans from this pool
         require(
-            creditStateMapping[msg.sender].state ==
+            creditRecordMapping[msg.sender].state ==
                 BaseStructs.CreditState.Deleted,
             "HumaIF:DENY_EXISTING_LOAN"
         );
@@ -82,28 +82,28 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // when the protocol is paused.
         // todo add security control to make sure the caller is either borrower or approver
         protoNotPaused();
-        BaseStructs.CreditStatus memory cs = creditStateMapping[borrower];
+        BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
 
         // todo handle multiple payments.
 
         require(asset == address(poolToken), "HumaIF:WRONG_ASSET");
 
         // todo decide what to do if the payment amount is insufficient.
-        require(amount >= cs.remainingPrincipal, "HumaIF:AMOUNT_TOO_LOW");
+        require(amount >= cr.remainingPrincipal, "HumaIF:AMOUNT_TOO_LOW");
 
         // todo verify that we have indeeded received the payment.
 
         uint256 lateFee = IFeeManager(feeManagerAddr).calcLateFee(
-            cs.nextAmtDue,
-            cs.nextDueDate,
-            cs.lastLateFeeTimestamp,
-            cs.paymentInterval
+            cr.nextAmtDue,
+            cr.nextDueDate,
+            lastLateFeeDateMapping[borrower],
+            cr.paymentIntervalInDays
         );
-        uint256 refundAmt = amount - cs.remainingPrincipal - lateFee;
+        uint256 refundAmt = amount - cr.remainingPrincipal - lateFee;
 
         // Sends the remainder to the borrower
-        cs.remainingPrincipal = 0;
-        cs.remainingPayments = 0;
+        cr.remainingPrincipal = 0;
+        cr.remainingPayments = 0;
 
         processRefund(borrower, refundAmt);
 
