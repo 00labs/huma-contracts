@@ -67,15 +67,15 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
-    uint256 public withdrawalLockoutPeriod = 2630000;
+    uint256 public constant SECONDS_IN_180_DAYS = 15552000;
+    uint256 public withdrawalLockoutPeriod = SECONDS_IN_180_DAYS;
 
     uint256 public poolDefaultGracePeriod;
 
-    // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
-        uint256 amount;
-        uint256 weightedDepositDate; // weighted average deposit date
-        uint256 mostRecentLoanTimestamp;
+        uint96 amount;
+        uint64 mostRecentLoanTimestamp;
+        bool deleted;
     }
 
     enum PoolStatus {
@@ -139,17 +139,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         // Update weighted deposit date:
         // prevDate + (now - prevDate) * (amount / (balance + amount))
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
-        uint256 prevDate = lenderInfo[lender].weightedDepositDate;
-        uint256 balance = lenderInfo[lender].amount;
+        LenderInfo memory li = lenderInfo[lender];
 
-        uint256 newDate = (balance + amount) > 0
-            ? prevDate +
-                (((block.timestamp - prevDate) * amount) / (balance + amount))
-            : prevDate;
+        li.amount += uint96(amount);
+        li.mostRecentLoanTimestamp = uint64(block.timestamp);
 
-        lenderInfo[lender].weightedDepositDate = newDate;
-        lenderInfo[lender].amount += amount;
-        lenderInfo[lender].mostRecentLoanTimestamp = block.timestamp;
+        lenderInfo[lender] = li;
 
         poolToken.safeTransferFrom(lender, poolLockerAddr, amount);
 
@@ -181,7 +176,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
             "BasePool:WITHDRAW_AMT_TOO_GREAT"
         );
 
-        lenderInfo[msg.sender].amount -= amount;
+        lenderInfo[msg.sender].amount -= uint96(amount);
 
         // Calculate the amount that msg.sender can actually withdraw.
         // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
