@@ -165,18 +165,20 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      */
     function withdraw(uint256 amount) public virtual override {
         poolOn();
+        LenderInfo memory li = lenderInfo[msg.sender];
         require(
             block.timestamp >=
-                lenderInfo[msg.sender].mostRecentLoanTimestamp +
-                    withdrawalLockoutPeriod,
+                uint256(li.mostRecentLoanTimestamp) + withdrawalLockoutPeriod,
             "BasePool:WITHDRAW_TOO_SOON"
         );
         require(
-            amount <= lenderInfo[msg.sender].amount,
+            amount <= uint256(li.amount),
             "BasePool:WITHDRAW_AMT_TOO_GREAT"
         );
 
-        lenderInfo[msg.sender].amount -= uint96(amount);
+        li.amount = uint96(uint256(li.amount) - amount);
+
+        lenderInfo[msg.sender] = li;
 
         // Calculate the amount that msg.sender can actually withdraw.
         // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
