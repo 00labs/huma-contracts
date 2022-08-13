@@ -1,19 +1,9 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity >=0.8.4 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./interfaces/IPreapprovedCredit.sol";
 
 import "./BaseCreditPool.sol";
-import "./PoolLocker.sol";
-import "./interfaces/ICredit.sol";
-import "./interfaces/IPreapprovedCredit.sol";
-import "./interfaces/IPoolLocker.sol";
-import "./libraries/SafeMathInt.sol";
-import "./libraries/SafeMathUint.sol";
-import "./libraries/BaseStructs.sol";
-
-import "hardhat/console.sol";
 
 /**
  * @notice Invoice Financing
@@ -41,7 +31,8 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 borrowAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) public virtual override {
         poolOn();
         require(
@@ -51,7 +42,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
 
         // Borrowers must not have existing loans from this pool
         require(
-            creditStateMapping[msg.sender].state ==
+            creditRecordMapping[msg.sender].state ==
                 BaseStructs.CreditState.Deleted,
             "HumaIF:DENY_EXISTING_LOAN"
         );
@@ -62,7 +53,15 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // Borrowing amount needs to be lower than max for the pool.
         require(maxBorrowAmt >= borrowAmt, "HumaIF:GREATER_THAN_LIMIT");
 
-        initiate(borrower, borrowAmt, collateralAsset, collateralAmt, terms);
+        initiate(
+            borrower,
+            borrowAmt,
+            collateralAsset,
+            collateralAmt,
+            poolAprInBps,
+            _paymentIntervalInDays,
+            _remainingPayments
+        );
         approveCredit(borrower);
     }
 
@@ -82,28 +81,28 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // when the protocol is paused.
         // todo add security control to make sure the caller is either borrower or approver
         protoNotPaused();
-        BaseStructs.CreditStatus memory cs = creditStateMapping[borrower];
+        BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
 
         // todo handle multiple payments.
 
         require(asset == address(poolToken), "HumaIF:WRONG_ASSET");
 
         // todo decide what to do if the payment amount is insufficient.
-        require(amount >= cs.remainingPrincipal, "HumaIF:AMOUNT_TOO_LOW");
+        require(amount >= cr.remainingPrincipal, "HumaIF:AMOUNT_TOO_LOW");
 
         // todo verify that we have indeeded received the payment.
 
         uint256 lateFee = IFeeManager(feeManagerAddr).calcLateFee(
-            cs.nextAmtDue,
-            cs.nextDueDate,
-            cs.lastLateFeeTimestamp,
-            cs.paymentInterval
+            cr.nextAmtDue,
+            cr.nextDueDate,
+            lastLateFeeDateMapping[borrower],
+            cr.paymentIntervalInDays
         );
-        uint256 refundAmt = amount - cs.remainingPrincipal - lateFee;
+        uint256 refundAmt = amount - cr.remainingPrincipal - lateFee;
 
         // Sends the remainder to the borrower
-        cs.remainingPrincipal = 0;
-        cs.remainingPayments = 0;
+        cr.remainingPrincipal = 0;
+        cr.remainingPayments = 0;
 
         processRefund(borrower, refundAmt);
 
@@ -126,14 +125,16 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         address collateralAsset,
         uint256 collateralParam,
         uint256 collateralAmount,
-        uint256[] memory terms
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) external {
         postPreapprovedCreditRequest(
             borrower,
             borrowAmt,
             collateralAsset,
             collateralAmount,
-            terms
+            _paymentIntervalInDays,
+            _remainingPayments
         );
 
         originateCreditWithCollateral(

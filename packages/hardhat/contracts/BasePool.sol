@@ -1,19 +1,21 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity >=0.8.4 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import "./interfaces/ILiquidityProvider.sol";
-import "./interfaces/IPoolLocker.sol";
 import "./interfaces/IPool.sol";
-import "./PoolLocker.sol";
-import "./HDT/HDT.sol";
+import "./interfaces/IPoolLocker.sol";
+
 import "./HumaConfig.sol";
 import "./PoolLocker.sol";
 import "./PoolLockerFactory.sol";
+import "./HDT/HDT.sol";
+
+import "hardhat/console.sol";
 
 abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
@@ -45,7 +47,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 internal maxBorrowAmt;
 
     // The interest rate this pool charges for loans
-    uint256 internal aprInBps;
+    uint256 internal poolAprInBps;
 
     // The collateral basis percentage required from lenders
     uint256 internal collateralRequiredInBps;
@@ -67,15 +69,15 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
-    uint256 public withdrawalLockoutPeriod = 2630000;
+    uint256 public constant SECONDS_IN_180_DAYS = 15552000;
+    uint256 public withdrawalLockoutPeriod = SECONDS_IN_180_DAYS;
 
     uint256 public poolDefaultGracePeriod;
 
-    // todo (by RL) Need to use uint32 and uint48 for diff fields to take advantage of packing
     struct LenderInfo {
-        uint256 amount;
-        uint256 weightedDepositDate; // weighted average deposit date
-        uint256 mostRecentLoanTimestamp;
+        uint96 amount;
+        uint64 mostRecentLoanTimestamp;
+        bool deleted;
     }
 
     enum PoolStatus {
@@ -139,17 +141,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         // Update weighted deposit date:
         // prevDate + (now - prevDate) * (amount / (balance + amount))
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
-        uint256 prevDate = lenderInfo[lender].weightedDepositDate;
-        uint256 balance = lenderInfo[lender].amount;
+        LenderInfo memory li = lenderInfo[lender];
 
-        uint256 newDate = (balance + amount) > 0
-            ? prevDate +
-                (((block.timestamp - prevDate) * amount) / (balance + amount))
-            : prevDate;
+        li.amount += uint96(amount);
+        li.mostRecentLoanTimestamp = uint64(block.timestamp);
 
-        lenderInfo[lender].weightedDepositDate = newDate;
-        lenderInfo[lender].amount += amount;
-        lenderInfo[lender].mostRecentLoanTimestamp = block.timestamp;
+        lenderInfo[lender] = li;
 
         poolToken.safeTransferFrom(lender, poolLockerAddr, amount);
 
@@ -170,18 +167,20 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      */
     function withdraw(uint256 amount) public virtual override {
         poolOn();
+        LenderInfo memory li = lenderInfo[msg.sender];
         require(
             block.timestamp >=
-                lenderInfo[msg.sender].mostRecentLoanTimestamp +
-                    withdrawalLockoutPeriod,
+                uint256(li.mostRecentLoanTimestamp) + withdrawalLockoutPeriod,
             "BasePool:WITHDRAW_TOO_SOON"
         );
         require(
-            amount <= lenderInfo[msg.sender].amount,
+            amount <= uint256(li.amount),
             "BasePool:WITHDRAW_AMT_TOO_GREAT"
         );
 
-        lenderInfo[msg.sender].amount -= amount;
+        li.amount = uint96(uint256(li.amount) - amount);
+
+        lenderInfo[msg.sender] = li;
 
         // Calculate the amount that msg.sender can actually withdraw.
         // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
@@ -220,7 +219,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     function setAPR(uint256 _aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(_aprInBps >= 0 && _aprInBps <= 10000, "BasePool:INVALID_APR");
-        aprInBps = _aprInBps;
+        poolAprInBps = _aprInBps;
     }
 
     function setCollateralRequiredInBps(uint256 _collateralInBps)
@@ -369,7 +368,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         ERC20 erc20Contract = ERC20(address(poolToken));
         return (
             address(poolToken),
-            aprInBps,
+            poolAprInBps,
             minBorrowAmt,
             maxBorrowAmt,
             liquidityCap,
@@ -396,7 +395,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         )
     {
         return (
-            aprInBps,
+            poolAprInBps,
             front_loading_fee_flat,
             front_loading_fee_bps,
             late_fee_flat,

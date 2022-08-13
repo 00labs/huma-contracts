@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity >=0.8.4 <0.9.0;
 
 interface ICredit {
     function initiate(
@@ -7,7 +7,9 @@ interface ICredit {
         uint256 liquidityAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256 _aprInBps,
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) external;
 
     function approveCredit(address borrower) external;

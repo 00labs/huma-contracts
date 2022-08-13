@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0 <0.9.0;
+pragma solidity >=0.8.4 <0.9.0;
 
 interface IPreapprovedCredit {
     function postPreapprovedCreditRequest(
@@ -7,6 +7,7 @@ interface IPreapprovedCredit {
         uint256 borrowAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) external;
 }

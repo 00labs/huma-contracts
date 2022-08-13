@@ -1,12 +1,9 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./interfaces/IHDT.sol";
-import "../libraries/SafeMathInt.sol";
-import "../libraries/SafeMathUint.sol";
 import "hardhat/console.sol";
 
 /**
@@ -14,9 +11,6 @@ import "hardhat/console.sol";
  * @notice HDT tracks the principal, earnings and losses associated with a token.
  */
 contract HDT is IHDT, ERC20 {
-    using SafeMath for uint256;
-    using SafeMathInt for int256;
-    using SafeMathUint for uint256;
     using SafeERC20 for IERC20;
 
     // optimize, see https://github.com/ethereum/EIPs/issues/1726#issuecomment-472352728
@@ -69,9 +63,10 @@ contract HDT is IHDT, ERC20 {
         require(totalSupply() > 0, "HDT:SUPPLY_IS_ZERO");
 
         if (value > 0) {
-            pointsPerShare = pointsPerShare.add(
-                value.mul(pointsMultiplier) / totalSupply()
-            );
+            pointsPerShare =
+                pointsPerShare +
+                (value * pointsMultiplier) /
+                totalSupply();
 
             emit IncomeDistributed(msg.sender, value);
         }
@@ -88,9 +83,10 @@ contract HDT is IHDT, ERC20 {
         require(totalSupply() > 0, "HDT:SUPPLY_IS_ZERO");
 
         if (value > 0) {
-            pointsPerShare = pointsPerShare.sub(
-                value.mul(pointsMultiplier) / totalSupply()
-            );
+            pointsPerShare =
+                pointsPerShare -
+                (value * pointsMultiplier) /
+                totalSupply();
             emit LossesDistributed(msg.sender, value);
         }
     }
@@ -99,7 +95,7 @@ contract HDT is IHDT, ERC20 {
      * @dev Withdraws all available funds for a token holder.
      */
     function reportWithdrawn(uint256 amount) external virtual override {
-        withdrawnFunds[msg.sender] = withdrawnFunds[msg.sender].add(amount);
+        withdrawnFunds[msg.sender] = withdrawnFunds[msg.sender] + amount;
     }
 
     /**
@@ -114,7 +110,7 @@ contract HDT is IHDT, ERC20 {
         override
         returns (uint256)
     {
-        return accumulativeFundsOf(_owner).sub(withdrawnFunds[_owner]);
+        return accumulativeFundsOf(_owner) - (withdrawnFunds[_owner]);
     }
 
     /**
@@ -140,11 +136,10 @@ contract HDT is IHDT, ERC20 {
         returns (uint256)
     {
         return
-            pointsPerShare
-                .mul(balanceOf(_owner))
-                .toInt256Safe()
-                .add(pointsCorrection[_owner])
-                .toUint256Safe() / pointsMultiplier;
+            uint256(
+                int256(pointsPerShare * balanceOf(_owner)) +
+                    (pointsCorrection[_owner])
+            ) / pointsMultiplier;
     }
 
     // *****************************
@@ -164,9 +159,9 @@ contract HDT is IHDT, ERC20 {
     ) internal virtual override {
         super._transfer(from, to, value);
 
-        int256 _magCorrection = pointsPerShare.mul(value).toInt256Safe();
-        pointsCorrection[from] = pointsCorrection[from].add(_magCorrection);
-        pointsCorrection[to] = pointsCorrection[to].sub(_magCorrection);
+        int256 _magCorrection = int256(pointsPerShare * value);
+        pointsCorrection[from] = pointsCorrection[from] + _magCorrection;
+        pointsCorrection[to] = pointsCorrection[to] - _magCorrection;
     }
 
     /**
@@ -178,9 +173,9 @@ contract HDT is IHDT, ERC20 {
     function _mint(address account, uint256 value) internal virtual override {
         super._mint(account, value);
 
-        pointsCorrection[account] = pointsCorrection[account].sub(
-            ((pointsPerShare.sub(pointsMultiplier)).mul(value)).toInt256Safe()
-        );
+        pointsCorrection[account] =
+            pointsCorrection[account] -
+            int256((pointsPerShare - pointsMultiplier) * value);
     }
 
     /**
@@ -192,8 +187,8 @@ contract HDT is IHDT, ERC20 {
     function _burn(address account, uint256 value) internal virtual override {
         super._burn(account, value);
 
-        pointsCorrection[account] = pointsCorrection[account].add(
-            (pointsPerShare.mul(value)).toInt256Safe()
-        );
+        pointsCorrection[account] =
+            pointsCorrection[account] +
+            int256(pointsPerShare * value);
     }
 }
