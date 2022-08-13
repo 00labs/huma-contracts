@@ -26,6 +26,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // Liquidity holder proxy contract for this pool
     address public poolLockerAddr;
 
+    // Address for the fee manager contract
+    address public feeManagerAddr;
+
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => LenderInfo) public lenderInfo;
 
@@ -87,10 +90,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerFactory
+        address _poolLockerFactory,
+        address _feeManager
     ) HDT("Huma", "Huma", _poolToken) {
         poolToken = IERC20(_poolToken);
         humaConfig = _humaConfig;
+        feeManagerAddr = _feeManager;
+
         poolDefaultGracePeriod = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
 

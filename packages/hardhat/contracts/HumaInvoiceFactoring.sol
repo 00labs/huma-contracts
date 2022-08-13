@@ -25,8 +25,16 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerAddr
-    ) BaseCreditPool(_poolToken, _humaConfig, _poolLockerAddr) {}
+        address _poolLockerAddr,
+        address _feeManagerAddr
+    )
+        BaseCreditPool(
+            _poolToken,
+            _humaConfig,
+            _poolLockerAddr,
+            _feeManagerAddr
+        )
+    {}
 
     function postPreapprovedCreditRequest(
         address borrower,
@@ -74,7 +82,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // when the protocol is paused.
         // todo add security control to make sure the caller is either borrower or approver
         protoNotPaused();
-        BaseStructs.CreditStatus storage cs = creditStateMapping[borrower];
+        BaseStructs.CreditStatus memory cs = creditStateMapping[borrower];
 
         // todo handle multiple payments.
 
@@ -85,9 +93,11 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
 
         // todo verify that we have indeeded received the payment.
 
-        uint256 lateFee = BaseStructs.assessLateFee(
-            creditFeesMapping[borrower],
-            creditStateMapping[borrower]
+        uint256 lateFee = IFeeManager(feeManagerAddr).calcLateFee(
+            cs.nextAmtDue,
+            cs.nextDueDate,
+            cs.lastLateFeeTimestamp,
+            cs.paymentInterval
         );
         uint256 refundAmt = amount - cs.remainingPrincipal - lateFee;
 
