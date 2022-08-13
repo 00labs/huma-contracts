@@ -4,7 +4,7 @@ import "hardhat/console.sol";
 
 library BaseStructs {
     /**
-     * @notice CreditInfo stores the overall info and status about a credit originated.
+     * @notice CreditRecord stores the overall info and status about a credit originated.
      * @dev amounts are stored in uint96, all counts are stored in uint16
      * @dev each struct can have no more than 13 elements.
      */
@@ -13,10 +13,10 @@ library BaseStructs {
         uint96 loanAmt;
         uint96 nextAmtDue;
         uint64 nextDueDate;
-        uint96 remainingPrincipal; // remaining principal balance
+        uint96 remainingPrincipal;
         uint96 feesAccrued;
-        uint16 paymentIntervalInDays; // in days
-        uint16 aprInBps; // interest rate in bps
+        uint16 paymentIntervalInDays;
+        uint16 aprInBps;
         uint16 remainingPayments;
         CreditState state;
         bool deleted;
