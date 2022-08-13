@@ -26,8 +26,7 @@ contract BaseCreditPool is ICredit, BasePool {
     uint256 public constant BPS_DIVIDER = 120000;
 
     using SafeERC20 for IERC20;
-    using ERC165Checker for IERC20;
-    using ERC165Checker for IERC721;
+    using ERC165Checker for address;
     using BaseStructs for BaseCreditPool;
 
     // The primary mapping of the status of the credit.
@@ -218,23 +217,23 @@ contract BaseCreditPool is ICredit, BasePool {
         if (collateralAsset != address(0)) {
             // todo not sure why compiler compalined about supportsInterface.
             // Need to look into it and uncomment to support both ERc721 and ERC20.
-            //if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
-            IERC721(collateralAsset).safeTransferFrom(
-                borrower,
-                poolLockerAddr,
-                collateralParam
-            );
-            // } else if (
-            //     collateralAsset.supportsInterface(type(IERC20).interfaceId)
-            // ) {
-            //     IERC20(collateralAsset).safeTransferFrom(
-            //         msg.sender,
-            //         poolLocker,
-            //         collateralCount
-            //     );
-            // } else {
-            //     revert("BaseCreditPool:COLLATERAL_ASSET_NOT_SUPPORTED");
-            // }
+            if (collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
+                IERC721(collateralAsset).safeTransferFrom(
+                    borrower,
+                    poolLockerAddr,
+                    collateralParam
+                );
+            } else if (
+                collateralAsset.supportsInterface(type(IERC20).interfaceId)
+            ) {
+                IERC20(collateralAsset).safeTransferFrom(
+                    msg.sender,
+                    poolLockerAddr,
+                    collateralCount
+                );
+            } else {
+                revert("BaseCreditPool:COLLATERAL_ASSET_NOT_SUPPORTED");
+            }
         }
 
         // Transfer protocole fee and funds the borrower
