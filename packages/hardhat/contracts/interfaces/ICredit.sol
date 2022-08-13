@@ -7,7 +7,9 @@ interface ICredit {
         uint256 liquidityAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256 _aprInBps,
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) external;
 
     function approveCredit(address borrower) external;

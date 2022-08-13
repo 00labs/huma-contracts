@@ -7,6 +7,7 @@ interface IPreapprovedCredit {
         uint256 borrowAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) external;
 }

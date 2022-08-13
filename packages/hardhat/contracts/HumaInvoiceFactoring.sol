@@ -41,7 +41,8 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 borrowAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) public virtual override {
         poolOn();
         require(
@@ -62,7 +63,15 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // Borrowing amount needs to be lower than max for the pool.
         require(maxBorrowAmt >= borrowAmt, "HumaIF:GREATER_THAN_LIMIT");
 
-        initiate(borrower, borrowAmt, collateralAsset, collateralAmt, terms);
+        initiate(
+            borrower,
+            borrowAmt,
+            collateralAsset,
+            collateralAmt,
+            aprInBps,
+            _paymentIntervalInDays,
+            _remainingPayments
+        );
         approveCredit(borrower);
     }
 
@@ -126,14 +135,16 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         address collateralAsset,
         uint256 collateralParam,
         uint256 collateralAmount,
-        uint256[] memory terms
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) external {
         postPreapprovedCreditRequest(
             borrower,
             borrowAmt,
             collateralAsset,
             collateralAmount,
-            terms
+            _paymentIntervalInDays,
+            _remainingPayments
         );
 
         originateCreditWithCollateral(
