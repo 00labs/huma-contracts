@@ -577,7 +577,7 @@ contract BaseCreditPool is ICredit, BasePool {
         );
 
         // todo need to call with the original principal amount
-        fees += IFeeManager(feeManagerAddr).calcBackLoandingFee(principal);
+        fees += IFeeManager(feeManagerAddr).calcBackLoadingFee(principal);
         total = principal + interest + fees;
         return (total, principal, interest, fees, block.timestamp);
     }

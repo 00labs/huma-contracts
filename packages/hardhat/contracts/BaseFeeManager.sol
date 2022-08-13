@@ -69,7 +69,7 @@ contract BaseFeeManager is IFeeManager {
         }
     }
 
-    function calcBackLoandingFee(uint256 _amount)
+    function calcBackLoadingFee(uint256 _amount)
         external
         virtual
         override

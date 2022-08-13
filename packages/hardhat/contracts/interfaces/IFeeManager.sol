@@ -15,7 +15,7 @@ interface IFeeManager {
         uint256 _paymentInterval
     ) external returns (uint256 fees);
 
-    function calcBackLoandingFee(uint256 _amount)
+    function calcBackLoadingFee(uint256 _amount)
         external
         returns (uint256 fees);
 
