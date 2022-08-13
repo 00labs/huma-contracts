@@ -108,7 +108,7 @@ describe("Huma Invoice Financing", function () {
 
         await invoiceContract.addCreditApprover(creditApprover.address);
 
-        await invoiceContract.setAPR(1200); //bps
+        await invoiceContract.setAPR(0); //bps
         await invoiceContract.setMinMaxBorrowAmt(10, 1000);
         // set fees (factoring_fat, factoring_bps, late_flat, late_bps, early_falt, early_bps)
         await invoiceContract.setFees(10, 100, 20, 100, 30, 100);
@@ -226,7 +226,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(1200);
+            await invoiceContract.connect(owner).setAPR(0);
 
             const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await invoiceContract
@@ -243,9 +243,9 @@ describe("Huma Invoice Financing", function () {
                 borrower.address
             );
 
-            expect(creditInfo._amount).to.equal(400);
-            expect(creditInfo._remainingPrincipal).to.equal(400);
-            expect(creditInfo._remainingPayments).to.equal(1);
+            expect(creditInfo.loanAmt).to.equal(400);
+            expect(creditInfo.remainingPrincipal).to.equal(400);
+            expect(creditInfo.remainingPayments).to.equal(1);
         });
     });
 
@@ -259,7 +259,7 @@ describe("Huma Invoice Financing", function () {
         // });
 
         it("Should allow credit approver to invalidate an approved invoice factoring record", async function () {
-            await invoiceContract.connect(owner).setAPR(1200);
+            await invoiceContract.connect(owner).setAPR(0);
 
             const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await invoiceContract
@@ -281,7 +281,7 @@ describe("Huma Invoice Financing", function () {
                 borrower.address
             );
 
-            expect(creditInfo._deleted).to.equal(true);
+            expect(creditInfo.deleted).to.equal(true);
         });
     });
 
@@ -505,7 +505,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(1200);
+            await invoiceContract.connect(owner).setAPR(0);
 
             const terms = [0, 10, 100, 20, 100, 30, 1, 30, 100];
             await invoiceContract
@@ -651,7 +651,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(1200);
+            await invoiceContract.connect(owner).setAPR(0);
 
             const terms = [0, 10, 100, 20, 100, 30, 1];
             await invoiceContract
@@ -669,7 +669,7 @@ describe("Huma Invoice Financing", function () {
                 borrower.address
             );
 
-            expect(invoiceInfo._amount).to.equal(400);
+            expect(invoiceInfo.loanAmt).to.equal(400);
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
@@ -803,7 +803,7 @@ describe("Huma Invoice Financing", function () {
                 borrower.address
             );
             let gracePeriod = await invoiceContract.poolDefaultGracePeriod();
-            let dueDate = creditInfo._nextDueDate;
+            let dueDate = creditInfo.nextDueDate;
             let current = Date.now();
 
             let timeNeeded = dueDate + gracePeriod - current;

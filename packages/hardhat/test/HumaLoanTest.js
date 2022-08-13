@@ -215,10 +215,9 @@ describe("Huma Loan", function () {
             const loanInformation = await poolContract.getCreditInformation(
                 borrower.address
             );
-            expect(loanInformation._amount).to.equal(400);
-            expect(loanInformation._paybackPerInterval).to.equal(0);
-            expect(loanInformation._paybackInterval).to.equal(30);
-            expect(loanInformation._interestRateBasis).to.equal(1200);
+            expect(loanInformation.loanAmt).to.equal(400);
+            expect(loanInformation.paymentIntervalInDays).to.equal(30);
+            expect(loanInformation.aprInBps).to.equal(1200);
         });
 
         describe("Loan Funding", function () {
@@ -351,8 +350,8 @@ describe("Huma Loan", function () {
                     borrower.address
                 );
 
-                expect(creditInfo._remainingPayments).to.equal(11);
-                expect(creditInfo._remainingPrincipal).to.equal(399);
+                expect(creditInfo.remainingPrincipal).to.equal(399);
+                expect(creditInfo.remainingPayments).to.equal(11);
             });
 
             // Default flow. Designed to include one payment successfully followed by a default.

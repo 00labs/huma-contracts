@@ -3,46 +3,36 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 
 library BaseStructs {
-    uint256 public constant BPS_DIVIDER = 120000;
-
     /**
-     * @notice CreditInfo stores the overall info about a loan.
-     * @dev amounts are stored in uint32, all counts are stored in uint16
-     * @dev all fields in CreditInfo will not change after initialization.
-     * @dev each struct can have no more than 13 elements. Some fields
-     * are stored in CreditStatus because of space limitation.
+     * @notice CreditRecord stores the overall info and status about a credit originated.
+     * @dev amounts are stored in uint96, all counts are stored in uint16
+     * @dev each struct can have no more than 13 elements.
      */
-    struct CreditInfo {
+    struct CreditRecord {
         // fields related to the overall picture of the loan
-        address collateralAsset;
-        uint32 collateralAmt;
-        uint32 loanAmt;
-        uint16 numOfPayments;
-        bool deleted;
-        uint256 collateralParam;
-    }
-
-    struct CreditFeeStructure {
-        // todo, with the removal of the fee fields, the structs need to be reorganized.
-        uint16 apr_in_bps; // interest rate in bps
-        bool deleted;
-    }
-
-    /**
-     * @notice CreditStatus tracks the state such as how much has been paid,
-     * how many payments are remaining.
-     * @dev most fields in LaonState change as the borrower pays back
-     */
-    struct CreditStatus {
+        uint96 loanAmt;
+        uint96 nextAmtDue;
         uint64 nextDueDate;
-        uint32 nextAmtDue;
-        uint32 remainingPrincipal; // remaining principal balance
+        uint96 remainingPrincipal;
+        uint96 feesAccrued;
+        uint16 paymentIntervalInDays;
+        uint16 aprInBps;
         uint16 remainingPayments;
-        uint16 paymentInterval; // in days
-        uint64 lastLateFeeTimestamp;
-        uint32 feesDue;
         CreditState state;
         bool deleted;
+    }
+
+    /**
+     * @notice CollateralInfo stores collateral used for credits.
+     * @dev Used uint88 for collateralAmt to pack the entire struct in 2 storage units
+     * @dev deleted is used to mark the entry as deleted in mappings
+     * @dev collateralParam is used to store info such as NFT tokenId
+     */
+    struct CollateralInfo {
+        address collateralAsset;
+        uint88 collateralAmt;
+        bool deleted;
+        uint256 collateralParam;
     }
 
     enum CreditState {
@@ -59,34 +49,19 @@ library BaseStructs {
 
     // Please do NOT delete during development stage.
     // Debugging helper function. Please comment out after finishing debugging.
-    function printDetailStatus(
-        CreditFeeStructure storage cfs,
-        CreditInfo storage ci,
-        CreditStatus storage cs
-    ) public view {
+    function printCreditInfo(CreditRecord storage cr) public view {
         console.log("\n##### Status of the Credit #####");
-        console.log("ci.collateralAsset=", ci.collateralAsset);
-        console.log("ci.collateralAmt=", uint256(ci.collateralAmt));
-        console.log("ci.loanAmt=", uint256(ci.loanAmt));
-        console.log("ci.numOfPayments=", uint256(ci.numOfPayments));
-        console.log("ci.deleted=", ci.deleted);
-        console.log("ci.collateralParam=", ci.collateralParam);
-
-        console.log("cfs.apr_in_bps=", uint256(cfs.apr_in_bps));
-        console.log("cfs.deleted=", cfs.deleted);
-
-        console.log("cs.nextDueDate=", uint256(cs.nextDueDate));
-        console.log("cs.nextAmtDue=", uint256(cs.nextAmtDue));
-        console.log("cs.remainingPrincipal=", uint256(cs.remainingPrincipal));
-        console.log("cs.remainingPayments=", uint256(cs.remainingPayments));
-        console.log("cs.paymentInterval=", uint256(cs.paymentInterval));
+        console.log("cr.loanAmt=", uint256(cr.loanAmt));
+        console.log("cr.nextDueDate=", uint256(cr.nextDueDate));
+        console.log("cr.remainingPrincipal=", uint256(cr.remainingPrincipal));
+        console.log("cr.feesAccrued=", uint256(cr.feesAccrued));
         console.log(
-            "cs.lastLateFeeTimestamp=",
-            uint256(cs.lastLateFeeTimestamp)
+            "cr.paymentIntervalInDays=",
+            uint256(cr.paymentIntervalInDays)
         );
-
-        console.log("cs.feesDue=", uint256(cs.feesDue));
-        console.log("cs.state=", uint256(cs.state));
-        console.log("cs.deleted=", cs.deleted);
+        console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
+        console.log("cr.remainingPayments=", uint256(cr.remainingPayments));
+        console.log("cr.state=", uint256(cr.state));
+        console.log("cr.deleted=", cr.deleted);
     }
 }
