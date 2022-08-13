@@ -45,7 +45,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 internal maxBorrowAmt;
 
     // The interest rate this pool charges for loans
-    uint256 internal aprInBps;
+    uint256 internal poolAprInBps;
 
     // The collateral basis percentage required from lenders
     uint256 internal collateralRequiredInBps;
@@ -220,7 +220,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     function setAPR(uint256 _aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(_aprInBps >= 0 && _aprInBps <= 10000, "BasePool:INVALID_APR");
-        aprInBps = _aprInBps;
+        poolAprInBps = _aprInBps;
     }
 
     function setCollateralRequiredInBps(uint256 _collateralInBps)
@@ -369,7 +369,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         ERC20 erc20Contract = ERC20(address(poolToken));
         return (
             address(poolToken),
-            aprInBps,
+            poolAprInBps,
             minBorrowAmt,
             maxBorrowAmt,
             liquidityCap,
@@ -396,7 +396,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         )
     {
         return (
-            aprInBps,
+            poolAprInBps,
             front_loading_fee_flat,
             front_loading_fee_bps,
             late_fee_flat,

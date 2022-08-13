@@ -56,10 +56,6 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _numOfPayments
     ) external {
         poolOn();
-        uint256[] memory terms = getLoanTerms(
-            _paymentIntervalInDays,
-            _numOfPayments
-        );
 
         // Borrowers must not have existing loans from this pool
         require(
@@ -74,7 +70,15 @@ contract BaseCreditPool is ICredit, BasePool {
         // Borrowing amount needs to be lower than max for the pool.
         require(maxBorrowAmt >= _borrowAmt, "GREATER_THAN_LIMIT");
 
-        initiate(msg.sender, _borrowAmt, address(0), 0, terms);
+        initiate(
+            msg.sender,
+            _borrowAmt,
+            address(0),
+            0,
+            poolAprInBps,
+            _paymentIntervalInDays,
+            _numOfPayments
+        );
     }
 
     /**
@@ -83,10 +87,6 @@ contract BaseCreditPool is ICredit, BasePool {
      * @param liquidityAmt the amount of the liquidity asset that the borrower obtains
      * @param collateralAsset the address of the collateral asset.
      * @param collateralAmt the amount of the collateral asset
-     * @param terms[] the terms for the loan.
-     *                [0] aprInBps
-     *                [1] payment_interval, in days
-     *                [2] numOfPayments
      * todo remove dynamic array, need to coordinate with client for that change.
      */
     function initiate(
@@ -94,7 +94,9 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 liquidityAmt,
         address collateralAsset,
         uint256 collateralAmt,
-        uint256[] memory terms
+        uint256 _aprInBps,
+        uint256 _paymentIntervalInDays,
+        uint256 _remainingPayments
     ) public virtual override {
         protoNotPaused();
 
@@ -102,10 +104,10 @@ contract BaseCreditPool is ICredit, BasePool {
         BaseStructs.CreditRecord memory cr;
         cr.loanAmt = uint96(liquidityAmt);
         cr.remainingPrincipal = uint96(liquidityAmt);
-        cr.paymentIntervalInDays = uint16(terms[5]);
-        require(terms[0] >= aprInBps, "APR_LOWER_THAN_POOL_REQUIREMENT");
-        cr.aprInBps = uint16(terms[0]);
-        cr.remainingPayments = uint16(terms[6]);
+        require(_aprInBps >= poolAprInBps, "APR_LOWER_THAN_POOL_REQUIREMENT");
+        cr.aprInBps = uint16(_aprInBps);
+        cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
+        cr.remainingPayments = uint16(_remainingPayments);
         cr.state = BaseStructs.CreditState.Requested;
         creditRecordMapping[_borrower] = cr;
 
@@ -623,26 +625,6 @@ contract BaseCreditPool is ICredit, BasePool {
             HumaConfig(humaConfig).isProtocolPaused() == false,
             "PROTOCOL_PAUSED"
         );
-    }
-
-    /**
-     * Retrieve loan terms from pool config. 
-     //todo It is hard-coded right now. Need to call poll config to get the real data
-    */
-    function getLoanTerms(
-        uint256 _paymentIntervalInDays,
-        uint256 _numOfPayments
-    ) private view returns (uint256[] memory terms) {
-        terms = new uint256[](9);
-        terms[0] = aprInBps; //aprInBps
-        terms[1] = front_loading_fee_flat;
-        terms[2] = front_loading_fee_bps;
-        terms[3] = late_fee_flat;
-        terms[4] = late_fee_bps;
-        terms[5] = _paymentIntervalInDays; //payment_interval, in days
-        terms[6] = _numOfPayments; //numOfPayments
-        terms[7] = back_loading_fee_flat;
-        terms[8] = back_loading_fee_bps;
     }
 
     function getApprovalStatusForBorrower(address borrower)
