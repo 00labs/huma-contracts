@@ -108,4 +108,28 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
         return (amtToBorrower, protocolFee, poolIncome);
     }
+
+    /// returns (maxLoanAmt, interest, and the 6 fee fields)
+    function getFees()
+        public
+        view
+        virtual
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (
+            front_loading_fee_flat,
+            front_loading_fee_bps,
+            late_fee_flat,
+            late_fee_bps,
+            back_loading_fee_flat,
+            back_loading_fee_bps
+        );
+    }
 }

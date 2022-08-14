@@ -52,16 +52,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // The collateral basis percentage required from lenders
     uint256 internal collateralRequiredInBps;
 
-    // Platform fee, charged when a loan is originated
-    uint256 front_loading_fee_flat;
-    uint256 front_loading_fee_bps;
-    // Late fee, charged when the borrow is late for a pyament.
-    uint256 late_fee_flat;
-    uint256 late_fee_bps;
-    // Early payoff fee, charged when the borrow pays off prematurely
-    uint256 back_loading_fee_flat;
-    uint256 back_loading_fee_bps;
-
     PoolStatus public status = PoolStatus.Off;
 
     // List of credit approvers who can approve credit requests.
@@ -306,27 +296,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         liquidityCap = _liquidityCap;
     }
 
-    function setFees(
-        uint256 _front_loading_fee_flat,
-        uint256 _front_loading_fee_bps,
-        uint256 _late_fee_flat,
-        uint256 _late_fee_bps,
-        uint256 _back_platform_fee_flat,
-        uint256 _back_platform_fee_bps
-    ) public virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        require(
-            _front_loading_fee_bps > HumaConfig(humaConfig).treasuryFee(),
-            "BasePool:PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE"
-        );
-        front_loading_fee_flat = _front_loading_fee_flat;
-        front_loading_fee_bps = _front_loading_fee_bps;
-        late_fee_flat = _late_fee_flat;
-        late_fee_bps = _late_fee_bps;
-        back_loading_fee_flat = _back_platform_fee_flat;
-        back_loading_fee_bps = _back_platform_fee_bps;
-    }
-
     function getLenderInfo(address _lender)
         public
         view
@@ -375,33 +344,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
             erc20Contract.name(),
             erc20Contract.symbol(),
             erc20Contract.decimals()
-        );
-    }
-
-    /// returns (maxLoanAmt, interest, and the 6 fee fields)
-    function getPoolFees()
-        public
-        view
-        virtual
-        override
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (
-            poolAprInBps,
-            front_loading_fee_flat,
-            front_loading_fee_bps,
-            late_fee_flat,
-            late_fee_bps,
-            back_loading_fee_flat,
-            back_loading_fee_bps
         );
     }
 
