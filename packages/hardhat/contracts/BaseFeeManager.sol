@@ -1,11 +1,13 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4 <0.9.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 import "./interfaces/IFeeManager.sol";
 import "./HumaConfig.sol";
 import "hardhat/console.sol";
 
-contract BaseFeeManager is IFeeManager {
+contract BaseFeeManager is IFeeManager, Ownable {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 public constant BPS_DIVIDER = 120000;
 
@@ -26,7 +28,7 @@ contract BaseFeeManager is IFeeManager {
         uint256 _late_fee_bps,
         uint256 _back_platform_fee_flat,
         uint256 _back_platform_fee_bps
-    ) public {
+    ) public onlyOwner {
         front_loading_fee_flat = _front_loading_fee_flat;
         front_loading_fee_bps = _front_loading_fee_bps;
         late_fee_flat = _late_fee_flat;
@@ -105,5 +107,29 @@ contract BaseFeeManager is IFeeManager {
         amtToBorrower = borrowAmt - platformFees;
 
         return (amtToBorrower, protocolFee, poolIncome);
+    }
+
+    /// returns (maxLoanAmt, interest, and the 6 fee fields)
+    function getFees()
+        public
+        view
+        virtual
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (
+            front_loading_fee_flat,
+            front_loading_fee_bps,
+            late_fee_flat,
+            late_fee_bps,
+            back_loading_fee_flat,
+            back_loading_fee_bps
+        );
     }
 }

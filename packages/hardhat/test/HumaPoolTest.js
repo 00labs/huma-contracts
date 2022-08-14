@@ -97,8 +97,6 @@ describe("Base Pool - LP and Admin functions", function () {
 
         await poolContract.setAPR(1200); //bps
         await poolContract.setMinMaxBorrowAmt(10, 1000);
-        // set fees (front_fat, front_bps, late_flat, late_bps, back_falt, back_bps)
-        await poolContract.setFees(10, 100, 20, 100, 30, 100);
         await poolContract.enablePool();
 
         await testTokenContract.give1000To(lender.address);
@@ -146,22 +144,12 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(max).to.equal(1000);
         });
 
-        it("Should disallow platform fee bps lower than protocol fee bps", async function () {
-            await expect(
-                poolContract.setFees(20, 10, 0, 0, 0, 0)
-            ).to.be.revertedWith("PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE");
-        });
-
-        it("Set pool fees and parameters", async function () {
-            var [interest, f1, f2, f3, f4, f5, f6] =
-                await poolContract.getPoolFees();
-            expect(f1).to.equal(10);
-            expect(f2).to.equal(100);
-            expect(f3).to.equal(20);
-            expect(f4).to.equal(100);
-            expect(f5).to.equal(30);
-            expect(f6).to.equal(100);
-        });
+        // todo decide protocol fee calculation, and add this check to either setTreasuryFee() or setFees()
+        // it("Should disallow platform fee bps lower than protocol fee bps", async function () {
+        //     await expect(
+        //         poolContract.setFees(20, 10, 0, 0, 0, 0)
+        //     ).to.be.revertedWith("PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE");
+        // });
 
         it("Shall have the protocol-level default-grace-period", async function () {
             let poolDefaultGracePeriod =

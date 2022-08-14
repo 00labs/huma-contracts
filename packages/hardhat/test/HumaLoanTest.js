@@ -130,8 +130,6 @@ describe("Huma Loan", function () {
 
         await poolContract.setAPR(1200); //bps
         await poolContract.setMinMaxBorrowAmt(10, 1000);
-        // set fees (front_fat, front_bps, late_flat, late_bps, back_falt, back_bps)
-        await poolContract.setFees(10, 100, 20, 100, 30, 100);
         await poolContract.enablePool();
 
         await testTokenContract.give1000To(lender.address);

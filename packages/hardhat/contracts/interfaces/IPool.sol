@@ -30,15 +30,6 @@ interface IPool {
 
     function setMinMaxBorrowAmt(uint256 _minAmt, uint256 _maxAmt) external;
 
-    function setFees(
-        uint256 _front_fee_flat,
-        uint256 _front_fee_bps,
-        uint256 _late_fee_flat,
-        uint256 _late_fee_bps,
-        uint256 _back_fee_flat,
-        uint256 _back_fee_bps
-    ) external;
-
     function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external;
 
     function setPoolLiquidityCap(uint256 _liquidityCap) external;
@@ -59,18 +50,5 @@ interface IPool {
             string memory name,
             string memory symbol,
             uint8 decimal
-        );
-
-    function getPoolFees()
-        external
-        view
-        returns (
-            uint256 apr,
-            uint256 front_fee_flat,
-            uint256 front_fee_bps,
-            uint256 late_fee_flat,
-            uint256 late_fee_bps,
-            uint256 back_fee_flat,
-            uint256 back_fee_bps
         );
 }
