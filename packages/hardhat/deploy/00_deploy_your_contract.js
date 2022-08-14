@@ -29,8 +29,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         log: true,
         waitConfirmations: 5,
     });
-
     const TestToken = await ethers.getContract("TestToken", deployer);
+    const poolTokenDecimals = await TestToken.decimals();
 
     await deploy("HumaConfig", {
         from: deployer,
@@ -38,7 +38,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         args: [treasury.address],
         waitConfirmations: 5,
     });
-
     const HumaConfig = await ethers.getContract("HumaConfig", deployer);
     await HumaConfig.setLiquidityAsset(TestToken.address, true);
     await HumaConfig.setHumaTreasury(treasury.address);
@@ -49,26 +48,21 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         args: [],
         waitConfirmations: 5,
     });
-
     const BaseFeeManager = await ethers.getContract("BaseFeeManager", deployer);
-
-    // await deploy("HumaCreditFactory", {
-    //     from: deployer,
-    //     log: true,
-    //     waitConfirmations: 5,
-    // });
-
-    // const HumaCreditFactory = await ethers.getContract(
-    //     "HumaCreditFactory",
-    //     deployer
-    // );
+    await BaseFeeManager.setFees(
+        decimalToExpandedString(10, poolTokenDecimals),
+        100,
+        decimalToExpandedString(20, poolTokenDecimals),
+        100,
+        decimalToExpandedString(30, poolTokenDecimals),
+        100
+    );
 
     await deploy("PoolLockerFactory", {
         from: deployer,
         log: true,
         waitConfirmations: 5,
     });
-
     const PoolLockerFactory = await ethers.getContract(
         "PoolLockerFactory",
         deployer
@@ -95,17 +89,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await HumaInvoiceFactoring.addCreditApprover(
         process.env.INITIAL_HUMA_CREDIT_APPROVER
     );
-    const poolTokenDecimals = await TestToken.decimals();
     const maxBorrowAmt = decimalToExpandedString(10000, poolTokenDecimals);
     await HumaInvoiceFactoring.setMinMaxBorrowAmt(10, maxBorrowAmt);
-    await HumaInvoiceFactoring.setFees(
-        decimalToExpandedString(10, poolTokenDecimals),
-        100,
-        decimalToExpandedString(20, poolTokenDecimals),
-        100,
-        decimalToExpandedString(30, poolTokenDecimals),
-        100
-    );
 
     await deploy("InvoiceNFT", {
         from: deployer,
