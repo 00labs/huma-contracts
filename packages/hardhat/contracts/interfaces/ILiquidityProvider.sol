@@ -7,4 +7,6 @@ interface ILiquidityProvider {
     function makeInitialDeposit(uint256 _amount) external;
 
     function withdraw(uint256 _amount) external;
+
+    function withdrawAll() external;
 }
