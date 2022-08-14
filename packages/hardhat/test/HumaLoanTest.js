@@ -122,7 +122,7 @@ describe("Huma Loan", function () {
         const lenderInfo = await poolContract
             .connect(owner)
             .getLenderInfo(owner.address);
-        expect(lenderInfo.amount).to.equal(100);
+        expect(lenderInfo.principalAmt).to.equal(100);
         expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
         expect(await poolContract.getPoolLiquidity()).to.equal(100);
 
