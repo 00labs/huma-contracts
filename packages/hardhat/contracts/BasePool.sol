@@ -110,6 +110,14 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         emit PoolDeployed(address(this));
     }
 
+    modifier onlyHumaMasterAdmin() {
+        require(
+            msg.sender == HumaConfig(humaConfig).owner(),
+            "BasePool:PERMISSION_DENIED_NOT_MASTER_ADMIN"
+        );
+        _;
+    }
+
     //********************************************/
     //               LP Functions                //
     //********************************************/
