@@ -130,9 +130,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     function _deposit(address lender, uint256 amount) internal {
-        // Update weighted deposit date:
-        // prevDate + (now - prevDate) * (amount / (balance + amount))
-        // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
         LenderInfo memory li = lenderInfo[lender];
 
         li.amount += uint96(amount);
@@ -157,7 +154,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      *      the number of HDTs to reduct from msg.sender's account.
      * @dev Error checking sequence: 1) is the pool on 2) is the amount right 3)
      */
-    function withdraw(uint256 amount) public virtual override {
+    function withdraw(uint256 amount) external virtual override {
         poolOn();
         LenderInfo memory li = lenderInfo[msg.sender];
         require(
@@ -186,13 +183,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         PoolLocker(poolLockerAddr).transfer(msg.sender, amountToWithdraw);
 
         emit LiquidityWithdrawn(msg.sender, amount, amountToWithdraw);
-    }
-
-    /**
-     * @notice Withdraw all balance from the pool.
-     */
-    function withdrawAll() external virtual override {
-        return withdraw(lenderInfo[msg.sender].amount);
     }
 
     /********************************************/
