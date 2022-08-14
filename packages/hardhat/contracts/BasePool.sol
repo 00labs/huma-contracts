@@ -160,12 +160,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         require(
             block.timestamp >=
                 uint256(li.mostRecentLoanTimestamp) + withdrawalLockoutPeriod,
-            "BasePool:WITHDRAW_TOO_SOON"
+            "WITHDRAW_TOO_SOON"
         );
-        require(
-            amount <= uint256(li.amount),
-            "BasePool:WITHDRAW_AMT_TOO_GREAT"
-        );
+        require(amount <= uint256(li.amount), "WITHDRAW_AMT_TOO_GREAT");
 
         li.amount = uint96(uint256(li.amount) - amount);
 
@@ -200,7 +197,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     function setAPR(uint256 _aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        require(_aprInBps >= 0 && _aprInBps <= 10000, "BasePool:INVALID_APR");
+        require(_aprInBps >= 0 && _aprInBps <= 10000, "INVALID_APR");
         poolAprInBps = _aprInBps;
     }
 
@@ -223,8 +220,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        require(_minBorrowAmt > 0, "BasePool:MINAMT_IS_ZERO");
-        require(_maxBorrowAmt >= _minBorrowAmt, "BasePool:MAX_LESS_THAN_MIN");
+        require(_minBorrowAmt > 0, "MINAMT_IS_ZERO");
+        require(_maxBorrowAmt >= _minBorrowAmt, "MAX_LESS_THAN_MIN");
         minBorrowAmt = _minBorrowAmt;
         maxBorrowAmt = _maxBorrowAmt;
     }
@@ -299,7 +296,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         onlyOwnerOrHumaMasterAdmin();
         require(
             _front_loading_fee_bps > HumaConfig(humaConfig).treasuryFee(),
-            "BasePool:PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE"
+            "PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE"
         );
         front_loading_fee_flat = _front_loading_fee_flat;
         front_loading_fee_bps = _front_loading_fee_bps;
@@ -393,7 +390,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         require(
             (msg.sender == owner() ||
                 msg.sender == HumaConfig(humaConfig).owner()),
-            "BasePool:PERMISSION_DENIED_NOT_ADMIN"
+            "PERMISSION_DENIED_NOT_ADMIN"
         );
     }
 
@@ -402,8 +399,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     function poolOn() internal view {
         require(
             HumaConfig(humaConfig).isProtocolPaused() == false,
-            "BasePool:PROTOCOL_PAUSED"
+            "PROTOCOL_PAUSED"
         );
-        require(status == PoolStatus.On, "BasePool:POOL_NOT_ON");
+        require(status == PoolStatus.On, "POOL_NOT_ON");
     }
 }
