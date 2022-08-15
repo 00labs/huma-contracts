@@ -51,6 +51,7 @@
     "send": "hardhat send",
     "generate": "hardhat generate",
     "account": "hardhat account",
-    "verify": "hardhat verify"
+    "verify": "hardhat verify",
+    "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol"
   }
 }
