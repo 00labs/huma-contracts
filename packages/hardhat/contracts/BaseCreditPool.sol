@@ -45,7 +45,7 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _numOfPayments
     ) external virtual override {
         // Open access to the borrower
-        // Parameter and conditino validation happens in initiate()
+        // Parameter and condition validation happens in initiate()
         initiate(
             msg.sender,
             _borrowAmt,
@@ -239,31 +239,20 @@ contract BaseCreditPool is ICredit, BasePool {
         locker.transfer(_borrower, amtToBorrower);
     }
 
-    function makePayment(address asset, uint256 amount)
-        external
-        virtual
-        override
-    {
-        _makePayment(msg.sender, asset, amount);
-    }
-
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
      * @dev "WRONG_ASSET" reverted when asset address does not match
      *
      */
-    function _makePayment(
-        address _borrower,
-        address _asset,
-        uint256 _amount
-    ) internal {
+    function makePayment(address _asset, uint256 _amount)
+        external
+        virtual
+        override
+    {
         protocolAndpoolOn();
 
-        // msg.sender needs to be _borrower themselvers or the approver.
-        if (msg.sender != _borrower) onlyApprovers();
-
-        BaseStructs.CreditRecord memory cr = creditRecordMapping[_borrower];
+        BaseStructs.CreditRecord memory cr = creditRecordMapping[msg.sender];
 
         require(_asset == address(poolToken), "WRONG_ASSET");
         require(cr.remainingPayments > 0, "LOAN_PAID_OFF_ALREADY");
@@ -279,7 +268,7 @@ contract BaseCreditPool is ICredit, BasePool {
                 interest,
                 fees, /*unused*/
 
-            ) = getPayoffInfoInterestOnly(_borrower);
+            ) = getPayoffInfoInterestOnly(msg.sender);
         } else {
             (
                 totalAmt,
@@ -287,7 +276,7 @@ contract BaseCreditPool is ICredit, BasePool {
                 interest,
                 fees, /*unused*/
 
-            ) = getNextPaymentInterestOnly(_borrower);
+            ) = getNextPaymentInterestOnly(msg.sender);
         }
 
         // Do not accept partial payments. Requires _amount to be able to cover
@@ -321,13 +310,13 @@ contract BaseCreditPool is ICredit, BasePool {
 
         if (cr.remainingPayments == 0) {
             // No way to delete entries in mapping, thus mark the deleted field to true.
-            invalidateApprovedCredit(_borrower);
+            invalidateApprovedCredit(msg.sender);
         }
-        creditRecordMapping[_borrower] = cr;
+        creditRecordMapping[msg.sender] = cr;
 
         // Transfer assets from the _borrower to pool locker
         IERC20 assetIERC20 = IERC20(poolToken);
-        assetIERC20.transferFrom(_borrower, poolLockerAddr, _amount);
+        assetIERC20.transferFrom(msg.sender, poolLockerAddr, _amount);
     }
 
     /**
