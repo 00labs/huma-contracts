@@ -333,27 +333,6 @@ contract BaseCreditPool is ICredit, BasePool {
     }
 
     /**
-     * @notice Assess and charge penalty fee for early payoff.
-     */
-    // function assessEarlyPayoffFees(address borrower)
-    //     public
-    //     virtual
-    //     override
-    //     returns (uint256 penalty)
-    // {
-    //     BaseStructs.CreditFeeStructure storage cfs = creditFeesMapping[borrower];
-    //     BaseStructs.CreditStatus storage cs = creditRecordMapping[borrower];
-    //     if (cfs.back_loading_fee_flat > 0) penalty = cfs.back_loading_fee_flat;
-    //     if (cfs.back_loading_fee_bps > 0) {
-    //         penalty +=
-    //             (cr.remainingPrincipal *
-    //                 creditFeesMapping[borrower].back_loading_fee_bps) /
-    //             BPS_DIVIDER;
-    //     }
-    //     cr.feesAccrued += uint32(penalty);
-    // }
-
-    /**
      * @notice Borrower requests to payoff the credit
      */
     function payoff(
@@ -363,40 +342,6 @@ contract BaseCreditPool is ICredit, BasePool {
     ) external virtual override {
         //todo to implement
     }
-
-    // /**
-    //  * @notice Checks if a late fee should be charged and charges if needed
-    //  * @return fees the amount of fees charged
-    //  */
-    // function assessLateFee(address borrower)
-    //     public
-    //     virtual
-    //     override
-    //     returns (uint256 fees)
-    // {
-    //     BaseStructs.CreditFeeStructure storage cfs = creditFeesMapping[
-    //         borrower
-    //     ];
-    //     BaseStructs.CreditStatus storage cs = creditRecordMapping[borrower];
-
-    //     // Charge a late fee if 1) passed the due date and 2) there is no late fee charged
-    //     // between the due date and the current timestamp.
-
-    //     uint256 newFees;
-    //     if (
-    //         block.timestamp > cr.nextDueDate &&
-    //         cr.lastLateFeeTimestamp < cr.nextDueDate
-    //     ) {
-    //         if (cfs.late_fee_flat > 0) newFees = cfs.late_fee_flat;
-    //         if (cfs.late_fee_bps > 0) {
-    //             newFees += (cr.nextAmtDue * cfs.late_fee_bps) / BPS_DIVIDER;
-    //         }
-    //         cr.feesAccrued += uint32(newFees);
-    //         cr.lastLateFeeTimestamp = uint64(block.timestamp);
-    //         creditRecordMapping[borrower] = cs;
-    //     }
-    //     return newFees;
-    // }
 
     /**
      * @notice Triggers the default process
@@ -429,28 +374,6 @@ contract BaseCreditPool is ICredit, BasePool {
 
         return losses;
     }
-
-    // /**
-    //  * @notice Calculates monthly payment for a loan.
-    //  * M = P [ i(1 + i)^n ] / [ (1 + i)^n – 1].
-    //  * M = Total monthly payment
-    //  * P = The total amount of the loan
-    //  * I = Interest rate, as a monthly percentage
-    //  * N = Number of payments.
-    //  */
-    // function calcMonthlyPayment()
-    //     private
-    //     view
-    //     returns (uint256 monthlyPayment)
-    // {
-    //     BaseStructs.BaseStructs.CreditRecord storage ci = loanInfo;
-    //     BaseStructs.CreditStatus storage cs = creditRecordMapping[borrower];
-    //     uint256 monthlyRateBP = cr.aprInBps / 12;
-    //     monthlyPayment = ci
-    //         .loanAmt
-    //         .mul(monthlyRateBP.mul(monthlyRateBP.add(HUNDRED_PERCENT_IN_BPS)) ^ cr.numOfPayments)
-    //         .div(monthlyRateBP.add(HUNDRED_PERCENT_IN_BPS) ^ cr.numOfPayments.sub(HUNDRED_PERCENT_IN_BPS));
-    // }
 
     // /**
     //  * @notice Gets the information of the next payment due
