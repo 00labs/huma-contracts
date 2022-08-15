@@ -157,7 +157,7 @@ describe("Huma Invoice Financing", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("ILLEGAL_CREDIT_POSTER");
+            ).to.be.revertedWith("APPROVER_REQUIRED");
         });
 
         it("Should not allow posting approved loans while protocol is paused", async function () {
@@ -258,7 +258,7 @@ describe("Huma Invoice Financing", function () {
         //         invoiceContract
         //             .connect(payer)
         //             .invalidateApprovedCredit(borrower.address)
-        //     ).to.be.revertedWith("ILLEGAL_CREDIT_POSTER");
+        //     ).to.be.revertedWith("APPROVER_REQUIRED");
         // });
 
         it("Should allow credit approver to invalidate an approved invoice factoring record", async function () {
@@ -338,7 +338,9 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Should be able to borrow amount less than approved", async function () {
-            await invoiceContract.approveCredit(borrower.address);
+            await invoiceContract
+                .connect(creditApprover)
+                .approveCredit(borrower.address);
 
             await invoiceContract
                 .connect(borrower)
@@ -363,7 +365,9 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Should be able to borrow the full approved amount", async function () {
-            await invoiceContract.approveCredit(borrower.address);
+            await invoiceContract
+                .connect(creditApprover)
+                .approveCredit(borrower.address);
             // expect(await invoiceContract.isApproved()).to.equal(true);
 
             await invoiceContract
@@ -468,7 +472,7 @@ describe("Huma Invoice Financing", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("ILLEGAL_CREDIT_POSTER");
+            ).to.be.revertedWith("APPROVER_REQUIRED");
         });
 
         // Should deny if there is existing IF.
@@ -602,7 +606,7 @@ describe("Huma Invoice Financing", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("ILLEGAL_CREDIT_POSTER");
+            ).to.be.revertedWith("APPROVER_REQUIRED");
         });
 
         // Should deny if there is existing IF.
@@ -742,11 +746,26 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(borrower)
-                    .makePayment(borrower.address, testTokenContract.address, 5)
+                    .makePayment(testTokenContract.address, 5)
             ).to.be.revertedWith("PROTOCOL_PAUSED");
         });
 
         // todo if the pool is stopped, shall we accept payback?
+
+        it("Should reject if non-approver calls to report payments received", async function () {
+            await ethers.provider.send("evm_increaseTime", [
+                30 * 24 * 3600 - 10,
+            ]);
+            await expect(
+                invoiceContract
+                    .connect(borrower)
+                    .receivedPayment(
+                        borrower.address,
+                        testTokenContract.address,
+                        500
+                    )
+            ).to.be.revertedWith("APPROVER_REQUIRED");
+        });
 
         it("Process payback", async function () {
             await ethers.provider.send("evm_increaseTime", [
@@ -774,7 +793,7 @@ describe("Huma Invoice Financing", function () {
                 .approve(invoiceContract.address, 100);
 
             await invoiceContract
-                .connect(borrower)
+                .connect(creditApprover)
                 .receivedPayment(
                     borrower.address,
                     testTokenContract.address,
@@ -809,7 +828,8 @@ describe("Huma Invoice Financing", function () {
             const creditInfo = await invoiceContract.getCreditInformation(
                 borrower.address
             );
-            let gracePeriod = await invoiceContract.poolDefaultGracePeriod();
+            let gracePeriod =
+                await invoiceContract.poolDefaultGracePeriodInSeconds();
             let dueDate = creditInfo.nextDueDate;
             let current = Date.now();
 

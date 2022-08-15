@@ -16,7 +16,6 @@ contract BaseCreditPool is ICredit, BasePool {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 public constant BPS_DIVIDER = 120000;
     uint256 public constant HUNDRED_PERCENT_IN_BPS = 10000;
-    uint256 public constant SECONDS_IN_A_DAY = 86400;
 
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
@@ -57,22 +56,9 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _borrowAmt,
         uint256 _paymentIntervalInDays,
         uint256 _numOfPayments
-    ) external {
-        poolOn();
-
-        // Borrowers must not have existing loans from this pool
-        require(
-            creditRecordMapping[msg.sender].state ==
-                BaseStructs.CreditState.Deleted,
-            "DENY_EXISTING_LOAN"
-        );
-
-        // Borrowing amount needs to be higher than min for the pool.
-        require(_borrowAmt >= minBorrowAmt, "SMALLER_THAN_LIMIT");
-
-        // Borrowing amount needs to be lower than max for the pool.
-        require(maxBorrowAmt >= _borrowAmt, "GREATER_THAN_LIMIT");
-
+    ) external virtual override {
+        // Open access to the borrower
+        // Parameter and condition validation happens in initiate()
         initiate(
             msg.sender,
             _borrowAmt,
@@ -87,27 +73,38 @@ contract BaseCreditPool is ICredit, BasePool {
     /**
      * @notice the initiation of a loan
      * @param _borrower the address of the borrower
-     * @param liquidityAmt the amount of the liquidity asset that the borrower obtains
-     * @param collateralAsset the address of the collateral asset.
-     * @param collateralAmt the amount of the collateral asset
+     * @param _borrowAmt the amount of the liquidity asset that the borrower obtains
+     * @param _collateralAsset the address of the collateral asset.
+     * @param _collateralAmt the amount of the collateral asset
      * todo remove dynamic array, need to coordinate with client for that change.
      */
     function initiate(
         address _borrower,
-        uint256 liquidityAmt,
-        address collateralAsset,
-        uint256 collateralAmt,
+        uint256 _borrowAmt,
+        address _collateralAsset,
+        uint256 _collateralAmt,
         uint256 _aprInBps,
         uint256 _paymentIntervalInDays,
         uint256 _remainingPayments
-    ) public virtual override {
-        protoNotPaused();
+    ) internal virtual {
+        protocolAndpoolOn();
+        // Borrowers must not have existing loans from this pool
+        require(
+            creditRecordMapping[msg.sender].state ==
+                BaseStructs.CreditState.Deleted,
+            "DENY_EXISTING_LOAN"
+        );
+
+        // Borrowing amount needs to be higher than min for the pool.
+        require(_borrowAmt >= minBorrowAmt, "SMALLER_THAN_LIMIT");
+
+        // Borrowing amount needs to be lower than max for the pool.
+        require(maxBorrowAmt >= _borrowAmt, "GREATER_THAN_LIMIT");
 
         // Populates basic credit info fields
         BaseStructs.CreditRecord memory cr;
-        cr.loanAmt = uint96(liquidityAmt);
-        cr.remainingPrincipal = uint96(liquidityAmt);
-        require(_aprInBps >= poolAprInBps, "APR_LOWER_THAN_POOL_REQUIREMENT");
+        cr.loanAmt = uint96(_borrowAmt);
+        cr.remainingPrincipal = uint96(_borrowAmt);
         cr.aprInBps = uint16(_aprInBps);
         cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
         cr.remainingPayments = uint16(_remainingPayments);
@@ -115,10 +112,10 @@ contract BaseCreditPool is ICredit, BasePool {
         creditRecordMapping[_borrower] = cr;
 
         // Populates fields related to collateral
-        if (collateralAsset != address(0)) {
+        if (_collateralAsset != address(0)) {
             BaseStructs.CollateralInfo memory ci;
-            ci.collateralAsset = collateralAsset;
-            ci.collateralAmt = uint88(collateralAmt);
+            ci.collateralAsset = _collateralAsset;
+            ci.collateralAmt = uint88(_collateralAmt);
             collateralInfoMapping[_borrower] = ci;
         }
     }
@@ -127,12 +124,8 @@ contract BaseCreditPool is ICredit, BasePool {
      * Approves the loan request with the terms on record.
      */
     function approveCredit(address _borrower) public virtual override {
-        protoNotPaused();
-        // todo set properly so that only credit approvers can call this function
-        // require(
-        //     creditApprovers[msg.sender] = true,
-        //     "BasePool:APPROVER_REQUIRED"
-        // );
+        protocolAndpoolOn();
+        onlyApprovers();
         creditRecordMapping[_borrower].state = BaseStructs.CreditState.Approved;
     }
 
@@ -141,11 +134,8 @@ contract BaseCreditPool is ICredit, BasePool {
         virtual
         override
     {
-        poolOn();
-        require(
-            creditApprovers[msg.sender] == true,
-            "HumaPool:ILLEGAL_CREDIT_POSTER"
-        );
+        protocolAndpoolOn();
+        onlyApprovers();
         creditRecordMapping[_borrower].deleted = true;
     }
 
@@ -165,6 +155,8 @@ contract BaseCreditPool is ICredit, BasePool {
     }
 
     function originateCredit(uint256 borrowAmt) external virtual override {
+        // Open access to the borrower
+        // Condition validation happens in originateCreditWithCollateral()
         return
             originateCreditWithCollateral(
                 msg.sender,
@@ -182,7 +174,11 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _collateralParam,
         uint256 _collateralCount
     ) public virtual override {
-        poolOn();
+        protocolAndpoolOn();
+
+        // msg.sender needs to be the borrower themselvers or the approver.
+        if (msg.sender != _borrower) onlyApprovers();
+
         require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
 
         // Critical to update cr.loanAmt since _borrowAmt
@@ -262,16 +258,16 @@ contract BaseCreditPool is ICredit, BasePool {
      * @dev "WRONG_ASSET" reverted when asset address does not match
      *
      */
-    function makePayment(
-        address borrower,
-        address asset,
-        uint256 amount
-    ) external virtual override {
-        protoNotPaused();
-        // todo security check
-        BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
+    function makePayment(address _asset, uint256 _amount)
+        external
+        virtual
+        override
+    {
+        protocolAndpoolOn();
 
-        require(asset == address(poolToken), "WRONG_ASSET");
+        BaseStructs.CreditRecord memory cr = creditRecordMapping[msg.sender];
+
+        require(_asset == address(poolToken), "WRONG_ASSET");
         require(cr.remainingPayments > 0, "LOAN_PAID_OFF_ALREADY");
 
         uint256 totalAmt;
@@ -285,7 +281,7 @@ contract BaseCreditPool is ICredit, BasePool {
                 interest,
                 fees, /*unused*/
 
-            ) = getPayoffInfoInterestOnly(borrower);
+            ) = getPayoffInfoInterestOnly(msg.sender);
         } else {
             (
                 totalAmt,
@@ -293,22 +289,22 @@ contract BaseCreditPool is ICredit, BasePool {
                 interest,
                 fees, /*unused*/
 
-            ) = getNextPaymentInterestOnly(borrower);
+            ) = getNextPaymentInterestOnly(msg.sender);
         }
 
-        // Do not accept partial payments. Requires amount to be able to cover
+        // Do not accept partial payments. Requires _amount to be able to cover
         // the next payment and all the outstanding fees.
-        require(amount >= totalAmt, "AMOUNT_TOO_LOW");
+        require(_amount >= totalAmt, "AMOUNT_TOO_LOW");
 
         // Handle overpayment towards principal.
-        principal += (amount - totalAmt);
-        totalAmt = amount;
+        principal += (_amount - totalAmt);
+        totalAmt = _amount;
 
         if (cr.remainingPayments == 1) {
-            cr.remainingPrincipal = 0;
-            cr.feesAccrued = 0;
             cr.nextAmtDue = 0;
             cr.nextDueDate = 0;
+            cr.remainingPrincipal = 0;
+            cr.feesAccrued = 0;
             cr.remainingPayments = 0;
         } else {
             cr.feesAccrued = 0;
@@ -327,13 +323,13 @@ contract BaseCreditPool is ICredit, BasePool {
 
         if (cr.remainingPayments == 0) {
             // No way to delete entries in mapping, thus mark the deleted field to true.
-            invalidateApprovedCredit(borrower);
+            invalidateApprovedCredit(msg.sender);
         }
-        creditRecordMapping[borrower] = cr;
+        creditRecordMapping[msg.sender] = cr;
 
-        // Transfer assets from the borrower to pool locker
+        // Transfer assets from the _borrower to pool locker
         IERC20 assetIERC20 = IERC20(poolToken);
-        assetIERC20.transferFrom(borrower, poolLockerAddr, amount);
+        assetIERC20.transferFrom(msg.sender, poolLockerAddr, _amount);
     }
 
     /**
@@ -413,12 +409,14 @@ contract BaseCreditPool is ICredit, BasePool {
         override
         returns (uint256 losses)
     {
+        protocolAndpoolOn();
+
         // check to make sure the default grace period has passed.
         require(
             block.timestamp >
                 creditRecordMapping[borrower].nextDueDate +
-                    poolDefaultGracePeriod,
-            "HumaIF:DEFAULT_TRIGGERED_TOO_EARLY"
+                    poolDefaultGracePeriodInSeconds,
+            "DEFAULT_TRIGGERED_TOO_EARLY"
         );
 
         // FeatureRequest: add pool cover logic
@@ -621,13 +619,6 @@ contract BaseCreditPool is ICredit, BasePool {
         );
     }
 
-    function protoNotPaused() internal view {
-        require(
-            HumaConfig(humaConfig).isProtocolPaused() == false,
-            "PROTOCOL_PAUSED"
-        );
-    }
-
     function getApprovalStatusForBorrower(address borrower)
         external
         view
@@ -636,5 +627,9 @@ contract BaseCreditPool is ICredit, BasePool {
         return
             creditRecordMapping[borrower].state >=
             BaseStructs.CreditState.Approved;
+    }
+
+    function onlyApprovers() internal view {
+        require(creditApprovers[msg.sender] == true, "APPROVER_REQUIRED");
     }
 }

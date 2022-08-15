@@ -40,25 +40,9 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 _paymentIntervalInDays,
         uint256 _remainingPayments
     ) public virtual override {
-        poolOn();
-        require(
-            creditApprovers[msg.sender] == true,
-            "HumaIF:ILLEGAL_CREDIT_POSTER"
-        );
+        onlyApprovers();
 
-        // Borrowers must not have existing loans from this pool
-        require(
-            creditRecordMapping[msg.sender].state ==
-                BaseStructs.CreditState.Deleted,
-            "HumaIF:DENY_EXISTING_LOAN"
-        );
-
-        // Borrowing amount needs to be higher than min for the pool.
-        require(borrowAmt >= minBorrowAmt, "HumaIF:SMALLER_THAN_LIMIT");
-
-        // Borrowing amount needs to be lower than max for the pool.
-        require(maxBorrowAmt >= borrowAmt, "HumaIF:GREATER_THAN_LIMIT");
-
+        // Pool status and data validation happens within initiate().
         initiate(
             borrower,
             borrowAmt,
@@ -68,6 +52,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             _paymentIntervalInDays,
             _remainingPayments
         );
+
         approveCredit(borrower);
     }
 
@@ -86,7 +71,8 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // todo Need to  discuss more on whether to accept invoice pyaments from RN
         // when the protocol is paused.
         // todo add security control to make sure the caller is either borrower or approver
-        protoNotPaused();
+        protocolAndpoolOn();
+        onlyApprovers();
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
 
         // todo handle multiple payments.
@@ -116,7 +102,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
     }
 
     function processRefund(address receiver, uint256 amount)
-        public
+        internal
         returns (bool)
     {
         PoolLocker locker = PoolLocker(poolLockerAddr);
@@ -134,6 +120,10 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 _paymentIntervalInDays,
         uint256 _remainingPayments
     ) external {
+        // There are repeated calls to onlyApprovers() here and the called functions.
+        // This is intentional in case we make changes and forget to add access control
+        onlyApprovers();
+
         postPreapprovedCreditRequest(
             borrower,
             borrowAmt,
