@@ -65,6 +65,7 @@ contract BaseCreditPool is ICredit, BasePool {
             address(0),
             0,
             poolAprInBps,
+            interestOnly,
             _paymentIntervalInDays,
             _numOfPayments
         );
@@ -84,6 +85,7 @@ contract BaseCreditPool is ICredit, BasePool {
         address _collateralAsset,
         uint256 _collateralAmt,
         uint256 _aprInBps,
+        bool _interestOnly,
         uint256 _paymentIntervalInDays,
         uint256 _remainingPayments
     ) internal virtual {
@@ -106,6 +108,7 @@ contract BaseCreditPool is ICredit, BasePool {
         cr.loanAmt = uint96(_borrowAmt);
         cr.remainingPrincipal = uint96(_borrowAmt);
         cr.aprInBps = uint16(_aprInBps);
+        cr.interestOnly = _interestOnly;
         cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
         cr.remainingPayments = uint16(_remainingPayments);
         cr.state = BaseStructs.CreditState.Requested;
@@ -274,23 +277,13 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 principal;
         uint256 interest;
         uint256 fees;
-        if (cr.remainingPayments == 1) {
-            (
-                totalAmt,
-                principal,
-                interest,
-                fees, /*unused*/
+        bool paidOff;
 
-            ) = getPayoffInfoInterestOnly(msg.sender);
-        } else {
-            (
-                totalAmt,
-                principal,
-                interest,
-                fees, /*unused*/
-
-            ) = getNextPaymentInterestOnly(msg.sender);
-        }
+        (principal, interest, fees, paidOff) = getNextPayment(
+            cr,
+            lastLateFeeDateMapping[msg.sender]
+        );
+        totalAmt = principal + interest + fees;
 
         // Do not accept partial payments. Requires _amount to be able to cover
         // the next payment and all the outstanding fees.
@@ -300,7 +293,7 @@ contract BaseCreditPool is ICredit, BasePool {
         principal += (_amount - totalAmt);
         totalAmt = _amount;
 
-        if (cr.remainingPayments == 1) {
+        if (paidOff) {
             cr.nextAmtDue = 0;
             cr.nextDueDate = 0;
             cr.remainingPrincipal = 0;
@@ -375,43 +368,35 @@ contract BaseCreditPool is ICredit, BasePool {
         return losses;
     }
 
-    // /**
-    //  * @notice Gets the information of the next payment due
-    //  * @return totalAmt the full amount due for the next payment
-    //  * @return principal the amount towards principal
-    //  * @return interest the amount towards interest
-    //  * @return fees the amount towards fees
-    //  * @return dueDate the datetime of when the next payment is due
-    //  */
-    // function getNextPayment(address borrower)
-    //     public
-    //     virtual
-    //     override
-    //     returns (
-    //         uint256 totalAmt,
-    //         uint256 principal,
-    //         uint256 interest,
-    //         uint256 fees,
-    //         uint256 dueDate
-    //     )
-    // {
-    //     fees = assessLateFee(borrower);
-    //     BaseStructs.CreditStatus storage cs = creditRecordMapping[borrower];
-    //     // For loans w/ fixed payments, the portion towards interest is this month's interest charge,
-    //     // which is remaining principal times monthly interest rate. The difference b/w the total amount
-    //     // and the interest payment pays down principal.
-    //     interest =
-    //         (cr.remainingPrincipal * creditFeesMapping[borrower].aprInBps) /
-    //         BPS_DIVIDER;
-    //     principal = cr.nextAmtDue - interest;
-    //     return (
-    //         principal + interest + fees,
-    //         principal,
-    //         interest,
-    //         fees,
-    //         block.timestamp
-    //     );
-    // }
+    function getNextPayment(
+        BaseStructs.CreditRecord memory cr,
+        uint256 lastLateFeeDate
+    )
+        public
+        returns (
+            uint256 principal,
+            uint256 interest,
+            uint256 fees,
+            bool paidOff
+        )
+    {
+        fees = IFeeManager(feeManagerAddr).calcLateFee(
+            cr.nextAmtDue,
+            cr.nextDueDate,
+            lastLateFeeDate,
+            cr.paymentIntervalInDays
+        );
+
+        interest = (cr.remainingPrincipal * cr.aprInBps) / BPS_DIVIDER;
+
+        if (cr.remainingPayments > 1) {
+            paidOff = false;
+            principal = cr.nextAmtDue - interest;
+        } else {
+            paidOff = true;
+            principal = cr.remainingPrincipal;
+        }
+    }
 
     /**
      * @notice Gets the information of the next payment due for interest only
