@@ -22,7 +22,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     uint256 public back_loading_fee_bps;
 
     // fixedPaymentPerOneMillion is a mapping from terms (# of multiple of 30 days) to
-    // a mapping from intereast rate to payment.
+    // a mapping from interest rate to payment.
     // It is used for efficiency and gas consideration. We pre-compute the monthly payments for
     // different combination of terms and interest rate off-chain and load it on-chain when
     // the contract is initiazed by the pool owner. At run time, intead of using complicated
