@@ -21,16 +21,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
     uint256 public back_loading_fee_flat;
     uint256 public back_loading_fee_bps;
 
-    // paymentPerOneMillion is a payment lookup table using terms and
-    // interest rate to get monthly payment for a credit of one million.
-    // It is a mapping from terms (# of multiple of 30 days) to
+    // fixedPaymentPerOneMillion is a mapping from terms (# of multiple of 30 days) to
     // a mapping from intereast rate to payment.
-    // This is used to overcome Solidity's limitation at floating point
-    // calculation. We will computer monthly payment and feed into
-    // this mapping. Instead of computing the monthly payment amount
-    // using Solidity, we will just do a lookup.
-    // When the contract is deployed, the pool owner will populate
-    // this table using setFixedPaymentTable().
+    // It is used for efficiency and gas consideration. We pre-compute the monthly payments for
+    // different combination of terms and interest rate off-chain and load it on-chain when
+    // the contract is initiazed by the pool owner. At run time, intead of using complicated
+    // formula to get monthly payment for every request to a mortgage type of loan on the fly,
+    // we will just do a lookup.
     mapping(uint256 => mapping(uint256 => uint256)) fixedPaymentPerOneMillion;
 
     function setFees(
@@ -157,7 +154,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 uintPrice = (fixedPaymentPerOneMillion[numOfPayments])[
             aprInBps
         ];
-        paymentAmt = (uintPrice * creditAmt) / 1000000000;
+        paymentAmt = (uintPrice * creditAmt) / 1000000;
     }
 
     /// returns (maxLoanAmt, interest, and the 6 fee fields)

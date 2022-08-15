@@ -136,36 +136,36 @@ describe("Base Fee Manager", function () {
             await expect(
                 feeManagerContract
                     .connect(treasury)
-                    .addFixedPayment(24, 500, 43871390)
+                    .addFixedPayment(24, 500, 43871)
             ).to.be.revertedWith("caller is not the owner");
         });
 
         it("Should allow a single payment to be added", async function () {
             await feeManagerContract
                 .connect(poolOwner)
-                .addFixedPayment(24, 500, 43871389);
+                .addFixedPayment(24, 500, 43871);
 
             const payment = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(1000000000, 500, 24);
-            expect(payment).to.equal(43871389);
+                .getFixedPaymentAmt(1000000, 500, 24);
+            expect(payment).to.equal(43871);
         });
 
         it("Should allow existing record to be updated", async function () {
             await feeManagerContract
                 .connect(poolOwner)
-                .addFixedPayment(24, 500, 43871390);
+                .addFixedPayment(24, 500, 43872);
 
             const payment = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(1000000000, 500, 24);
-            expect(payment).to.equal(43871390);
+                .getFixedPaymentAmt(1000000, 500, 24);
+            expect(payment).to.equal(43872);
         });
 
         it("Should reject batch input of fixed payment schedule if array lengths do not match", async function () {
             let terms = [24, 24];
             let aprInBps = [1000, 1025];
-            let payments = [46260399];
+            let payments = [46260];
 
             await expect(
                 feeManagerContract
@@ -183,9 +183,8 @@ describe("Base Fee Manager", function () {
                 1000, 1025,
             ];
             let payments = [
-                85607482, 86066430, 86526746, 86988429, 87451477, 87915887,
-                88032203, 43871390, 44320610, 44772579, 45227291, 45684742,
-                46144926, 46260399,
+                85607, 86066, 86527, 86988, 87451, 87916, 88032, 43871, 44321,
+                44773, 45227, 45685, 46145, 46260,
             ];
 
             await feeManagerContract
@@ -194,16 +193,16 @@ describe("Base Fee Manager", function () {
 
             const payment1 = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(1000000000, 500, 12);
-            expect(payment1).to.equal(85607482);
+                .getFixedPaymentAmt(10000000, 500, 12);
+            expect(payment1).to.equal(856070);
             const payment2 = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(1000000000, 1025, 12);
-            expect(payment2).to.equal(88032203);
+                .getFixedPaymentAmt(100000, 1025, 12);
+            expect(payment2).to.equal(8803);
             const payment3 = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(1000000000, 500, 24);
-            expect(payment3).to.equal(43871390);
+                .getFixedPaymentAmt(1000000, 500, 24);
+            expect(payment3).to.equal(43871);
         });
     });
 });
