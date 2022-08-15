@@ -61,8 +61,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // before they can withdraw their capital
     uint256 public constant SECONDS_IN_180_DAYS = 15552000;
     uint256 public withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS;
+    uint256 public constant SECONDS_IN_A_DAY = 86400;
 
-    uint256 public poolDefaultGracePeriod;
+    uint256 public poolDefaultGracePeriodInSeconds;
 
     struct LenderInfo {
         uint96 amount;
@@ -89,7 +90,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         humaConfig = _humaConfig;
         feeManagerAddr = _feeManager;
 
-        poolDefaultGracePeriod = HumaConfig(humaConfig)
+        poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
 
         poolLockerAddr = PoolLockerFactory(_poolLockerFactory).deployNewLocker(
@@ -113,7 +114,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     function deposit(uint256 amount) external virtual override {
-        poolOn();
+        protocolAndpoolOn();
         // todo (by RL) Need to check if the pool is open to msg.sender to deposit
         // todo (by RL) Need to add maximal pool size support and check if it has reached the size
         return _deposit(msg.sender, amount);
@@ -148,7 +149,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @dev Error checking sequence: 1) is the pool on 2) is the amount right 3)
      */
     function withdraw(uint256 amount) public virtual override {
-        poolOn();
+        protocolAndpoolOn();
         LenderInfo memory li = lenderInfo[msg.sender];
         require(
             block.timestamp >=
@@ -257,7 +258,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        poolDefaultGracePeriod = _gracePeriodInDays;
+        poolDefaultGracePeriodInSeconds = _gracePeriodInDays * SECONDS_IN_A_DAY;
     }
 
     function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays)
@@ -344,7 +345,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
-    function poolOn() internal view {
+    function protocolAndpoolOn() internal view {
         require(
             HumaConfig(humaConfig).isProtocolPaused() == false,
             "PROTOCOL_PAUSED"

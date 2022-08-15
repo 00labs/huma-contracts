@@ -2,14 +2,10 @@
 pragma solidity >=0.8.4 <0.9.0;
 
 interface ICredit {
-    function initiate(
-        address _borrower,
-        uint256 liquidityAmt,
-        address collateralAsset,
-        uint256 collateralAmt,
-        uint256 _aprInBps,
+    function requestCredit(
+        uint256 _borrowAmt,
         uint256 _paymentIntervalInDays,
-        uint256 _remainingPayments
+        uint256 _numOfPayments
     ) external;
 
     function approveCredit(address borrower) external;
@@ -26,11 +22,7 @@ interface ICredit {
 
     function invalidateApprovedCredit(address _borrower) external;
 
-    function makePayment(
-        address _borrower,
-        address _asset,
-        uint256 _amount
-    ) external;
+    function makePayment(address _asset, uint256 _amount) external;
 
     function payoff(
         address borrower,

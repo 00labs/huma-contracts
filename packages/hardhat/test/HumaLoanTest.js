@@ -241,7 +241,9 @@ describe("Huma Loan", function () {
             });
 
             it("Borrow less than approved amount", async function () {
-                await poolContract.approveCredit(borrower.address);
+                await poolContract
+                    .connect(creditApprover)
+                    .approveCredit(borrower.address);
                 expect(
                     await poolContract.isApproved(borrower.address)
                 ).to.equal(true);
@@ -273,7 +275,9 @@ describe("Huma Loan", function () {
             });
 
             it("Borrow full amount that has been approved", async function () {
-                await poolContract.approveCredit(borrower.address);
+                await poolContract
+                    .connect(creditApprover)
+                    .approveCredit(borrower.address);
                 expect(
                     await poolContract.isApproved(borrower.address)
                 ).to.equal(true);
@@ -308,7 +312,9 @@ describe("Huma Loan", function () {
                 await poolContract.connect(owner).setAPR(1200);
                 await poolContract.connect(borrower).requestCredit(400, 30, 12);
 
-                await poolContract.approveCredit(borrower.address);
+                await poolContract
+                    .connect(creditApprover)
+                    .approveCredit(borrower.address);
                 await poolContract.connect(borrower).originateCredit(400);
             });
 
@@ -321,11 +327,7 @@ describe("Huma Loan", function () {
                 await expect(
                     poolContract
                         .connect(borrower)
-                        .makePayment(
-                            borrower.address,
-                            testTokenContract.address,
-                            5
-                        )
+                        .makePayment(testTokenContract.address, 5)
                 ).to.be.revertedWith("PROTOCOL_PAUSED");
             });
 
@@ -338,11 +340,7 @@ describe("Huma Loan", function () {
 
                 await poolContract
                     .connect(borrower)
-                    .makePayment(
-                        borrower.address,
-                        testTokenContract.address,
-                        5
-                    );
+                    .makePayment(testTokenContract.address, 5);
 
                 let creditInfo = await poolContract.getCreditInformation(
                     borrower.address
@@ -363,11 +361,7 @@ describe("Huma Loan", function () {
                     .approve(poolContract.address, 4);
                 await poolContract
                     .connect(borrower)
-                    .makePayment(
-                        borrower.address,
-                        testTokenContract.address,
-                        4
-                    );
+                    .makePayment(testTokenContract.address, 4);
                 expect(
                     await poolContract.withdrawableFundsOf(owner.address)
                 ).to.be.within(102, 104); // target 3
@@ -377,7 +371,7 @@ describe("Huma Loan", function () {
 
                 await expect(
                     poolContract.triggerDefault(borrower.address)
-                ).to.be.revertedWith("HumaIF:DEFAULT_TRIGGERED_TOO_EARLY");
+                ).to.be.revertedWith("DEFAULT_TRIGGERED_TOO_EARLY");
 
                 await ethers.provider.send("evm_increaseTime", [
                     36 * 24 * 3600,

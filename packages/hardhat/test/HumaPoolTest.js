@@ -152,19 +152,19 @@ describe("Base Pool - LP and Admin functions", function () {
         // });
 
         it("Shall have the protocol-level default-grace-period", async function () {
-            let poolDefaultGracePeriod =
-                await poolContract.poolDefaultGracePeriod();
+            let poolDefaultGracePeriodInSconds =
+                await poolContract.poolDefaultGracePeriodInSeconds();
             expect(
                 await humaConfigContract.protocolDefaultGracePeriod()
-            ).to.equal(poolDefaultGracePeriod);
+            ).to.equal(poolDefaultGracePeriodInSconds);
         });
 
         it("Shall be able to set new value for the default grace period", async function () {
-            await poolContract.setPoolDefaultGracePeriod(30 * 24 * 3600);
+            await poolContract.setPoolDefaultGracePeriod(30);
 
-            expect(await poolContract.poolDefaultGracePeriod()).to.equal(
-                30 * 24 * 3600
-            );
+            expect(
+                await poolContract.poolDefaultGracePeriodInSeconds()
+            ).to.equal(30 * 24 * 3600);
         });
     });
 
