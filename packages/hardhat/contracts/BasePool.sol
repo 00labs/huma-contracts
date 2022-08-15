@@ -21,6 +21,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
 
+    string poolName;
+
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
     address public humaConfig;
@@ -65,8 +67,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 public poolDefaultGracePeriod;
 
     struct LenderInfo {
-        uint96 amount;
-        uint64 mostRecentLoanTimestamp;
+        // this field may not be needed. it should equal to hdt.balanceOf(user). todo check later & remove struct
+        uint96 principalAmt;
+        uint64 mostRecentCreditTimestamp;
         bool deleted;
     }
 
@@ -83,8 +86,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         address _poolToken,
         address _humaConfig,
         address _poolLockerFactory,
-        address _feeManager
-    ) HDT("Huma", "Huma", _poolToken) {
+        address _feeManager,
+        string memory _poolName,
+        string memory _hdtName,
+        string memory _hdtSymbol
+    ) HDT(_hdtName, _hdtSymbol, _poolToken) {
+        poolName = _poolName;
         poolToken = IERC20(_poolToken);
         humaConfig = _humaConfig;
         feeManagerAddr = _feeManager;
@@ -125,8 +132,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
         LenderInfo memory li = lenderInfo[lender];
 
-        li.amount += uint96(amount);
-        li.mostRecentLoanTimestamp = uint64(block.timestamp);
+        li.principalAmt += uint96(amount);
+        li.mostRecentCreditTimestamp = uint64(block.timestamp);
 
         lenderInfo[lender] = li;
 
@@ -152,40 +159,46 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         LenderInfo memory li = lenderInfo[msg.sender];
         require(
             block.timestamp >=
-                uint256(li.mostRecentLoanTimestamp) +
+                uint256(li.mostRecentCreditTimestamp) +
                     withdrawalLockoutPeriodInSeconds,
             "WITHDRAW_TOO_SOON"
         );
-        require(amount <= uint256(li.amount), "WITHDRAW_AMT_TOO_GREAT");
+        uint256 withdrawableAmt = withdrawableFundsOf(msg.sender);
+        require(amount <= withdrawableAmt, "WITHDRAW_AMT_TOO_GREAT");
 
-        li.amount = uint96(uint256(li.amount) - amount);
+        // Calcuate the corresponding principal amount to reduce
+        uint256 principalToReduce = (balanceOf(msg.sender) * amount) /
+            withdrawableAmt;
+
+        li.principalAmt = uint96(uint256(li.principalAmt) - principalToReduce);
 
         lenderInfo[msg.sender] = li;
 
-        // Calculate the amount that msg.sender can actually withdraw.
-        // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
-        // number of poolToken, incl. principal,income and losses.
-        // then get the portion that msg.sender wants to withdraw (amount / total principal)
-        uint256 amountToWithdraw = (withdrawableFundsOf(msg.sender) * amount) /
-            balanceOf(msg.sender);
+        _burn(msg.sender, principalToReduce);
 
-        _burn(msg.sender, amount);
+        PoolLocker(poolLockerAddr).transfer(msg.sender, amount);
 
-        PoolLocker(poolLockerAddr).transfer(msg.sender, amountToWithdraw);
-
-        emit LiquidityWithdrawn(msg.sender, amount, amountToWithdraw);
+        emit LiquidityWithdrawn(msg.sender, amount, principalToReduce);
     }
 
     /**
      * @notice Withdraw all balance from the pool.
      */
     function withdrawAll() external virtual override {
-        return withdraw(lenderInfo[msg.sender].amount);
+        return withdraw(lenderInfo[msg.sender].principalAmt);
     }
 
     /********************************************/
     //                Settings                  //
     /********************************************/
+
+    /**
+     * @notice Change pool name
+     */
+    function setPoolName(string memory newName) external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        poolName = newName;
+    }
 
     /**
      * @notice Adds an approver to the list who can approve loans.

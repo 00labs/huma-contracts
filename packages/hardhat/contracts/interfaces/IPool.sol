@@ -2,6 +2,8 @@
 pragma solidity >=0.8.4 <0.9.0;
 
 interface IPool {
+    function setPoolName(string memory newName) external;
+
     function addCreditApprover(address approver) external;
 
     function disablePool() external;

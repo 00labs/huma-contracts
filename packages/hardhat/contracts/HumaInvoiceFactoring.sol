@@ -16,13 +16,19 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         address _poolToken,
         address _humaConfig,
         address _poolLockerAddr,
-        address _feeManagerAddr
+        address _feeManagerAddr,
+        string memory _poolName,
+        string memory _hdtName,
+        string memory _hdtSymbol
     )
         BaseCreditPool(
             _poolToken,
             _humaConfig,
             _poolLockerAddr,
-            _feeManagerAddr
+            _feeManagerAddr,
+            _poolName,
+            _hdtName,
+            _hdtSymbol
         )
     {}
 
