@@ -111,8 +111,8 @@ describe("Huma Invoice Financing", function () {
 
         await invoiceContract.addCreditApprover(creditApprover.address);
 
-        await invoiceContract.setAPR(0); //bps
-        await invoiceContract.setMinMaxBorrowAmount(10, 1000);
+        await invoiceContract.connect(poolOwner).setAPR(0, true); //bps
+        await invoiceContract.setMinMaxBorrowAmt(10, 1000);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
@@ -229,7 +229,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(0);
+            await invoiceContract.connect(owner).setAPR(0, true);
 
             await invoiceContract
                 .connect(creditApprover)
@@ -262,7 +262,7 @@ describe("Huma Invoice Financing", function () {
         // });
 
         it("Should allow credit approver to invalidate an approved invoice factoring record", async function () {
-            await invoiceContract.connect(owner).setAPR(0);
+            await invoiceContract.connect(owner).setAPR(0, true);
 
             await invoiceContract
                 .connect(creditApprover)
@@ -514,7 +514,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(0);
+            await invoiceContract.connect(owner).setAPR(0, true);
 
             await invoiceContract
                 .connect(creditApprover)
@@ -662,7 +662,7 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(0);
+            await invoiceContract.connect(owner).setAPR(0, true);
 
             await invoiceContract
                 .connect(creditApprover)
