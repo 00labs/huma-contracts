@@ -53,5 +53,10 @@
     "account": "hardhat account",
     "verify": "hardhat verify",
     "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol"
+  },
+  "husky": {
+    "hooks": {
+      "pre-push": "yarn prettier:solidity"
+    }
   }
 }
