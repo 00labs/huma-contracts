@@ -73,7 +73,10 @@ describe("Huma Invoice Financing", function () {
             testTokenContract.address,
             humaConfigContract.address,
             poolLockerFactoryContract.address,
-            feeManagerContract.address
+            feeManagerContract.address,
+            "Invoice Factory Pool",
+            "HumaIF HDT",
+            "HHDT"
         );
         await invoiceContract.deployed();
 

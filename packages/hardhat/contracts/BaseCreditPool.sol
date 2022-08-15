@@ -34,8 +34,21 @@ contract BaseCreditPool is ICredit, BasePool {
         address _poolToken,
         address _humaConfig,
         address _poolLockerAddr,
-        address _feeManagerAddr
-    ) BasePool(_poolToken, _humaConfig, _poolLockerAddr, _feeManagerAddr) {}
+        address _feeManagerAddr,
+        string memory _poolName,
+        string memory _hdtName,
+        string memory _hdtSymbol
+    )
+        BasePool(
+            _poolToken,
+            _humaConfig,
+            _poolLockerAddr,
+            _feeManagerAddr,
+            _poolName,
+            _hdtName,
+            _hdtSymbol
+        )
+    {}
 
     /**
      * @notice accepts a credit request from msg.sender
@@ -218,11 +231,11 @@ contract BaseCreditPool is ICredit, BasePool {
         // // Transfers collateral asset
         if (_collateralAsset != address(0)) {
             if (_collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
-            IERC721(_collateralAsset).safeTransferFrom(
-                _borrower,
-                poolLockerAddr,
-                _collateralParam
-            );
+                IERC721(_collateralAsset).safeTransferFrom(
+                    _borrower,
+                    poolLockerAddr,
+                    _collateralParam
+                );
             } else if (
                 _collateralAsset.supportsInterface(type(IERC20).interfaceId)
             ) {

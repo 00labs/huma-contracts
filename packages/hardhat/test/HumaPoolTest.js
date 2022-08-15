@@ -60,7 +60,10 @@ describe("Base Pool - LP and Admin functions", function () {
             testTokenContract.address,
             humaConfigContract.address,
             poolLockerFactoryContract.address,
-            feeManagerContract.address
+            feeManagerContract.address,
+            "Base Credit Pool",
+            "Base Credit HDT",
+            "CHDT"
         );
         await poolContract.deployed();
 

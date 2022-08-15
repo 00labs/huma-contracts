@@ -76,6 +76,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             HumaConfig.address,
             PoolLockerFactory.address,
             BaseFeeManager.address,
+            "Huma Invoice Factory Pool",
+            "HumaIF HDT",
+            "HHDT",
         ],
         waitConfirmations: 5,
     });

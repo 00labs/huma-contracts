@@ -21,6 +21,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
 
+    string poolName;
+
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
     address public humaConfig;
@@ -83,8 +85,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         address _poolToken,
         address _humaConfig,
         address _poolLockerFactory,
-        address _feeManager
-    ) HDT("Huma", "Huma", _poolToken) {
+        address _feeManager,
+        string memory _poolName,
+        string memory _hdtName,
+        string memory _hdtSymbol
+    ) HDT(_hdtName, _hdtSymbol, _poolToken) {
+        poolName = _poolName;
         poolToken = IERC20(_poolToken);
         humaConfig = _humaConfig;
         feeManagerAddr = _feeManager;
@@ -196,6 +202,14 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     /********************************************/
     //                Settings                  //
     /********************************************/
+
+    /**
+     * @notice Change pool name
+     */
+    function setPoolName(string memory newName) external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        poolName = newName;
+    }
 
     /**
      * @notice Adds an approver to the list who can approve loans.
