@@ -92,7 +92,7 @@ describe("Base Pool - LP and Admin functions", function () {
         const lenderInfo = await poolContract
             .connect(owner)
             .getLenderInfo(owner.address);
-        expect(lenderInfo.amount).to.equal(100);
+        expect(lenderInfo.principalAmt).to.equal(100);
         expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
         expect(await poolContract.getPoolLiquidity()).to.equal(100);
 
@@ -115,7 +115,7 @@ describe("Base Pool - LP and Admin functions", function () {
             const lenderInfo = await poolContract
                 .connect(owner)
                 .getLenderInfo(owner.address);
-            expect(lenderInfo.amount).to.equal(100);
+            expect(lenderInfo.principalAmt).to.equal(100);
             expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
 
             expect(await poolContract.getPoolLiquidity()).to.equal(100);
@@ -203,7 +203,7 @@ describe("Base Pool - LP and Admin functions", function () {
             const lenderInfo = await poolContract
                 .connect(lender)
                 .getLenderInfo(lender.address);
-            expect(lenderInfo.amount).to.equal(100);
+            expect(lenderInfo.principalAmt).to.equal(100);
             expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
             expect(await poolContract.getPoolLiquidity()).to.equal(200);
 
@@ -268,7 +268,7 @@ describe("Base Pool - LP and Admin functions", function () {
             const lenderInfo = await poolContract
                 .connect(lender)
                 .getLenderInfo(lender.address);
-            expect(lenderInfo.amount).to.equal(0);
+            expect(lenderInfo.principalAmt).to.equal(0);
 
             expect(await poolContract.getPoolLiquidity()).to.equal(100);
 

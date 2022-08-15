@@ -67,8 +67,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 public poolDefaultGracePeriod;
 
     struct LenderInfo {
-        uint96 amount;
-        uint64 mostRecentLoanTimestamp;
+        // this field may not be needed. it should equal to hdt.balanceOf(user). todo check later & remove struct
+        uint96 principalAmt;
+        uint64 mostRecentCreditTimestamp;
         bool deleted;
     }
 
@@ -139,8 +140,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
         LenderInfo memory li = lenderInfo[lender];
 
-        li.amount += uint96(amount);
-        li.mostRecentLoanTimestamp = uint64(block.timestamp);
+        li.principalAmt += uint96(amount);
+        li.mostRecentCreditTimestamp = uint64(block.timestamp);
 
         lenderInfo[lender] = li;
 
@@ -166,37 +167,32 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         LenderInfo memory li = lenderInfo[msg.sender];
         require(
             block.timestamp >=
-                uint256(li.mostRecentLoanTimestamp) + withdrawalLockoutPeriod,
+                uint256(li.mostRecentCreditTimestamp) + withdrawalLockoutPeriod,
             "BasePool:WITHDRAW_TOO_SOON"
         );
-        require(
-            amount <= uint256(li.amount),
-            "BasePool:WITHDRAW_AMT_TOO_GREAT"
-        );
+        uint256 withdrawableAmt = withdrawableFundsOf(msg.sender);
+        require(amount <= withdrawableAmt, "BasePool:WITHDRAW_AMT_TOO_GREAT");
 
-        li.amount = uint96(uint256(li.amount) - amount);
+        // Calcuate the corresponding principal amount to reduce
+        uint256 principalToReduce = (balanceOf(msg.sender) * amount) /
+            withdrawableAmt;
+
+        li.principalAmt = uint96(uint256(li.principalAmt) - principalToReduce);
 
         lenderInfo[msg.sender] = li;
 
-        // Calculate the amount that msg.sender can actually withdraw.
-        // withdrawableFundsOf(...) returns everything that msg.sender can claim in terms of
-        // number of poolToken, incl. principal,income and losses.
-        // then get the portion that msg.sender wants to withdraw (amount / total principal)
-        uint256 amountToWithdraw = (withdrawableFundsOf(msg.sender) * amount) /
-            balanceOf(msg.sender);
+        _burn(msg.sender, principalToReduce);
 
-        _burn(msg.sender, amount);
+        PoolLocker(poolLockerAddr).transfer(msg.sender, amount);
 
-        PoolLocker(poolLockerAddr).transfer(msg.sender, amountToWithdraw);
-
-        emit LiquidityWithdrawn(msg.sender, amount, amountToWithdraw);
+        emit LiquidityWithdrawn(msg.sender, amount, principalToReduce);
     }
 
     /**
      * @notice Withdraw all balance from the pool.
      */
     function withdrawAll() external virtual override {
-        return withdraw(lenderInfo[msg.sender].amount);
+        return withdraw(lenderInfo[msg.sender].principalAmt);
     }
 
     /********************************************/

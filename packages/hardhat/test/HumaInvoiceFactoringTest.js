@@ -105,7 +105,7 @@ describe("Huma Invoice Financing", function () {
         const lenderInfo = await invoiceContract
             .connect(owner)
             .getLenderInfo(owner.address);
-        expect(lenderInfo.amount).to.equal(100);
+        expect(lenderInfo.principalAmt).to.equal(100);
         expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
         expect(await invoiceContract.getPoolLiquidity()).to.equal(100);
 
