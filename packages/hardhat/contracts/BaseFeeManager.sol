@@ -21,6 +21,18 @@ contract BaseFeeManager is IFeeManager, Ownable {
     uint256 public back_loading_fee_flat;
     uint256 public back_loading_fee_bps;
 
+    // paymentPerOneMillion is a payment lookup table using terms and
+    // interest rate to get monthly payment for a credit of one million.
+    // It is a mapping from terms (# of multiple of 30 days) to
+    // a mapping from intereast rate to payment.
+    // This is used to overcome Solidity's limitation at floating point
+    // calculation. We will computer monthly payment and feed into
+    // this mapping. Instead of computing the monthly payment amount
+    // using Solidity, we will just do a lookup.
+    // When the contract is deployed, the pool owner will populate
+    // this table using setFixedPaymentTable().
+    mapping(uint256 => mapping(uint256 => uint256)) fixedPaymentPerOneMillion;
+
     function setFees(
         uint256 _front_loading_fee_flat,
         uint256 _front_loading_fee_bps,
@@ -107,6 +119,45 @@ contract BaseFeeManager is IFeeManager, Ownable {
         amtToBorrower = borrowAmt - platformFees;
 
         return (amtToBorrower, protocolFee, poolIncome);
+    }
+
+    function addBatchOfFixedPayments(
+        uint256[] calldata numOfPayments,
+        uint256[] calldata aprInBps,
+        uint256[] calldata payments
+    ) external onlyOwner {
+        uint256 length = numOfPayments.length;
+        require(
+            (length == aprInBps.length) && (aprInBps.length == payments.length),
+            "INPUT_ARRAY_SIZE_MISMATCH"
+        );
+
+        uint256 i;
+        for (i = 0; i < length; i++) {
+            addFixedPayment(numOfPayments[i], aprInBps[i], payments[i]);
+        }
+    }
+
+    function addFixedPayment(
+        uint256 numberOfPayments,
+        uint256 aprInBps,
+        uint256 payment
+    ) public onlyOwner {
+        mapping(uint256 => uint256) storage tempMap = fixedPaymentPerOneMillion[
+            numberOfPayments
+        ];
+        tempMap[aprInBps] = payment;
+    }
+
+    function getFixedPaymentAmt(
+        uint256 creditAmt,
+        uint256 aprInBps,
+        uint256 numOfPayments
+    ) public view returns (uint256 paymentAmt) {
+        uint256 uintPrice = (fixedPaymentPerOneMillion[numOfPayments])[
+            aprInBps
+        ];
+        paymentAmt = (uintPrice * creditAmt) / 1000000000;
     }
 
     /// returns (maxLoanAmt, interest, and the 6 fee fields)

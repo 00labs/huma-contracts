@@ -123,4 +123,87 @@ describe("Base Fee Manager", function () {
             expect(f6).to.equal(350);
         });
     });
+
+    //  * @notice Calculates monthly payment for a loan.
+    //  * M = P [ i(1 + i)^n ] / [ (1 + i)^n – 1].
+    //  * M = Total monthly payment
+    //  * P = The total amount of the loan
+    //  * I = Interest rate, as a monthly percentage
+    //  * N = Number of payments.
+    // payment lookup table: shorturl.at/fY015
+    describe("Fixed Payment Setting and Lookup", function () {
+        it("Should disallow non-owner to set the payment", async function () {
+            await expect(
+                feeManagerContract
+                    .connect(treasury)
+                    .addFixedPayment(24, 500, 43871390)
+            ).to.be.revertedWith("caller is not the owner");
+        });
+
+        it("Should allow a single payment to be added", async function () {
+            await feeManagerContract
+                .connect(poolOwner)
+                .addFixedPayment(24, 500, 43871389);
+
+            const payment = await feeManagerContract
+                .connect(poolOwner)
+                .getFixedPaymentAmt(1000000000, 500, 24);
+            expect(payment).to.equal(43871389);
+        });
+
+        it("Should allow existing record to be updated", async function () {
+            await feeManagerContract
+                .connect(poolOwner)
+                .addFixedPayment(24, 500, 43871390);
+
+            const payment = await feeManagerContract
+                .connect(poolOwner)
+                .getFixedPaymentAmt(1000000000, 500, 24);
+            expect(payment).to.equal(43871390);
+        });
+
+        it("Should reject batch input of fixed payment schedule if array lengths do not match", async function () {
+            let terms = [24, 24];
+            let aprInBps = [1000, 1025];
+            let payments = [46260399];
+
+            await expect(
+                feeManagerContract
+                    .connect(poolOwner)
+                    .addBatchOfFixedPayments(terms, aprInBps, payments)
+            ).to.be.revertedWith("INPUT_ARRAY_SIZE_MISMATCH");
+        });
+
+        it("Should allow list of fixed payment schedule to be added", async function () {
+            let terms = [
+                12, 12, 12, 12, 12, 12, 12, 24, 24, 24, 24, 24, 24, 24,
+            ];
+            let aprInBps = [
+                500, 600, 700, 800, 900, 1000, 1025, 500, 600, 700, 800, 900,
+                1000, 1025,
+            ];
+            let payments = [
+                85607482, 86066430, 86526746, 86988429, 87451477, 87915887,
+                88032203, 43871390, 44320610, 44772579, 45227291, 45684742,
+                46144926, 46260399,
+            ];
+
+            await feeManagerContract
+                .connect(poolOwner)
+                .addBatchOfFixedPayments(terms, aprInBps, payments);
+
+            const payment1 = await feeManagerContract
+                .connect(poolOwner)
+                .getFixedPaymentAmt(1000000000, 500, 12);
+            expect(payment1).to.equal(85607482);
+            const payment2 = await feeManagerContract
+                .connect(poolOwner)
+                .getFixedPaymentAmt(1000000000, 1025, 12);
+            expect(payment2).to.equal(88032203);
+            const payment3 = await feeManagerContract
+                .connect(poolOwner)
+                .getFixedPaymentAmt(1000000000, 500, 24);
+            expect(payment3).to.equal(43871390);
+        });
+    });
 });
