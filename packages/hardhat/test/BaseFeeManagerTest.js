@@ -66,7 +66,10 @@ describe("Base Fee Manager", function () {
             testTokenContract.address,
             humaConfigContract.address,
             poolLockerFactoryContract.address,
-            feeManagerContract.address
+            feeManagerContract.address,
+            "Base Credit Pool",
+            "Base HDT",
+            "BHDT"
         );
         await poolContract.deployed();
 

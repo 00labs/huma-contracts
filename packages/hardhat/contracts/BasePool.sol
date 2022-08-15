@@ -62,7 +62,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
     uint256 public constant SECONDS_IN_180_DAYS = 15552000;
-    uint256 public withdrawalLockoutPeriod = SECONDS_IN_180_DAYS;
+    uint256 public withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS;
 
     uint256 public poolDefaultGracePeriod;
 
@@ -105,14 +105,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         );
 
         emit PoolDeployed(address(this));
-    }
-
-    modifier onlyHumaMasterAdmin() {
-        require(
-            msg.sender == HumaConfig(humaConfig).owner(),
-            "BasePool:PERMISSION_DENIED_NOT_MASTER_ADMIN"
-        );
-        _;
     }
 
     //********************************************/
@@ -167,11 +159,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         LenderInfo memory li = lenderInfo[msg.sender];
         require(
             block.timestamp >=
-                uint256(li.mostRecentCreditTimestamp) + withdrawalLockoutPeriod,
-            "BasePool:WITHDRAW_TOO_SOON"
+                uint256(li.mostRecentCreditTimestamp) +
+                    withdrawalLockoutPeriodInSeconds,
+            "WITHDRAW_TOO_SOON"
         );
         uint256 withdrawableAmt = withdrawableFundsOf(msg.sender);
-        require(amount <= withdrawableAmt, "BasePool:WITHDRAW_AMT_TOO_GREAT");
+        require(amount <= withdrawableAmt, "WITHDRAW_AMT_TOO_GREAT");
 
         // Calcuate the corresponding principal amount to reduce
         uint256 principalToReduce = (balanceOf(msg.sender) * amount) /
@@ -213,12 +206,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      */
     function addCreditApprover(address approver) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
+        denyZeroAddress(approver);
         creditApprovers[approver] = true;
     }
 
     function setAPR(uint256 _aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        require(_aprInBps >= 0 && _aprInBps <= 10000, "BasePool:INVALID_APR");
+        require(_aprInBps <= 10000, "INVALID_APR");
         poolAprInBps = _aprInBps;
     }
 
@@ -228,7 +222,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        require(_collateralInBps >= 0);
+        require(_collateralInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
         collateralRequiredInBps = _collateralInBps;
     }
 
@@ -241,22 +235,16 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        require(_minBorrowAmt > 0, "BasePool:MINAMT_IS_ZERO");
-        require(_maxBorrowAmt >= _minBorrowAmt, "BasePool:MAX_LESS_THAN_MIN");
+        require(_minBorrowAmt > 0, "MINAMT_IS_ZERO");
+        require(_maxBorrowAmt >= _minBorrowAmt, "MAX_LESS_THAN_MIN");
         minBorrowAmt = _minBorrowAmt;
         maxBorrowAmt = _maxBorrowAmt;
     }
 
-    function setPoolLocker(address _poolLockerAddr)
-        external
-        virtual
-        override
-        returns (bool)
-    {
+    function setPoolLocker(address _poolLockerAddr) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
+        denyZeroAddress(_poolLockerAddr);
         poolLockerAddr = _poolLockerAddr;
-
-        return true;
     }
 
     // Reject all future borrow applications and loans. Note that existing
@@ -285,13 +273,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         poolDefaultGracePeriod = _gracePeriodInDays;
     }
 
-    function setWithdrawalLockoutPeriod(uint256 _withdrawalLockoutPeriod)
+    function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays)
         external
         virtual
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        withdrawalLockoutPeriod = _withdrawalLockoutPeriod;
+        withdrawalLockoutPeriodInSeconds = _lockoutPeriodInDays;
     }
 
     /**
@@ -363,7 +351,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         require(
             (msg.sender == owner() ||
                 msg.sender == HumaConfig(humaConfig).owner()),
-            "BasePool:PERMISSION_DENIED_NOT_ADMIN"
+            "PERMISSION_DENIED_NOT_ADMIN"
         );
     }
 
@@ -372,8 +360,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     function poolOn() internal view {
         require(
             HumaConfig(humaConfig).isProtocolPaused() == false,
-            "BasePool:PROTOCOL_PAUSED"
+            "PROTOCOL_PAUSED"
         );
-        require(status == PoolStatus.On, "BasePool:POOL_NOT_ON");
+        require(status == PoolStatus.On, "POOL_NOT_ON");
+    }
+
+    function denyZeroAddress(address addr) internal pure {
+        require(addr != address(0), "ADDRESS_0_PROVIDED");
     }
 }

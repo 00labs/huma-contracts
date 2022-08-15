@@ -246,7 +246,7 @@ describe("Base Pool - LP and Admin functions", function () {
 
         it("Should reject if the withdraw amount is higher than deposit", async function () {
             const loanWithdrawalLockout =
-                await poolContract.withdrawalLockoutPeriod();
+                await poolContract.withdrawalLockoutPeriodInSeconds();
             await ethers.provider.send("evm_increaseTime", [
                 loanWithdrawalLockout.toNumber(),
             ]);
@@ -258,7 +258,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Pool withdrawal works correctly", async function () {
             // Increment block by lockout period
             const loanWithdrawalLockout =
-                await poolContract.withdrawalLockoutPeriod();
+                await poolContract.withdrawalLockoutPeriodInSeconds();
             await ethers.provider.send("evm_increaseTime", [
                 loanWithdrawalLockout.toNumber(),
             ]);
