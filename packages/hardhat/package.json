@@ -46,6 +46,7 @@
     "send": "hardhat send",
     "generate": "hardhat generate",
     "account": "hardhat account",
-    "verify": "hardhat verify"
+    "verify": "hardhat verify",
+    "lint-solidity": "./node_modules/.bin/solhint -f table contracts/**/*.sol"
   }
 }
