@@ -48,5 +48,25 @@ interface ICredit {
     //         uint256 dueDate
     //     );
 
+    function getNextPaymentInterestOnly(address borrower)
+        external
+        returns (
+            uint256 totalAmt,
+            uint256 principal,
+            uint256 interest,
+            uint256 fees,
+            uint256 dueDate
+        );
+
+    function getPayoffInfoInterestOnly(address borrower)
+        external
+        returns (
+            uint256 total,
+            uint256 principal,
+            uint256 interest,
+            uint256 fees,
+            uint256 dueDate
+        );
+
     function isApproved(address borrower) external view returns (bool);
 }
