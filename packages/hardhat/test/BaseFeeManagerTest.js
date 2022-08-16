@@ -205,7 +205,7 @@ describe("Base Fee Manager", function () {
             const payment3 = await feeManagerContract
                 .connect(poolOwner)
                 .getFixedPaymentAmt(1000000, 500, 24);
-            expect(payment3).to.equal(43871);
+            expect(payment3).to.equal(43870);
         });
     });
 });
