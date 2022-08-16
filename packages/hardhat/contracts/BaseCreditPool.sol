@@ -273,25 +273,60 @@ contract BaseCreditPool is ICredit, BasePool {
         require(_asset == address(poolToken), "WRONG_ASSET");
         require(cr.remainingPayments > 0, "LOAN_PAID_OFF_ALREADY");
 
-        uint256 totalAmount;
         uint256 principal;
         uint256 interest;
         uint256 fees;
         bool paidOff;
 
-        (principal, interest, fees, paidOff) = getNextPayment(
-            cr,
-            lastLateFeeDateMapping[msg.sender]
-        );
-        totalAmount = principal + interest + fees;
+        (principal, interest, fees, paidOff) = IFeeManager(feeManagerAddress)
+            .getNextPayment(cr, lastLateFeeDateMapping[msg.sender], _amount);
+
+        uint256 totalDue = principal + interest + fees;
 
         // Do not accept partial payments. Requires _amount to be able to cover
         // the next payment and all the outstanding fees.
-        require(_amount >= totalAmount, "AMOUNT_TOO_LOW");
+        // todo figure out a good way to communicate back to the user when
+        // the amount is insufficient,
+        require(_amount >= totalDue, "AMOUNT_TOO_LOW");
 
         // Handle overpayment towards principal.
-        principal += (_amount - totalAmount);
-        totalAmount = _amount;
+        if (_amount > totalDue) {
+            uint256 extra = _amount - totalDue;
+
+            if (extra < (cr.remainingPrincipal - principal)) {
+                // The extra does not cover all the remaining principal, simply
+                // apply the extra towards principal payment
+                principal += extra;
+            } else {
+                // the extra can cover the remaining principal, check if it is
+                // enough to cover back loading fee.
+                extra -= cr.remainingPrincipal - principal;
+                principal = cr.remainingPrincipal;
+
+                uint256 backloadingFee = IFeeManager(feeManagerAddress)
+                    .calcBackLoadingFee(cr.loanAmount);
+                if (extra > backloadingFee) {
+                    fees += backloadingFee;
+                    paidOff = true;
+                }
+            }
+        }
+
+        // // It is tricky if there is backloading fee.
+
+        // uint256 total = principal + interest + fees;
+
+        // // Check if the extra principal payment is enough to pay off
+        // if (_paymentAmount >= total && paidOff == false) {
+        //     uint256 extraAmount = _paymentAmount - total;
+        //
+        //     // check if there is enough to cover back loading fee.
+        //     if (extraAmount >= backloadingFee) {
+        //         fees += backloadingFee;
+        //         principal = cr.remainingPrincipal;
+        //         paidOff = true;
+        //     }
+        // }
 
         if (paidOff) {
             cr.nextAmountDue = 0;
@@ -366,36 +401,6 @@ contract BaseCreditPool is ICredit, BasePool {
         distributeLosses(losses);
 
         return losses;
-    }
-
-    function getNextPayment(
-        BaseStructs.CreditRecord memory cr,
-        uint256 lastLateFeeDate
-    )
-        public
-        returns (
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            bool paidOff
-        )
-    {
-        fees = IFeeManager(feeManagerAddress).calcLateFee(
-            cr.nextAmountDue,
-            cr.nextDueDate,
-            lastLateFeeDate,
-            cr.paymentIntervalInDays
-        );
-
-        interest = (cr.remainingPrincipal * cr.aprInBps) / BPS_DIVIDER;
-
-        if (cr.remainingPayments > 1) {
-            paidOff = false;
-            principal = cr.nextAmountDue - interest;
-        } else {
-            paidOff = true;
-            principal = cr.remainingPrincipal;
-        }
     }
 
     /**
