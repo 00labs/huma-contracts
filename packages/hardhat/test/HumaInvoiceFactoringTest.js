@@ -149,7 +149,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(lender)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -166,7 +166,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -183,7 +183,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -198,7 +198,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         5,
                         ethers.constants.AddressZero,
@@ -213,7 +213,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         9999,
                         ethers.constants.AddressZero,
@@ -233,7 +233,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(creditApprover)
-                .postPreapprovedCreditRequest(
+                .recordPreapprovedCreditRequest(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -266,7 +266,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(creditApprover)
-                .postPreapprovedCreditRequest(
+                .recordPreapprovedCreditRequest(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -295,7 +295,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(creditApprover)
-                .postPreapprovedCreditRequest(
+                .recordPreapprovedCreditRequest(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -701,7 +701,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(creditApprover)
-                .postPreapprovedCreditRequest(
+                .recordPreapprovedCreditRequest(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,

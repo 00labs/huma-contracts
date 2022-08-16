@@ -2,7 +2,7 @@
 pragma solidity >=0.8.4 <0.9.0;
 
 interface IPreapprovedCredit {
-    function postPreapprovedCreditRequest(
+    function recordPreapprovedCreditRequest(
         address borrower,
         uint256 borrowAmt,
         address collateralAsset,

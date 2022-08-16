@@ -32,7 +32,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         )
     {}
 
-    function postPreapprovedCreditRequest(
+    function recordPreapprovedCreditRequest(
         address borrower,
         uint256 borrowAmt,
         address collateralAsset,
@@ -124,7 +124,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // This is intentional in case we make changes and forget to add access control
         onlyApprovers();
 
-        postPreapprovedCreditRequest(
+        recordPreapprovedCreditRequest(
             borrower,
             borrowAmt,
             collateralAsset,
