@@ -51,7 +51,7 @@
     "generate": "hardhat generate",
     "account": "hardhat account",
     "verify": "hardhat verify",
-    "lint-solidity": "./node_modules/.bin/solhint -f table 'contracts/**/*.sol'",
-    "prettier:solidity": "./node_modules/.bin/prettier --write 'contracts/**/*.sol'"
+    "lint-solidity": "yarn solhint -f table 'contracts/**/*.sol'",
+    "prettier:solidity": "yarn prettier --write 'contracts/**/*.sol'"
   }
 }
