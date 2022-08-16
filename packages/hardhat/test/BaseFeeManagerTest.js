@@ -215,7 +215,7 @@ describe("Base Fee Manager", function () {
         it("Should fallback properly when fixed payment amount lookup failed", async function () {});
     });
 
-    // IntOnly := Interest Only, backFee := backFee,
+    // IntOnly := Interest Only, Fixed := Fixed monthly payment, backFee := backFee,
     describe("getNextPayment()", function () {
         it("IntOnly - 1st pay - no backFee - amt < interest", async function () {});
         it("IntOnly - 1st pay - no backFee - amt = interest", async function () {});
@@ -249,30 +249,40 @@ describe("Base Fee Manager", function () {
         it("IntOnly - final pay - has backFee - amt > interst + principal + backFee", async function () {});
         it("IntOnly - final pay - has backFee - late - amt < interst + principal + backFee + late fee", async function () {});
         it("IntOnly - final pay - has backFee - late - amt = interst + principal + backFee + late fee", async function () {});
-        it("IntOnly - final pay - has backFee - late - amt = interst + principal + backFee + late fee", async function () {});
+        it("IntOnly - final pay - has backFee - late - amt > interst + principal + backFee + late fee", async function () {});
 
-        it("Fixed - 1st pay - no backFee - amount < due", async function () {});
-        it("Fixed - 1st pay - no backFee - amount = due", async function () {});
-        it("Fixed - 1st pay - no backFee - amount between [due, due + principal]", async function () {});
-        it("Fixed - 1st pay - no backFee - amount = due + principal (early payoff)", async function () {});
-        it("Fixed - 1st pay - no backFee - amount > due + principal (early payoff, extra pay)", async function () {});
-        it("Fixed - 1st pay - has backFee - amount = due + principal + backFee (early payoff)", async function () {});
-        it("Fixed - 1st pay - has backFee - amount > due + principal + backFee (early payoff, extra pay)", async function () {});
-        it("Fixed - 2nd pay - no backFee - amount < due", async function () {});
-        it("Fixed - 2nd pay - no backFee - amount = due", async function () {});
-        it("Fixed - 2nd pay - no backFee - amount between [due, due + principal]", async function () {});
-        it("Fixed - 2nd pay - no backFee - amount = due + principal (early payoff)", async function () {});
-        it("Fixed - 2nd pay - no backFee - amount > due + principal (early payoff, extra pay)", async function () {});
-        it("Fixed - 2nd pay - has backFee - amount = due + principal + backFee (early payoff)", async function () {});
-        it("Fixed - 2nd pay - has backFee - amount > due + principal + backFee (early payoff, extra pay)", async function () {});
-        it("Fixed - final pay - no backFee - amount < interst", async function () {});
-        it("Fixed - final pay - no backFee - amount b/w [interest, interst + principal]", async function () {});
-        it("Fixed - final pay - no backFee - amount = interst + principal", async function () {});
-        it("Fixed - final pay - no backFee - amount > interst + principal", async function () {});
-        it("Fixed - final pay - has backFee - amount < interst", async function () {});
-        it("Fixed - final pay - has backFee - amount = interest + principal", async function () {});
-        it("Fixed - final pay - has backFee - amount b/w [interest + principal, interst + principal + backFee]", async function () {});
-        it("Fixed - final pay - has backFee - amount = interst + principal + backFee", async function () {});
-        it("Fixed - final pay - has backFee - amount > interst + principal + backFee", async function () {});
+        it("Fixed - 1st pay - no backFee - amt < interest", async function () {});
+        it("Fixed - 1st pay - no backFee - amt = interest", async function () {});
+        it("Fixed - 1st pay - no backFee - late - amt = interest, thus < interst + late fee", async function () {});
+        it("Fixed - 1st pay - no backFee - late - amt = interest + late fee", async function () {});
+        it("Fixed - 1st pay - no backFee - amt between [interest, interest + principal]", async function () {});
+        it("Fixed - 1st pay - no backFee - amt = interest + principal (early payoff)", async function () {});
+        it("Fixed - 1st pay - no backFee - amt > interest + principal (early payoff, extra pay)", async function () {});
+        it("Fixed - 1st pay - has backFee - amt = interest + principal + backFee (early payoff)", async function () {});
+        it("Fixed - 1st pay - has backFee - amt > interest + principal + backFee (early payoff, extra pay)", async function () {});
+        it("Fixed - 2nd pay - no backFee - amt < interest", async function () {});
+        it("Fixed - 2nd pay - no backFee - amt = interest", async function () {});
+        it("Fixed - 2nd pay - no backFee - late - amt = interest, thus < interst + late fee", async function () {});
+        it("Fixed - 2nd pay - no backFee - late - amt = interest + late fee", async function () {});
+        it("Fixed - 2nd pay - no backFee - amt between [interest, interest + principal]", async function () {});
+        it("Fixed - 2nd pay - no backFee - amt = interest + principal (early payoff)", async function () {});
+        it("Fixed - 2nd pay - no backFee - amt > interest + principal (early payoff, extra pay)", async function () {});
+        it("Fixed - 2nd pay - has backFee - amt = interest + principal + backFee (early payoff)", async function () {});
+        it("Fixed - 2nd pay - has backFee - amt > interest + principal + backFee (early payoff, extra pay)", async function () {});
+        it("Fixed - final pay - no backFee - amt < interst", async function () {});
+        it("Fixed - final pay - no backFee - amt b/w [interest, interst + principal]", async function () {});
+        it("Fixed - final pay - no backFee - amt = interst + principal", async function () {});
+        it("Fixed - final pay - no backFee - amt = interst + principal", async function () {});
+        it("Fixed - final pay - no backFee - late - amt b/w [interst + principal, interst + principal + late fee]", async function () {});
+        it("Fixed - final pay - no backFee - late - amt = interst + principal + late fee", async function () {});
+        it("Fixed - final pay - no backFee - late - amt > interst + principal + late fee", async function () {});
+        it("Fixed - final pay - has backFee - amt < interst", async function () {});
+        it("Fixed - final pay - has backFee - amt = interest + principal", async function () {});
+        it("Fixed - final pay - has backFee - amt b/w [interest + principal, interst + principal + backFee]", async function () {});
+        it("Fixed - final pay - has backFee - amt = interst + principal + backFee", async function () {});
+        it("Fixed - final pay - has backFee - amt > interst + principal + backFee", async function () {});
+        it("Fixed - final pay - has backFee - late - amt < interst + principal + backFee + late fee", async function () {});
+        it("Fixed - final pay - has backFee - late - amt = interst + principal + backFee + late fee", async function () {});
+        it("Fixed - final pay - has backFee - late - amt > interst + principal + backFee + late fee", async function () {});
     });
 });
