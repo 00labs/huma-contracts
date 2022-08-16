@@ -1,8 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4 <0.9.0;
+import "../interfaces/IFeeManager.sol";
 import "hardhat/console.sol";
 
 library BaseStructs {
+    // Divider to get monthly interest rate from APR BPS. 10000 * 12
+    uint256 public constant BPS_DIVIDER = 120000;
+
     /**
      * @notice CreditRecord stores the overall info and status about a credit originated.
      * @dev amounts are stored in uint96, all counts are stored in uint16
@@ -19,6 +23,7 @@ library BaseStructs {
         uint16 aprInBps;
         uint16 remainingPayments;
         CreditState state;
+        bool interestOnly;
         bool deleted;
     }
 
