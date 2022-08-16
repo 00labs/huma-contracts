@@ -98,7 +98,7 @@ describe("Base Pool - LP and Admin functions", function () {
 
         await poolContract.addCreditApprover(creditApprover.address);
 
-        await poolContract.setAPR(1200, true); //bps
+        await poolContract.setAPR(1200); //bps
         await poolContract.setMinMaxBorrowAmt(10, 1000);
         await poolContract.enablePool();
 
