@@ -15,8 +15,8 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerAddr,
-        address _feeManagerAddr,
+        address _poolLockerAddress,
+        address _feeManagerAddress,
         string memory _poolName,
         string memory _hdtName,
         string memory _hdtSymbol
@@ -24,19 +24,19 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         BaseCreditPool(
             _poolToken,
             _humaConfig,
-            _poolLockerAddr,
-            _feeManagerAddr,
+            _poolLockerAddress,
+            _feeManagerAddress,
             _poolName,
             _hdtName,
             _hdtSymbol
         )
     {}
 
-    function postPreapprovedCreditRequest(
+    function recordPreapprovedCreditRequest(
         address borrower,
-        uint256 borrowAmt,
+        uint256 borrowAmount,
         address collateralAsset,
-        uint256 collateralAmt,
+        uint256 collateralAmount,
         uint256 _paymentIntervalInDays,
         uint256 _remainingPayments
     ) public virtual override {
@@ -45,9 +45,9 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // Pool status and data validation happens within initiate().
         initiate(
             borrower,
-            borrowAmt,
+            borrowAmount,
             collateralAsset,
-            collateralAmt,
+            collateralAmount,
             poolAprInBps,
             _paymentIntervalInDays,
             _remainingPayments
@@ -84,19 +84,19 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
 
         // todo verify that we have indeeded received the payment.
 
-        uint256 lateFee = IFeeManager(feeManagerAddr).calcLateFee(
-            cr.nextAmtDue,
+        uint256 lateFee = IFeeManager(feeManagerAddress).calcLateFee(
+            cr.nextAmountDue,
             cr.nextDueDate,
             lastLateFeeDateMapping[borrower],
             cr.paymentIntervalInDays
         );
-        uint256 refundAmt = amount - cr.remainingPrincipal - lateFee;
+        uint256 refundAmount = amount - cr.remainingPrincipal - lateFee;
 
         // Sends the remainder to the borrower
         cr.remainingPrincipal = 0;
         cr.remainingPayments = 0;
 
-        processRefund(borrower, refundAmt);
+        processRefund(borrower, refundAmount);
 
         return true;
     }
@@ -105,15 +105,15 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         internal
         returns (bool)
     {
-        PoolLocker locker = PoolLocker(poolLockerAddr);
+        PoolLocker locker = PoolLocker(poolLockerAddress);
         locker.transfer(receiver, amount);
 
         return true;
     }
 
-    function originateCreditWithPreapproval(
+    function originatePreapprovedCredit(
         address borrower,
-        uint256 borrowAmt,
+        uint256 borrowAmount,
         address collateralAsset,
         uint256 collateralParam,
         uint256 collateralAmount,
@@ -124,18 +124,18 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // This is intentional in case we make changes and forget to add access control
         onlyApprovers();
 
-        postPreapprovedCreditRequest(
+        recordPreapprovedCreditRequest(
             borrower,
-            borrowAmt,
+            borrowAmount,
             collateralAsset,
             collateralAmount,
             _paymentIntervalInDays,
             _remainingPayments
         );
 
-        originateCreditWithCollateral(
+        originateCollateralizedCredit(
             borrower,
-            borrowAmt,
+            borrowAmount,
             collateralAsset,
             collateralParam,
             collateralAmount

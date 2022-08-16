@@ -28,10 +28,10 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     address public humaConfig;
 
     // Liquidity holder proxy contract for this pool
-    address public poolLockerAddr;
+    address public poolLockerAddress;
 
     // Address for the fee manager contract
-    address public feeManagerAddr;
+    address public feeManagerAddress;
 
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => LenderInfo) public lenderInfo;
@@ -43,10 +43,10 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 internal liquidityCap;
 
     // the min amount each loan/credit.
-    uint256 internal minBorrowAmt;
+    uint256 internal minBorrowAmount;
 
     // The maximum amount of poolTokens that this pool allows in a single loan
-    uint256 internal maxBorrowAmt;
+    uint256 internal maxBorrowAmount;
 
     // The interest rate this pool charges for loans
     uint256 internal poolAprInBps;
@@ -69,7 +69,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     struct LenderInfo {
         // this field may not be needed. it should equal to hdt.balanceOf(user). todo check later & remove struct
-        uint96 principalAmt;
+        uint96 principalAmount;
         uint64 mostRecentCreditTimestamp;
         bool deleted;
     }
@@ -80,7 +80,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     event LiquidityDeposited(address by, uint256 principal);
-    event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmt);
+    event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
     event PoolDeployed(address _poolAddress);
 
     constructor(
@@ -95,15 +95,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         poolName = _poolName;
         poolToken = IERC20(_poolToken);
         humaConfig = _humaConfig;
-        feeManagerAddr = _feeManager;
+        feeManagerAddress = _feeManager;
 
         poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
 
-        poolLockerAddr = PoolLockerFactory(_poolLockerFactory).deployNewLocker(
-            address(this),
-            _poolToken
-        );
+        poolLockerAddress = PoolLockerFactory(_poolLockerFactory)
+            .deployNewLocker(address(this), _poolToken);
 
         emit PoolDeployed(address(this));
     }
@@ -133,12 +131,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
         LenderInfo memory li = lenderInfo[lender];
 
-        li.principalAmt += uint96(amount);
+        li.principalAmount += uint96(amount);
         li.mostRecentCreditTimestamp = uint64(block.timestamp);
 
         lenderInfo[lender] = li;
 
-        poolToken.safeTransferFrom(lender, poolLockerAddr, amount);
+        poolToken.safeTransferFrom(lender, poolLockerAddress, amount);
 
         // Mint HDT for the LP to claim future income and losses
         _mint(lender, amount);
@@ -164,20 +162,22 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
                     withdrawalLockoutPeriodInSeconds,
             "WITHDRAW_TOO_SOON"
         );
-        uint256 withdrawableAmt = withdrawableFundsOf(msg.sender);
-        require(amount <= withdrawableAmt, "WITHDRAW_AMT_TOO_GREAT");
+        uint256 withdrawableAmount = withdrawableFundsOf(msg.sender);
+        require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
 
         // Calcuate the corresponding principal amount to reduce
         uint256 principalToReduce = (balanceOf(msg.sender) * amount) /
-            withdrawableAmt;
+            withdrawableAmount;
 
-        li.principalAmt = uint96(uint256(li.principalAmt) - principalToReduce);
+        li.principalAmount = uint96(
+            uint256(li.principalAmount) - principalToReduce
+        );
 
         lenderInfo[msg.sender] = li;
 
         _burn(msg.sender, principalToReduce);
 
-        PoolLocker(poolLockerAddr).transfer(msg.sender, amount);
+        PoolLocker(poolLockerAddress).transfer(msg.sender, amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, principalToReduce);
     }
@@ -186,7 +186,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @notice Withdraw all balance from the pool.
      */
     function withdrawAll() external virtual override {
-        return withdraw(lenderInfo[msg.sender].principalAmt);
+        return withdraw(lenderInfo[msg.sender].principalAmount);
     }
 
     /********************************************/
@@ -230,22 +230,25 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     /**
      * @notice Sets the min and max of each loan/credit allowed by the pool.
      */
-    function setMinMaxBorrowAmt(uint256 _minBorrowAmt, uint256 _maxBorrowAmt)
+    function setMinMaxBorrowAmount(
+        uint256 _minBorrowAmount,
+        uint256 _maxBorrowAmount
+    ) external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        require(_minBorrowAmount > 0, "MINAMT_IS_ZERO");
+        require(_maxBorrowAmount >= _minBorrowAmount, "MAX_LESS_THAN_MIN");
+        minBorrowAmount = _minBorrowAmount;
+        maxBorrowAmount = _maxBorrowAmount;
+    }
+
+    function setPoolLocker(address _poolLockerAddress)
         external
         virtual
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        require(_minBorrowAmt > 0, "MINAMT_IS_ZERO");
-        require(_maxBorrowAmt >= _minBorrowAmt, "MAX_LESS_THAN_MIN");
-        minBorrowAmt = _minBorrowAmt;
-        maxBorrowAmt = _maxBorrowAmt;
-    }
-
-    function setPoolLocker(address _poolLockerAddr) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        denyZeroAddress(_poolLockerAddr);
-        poolLockerAddr = _poolLockerAddr;
+        denyZeroAddress(_poolLockerAddress);
+        poolLockerAddress = _poolLockerAddress;
     }
 
     // Reject all future borrow applications and loans. Note that existing
@@ -304,7 +307,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     function getPoolLiquidity() public view returns (uint256) {
-        return poolToken.balanceOf(poolLockerAddr);
+        return poolToken.balanceOf(poolLockerAddress);
     }
 
     // Function to receive Ether. msg.data must be empty
@@ -325,8 +328,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         returns (
             address token,
             uint256 apr,
-            uint256 minCreditAmt,
-            uint256 maxCreditAmt,
+            uint256 minCreditAmount,
+            uint256 maxCreditAmount,
             uint256 liquiditycap,
             string memory name,
             string memory symbol,
@@ -337,8 +340,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         return (
             address(poolToken),
             poolAprInBps,
-            minBorrowAmt,
-            maxBorrowAmt,
+            minBorrowAmount,
+            maxBorrowAmount,
             liquidityCap,
             erc20Contract.name(),
             erc20Contract.symbol(),

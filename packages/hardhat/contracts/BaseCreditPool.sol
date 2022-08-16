@@ -32,8 +32,8 @@ contract BaseCreditPool is ICredit, BasePool {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerAddr,
-        address _feeManagerAddr,
+        address _poolLockerAddress,
+        address _feeManagerAddress,
         string memory _poolName,
         string memory _hdtName,
         string memory _hdtSymbol
@@ -41,8 +41,8 @@ contract BaseCreditPool is ICredit, BasePool {
         BasePool(
             _poolToken,
             _humaConfig,
-            _poolLockerAddr,
-            _feeManagerAddr,
+            _poolLockerAddress,
+            _feeManagerAddress,
             _poolName,
             _hdtName,
             _hdtSymbol
@@ -53,7 +53,7 @@ contract BaseCreditPool is ICredit, BasePool {
      * @notice accepts a credit request from msg.sender
      */
     function requestCredit(
-        uint256 _borrowAmt,
+        uint256 _borrowAmount,
         uint256 _paymentIntervalInDays,
         uint256 _numOfPayments
     ) external virtual override {
@@ -61,7 +61,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // Parameter and condition validation happens in initiate()
         initiate(
             msg.sender,
-            _borrowAmt,
+            _borrowAmount,
             address(0),
             0,
             poolAprInBps,
@@ -73,16 +73,16 @@ contract BaseCreditPool is ICredit, BasePool {
     /**
      * @notice the initiation of a loan
      * @param _borrower the address of the borrower
-     * @param _borrowAmt the amount of the liquidity asset that the borrower obtains
+     * @param _borrowAmount the amount of the liquidity asset that the borrower obtains
      * @param _collateralAsset the address of the collateral asset.
-     * @param _collateralAmt the amount of the collateral asset
+     * @param _collateralAmount the amount of the collateral asset
      * todo remove dynamic array, need to coordinate with client for that change.
      */
     function initiate(
         address _borrower,
-        uint256 _borrowAmt,
+        uint256 _borrowAmount,
         address _collateralAsset,
-        uint256 _collateralAmt,
+        uint256 _collateralAmount,
         uint256 _aprInBps,
         uint256 _paymentIntervalInDays,
         uint256 _remainingPayments
@@ -96,15 +96,15 @@ contract BaseCreditPool is ICredit, BasePool {
         );
 
         // Borrowing amount needs to be higher than min for the pool.
-        require(_borrowAmt >= minBorrowAmt, "SMALLER_THAN_LIMIT");
+        require(_borrowAmount >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
         // Borrowing amount needs to be lower than max for the pool.
-        require(maxBorrowAmt >= _borrowAmt, "GREATER_THAN_LIMIT");
+        require(maxBorrowAmount >= _borrowAmount, "GREATER_THAN_LIMIT");
 
         // Populates basic credit info fields
         BaseStructs.CreditRecord memory cr;
-        cr.loanAmt = uint96(_borrowAmt);
-        cr.remainingPrincipal = uint96(_borrowAmt);
+        cr.loanAmount = uint96(_borrowAmount);
+        cr.remainingPrincipal = uint96(_borrowAmount);
         cr.aprInBps = uint16(_aprInBps);
         cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
         cr.remainingPayments = uint16(_remainingPayments);
@@ -115,7 +115,7 @@ contract BaseCreditPool is ICredit, BasePool {
         if (_collateralAsset != address(0)) {
             BaseStructs.CollateralInfo memory ci;
             ci.collateralAsset = _collateralAsset;
-            ci.collateralAmt = uint88(_collateralAmt);
+            ci.collateralAmount = uint88(_collateralAmount);
             collateralInfoMapping[_borrower] = ci;
         }
     }
@@ -154,22 +154,22 @@ contract BaseCreditPool is ICredit, BasePool {
         else return false;
     }
 
-    function originateCredit(uint256 borrowAmt) external virtual override {
+    function originateCredit(uint256 borrowAmount) external virtual override {
         // Open access to the borrower
-        // Condition validation happens in originateCreditWithCollateral()
+        // Condition validation happens in originateCollateralizedCredit()
         return
-            originateCreditWithCollateral(
+            originateCollateralizedCredit(
                 msg.sender,
-                borrowAmt,
+                borrowAmount,
                 address(0),
                 0,
                 0
             );
     }
 
-    function originateCreditWithCollateral(
+    function originateCollateralizedCredit(
         address _borrower,
-        uint256 _borrowAmt,
+        uint256 _borrowAmount,
         address _collateralAsset,
         uint256 _collateralParam,
         uint256 _collateralCount
@@ -181,10 +181,10 @@ contract BaseCreditPool is ICredit, BasePool {
 
         require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
 
-        // Critical to update cr.loanAmt since _borrowAmt
+        // Critical to update cr.loanAmount since _borrowAmount
         // might be lowered than the approved loan amount
         BaseStructs.CreditRecord memory cr = creditRecordMapping[_borrower];
-        cr.loanAmt = uint32(_borrowAmt);
+        cr.loanAmount = uint32(_borrowAmount);
         // // Calculates next payment amount and due date
         cr.nextDueDate = uint64(
             block.timestamp +
@@ -192,7 +192,7 @@ contract BaseCreditPool is ICredit, BasePool {
                 SECONDS_IN_A_DAY
         );
         // todo need to call FeeManager for this calculation.
-        cr.nextAmtDue = uint32((_borrowAmt * cr.aprInBps) / BPS_DIVIDER);
+        cr.nextAmountDue = uint32((_borrowAmount * cr.aprInBps) / BPS_DIVIDER);
         creditRecordMapping[_borrower] = cr;
 
         // Record the collateral info.
@@ -207,7 +207,7 @@ contract BaseCreditPool is ICredit, BasePool {
                 );
             }
             // todo check to make sure the collateral amount meets the requirements
-            ci.collateralAmt = uint32(_collateralCount);
+            ci.collateralAmount = uint32(_collateralCount);
             ci.collateralParam = _collateralParam;
             collateralInfoMapping[_borrower] = ci;
         }
@@ -216,8 +216,8 @@ contract BaseCreditPool is ICredit, BasePool {
             uint256 amtToBorrower,
             uint256 protocolFee,
             uint256 poolIncome
-        ) = IFeeManager(feeManagerAddr).distBorrowingAmt(
-                _borrowAmt,
+        ) = IFeeManager(feeManagerAddress).distBorrowingAmount(
+                _borrowAmount,
                 humaConfig
             );
 
@@ -229,7 +229,7 @@ contract BaseCreditPool is ICredit, BasePool {
             if (_collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
                 IERC721(_collateralAsset).safeTransferFrom(
                     _borrower,
-                    poolLockerAddr,
+                    poolLockerAddress,
                     _collateralParam
                 );
             } else if (
@@ -237,7 +237,7 @@ contract BaseCreditPool is ICredit, BasePool {
             ) {
                 IERC20(_collateralAsset).safeTransferFrom(
                     msg.sender,
-                    poolLockerAddr,
+                    poolLockerAddress,
                     _collateralCount
                 );
             } else {
@@ -247,7 +247,7 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Transfer protocole fee and funds the _borrower
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
-        PoolLocker locker = PoolLocker(poolLockerAddr);
+        PoolLocker locker = PoolLocker(poolLockerAddress);
         locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(_borrower, amtToBorrower);
     }
@@ -270,13 +270,13 @@ contract BaseCreditPool is ICredit, BasePool {
         require(_asset == address(poolToken), "WRONG_ASSET");
         require(cr.remainingPayments > 0, "LOAN_PAID_OFF_ALREADY");
 
-        uint256 totalAmt;
+        uint256 totalAmount;
         uint256 principal;
         uint256 interest;
         uint256 fees;
         if (cr.remainingPayments == 1) {
             (
-                totalAmt,
+                totalAmount,
                 principal,
                 interest,
                 fees, /*unused*/
@@ -284,7 +284,7 @@ contract BaseCreditPool is ICredit, BasePool {
             ) = getPayoffInfoInterestOnly(msg.sender);
         } else {
             (
-                totalAmt,
+                totalAmount,
                 principal,
                 interest,
                 fees, /*unused*/
@@ -294,14 +294,14 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Do not accept partial payments. Requires _amount to be able to cover
         // the next payment and all the outstanding fees.
-        require(_amount >= totalAmt, "AMOUNT_TOO_LOW");
+        require(_amount >= totalAmount, "AMOUNT_TOO_LOW");
 
         // Handle overpayment towards principal.
-        principal += (_amount - totalAmt);
-        totalAmt = _amount;
+        principal += (_amount - totalAmount);
+        totalAmount = _amount;
 
         if (cr.remainingPayments == 1) {
-            cr.nextAmtDue = 0;
+            cr.nextAmountDue = 0;
             cr.nextDueDate = 0;
             cr.remainingPrincipal = 0;
             cr.feesAccrued = 0;
@@ -329,7 +329,7 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Transfer assets from the _borrower to pool locker
         IERC20 assetIERC20 = IERC20(poolToken);
-        assetIERC20.transferFrom(msg.sender, poolLockerAddr, _amount);
+        assetIERC20.transferFrom(msg.sender, poolLockerAddress, _amount);
     }
 
     /**
@@ -389,7 +389,7 @@ contract BaseCreditPool is ICredit, BasePool {
     //     ) {
     //         if (cfs.late_fee_flat > 0) newFees = cfs.late_fee_flat;
     //         if (cfs.late_fee_bps > 0) {
-    //             newFees += (cr.nextAmtDue * cfs.late_fee_bps) / BPS_DIVIDER;
+    //             newFees += (cr.nextAmountDue * cfs.late_fee_bps) / BPS_DIVIDER;
     //         }
     //         cr.feesAccrued += uint32(newFees);
     //         cr.lastLateFeeTimestamp = uint64(block.timestamp);
@@ -447,14 +447,14 @@ contract BaseCreditPool is ICredit, BasePool {
     //     BaseStructs.CreditStatus storage cs = creditRecordMapping[borrower];
     //     uint256 monthlyRateBP = cr.aprInBps / 12;
     //     monthlyPayment = ci
-    //         .loanAmt
+    //         .loanAmount
     //         .mul(monthlyRateBP.mul(monthlyRateBP.add(HUNDRED_PERCENT_IN_BPS)) ^ cr.numOfPayments)
     //         .div(monthlyRateBP.add(HUNDRED_PERCENT_IN_BPS) ^ cr.numOfPayments.sub(HUNDRED_PERCENT_IN_BPS));
     // }
 
     // /**
     //  * @notice Gets the information of the next payment due
-    //  * @return totalAmt the full amount due for the next payment
+    //  * @return totalAmount the full amount due for the next payment
     //  * @return principal the amount towards principal
     //  * @return interest the amount towards interest
     //  * @return fees the amount towards fees
@@ -465,7 +465,7 @@ contract BaseCreditPool is ICredit, BasePool {
     //     virtual
     //     override
     //     returns (
-    //         uint256 totalAmt,
+    //         uint256 totalAmount,
     //         uint256 principal,
     //         uint256 interest,
     //         uint256 fees,
@@ -480,7 +480,7 @@ contract BaseCreditPool is ICredit, BasePool {
     //     interest =
     //         (cr.remainingPrincipal * creditFeesMapping[borrower].aprInBps) /
     //         BPS_DIVIDER;
-    //     principal = cr.nextAmtDue - interest;
+    //     principal = cr.nextAmountDue - interest;
     //     return (
     //         principal + interest + fees,
     //         principal,
@@ -492,7 +492,7 @@ contract BaseCreditPool is ICredit, BasePool {
 
     /**
      * @notice Gets the information of the next payment due for interest only
-     * @return totalAmt the full amount due for the next payment
+     * @return totalAmount the full amount due for the next payment
      * @return principal the amount towards principal
      * @return interest the amount towards interest
      * @return fees the amount towards fees
@@ -503,7 +503,7 @@ contract BaseCreditPool is ICredit, BasePool {
         virtual
         override
         returns (
-            uint256 totalAmt,
+            uint256 totalAmount,
             uint256 principal,
             uint256 interest,
             uint256 fees,
@@ -511,14 +511,14 @@ contract BaseCreditPool is ICredit, BasePool {
         )
     {
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
-        fees = IFeeManager(feeManagerAddr).calcLateFee(
-            cr.nextAmtDue,
+        fees = IFeeManager(feeManagerAddress).calcLateFee(
+            cr.nextAmountDue,
             cr.nextDueDate,
             lastLateFeeDateMapping[borrower],
             cr.paymentIntervalInDays
         );
 
-        interest = (cr.loanAmt * cr.aprInBps) / BPS_DIVIDER;
+        interest = (cr.loanAmount * cr.aprInBps) / BPS_DIVIDER;
         return (interest + fees, 0, interest, fees, block.timestamp);
     }
 
@@ -576,15 +576,15 @@ contract BaseCreditPool is ICredit, BasePool {
         principal = cr.remainingPrincipal;
         interest = (principal * cr.aprInBps) / BPS_DIVIDER;
         // todo
-        fees = IFeeManager(feeManagerAddr).calcLateFee(
-            cr.nextAmtDue,
+        fees = IFeeManager(feeManagerAddress).calcLateFee(
+            cr.nextAmountDue,
             cr.nextDueDate,
             lastLateFeeDateMapping[borrower],
             cr.paymentIntervalInDays
         );
 
         // todo need to call with the original principal amount
-        fees += IFeeManager(feeManagerAddr).calcBackLoadingFee(principal);
+        fees += IFeeManager(feeManagerAddress).calcBackLoadingFee(principal);
         total = principal + interest + fees;
         return (total, principal, interest, fees, block.timestamp);
     }
@@ -596,8 +596,8 @@ contract BaseCreditPool is ICredit, BasePool {
         external
         view
         returns (
-            uint96 loanAmt,
-            uint96 nextAmtDue,
+            uint96 loanAmount,
+            uint96 nextAmountDue,
             uint64 paymentIntervalInDays,
             uint16 aprInBps,
             uint64 nextDueDate,
@@ -608,8 +608,8 @@ contract BaseCreditPool is ICredit, BasePool {
     {
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
         return (
-            cr.loanAmt,
-            cr.nextAmtDue,
+            cr.loanAmount,
+            cr.nextAmountDue,
             cr.paymentIntervalInDays,
             cr.aprInBps,
             cr.nextDueDate,

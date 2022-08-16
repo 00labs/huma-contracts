@@ -91,7 +91,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             fees += (_amount * back_loading_fee_bps) / BPS_DIVIDER;
     }
 
-    function distBorrowingAmt(uint256 borrowAmt, address humaConfig)
+    function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
         external
         virtual
         override
@@ -102,18 +102,18 @@ contract BaseFeeManager is IFeeManager, Ownable {
         )
     {
         // Calculate platform fee, which includes protocol fee and pool fee
-        uint256 platformFees = calcFrontLoadingFee(borrowAmt);
+        uint256 platformFees = calcFrontLoadingFee(borrowAmount);
 
         // Split the fee between treasury and the pool
         protocolFee =
-            (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmt) /
+            (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmount) /
             10000;
 
         assert(platformFees >= protocolFee);
 
         poolIncome = platformFees - protocolFee;
 
-        amtToBorrower = borrowAmt - platformFees;
+        amtToBorrower = borrowAmount - platformFees;
 
         return (amtToBorrower, protocolFee, poolIncome);
     }
@@ -146,18 +146,18 @@ contract BaseFeeManager is IFeeManager, Ownable {
         tempMap[aprInBps] = payment;
     }
 
-    function getFixedPaymentAmt(
-        uint256 creditAmt,
+    function getFixedPaymentAmount(
+        uint256 creditAmount,
         uint256 aprInBps,
         uint256 numOfPayments
-    ) public view returns (uint256 paymentAmt) {
+    ) public view returns (uint256 paymentAmount) {
         uint256 uintPrice = (fixedPaymentPerOneMillion[numOfPayments])[
             aprInBps
         ];
-        paymentAmt = (uintPrice * creditAmt) / 1000000;
+        paymentAmount = (uintPrice * creditAmount) / 1000000;
     }
 
-    /// returns (maxLoanAmt, interest, and the 6 fee fields)
+    /// returns (maxLoanAmount, interest, and the 6 fee fields)
     function getFees()
         public
         view
