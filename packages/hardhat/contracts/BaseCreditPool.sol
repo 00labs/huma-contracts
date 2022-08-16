@@ -194,7 +194,7 @@ contract BaseCreditPool is ICredit, BasePool {
                 uint256(cr.paymentIntervalInDays) *
                 SECONDS_IN_A_DAY
         );
-        // todo need to call FeeManager for this calculation.
+        // Calculate the monthly payment (except the final payment)
         if (interestOnly) {
             cr.nextAmountDue = uint32(
                 (_borrowAmount * cr.aprInBps) / BPS_DIVIDER
@@ -208,8 +208,18 @@ contract BaseCreditPool is ICredit, BasePool {
                 )
             );
         }
-
         creditRecordMapping[_borrower] = cr;
+
+        (
+            uint256 amtToBorrower,
+            uint256 protocolFee,
+            uint256 poolIncome
+        ) = IFeeManager(feeManagerAddress).distBorrowingAmount(
+                _borrowAmount,
+                humaConfig
+            );
+
+        if (poolIncome > 0) distributeIncome(poolIncome);
 
         // Record the collateral info.
         if (_collateralAsset != address(0)) {
@@ -223,23 +233,11 @@ contract BaseCreditPool is ICredit, BasePool {
                 );
             }
             // todo check to make sure the collateral amount meets the requirements
-            ci.collateralAmount = uint32(_collateralCount);
+            ci.collateralAmount = uint88(_collateralCount);
             ci.collateralParam = _collateralParam;
             collateralInfoMapping[_borrower] = ci;
         }
 
-        (
-            uint256 amtToBorrower,
-            uint256 protocolFee,
-            uint256 poolIncome
-        ) = IFeeManager(feeManagerAddress).distBorrowingAmount(
-                _borrowAmount,
-                humaConfig
-            );
-
-        distributeIncome(poolIncome);
-
-        // //CRITICAL: Asset transfers
         // // Transfers collateral asset
         if (_collateralAsset != address(0)) {
             if (_collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
@@ -302,46 +300,34 @@ contract BaseCreditPool is ICredit, BasePool {
         // the amount is insufficient,
         require(_amount >= totalDue, "AMOUNT_TOO_LOW");
 
-        // uint256 total = principal + interest + fees;
-
-        // // Check if the extra principal payment is enough to pay off
-        // if (_paymentAmount >= total && paidOff == false) {
-        //     uint256 extraAmount = _paymentAmount - total;
-        //
-        //     // check if there is enough to cover back loading fee.
-        //     if (extraAmount >= backloadingFee) {
-        //         fees += backloadingFee;
-        //         principal = cr.remainingPrincipal;
-        //         paidOff = true;
-        //     }
-        // }
-
         if (paidOff) {
             cr.nextAmountDue = 0;
             cr.nextDueDate = 0;
             cr.remainingPrincipal = 0;
             cr.feesAccrued = 0;
             cr.remainingPayments = 0;
+            invalidateApprovedCredit(msg.sender);
         } else {
-            cr.feesAccrued = 0;
-            // Covers the case when the user paid extra amount than required
-            // todo needs to address the case when the amount paid can actually pay off
-            cr.remainingPrincipal = cr.remainingPrincipal - uint96(principal);
+            cr.remainingPrincipal = uint96(cr.remainingPrincipal - principal);
+            cr.remainingPayments -= 1;
             cr.nextDueDate =
                 cr.nextDueDate +
                 uint64(cr.paymentIntervalInDays * SECONDS_IN_A_DAY);
-            cr.remainingPayments -= 1;
+            // Handle the extreme corner case when the principal is 0
+            // but the backloading fee is not paid yet.
+            // ? do we accept portion payment?
+            if (cr.remainingPrincipal == 0)
+                cr.feesAccrued = uint96(
+                    IFeeManager(feeManagerAddress).calcBackLoadingFee(
+                        cr.loanAmount
+                    )
+                );
         }
+        creditRecordMapping[msg.sender] = cr;
 
         // Distribute income
         uint256 poolIncome = interest + fees;
         distributeIncome(poolIncome);
-
-        if (cr.remainingPayments == 0) {
-            // No way to delete entries in mapping, thus mark the deleted field to true.
-            invalidateApprovedCredit(msg.sender);
-        }
-        creditRecordMapping[msg.sender] = cr;
 
         // Transfer assets from the _borrower to pool locker
         IERC20 assetIERC20 = IERC20(poolToken);
