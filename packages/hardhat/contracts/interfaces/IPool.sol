@@ -13,8 +13,8 @@ interface IPool {
     // function setKeySettings(
     //     uint256 _apr,
     //     uint256 _collateralRateInBps,
-    //     uint256 _minAmt,
-    //     uint256 _maxAmt,
+    //     uint256 _minAmount,
+    //     uint256 _maxAmount,
     //     uint256 _front_fee_flat,
     //     uint256 _front_fee_bps,
     //     uint256 _late_fee_flat,
@@ -30,7 +30,8 @@ interface IPool {
 
     function setCollateralRequiredInBps(uint256 _collateralRateInBps) external;
 
-    function setMinMaxBorrowAmt(uint256 _minAmt, uint256 _maxAmt) external;
+    function setMinMaxBorrowAmount(uint256 _minAmount, uint256 _maxAmount)
+        external;
 
     function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external;
 
@@ -46,8 +47,8 @@ interface IPool {
         returns (
             address poolToken,
             uint256 apr,
-            uint256 minCreditAmt,
-            uint256 maxCreditAmt,
+            uint256 minCreditAmount,
+            uint256 maxCreditAmount,
             uint256 liquiditycap,
             string memory name,
             string memory symbol,

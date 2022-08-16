@@ -19,7 +19,7 @@ interface IFeeManager {
         external
         returns (uint256 fees);
 
-    function distBorrowingAmt(uint256 borrowAmt, address humaConfig)
+    function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
         external
         returns (
             uint256 amtToBorrower,

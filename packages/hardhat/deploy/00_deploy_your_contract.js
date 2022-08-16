@@ -92,8 +92,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await HumaInvoiceFactoring.addCreditApprover(
         process.env.INITIAL_HUMA_CREDIT_APPROVER
     );
-    const maxBorrowAmt = decimalToExpandedString(10000, poolTokenDecimals);
-    await HumaInvoiceFactoring.setMinMaxBorrowAmt(10, maxBorrowAmt);
+    const maxBorrowAmount = decimalToExpandedString(10000, poolTokenDecimals);
+    await HumaInvoiceFactoring.setMinMaxBorrowAmount(10, maxBorrowAmount);
 
     await deploy("InvoiceNFT", {
         from: deployer,
