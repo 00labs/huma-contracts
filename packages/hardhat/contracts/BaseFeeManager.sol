@@ -223,7 +223,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         return (principal, interest, fees, paidOff);
     }
 
-    /// returns (maxLoanAmount, interest, and the 6 fee fields)
+    /// returns (maxLoanAmt, interest, and the 6 fee fields)
     function getFees()
         public
         view
