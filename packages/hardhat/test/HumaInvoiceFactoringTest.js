@@ -344,7 +344,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(borrower)
-                .originateCreditWithCollateral(
+                .originateCollateralizedCredit(
                     borrower.address,
                     200,
                     invoiceNFTContract.address,
@@ -372,7 +372,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(borrower)
-                .originateCreditWithCollateral(
+                .originateCollateralizedCredit(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
@@ -726,7 +726,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(borrower)
-                .originateCreditWithCollateral(
+                .originateCollateralizedCredit(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,

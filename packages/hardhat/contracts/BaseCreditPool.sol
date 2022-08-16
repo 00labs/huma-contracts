@@ -156,9 +156,9 @@ contract BaseCreditPool is ICredit, BasePool {
 
     function originateCredit(uint256 borrowAmt) external virtual override {
         // Open access to the borrower
-        // Condition validation happens in originateCreditWithCollateral()
+        // Condition validation happens in originateCollateralizedCredit()
         return
-            originateCreditWithCollateral(
+            originateCollateralizedCredit(
                 msg.sender,
                 borrowAmt,
                 address(0),
@@ -167,7 +167,7 @@ contract BaseCreditPool is ICredit, BasePool {
             );
     }
 
-    function originateCreditWithCollateral(
+    function originateCollateralizedCredit(
         address _borrower,
         uint256 _borrowAmt,
         address _collateralAsset,
