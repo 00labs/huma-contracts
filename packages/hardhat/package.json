@@ -52,11 +52,7 @@
     "generate": "hardhat generate",
     "account": "hardhat account",
     "verify": "hardhat verify",
-    "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol"
-  },
-  "husky": {
-    "hooks": {
-      "pre-push": "yarn prettier:solidity"
-    }
+    "lint-solidity": "./node_modules/.bin/solhint -f table 'contracts/**/*.sol'",
+    "prettier:solidity": "./node_modules/.bin/prettier --write 'contracts/**/*.sol'"
   }
 }
