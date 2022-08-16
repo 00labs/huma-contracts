@@ -195,7 +195,20 @@ contract BaseCreditPool is ICredit, BasePool {
                 SECONDS_IN_A_DAY
         );
         // todo need to call FeeManager for this calculation.
-        cr.nextAmountDue = uint32((_borrowAmount * cr.aprInBps) / BPS_DIVIDER);
+        if (interestOnly) {
+            cr.nextAmountDue = uint32(
+                (_borrowAmount * cr.aprInBps) / BPS_DIVIDER
+            );
+        } else {
+            cr.nextAmountDue = uint96(
+                IFeeManager(feeManagerAddress).getFixedPaymentAmount(
+                    _borrowAmount,
+                    cr.aprInBps,
+                    cr.remainingPayments
+                )
+            );
+        }
+
         creditRecordMapping[_borrower] = cr;
 
         // Record the collateral info.
@@ -289,31 +302,6 @@ contract BaseCreditPool is ICredit, BasePool {
         // the amount is insufficient,
         require(_amount >= totalDue, "AMOUNT_TOO_LOW");
 
-        // Handle overpayment towards principal.
-        if (_amount > totalDue) {
-            uint256 extra = _amount - totalDue;
-
-            if (extra < (cr.remainingPrincipal - principal)) {
-                // The extra does not cover all the remaining principal, simply
-                // apply the extra towards principal payment
-                principal += extra;
-            } else {
-                // the extra can cover the remaining principal, check if it is
-                // enough to cover back loading fee.
-                extra -= cr.remainingPrincipal - principal;
-                principal = cr.remainingPrincipal;
-
-                uint256 backloadingFee = IFeeManager(feeManagerAddress)
-                    .calcBackLoadingFee(cr.loanAmount);
-                if (extra > backloadingFee) {
-                    fees += backloadingFee;
-                    paidOff = true;
-                }
-            }
-        }
-
-        // // It is tricky if there is backloading fee.
-
         // uint256 total = principal + interest + fees;
 
         // // Check if the extra principal payment is enough to pay off
@@ -401,105 +389,6 @@ contract BaseCreditPool is ICredit, BasePool {
         distributeLosses(losses);
 
         return losses;
-    }
-
-    /**
-     * @notice Gets the information of the next payment due for interest only
-     * @return totalAmount the full amount due for the next payment
-     * @return principal the amount towards principal
-     * @return interest the amount towards interest
-     * @return fees the amount towards fees
-     * @return dueDate the datetime of when the next payment is due
-     */
-    function getNextPaymentInterestOnly(address borrower)
-        public
-        virtual
-        override
-        returns (
-            uint256 totalAmount,
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            uint256 dueDate
-        )
-    {
-        BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
-        fees = IFeeManager(feeManagerAddress).calcLateFee(
-            cr.nextAmountDue,
-            cr.nextDueDate,
-            lastLateFeeDateMapping[borrower],
-            cr.paymentIntervalInDays
-        );
-
-        interest = (cr.loanAmount * cr.aprInBps) / BPS_DIVIDER;
-        return (interest + fees, 0, interest, fees, block.timestamp);
-    }
-
-    // /**
-    //  * @notice Gets the payoff information
-    //  * @return total the total amount for the payoff
-    //  * @return principal the remaining principal amount
-    //  * @return interest the interest amount for the last period
-    //  * @return fees fees including early payoff penalty
-    //  * @return dueDate the date that payment needs to be made for this payoff amount
-    //  */
-    // function getPayoffInfo(address borrower)
-    //     public
-    //     virtual
-    //     override
-    //     returns (
-    //         uint256 total,
-    //         uint256 principal,
-    //         uint256 interest,
-    //         uint256 fees,
-    //         uint256 dueDate
-    //     )
-    // {
-    //     principal = creditRecordMapping[borrower].remainingPrincipal;
-    //     interest =
-    //         (principal * creditFeesMapping[borrower].aprInBps) /
-    //         BPS_DIVIDER;
-    //     fees = assessLateFee(borrower);
-    //     fees += (assessEarlyPayoffFees(borrower));
-    //     total = principal + interest + fees;
-    //     return (total, principal, interest, fees, block.timestamp);
-    // }
-
-    /**
-     * @notice Gets the payoff information
-     * @return total the total amount for the payoff
-     * @return principal the remaining principal amount
-     * @return interest the interest amount for the last period
-     * @return fees fees including early payoff penalty
-     * @return dueDate the date that payment needs to be made for this payoff amount
-     */
-    function getPayoffInfoInterestOnly(address borrower)
-        public
-        virtual
-        override
-        returns (
-            uint256 total,
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            uint256 dueDate
-        )
-    {
-        BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
-        principal = cr.remainingPrincipal;
-        interest = (principal * cr.aprInBps) / BPS_DIVIDER;
-        // todo
-        fees = IFeeManager(feeManagerAddress).calcLateFee(
-            cr.nextAmountDue,
-            cr.nextDueDate,
-            lastLateFeeDateMapping[borrower],
-            cr.paymentIntervalInDays
-        );
-
-        // todo need to call with the original principal amount
-        fees += IFeeManager(feeManagerAddress).calcBackLoadingFee(principal);
-        total = principal + interest + fees;
-        return (total, principal, interest, fees, block.timestamp);
     }
 
     /**

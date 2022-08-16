@@ -151,7 +151,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 creditAmount,
         uint256 aprInBps,
         uint256 numOfPayments
-    ) public view returns (uint256 paymentAmount) {
+    ) public view virtual override returns (uint256 paymentAmount) {
         uint256 uintPrice = (fixedPaymentPerOneMillion[numOfPayments])[
             aprInBps
         ];
@@ -182,6 +182,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
         interest = (_cr.remainingPrincipal * _cr.aprInBps) / BPS_DIVIDER;
 
+        // final payment
         if (_cr.remainingPayments == 1) {
             fees += calcBackLoadingFee(_cr.loanAmount);
             principal = _cr.remainingPrincipal;
@@ -189,7 +190,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
         } else {
             principal = _cr.nextAmountDue - interest;
             paidOff = false;
-            uint256 totalDue = principal + interest + fees;
 
             // Handle overpayment
             // if the extra is not enough for all the reamining principle,
@@ -198,6 +198,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // process this as a payoff; otherwise, we get into a corner case
             // when the remaining principal becomes 0 but the credit is not
             // paid off because of back loading fee.
+            uint256 totalDue = principal + interest + fees;
             if (_paymentAmount > totalDue) {
                 uint256 extra = _paymentAmount - totalDue;
 
