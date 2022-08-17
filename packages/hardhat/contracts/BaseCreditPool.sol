@@ -63,6 +63,7 @@ contract BaseCreditPool is ICredit, BasePool {
             _borrowAmount,
             address(0),
             0,
+            0,
             poolAprInBps,
             interestOnly,
             _paymentIntervalInDays,
@@ -82,6 +83,7 @@ contract BaseCreditPool is ICredit, BasePool {
         address _borrower,
         uint256 _borrowAmount,
         address _collateralAsset,
+        uint256 _collateralParam,
         uint256 _collateralAmount,
         uint256 _aprInBps,
         bool _interestOnly,
@@ -117,6 +119,7 @@ contract BaseCreditPool is ICredit, BasePool {
         if (_collateralAsset != address(0)) {
             BaseStructs.CollateralInfo memory ci;
             ci.collateralAsset = _collateralAsset;
+            ci.collateralParam = _collateralParam;
             ci.collateralAmount = uint88(_collateralAmount);
             collateralInfoMapping[_borrower] = ci;
         }
