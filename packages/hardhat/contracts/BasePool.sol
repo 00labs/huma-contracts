@@ -37,7 +37,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     mapping(address => LenderInfo) public lenderInfo;
 
     // The ERC20 token this pool manages
-    IERC20 internal immutable poolToken;
+    IERC20 public immutable poolToken;
 
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
