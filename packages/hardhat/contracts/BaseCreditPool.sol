@@ -4,7 +4,6 @@ pragma solidity >=0.8.4 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "./interfaces/ICredit.sol";
-import "./interfaces/IFeeManager.sol";
 import "./libraries/BaseStructs.sol";
 
 import "./BaseFeeManager.sol";

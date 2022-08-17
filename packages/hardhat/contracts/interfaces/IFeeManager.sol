@@ -46,4 +46,16 @@ interface IFeeManager {
         uint256 aprInBps,
         uint256 numOfPayments
     ) external view returns (uint256 paymentAmount);
+
+    function getFees()
+        external
+        view
+        returns (
+            uint256 front_loading_fee_flat,
+            uint256 front_loading_fee_bps,
+            uint256 late_fee_flat,
+            uint256 late_fee_bps,
+            uint256 back_loading_fee_flat,
+            uint256 back_loading_fee_bps
+        );
 }

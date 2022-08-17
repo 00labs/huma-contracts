@@ -229,6 +229,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         public
         view
         virtual
+        override
         returns (
             uint256,
             uint256,
