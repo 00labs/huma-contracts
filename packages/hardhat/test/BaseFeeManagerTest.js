@@ -210,6 +210,11 @@ describe("Base Fee Manager", function () {
     });
 
     describe("Caclulate nextDueAmount", function () {
+        // beforeEach(async function () {
+        //   // setAPRandInterestOnly() to set interestOnly
+        //   poolContract.
+        // });
+        afterEach(async function () {});
         it("Should calculate interest only correctly", async function () {});
         it("Should calculate fixed payment amount correctly", async function () {});
         it("Should fallback properly when fixed payment amount lookup failed", async function () {});

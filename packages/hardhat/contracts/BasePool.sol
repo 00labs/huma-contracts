@@ -215,7 +215,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         creditApprovers[approver] = true;
     }
 
-    function setAPR(uint256 _aprInBps, bool _interestOnly)
+    function setAPRandInterestOnly(uint256 _aprInBps, bool _interestOnly)
         external
         virtual
         override
