@@ -154,6 +154,7 @@ describe("Huma Invoice Financing", function () {
                         400,
                         ethers.constants.AddressZero,
                         0,
+                        0,
                         30,
                         1
                     )
@@ -170,6 +171,7 @@ describe("Huma Invoice Financing", function () {
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
+                        0,
                         0,
                         30,
                         1
@@ -188,6 +190,7 @@ describe("Huma Invoice Financing", function () {
                         400,
                         ethers.constants.AddressZero,
                         0,
+                        0,
                         30,
                         1
                     )
@@ -203,6 +206,7 @@ describe("Huma Invoice Financing", function () {
                         5,
                         ethers.constants.AddressZero,
                         0,
+                        0,
                         30,
                         1
                     )
@@ -217,6 +221,7 @@ describe("Huma Invoice Financing", function () {
                         borrower.address,
                         9999,
                         ethers.constants.AddressZero,
+                        0,
                         0,
                         30,
                         1
@@ -237,6 +242,7 @@ describe("Huma Invoice Financing", function () {
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
+                    0,
                     0,
                     30,
                     1
@@ -271,6 +277,7 @@ describe("Huma Invoice Financing", function () {
                     400,
                     ethers.constants.AddressZero,
                     0,
+                    0,
                     30,
                     1
                 );
@@ -299,6 +306,7 @@ describe("Huma Invoice Financing", function () {
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
+                    0,
                     0,
                     30,
                     1
@@ -697,19 +705,6 @@ describe("Huma Invoice Financing", function () {
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", async function () {
         beforeEach(async function () {
-            await invoiceContract.connect(lender).deposit(300);
-
-            await invoiceContract
-                .connect(creditApprover)
-                .recordPreapprovedCreditRequest(
-                    borrower.address,
-                    400,
-                    invoiceNFTContract.address,
-                    1,
-                    30,
-                    1
-                );
-
             // Mint InvoiceNFT to the borrower
             const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
             const receipt = await tx.wait();
@@ -719,10 +714,22 @@ describe("Huma Invoice Financing", function () {
                     invoiceNFTTokenId = evt.args[0];
                 }
             }
-
             await invoiceNFTContract
                 .connect(borrower)
                 .approve(invoiceContract.address, invoiceNFTTokenId);
+
+            await invoiceContract.connect(lender).deposit(300);
+            await invoiceContract
+                .connect(creditApprover)
+                .recordPreapprovedCreditRequest(
+                    borrower.address,
+                    400,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1,
+                    30,
+                    1
+                );
 
             await invoiceContract
                 .connect(borrower)
