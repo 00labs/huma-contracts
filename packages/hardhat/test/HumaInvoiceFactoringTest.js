@@ -111,8 +111,8 @@ describe("Huma Invoice Financing", function () {
 
         await invoiceContract.addCreditApprover(creditApprover.address);
 
-        await invoiceContract.connect(poolOwner).setAPR(0, true); //bps
-        await invoiceContract.setMinMaxBorrowAmt(10, 1000);
+        await invoiceContract.connect(owner).setAPR(0, true); //bps
+        await invoiceContract.setMinMaxBorrowAmount(10, 1000);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
