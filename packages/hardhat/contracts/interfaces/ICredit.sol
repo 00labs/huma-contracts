@@ -3,18 +3,18 @@ pragma solidity >=0.8.4 <0.9.0;
 
 interface ICredit {
     function requestCredit(
-        uint256 _borrowAmt,
+        uint256 _borrowAmount,
         uint256 _paymentIntervalInDays,
         uint256 _numOfPayments
     ) external;
 
     function approveCredit(address borrower) external;
 
-    function originateCredit(uint256 _borrowAmt) external;
+    function originateCredit(uint256 _borrowAmount) external;
 
-    function originateCreditWithCollateral(
+    function originateCollateralizedCredit(
         address _borrower,
-        uint256 borrowAmt,
+        uint256 borrowAmount,
         address collateralAsset,
         uint256 collateralParam,
         uint256 collateralCount
@@ -41,32 +41,12 @@ interface ICredit {
     // function getNextPayment(address borrower)
     //     external
     //     returns (
-    //         uint256 totalAmt,
+    //         uint256 totalAmount,
     //         uint256 principal,
     //         uint256 interest,
     //         uint256 fees,
     //         uint256 dueDate
     //     );
-
-    function getNextPaymentInterestOnly(address borrower)
-        external
-        returns (
-            uint256 totalAmt,
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            uint256 dueDate
-        );
-
-    function getPayoffInfoInterestOnly(address borrower)
-        external
-        returns (
-            uint256 total,
-            uint256 principal,
-            uint256 interest,
-            uint256 fees,
-            uint256 dueDate
-        );
 
     function isApproved(address borrower) external view returns (bool);
 }

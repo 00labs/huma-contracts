@@ -105,14 +105,14 @@ describe("Huma Invoice Financing", function () {
         const lenderInfo = await invoiceContract
             .connect(owner)
             .getLenderInfo(owner.address);
-        expect(lenderInfo.principalAmt).to.equal(100);
+        expect(lenderInfo.principalAmount).to.equal(100);
         expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
         expect(await invoiceContract.getPoolLiquidity()).to.equal(100);
 
         await invoiceContract.addCreditApprover(creditApprover.address);
 
-        await invoiceContract.setAPR(0); //bps
-        await invoiceContract.setMinMaxBorrowAmt(10, 1000);
+        await invoiceContract.connect(owner).setAPR(0, true); //bps
+        await invoiceContract.setMinMaxBorrowAmount(10, 1000);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract
@@ -149,7 +149,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(lender)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -166,7 +166,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -183,7 +183,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -198,7 +198,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         5,
                         ethers.constants.AddressZero,
@@ -213,7 +213,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .postPreapprovedCreditRequest(
+                    .recordPreapprovedCreditRequest(
                         borrower.address,
                         9999,
                         ethers.constants.AddressZero,
@@ -229,11 +229,11 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(0);
+            await invoiceContract.connect(owner).setAPR(0, true);
 
             await invoiceContract
                 .connect(creditApprover)
-                .postPreapprovedCreditRequest(
+                .recordPreapprovedCreditRequest(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -246,7 +246,7 @@ describe("Huma Invoice Financing", function () {
                 borrower.address
             );
 
-            expect(creditInfo.loanAmt).to.equal(400);
+            expect(creditInfo.loanAmount).to.equal(400);
             expect(creditInfo.remainingPrincipal).to.equal(400);
             expect(creditInfo.remainingPayments).to.equal(1);
         });
@@ -262,11 +262,11 @@ describe("Huma Invoice Financing", function () {
         // });
 
         it("Should allow credit approver to invalidate an approved invoice factoring record", async function () {
-            await invoiceContract.connect(owner).setAPR(0);
+            await invoiceContract.connect(owner).setAPR(0, true);
 
             await invoiceContract
                 .connect(creditApprover)
-                .postPreapprovedCreditRequest(
+                .recordPreapprovedCreditRequest(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -295,7 +295,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(creditApprover)
-                .postPreapprovedCreditRequest(
+                .recordPreapprovedCreditRequest(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -344,7 +344,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(borrower)
-                .originateCreditWithCollateral(
+                .originateCollateralizedCredit(
                     borrower.address,
                     200,
                     invoiceNFTContract.address,
@@ -354,7 +354,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(
                 await invoiceNFTContract.ownerOf(invoiceNFTTokenId)
-            ).to.equal(await invoiceContract.poolLockerAddr());
+            ).to.equal(await invoiceContract.poolLockerAddress());
 
             expect(await invoiceNFTContract.balanceOf);
             expect(
@@ -372,7 +372,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(borrower)
-                .originateCreditWithCollateral(
+                .originateCollateralizedCredit(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
@@ -382,7 +382,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(
                 await invoiceNFTContract.ownerOf(invoiceNFTTokenId)
-            ).to.equal(await invoiceContract.poolLockerAddr());
+            ).to.equal(await invoiceContract.poolLockerAddress());
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
@@ -429,7 +429,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         400,
                         invoiceNFTContract.address,
@@ -447,7 +447,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         400,
                         invoiceNFTContract.address,
@@ -463,7 +463,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(lender)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         400,
                         invoiceNFTContract.address,
@@ -481,7 +481,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         5,
                         invoiceNFTContract.address,
@@ -497,7 +497,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         9999,
                         invoiceNFTContract.address,
@@ -514,11 +514,11 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(0);
+            await invoiceContract.connect(owner).setAPR(0, true);
 
             await invoiceContract
                 .connect(creditApprover)
-                .originateCreditWithPreapproval(
+                .originatePreapprovedCredit(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
@@ -530,7 +530,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(
                 await invoiceNFTContract.ownerOf(invoiceNFTTokenId)
-            ).to.equal(await invoiceContract.poolLockerAddr());
+            ).to.equal(await invoiceContract.poolLockerAddress());
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
@@ -563,7 +563,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         400,
                         invoiceNFTContract.address,
@@ -581,7 +581,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         400,
                         invoiceNFTContract.address,
@@ -597,7 +597,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(lender)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         400,
                         invoiceNFTContract.address,
@@ -615,7 +615,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         5,
                         invoiceNFTContract.address,
@@ -631,7 +631,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(creditApprover)
-                    .originateCreditWithPreapproval(
+                    .originatePreapprovedCredit(
                         borrower.address,
                         9999,
                         invoiceNFTContract.address,
@@ -662,11 +662,11 @@ describe("Huma Invoice Financing", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(0);
+            await invoiceContract.connect(owner).setAPR(0, true);
 
             await invoiceContract
                 .connect(creditApprover)
-                .originateCreditWithPreapproval(
+                .originatePreapprovedCredit(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
@@ -680,7 +680,7 @@ describe("Huma Invoice Financing", function () {
                 borrower.address
             );
 
-            expect(invoiceInfo.loanAmt).to.equal(400);
+            expect(invoiceInfo.loanAmount).to.equal(400);
 
             expect(
                 await testTokenContract.balanceOf(borrower.address)
@@ -701,7 +701,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(creditApprover)
-                .postPreapprovedCreditRequest(
+                .recordPreapprovedCreditRequest(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
@@ -726,7 +726,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(borrower)
-                .originateCreditWithCollateral(
+                .originateCollateralizedCredit(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
@@ -781,12 +781,12 @@ describe("Huma Invoice Financing", function () {
 
             // await testTokenContract
             //     .connect(borrower)
-            //     .approve(invoiceContract.poolLockerAddr(), 210);
+            //     .approve(invoiceContract.poolLockerAddress(), 210);
 
             // simulates payments from payer.
             await testTokenContract
                 .connect(payer)
-                .transfer(invoiceContract.poolLockerAddr(), 500);
+                .transfer(invoiceContract.poolLockerAddress(), 500);
 
             await testTokenContract
                 .connect(borrower)

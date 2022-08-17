@@ -92,14 +92,14 @@ describe("Base Pool - LP and Admin functions", function () {
         const lenderInfo = await poolContract
             .connect(owner)
             .getLenderInfo(owner.address);
-        expect(lenderInfo.principalAmt).to.equal(100);
+        expect(lenderInfo.principalAmount).to.equal(100);
         expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
         expect(await poolContract.getPoolLiquidity()).to.equal(100);
 
         await poolContract.addCreditApprover(creditApprover.address);
 
-        await poolContract.setAPR(1200); //bps
-        await poolContract.setMinMaxBorrowAmt(10, 1000);
+        await poolContract.setAPR(1200, true); //bps
+        await poolContract.setMinMaxBorrowAmount(10, 1000);
         await poolContract.enablePool();
 
         await testTokenContract.give1000To(lender.address);
@@ -115,7 +115,7 @@ describe("Base Pool - LP and Admin functions", function () {
             const lenderInfo = await poolContract
                 .connect(owner)
                 .getLenderInfo(owner.address);
-            expect(lenderInfo.principalAmt).to.equal(100);
+            expect(lenderInfo.principalAmount).to.equal(100);
             expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
 
             expect(await poolContract.getPoolLiquidity()).to.equal(100);
@@ -139,7 +139,7 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Should be able to set min and max credit size", async function () {
-            await poolContract.setMinMaxBorrowAmt(10, 1000);
+            await poolContract.setMinMaxBorrowAmount(10, 1000);
             var [token, interest, min, max] =
                 await poolContract.getPoolSummary();
 
@@ -203,7 +203,7 @@ describe("Base Pool - LP and Admin functions", function () {
             const lenderInfo = await poolContract
                 .connect(lender)
                 .getLenderInfo(lender.address);
-            expect(lenderInfo.principalAmt).to.equal(100);
+            expect(lenderInfo.principalAmount).to.equal(100);
             expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
             expect(await poolContract.getPoolLiquidity()).to.equal(200);
 
@@ -268,7 +268,7 @@ describe("Base Pool - LP and Admin functions", function () {
             const lenderInfo = await poolContract
                 .connect(lender)
                 .getLenderInfo(lender.address);
-            expect(lenderInfo.principalAmt).to.equal(0);
+            expect(lenderInfo.principalAmount).to.equal(0);
 
             expect(await poolContract.getPoolLiquidity()).to.equal(100);
 

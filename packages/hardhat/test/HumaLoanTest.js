@@ -125,14 +125,14 @@ describe("Huma Loan", function () {
         const lenderInfo = await poolContract
             .connect(owner)
             .getLenderInfo(owner.address);
-        expect(lenderInfo.principalAmt).to.equal(100);
+        expect(lenderInfo.principalAmount).to.equal(100);
         expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
         expect(await poolContract.getPoolLiquidity()).to.equal(100);
 
         await poolContract.addCreditApprover(creditApprover.address);
 
-        await poolContract.setAPR(1200); //bps
-        await poolContract.setMinMaxBorrowAmt(10, 1000);
+        await poolContract.setAPR(1200, true); //bps
+        await poolContract.setMinMaxBorrowAmount(10, 1000);
         await poolContract.enablePool();
 
         await testTokenContract.give1000To(lender.address);
@@ -201,7 +201,7 @@ describe("Huma Loan", function () {
                 await testTokenContract.balanceOf(borrower.address)
             ).to.equal(0);
 
-            await poolContract.connect(owner).setAPR(1200);
+            await poolContract.connect(owner).setAPR(1200, true);
 
             await testTokenContract
                 .connect(borrower)
@@ -216,7 +216,7 @@ describe("Huma Loan", function () {
             const loanInformation = await poolContract.getCreditInformation(
                 borrower.address
             );
-            expect(loanInformation.loanAmt).to.equal(400);
+            expect(loanInformation.loanAmount).to.equal(400);
             expect(loanInformation.paymentIntervalInDays).to.equal(30);
             expect(loanInformation.aprInBps).to.equal(1200);
         });
@@ -312,7 +312,7 @@ describe("Huma Loan", function () {
                     lender.address
                 );
 
-                await poolContract.connect(owner).setAPR(1200);
+                await poolContract.connect(owner).setAPR(1200, true);
                 await poolContract.connect(borrower).requestCredit(400, 30, 12);
 
                 await poolContract

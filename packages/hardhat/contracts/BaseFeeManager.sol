@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IFeeManager.sol";
 import "./HumaConfig.sol";
+import "./libraries/BaseStructs.sol";
 import "hardhat/console.sol";
 
 contract BaseFeeManager is IFeeManager, Ownable {
@@ -69,7 +70,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 _dueDate,
         uint256 _lastLateFeeDate,
         uint256 _paymentInterval
-    ) external virtual override returns (uint256 fees) {
+    ) public virtual override returns (uint256 fees) {
         if (
             block.timestamp > _dueDate &&
             _lastLateFeeDate < (block.timestamp - _paymentInterval)
@@ -81,7 +82,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     }
 
     function calcBackLoadingFee(uint256 _amount)
-        external
+        public
         virtual
         override
         returns (uint256 fees)
@@ -91,7 +92,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             fees += (_amount * back_loading_fee_bps) / BPS_DIVIDER;
     }
 
-    function distBorrowingAmt(uint256 borrowAmt, address humaConfig)
+    function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
         external
         virtual
         override
@@ -102,18 +103,18 @@ contract BaseFeeManager is IFeeManager, Ownable {
         )
     {
         // Calculate platform fee, which includes protocol fee and pool fee
-        uint256 platformFees = calcFrontLoadingFee(borrowAmt);
+        uint256 platformFees = calcFrontLoadingFee(borrowAmount);
 
         // Split the fee between treasury and the pool
         protocolFee =
-            (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmt) /
+            (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmount) /
             10000;
 
         assert(platformFees >= protocolFee);
 
         poolIncome = platformFees - protocolFee;
 
-        amtToBorrower = borrowAmt - platformFees;
+        amtToBorrower = borrowAmount - platformFees;
 
         return (amtToBorrower, protocolFee, poolIncome);
     }
@@ -146,15 +147,81 @@ contract BaseFeeManager is IFeeManager, Ownable {
         tempMap[aprInBps] = payment;
     }
 
-    function getFixedPaymentAmt(
-        uint256 creditAmt,
+    function getFixedPaymentAmount(
+        uint256 creditAmount,
         uint256 aprInBps,
         uint256 numOfPayments
-    ) public view returns (uint256 paymentAmt) {
+    ) public view virtual override returns (uint256 paymentAmount) {
         uint256 uintPrice = (fixedPaymentPerOneMillion[numOfPayments])[
             aprInBps
         ];
-        paymentAmt = (uintPrice * creditAmt) / 1000000;
+        paymentAmount = (uintPrice * creditAmount) / 1000000;
+    }
+
+    function getNextPayment(
+        BaseStructs.CreditRecord memory _cr,
+        uint256 _lastLateFeeDate,
+        uint256 _paymentAmount
+    )
+        public
+        virtual
+        override
+        returns (
+            uint256 principal,
+            uint256 interest,
+            uint256 fees,
+            bool paidOff
+        )
+    {
+        fees = calcLateFee(
+            _cr.nextAmountDue,
+            _cr.nextDueDate,
+            _lastLateFeeDate,
+            _cr.paymentIntervalInDays
+        );
+
+        interest = (_cr.remainingPrincipal * _cr.aprInBps) / BPS_DIVIDER;
+
+        // final payment
+        if (_cr.remainingPayments == 1) {
+            fees += calcBackLoadingFee(_cr.loanAmount);
+            principal = _cr.remainingPrincipal;
+            paidOff = true;
+        } else {
+            principal = _cr.nextAmountDue - interest;
+            paidOff = false;
+
+            // Handle overpayment
+            // if the extra is not enough for all the reamining principle,
+            // simply apply the extra towards principal, otherwise,
+            // check if the extra can cover the backloading fee as well. If yes,
+            // process this as a payoff; otherwise, we get into a corner case
+            // when the remaining principal becomes 0 but the credit is not
+            // paid off because of back loading fee.
+            uint256 totalDue = principal + interest + fees;
+            if (_paymentAmount > totalDue) {
+                uint256 extra = _paymentAmount - totalDue;
+
+                if ((_cr.remainingPrincipal - principal) > extra) {
+                    // The extra does not cover all the remaining principal, simply
+                    // apply the extra towards principal
+                    principal += extra;
+                } else {
+                    // the extra can cover the remaining principal, check if it is
+                    // enough to cover back loading fee.
+                    principal = _cr.remainingPrincipal;
+                    extra -= (_cr.remainingPrincipal - principal);
+                    uint256 backloadingFee = calcBackLoadingFee(_cr.loanAmount);
+
+                    if (extra >= backloadingFee) {
+                        fees += backloadingFee;
+                        paidOff = true;
+                    }
+                }
+            }
+        }
+
+        return (principal, interest, fees, paidOff);
     }
 
     /// returns (maxLoanAmt, interest, and the 6 fee fields)
@@ -162,6 +229,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         public
         view
         virtual
+        override
         returns (
             uint256,
             uint256,

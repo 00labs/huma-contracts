@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4 <0.9.0;
+import "../libraries/BaseStructs.sol";
 
 interface IFeeManager {
     function calcFrontLoadingFee(uint256 _amount)
@@ -19,11 +20,42 @@ interface IFeeManager {
         external
         returns (uint256 fees);
 
-    function distBorrowingAmt(uint256 borrowAmt, address humaConfig)
+    function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
         external
         returns (
             uint256 amtToBorrower,
             uint256 protocolFee,
             uint256 poolIncome
+        );
+
+    function getNextPayment(
+        BaseStructs.CreditRecord memory _cr,
+        uint256 _lastLateFeeDate,
+        uint256 _paymentAmount
+    )
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            bool
+        );
+
+    function getFixedPaymentAmount(
+        uint256 creditAmt,
+        uint256 aprInBps,
+        uint256 numOfPayments
+    ) external view returns (uint256 paymentAmount);
+
+    function getFees()
+        external
+        view
+        returns (
+            uint256 front_loading_fee_flat,
+            uint256 front_loading_fee_bps,
+            uint256 late_fee_flat,
+            uint256 late_fee_bps,
+            uint256 back_loading_fee_flat,
+            uint256 back_loading_fee_bps
         );
 }

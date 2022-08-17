@@ -150,7 +150,7 @@ describe("Base Fee Manager", function () {
 
             const payment = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(1000000, 500, 24);
+                .getFixedPaymentAmount(1000000, 500, 24);
             expect(payment).to.equal(43871);
         });
 
@@ -161,7 +161,7 @@ describe("Base Fee Manager", function () {
 
             const payment = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(1000000, 500, 24);
+                .getFixedPaymentAmount(1000000, 500, 24);
             expect(payment).to.equal(43872);
         });
 
@@ -196,15 +196,15 @@ describe("Base Fee Manager", function () {
 
             const payment1 = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(10000000, 500, 12);
+                .getFixedPaymentAmount(10000000, 500, 12);
             expect(payment1).to.equal(856070);
             const payment2 = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(100000, 1025, 12);
+                .getFixedPaymentAmount(100000, 1025, 12);
             expect(payment2).to.equal(8803);
             const payment3 = await feeManagerContract
                 .connect(poolOwner)
-                .getFixedPaymentAmt(1000000, 500, 24);
+                .getFixedPaymentAmount(1000000, 500, 24);
             expect(payment3).to.equal(43871);
         });
     });
