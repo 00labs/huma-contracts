@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
 import "./interfaces/IPoolLocker.sol";
+import "./interfaces/IFeeManager.sol";
 
 import "./HumaConfig.sol";
 import "./PoolLocker.sol";
@@ -355,6 +356,22 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
             erc20Contract.symbol(),
             erc20Contract.decimals()
         );
+    }
+
+    function getFees()
+        external
+        view
+        virtual
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return IFeeManager(feeManagerAddress).getFees();
     }
 
     // Allow for sensitive pool functions only to be called by

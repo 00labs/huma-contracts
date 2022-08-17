@@ -4,7 +4,6 @@ pragma solidity >=0.8.4 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "./interfaces/ICredit.sol";
-import "./interfaces/IFeeManager.sol";
 import "./libraries/BaseStructs.sol";
 
 import "./BaseFeeManager.sol";
@@ -419,21 +418,5 @@ contract BaseCreditPool is ICredit, BasePool {
 
     function onlyApprovers() internal view {
         require(creditApprovers[msg.sender] == true, "APPROVER_REQUIRED");
-    }
-
-    function getFees()
-        external
-        view
-        virtual
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return IFeeManager(feeManagerAddress).getFees();
     }
 }
