@@ -22,7 +22,7 @@ contract BaseCreditPool is ICredit, BasePool {
     using BaseStructs for BaseCreditPool;
 
     // mapping from wallet address to the credit record
-    mapping(address => BaseStructs.CreditRecord) internal creditRecordMapping;
+    mapping(address => BaseStructs.CreditRecord) public creditRecordMapping;
     // mapping from wallet address to the collateral supplied by this wallet
     mapping(address => BaseStructs.CollateralInfo)
         internal collateralInfoMapping;
