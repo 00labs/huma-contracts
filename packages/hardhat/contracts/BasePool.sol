@@ -51,6 +51,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // The interest rate this pool charges for loans
     uint256 internal poolAprInBps;
 
+    // Indicates if the pool is interest only or not
+    bool interestOnly;
+
     // The collateral basis percentage required from lenders
     uint256 internal collateralRequiredInBps;
 
@@ -211,10 +214,15 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         creditApprovers[approver] = true;
     }
 
-    function setAPR(uint256 _aprInBps) external virtual override {
+    function setAPR(uint256 _aprInBps, bool _interestOnly)
+        external
+        virtual
+        override
+    {
         onlyOwnerOrHumaMasterAdmin();
         require(_aprInBps <= 10000, "INVALID_APR");
         poolAprInBps = _aprInBps;
+        interestOnly = _interestOnly;
     }
 
     function setCollateralRequiredInBps(uint256 _collateralInBps)
