@@ -420,4 +420,20 @@ contract BaseCreditPool is ICredit, BasePool {
     function onlyApprovers() internal view {
         require(creditApprovers[msg.sender] == true, "APPROVER_REQUIRED");
     }
+
+    function getFees()
+        external
+        view
+        virtual
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return IFeeManager(feeManagerAddress).getFees();
+    }
 }
