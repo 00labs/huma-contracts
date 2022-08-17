@@ -121,6 +121,15 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(await poolContract.getPoolLiquidity()).to.equal(100);
 
             expect(await poolContract.balanceOf(owner.address)).to.equal(100);
+
+            const fees = await poolContract.getPoolFees();
+
+            expect(fees._front_loading_fee_flat).to.equal(10);
+            expect(fees._front_loading_fee_bps).to.equal(100);
+            expect(fees._late_fee_flat).to.equal(20);
+            expect(fees._late_fee_bps).to.equal(100);
+            expect(fees._back_loading_fee_flat).to.equal(30);
+            expect(fees._back_loading_fee_bps).to.equal(100);
         });
 
         //setPoolLiquidityCap

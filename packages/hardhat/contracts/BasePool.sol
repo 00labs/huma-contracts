@@ -358,17 +358,17 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         );
     }
 
-    function getFees()
+    function getPoolFees()
         external
         view
         virtual
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint256 _front_loading_fee_flat,
+            uint256 _front_loading_fee_bps,
+            uint256 _late_fee_flat,
+            uint256 _late_fee_bps,
+            uint256 _back_loading_fee_flat,
+            uint256 _back_loading_fee_bps
         )
     {
         return IFeeManager(feeManagerAddress).getFees();
