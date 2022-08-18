@@ -36,6 +36,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         address borrower,
         uint256 borrowAmount,
         address collateralAsset,
+        uint256 collateralParam,
         uint256 collateralAmount,
         uint256 _paymentIntervalInDays,
         uint256 _remainingPayments
@@ -47,6 +48,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             borrower,
             borrowAmount,
             collateralAsset,
+            collateralParam,
             collateralAmount,
             poolAprInBps,
             interestOnly,
@@ -129,6 +131,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             borrower,
             borrowAmount,
             collateralAsset,
+            collateralParam,
             collateralAmount,
             _paymentIntervalInDays,
             _remainingPayments
