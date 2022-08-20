@@ -220,7 +220,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         virtual
         override
     {
-        console.log("In setAPRandInterestOnly()");
         onlyOwnerOrHumaMasterAdmin();
         require(_aprInBps <= 10000, "INVALID_APR");
         poolAprInBps = _aprInBps;
