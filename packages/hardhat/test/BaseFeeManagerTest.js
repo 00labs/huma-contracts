@@ -25,32 +25,6 @@ describe.only("Base Fee Manager", function () {
   let creditApprover;
   let poolOwner;
 
-  const deployPool = async function () {
-    console.log("Enter deployPool.");
-    const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    poolContract = await BaseCreditPool.deploy(
-      testTokenContract.address,
-      humaConfigContract.address,
-      poolLockerFactoryContract.address,
-      feeManagerContract.address,
-      "Base Credit Pool",
-      "Base HDT",
-      "BHDT"
-    );
-    await poolContract.deployed();
-
-    await testTokenContract.approve(poolContract.address, 100);
-
-    await poolContract.transferOwnership(poolOwner.address);
-    await feeManagerContract.transferOwnership(poolOwner.address);
-
-    await poolContract.enablePool();
-
-    await testTokenContract.approve(poolContract.address, 100);
-
-    await poolContract.makeInitialDeposit(100);
-  };
-
   before(async function () {
     [owner, lender, borrower, borrower2, treasury, creditApprover, poolOwner] =
       await ethers.getSigners();
@@ -71,8 +45,29 @@ describe.only("Base Fee Manager", function () {
 
     const TestToken = await ethers.getContractFactory("TestToken");
     testTokenContract = await TestToken.deploy();
+    testTokenContract.give1000To(lender.address);
 
-    deployPool();
+    const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
+    poolContract = await BaseCreditPool.deploy(
+      testTokenContract.address,
+      humaConfigContract.address,
+      poolLockerFactoryContract.address,
+      feeManagerContract.address,
+      "Base Credit Pool",
+      "Base HDT",
+      "BHDT"
+    );
+    await poolContract.deployed();
+
+    await poolContract.transferOwnership(poolOwner.address);
+    await feeManagerContract.transferOwnership(poolOwner.address);
+
+    await testTokenContract.approve(poolContract.address, 100);
+    await poolContract.makeInitialDeposit(100);
+    await poolContract.enablePool();
+    await poolContract.setMinMaxBorrowAmount(10, 1000);
+
+    await testTokenContract.approve(poolContract.address, 100);
   });
 
   beforeEach(async function () {});
@@ -187,17 +182,54 @@ describe.only("Base Fee Manager", function () {
     beforeEach(async function () {
       deployPool;
     });
-    afterEach(async function () {});
     it("Should calculate interest only correctly", async function () {});
     it("Should calculate fixed payment amount correctly", async function () {});
     it("Should fallback properly when fixed payment amount lookup failed", async function () {});
   });
 
   // IntOnly := Interest Only, Fixed := Fixed monthly payment, backFee := backFee,
-  describe("getNextPayment() - interest only + 1st payment", function () {
-    it("IntOnly - 1st pay - amt < interest", async function () {});
-    it("IntOnly - 1st pay - amt = interest", async function () {});
-    it("IntOnly - 1st pay - amt < interest && < interest + principal]", async function () {});
+  describe.only("getNextPayment() - interest only + 1st payment", function () {
+    before(async function () {
+      const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
+      poolContract = await BaseCreditPool.deploy(
+        testTokenContract.address,
+        humaConfigContract.address,
+        poolLockerFactoryContract.address,
+        feeManagerContract.address,
+        "Base Credit Pool",
+        "Base HDT",
+        "BHDT"
+      );
+      await poolContract.deployed();
+      poolContract.addCreditApprover(creditApprover.address);
+
+      await testTokenContract.approve(poolContract.address, 100);
+      await poolContract.makeInitialDeposit(100);
+      await poolContract.enablePool();
+      await poolContract.setMinMaxBorrowAmount(10, 1000);
+      await poolContract.connect(owner).transferOwnership(poolOwner.address);
+
+      await poolContract.connect(poolOwner).setAPRandInterestOnly(1200, true);
+      await poolContract.connect(borrower).requestCredit(400, 30, 12);
+      await poolContract
+        .connect(creditApprover)
+        .approveCredit(borrower.address);
+      await testTokenContract
+        .connect(lender)
+        .approve(poolContract.address, 300);
+      await poolContract.connect(lender).deposit(300);
+      await testTokenContract.approve(poolContract.address, 400);
+      await poolContract.connect(borrower).originateCredit(400);
+    });
+    it("IntOnly - 1st pay - amt < interest", async function () {
+      expect(1).to.equal(1);
+    });
+    it("IntOnly - 1st pay - amt = interest", async function () {
+      expect(1).to.equal(1);
+    });
+    it("IntOnly - 1st pay - amt > interest && amt < interest + principal]", async function () {
+      expect(1).to.equal(1);
+    });
     it("IntOnly - 1st pay - amt = interest + principal (early payoff)", async function () {});
     it("IntOnly - 1st pay - amt > interest + principal (early payoff, extra pay)", async function () {});
     it("IntOnly - 1st pay - late - amt = interest, thus < interst + late fee", async function () {});
