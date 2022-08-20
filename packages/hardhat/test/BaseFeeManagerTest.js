@@ -5,17 +5,13 @@ const { solidity } = require("ethereum-waffle");
 
 use(solidity);
 
-const getLoanContractFromAddress = async function (address, signer) {
-  return ethers.getContractAt("HumaLoan", address, signer);
-};
-
 // Let us limit the depth of describe to be 2.
 //
 // In before() of "Huma Pool", all the key supporting contracts are deployed.
 //
 // In beforeEach() of "Huma Pool", we deploy a new HumaPool with initial
 // liquidity 100 from the owner
-describe("Base Fee Manager", function () {
+describe.only("Base Fee Manager", function () {
   let poolContract;
   let humaConfigContract;
   let humaPoolLockerFactoryContract;
@@ -29,27 +25,8 @@ describe("Base Fee Manager", function () {
   let creditApprover;
   let poolOwner;
 
-  before(async function () {
-    [owner, lender, borrower, borrower2, treasury, creditApprover, poolOwner] =
-      await ethers.getSigners();
-
-    const HumaConfig = await ethers.getContractFactory("HumaConfig");
-    humaConfigContract = await HumaConfig.deploy(treasury.address);
-    humaConfigContract.setHumaTreasury(treasury.address);
-
-    const poolLockerFactory = await ethers.getContractFactory(
-      "PoolLockerFactory"
-    );
-    poolLockerFactoryContract = await poolLockerFactory.deploy();
-
-    // Deploy Fee Manager
-    const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
-    feeManagerContract = await feeManagerFactory.deploy();
-
-    const TestToken = await ethers.getContractFactory("TestToken");
-    testTokenContract = await TestToken.deploy();
-
-    // Deploy BaseCreditPool
+  const deployPool = async function () {
+    console.log("Enter deployPool.");
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
     poolContract = await BaseCreditPool.deploy(
       testTokenContract.address,
@@ -69,11 +46,33 @@ describe("Base Fee Manager", function () {
 
     await poolContract.enablePool();
 
-    await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100);
-
     await testTokenContract.approve(poolContract.address, 100);
 
     await poolContract.makeInitialDeposit(100);
+  };
+
+  before(async function () {
+    [owner, lender, borrower, borrower2, treasury, creditApprover, poolOwner] =
+      await ethers.getSigners();
+
+    const HumaConfig = await ethers.getContractFactory("HumaConfig");
+    humaConfigContract = await HumaConfig.deploy(treasury.address);
+    humaConfigContract.setHumaTreasury(treasury.address);
+
+    const poolLockerFactory = await ethers.getContractFactory(
+      "PoolLockerFactory"
+    );
+    poolLockerFactoryContract = await poolLockerFactory.deploy();
+
+    // Deploy Fee Manager
+    const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
+    feeManagerContract = await feeManagerFactory.deploy();
+    await feeManagerContract.setFees(10, 100, 20, 100);
+
+    const TestToken = await ethers.getContractFactory("TestToken");
+    testTokenContract = await TestToken.deploy();
+
+    deployPool();
   });
 
   beforeEach(async function () {});
@@ -82,7 +81,7 @@ describe("Base Fee Manager", function () {
     // todo Verify only pool admins can deployNewPool
 
     it("Should set the fees correctly", async function () {
-      var [f1, f2, f3, f4, f5, f6] = await feeManagerContract.getFees();
+      var [f1, f2, f3, f4] = await feeManagerContract.getFees();
       expect(f1).to.equal(10);
       expect(f2).to.equal(100);
       expect(f3).to.equal(20);
@@ -185,10 +184,9 @@ describe("Base Fee Manager", function () {
   });
 
   describe("Caclulate nextDueAmount", function () {
-    // beforeEach(async function () {
-    //   // setAPRandInterestOnly() to set interestOnly
-    //   poolContract.
-    // });
+    beforeEach(async function () {
+      deployPool;
+    });
     afterEach(async function () {});
     it("Should calculate interest only correctly", async function () {});
     it("Should calculate fixed payment amount correctly", async function () {});
