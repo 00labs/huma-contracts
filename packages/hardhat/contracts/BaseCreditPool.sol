@@ -26,7 +26,7 @@ contract BaseCreditPool is ICredit, BasePool {
     mapping(address => BaseStructs.CollateralInfo)
         internal collateralInfoMapping;
     // mapping from wallet address to the last late fee charged date
-    mapping(address => uint256) internal lastLateFeeDateMapping;
+    mapping(address => uint256) public lastLateFeeDateMapping;
 
     constructor(
         address _poolToken,
@@ -289,10 +289,13 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 principal;
         uint256 interest;
         uint256 fees;
+        bool isLate;
+        bool goodPay;
         bool paidOff;
 
-        (principal, interest, fees, paidOff) = IFeeManager(feeManagerAddress)
-            .getNextPayment(cr, lastLateFeeDateMapping[msg.sender], _amount);
+        (principal, interest, fees, isLate, goodPay, paidOff) = IFeeManager(
+            feeManagerAddress
+        ).getNextPayment(cr, lastLateFeeDateMapping[msg.sender], _amount);
 
         uint256 totalDue = principal + interest + fees;
 

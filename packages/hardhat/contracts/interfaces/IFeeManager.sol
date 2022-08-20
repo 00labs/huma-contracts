@@ -12,7 +12,7 @@ interface IFeeManager {
         uint256 _dueDate,
         uint256 _lastLateFeeDate,
         uint256 _paymentInterval
-    ) external returns (uint256 fees);
+    ) external view returns (uint256 fees);
 
     function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
         external
@@ -28,10 +28,13 @@ interface IFeeManager {
         uint256 _paymentAmount
     )
         external
+        view
         returns (
             uint256,
             uint256,
             uint256,
+            bool,
+            bool,
             bool
         );
 

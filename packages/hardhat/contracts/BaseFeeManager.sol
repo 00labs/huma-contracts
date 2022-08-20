@@ -10,7 +10,8 @@ import "hardhat/console.sol";
 
 contract BaseFeeManager is IFeeManager, Ownable {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
-    uint256 public constant BPS_DIVIDER = 120000;
+    uint256 public constant BPS_DIVIDER = 10000;
+    uint256 public constant APR_BPS_DIVIDER = 120000;
 
     // Platform fee, charged when a loan is originated
     uint256 public frontLoadingFeeFlat;
@@ -57,12 +58,14 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 _dueDate,
         uint256 _lastLateFeeDate,
         uint256 _paymentInterval
-    ) public virtual override returns (uint256 fees) {
+    ) public view virtual override returns (uint256 fees) {
         if (
             block.timestamp > _dueDate &&
             _lastLateFeeDate < (block.timestamp - _paymentInterval)
         ) {
             fees = lateFeeFlat;
+            console.log("_amount=", _amount);
+            console.log("lateFeeBps=", lateFeeBps);
             if (lateFeeBps > 0) fees += (_amount * lateFeeBps) / BPS_DIVIDER;
         }
     }
@@ -133,18 +136,24 @@ contract BaseFeeManager is IFeeManager, Ownable {
         paymentAmount = (uintPrice * creditAmount) / 1000000;
     }
 
+    /**
+     * @dev Never accept partial payment for minimal due (interest + fees).
+     */
     function getNextPayment(
         BaseStructs.CreditRecord memory _cr,
         uint256 _lastLateFeeDate,
         uint256 _paymentAmount
     )
         public
+        view
         virtual
         override
         returns (
             uint256 principal,
             uint256 interest,
             uint256 fees,
+            bool isLate,
+            bool markPaid,
             bool paidOff
         )
     {
@@ -154,44 +163,61 @@ contract BaseFeeManager is IFeeManager, Ownable {
             _lastLateFeeDate,
             _cr.paymentIntervalInDays
         );
-
-        interest = (_cr.remainingPrincipal * _cr.aprInBps) / BPS_DIVIDER;
+        if (fees > 0) isLate = true;
+        console.log("new late fee=", fees);
+        fees += _cr.feesAccrued;
+        interest = (_cr.remainingPrincipal * _cr.aprInBps) / APR_BPS_DIVIDER;
+        console.log("fees=", fees);
+        console.log("interest=", interest);
 
         // final payment
         if (_cr.remainingPayments == 1) {
-            principal = _cr.remainingPrincipal;
-            paidOff = true;
+            uint256 due = fees + interest + _cr.remainingPrincipal;
+            console.log("Final payment, due=", due);
+
+            if (_paymentAmount >= due) {
+                // Successful payoff. If overpaid, leave overpaid unallocated
+                markPaid = true;
+                paidOff = true;
+                principal = _cr.remainingPrincipal;
+            } else if (_paymentAmount >= fees + interest) {
+                // Able to cover min due, but not enough to pay off,
+                // partially pay down the remaining principal
+                markPaid = false;
+                principal = _paymentAmount - fees - interest;
+            } else {
+                // Not enough to cover interest and late fees, do not accept any payment
+                markPaid = false;
+                fees = 0;
+                interest = 0;
+            }
         } else {
-            principal = _cr.nextAmountDue - interest;
-            paidOff = false;
+            uint256 due = _cr.nextAmountDue + fees;
+            console.log("Non-final pay, due=", due);
 
-            // Handle overpayment
-            // if the extra is not enough for all the reamining principle,
-            // simply apply the extra towards principal, otherwise,
-            // check if the extra can cover the backloading fee as well. If yes,
-            // process this as a payoff; otherwise, we get into a corner case
-            // when the remaining principal becomes 0 but the credit is not
-            // paid off because of back loading fee.
-            uint256 totalDue = principal + interest + fees;
-            if (_paymentAmount > totalDue) {
-                uint256 extra = _paymentAmount - totalDue;
+            if (_paymentAmount >= due) {
+                markPaid = true;
 
-                if ((_cr.remainingPrincipal - principal) > extra) {
-                    // The extra does not cover all the remaining principal, simply
-                    // apply the extra towards principal
-                    principal += extra;
-                } else {
-                    // the extra can cover the remaining principal, check if it is
-                    // enough to cover back loading fee.
+                // Check if amount is good enough for payoff
+                uint256 forPrincipal = _paymentAmount - interest - fees;
+
+                if (forPrincipal >= _cr.remainingPrincipal) {
+                    // Early payoff
                     principal = _cr.remainingPrincipal;
-                    extra -= (_cr.remainingPrincipal - principal);
-
                     paidOff = true;
+                } else {
+                    // Not enough for payoff, apply extra payment for principal
+                    principal = forPrincipal;
                 }
+            } else {
+                // Not enough to cover the total due, reject the payment.
+                markPaid = false;
+                fees = 0;
+                interest = 0;
             }
         }
 
-        return (principal, interest, fees, paidOff);
+        return (principal, interest, fees, isLate, markPaid, paidOff);
     }
 
     /// returns the four fields for fees. The last two fields are unused. Kept it for compatibility.
