@@ -315,15 +315,6 @@ contract BaseCreditPool is ICredit, BasePool {
             cr.nextDueDate =
                 cr.nextDueDate +
                 uint64(cr.paymentIntervalInDays * SECONDS_IN_A_DAY);
-            // Handle the extreme corner case when the principal is 0
-            // but the backloading fee is not paid yet.
-            // ? do we accept portion payment?
-            if (cr.remainingPrincipal == 0)
-                cr.feesAccrued = uint96(
-                    IFeeManager(feeManagerAddress).calcBackLoadingFee(
-                        cr.loanAmount
-                    )
-                );
         }
         creditRecordMapping[msg.sender] = cr;
 
