@@ -14,7 +14,7 @@ contract HDT is IHDT, ERC20 {
     using SafeERC20 for IERC20;
 
     // optimize, see https://github.com/ethereum/EIPs/issues/1726#issuecomment-472352728
-    uint256 internal constant pointsMultiplier = 2**128;
+    uint256 internal constant Points_Multiplier = 2**128;
 
     /// // The underlying token that the FDT owners can claim interest for
     IERC20 public immutable fundsToken;
@@ -44,7 +44,7 @@ contract HDT is IHDT, ERC20 {
         address _fundsToken
     ) ERC20(name, symbol) {
         fundsToken = IERC20(_fundsToken);
-        pointsPerShare = pointsMultiplier; //1 * pointsMultiplier.
+        pointsPerShare = Points_Multiplier; //1 * Points_Multiplier.
     }
 
     /**
@@ -53,8 +53,8 @@ contract HDT is IHDT, ERC20 {
      * It emits the `IncomeDistributed` event if the amount of received is greater than 0.
      * About undistributed income:
      *   In each distribution, there is a small amount of funds which does not get distributed,
-     *     which is `(msg.value * pointsMultiplier) % totalSupply()`.
-     *   With a well-chosen `pointsMultiplier`, the amount funds that are not getting distributed
+     *     which is `(msg.value * Points_Multiplier) % totalSupply()`.
+     *   With a well-chosen `Points_Multiplier`, the amount funds that are not getting distributed
      *     in a distribution can be less than 1 (base unit).
      *   We can actually keep track of the undistributed in a distribution
      *     and try to distribute it in the next distribution ....... todo implement
@@ -65,7 +65,7 @@ contract HDT is IHDT, ERC20 {
         if (value > 0) {
             pointsPerShare =
                 pointsPerShare +
-                (value * pointsMultiplier) /
+                (value * Points_Multiplier) /
                 totalSupply();
 
             emit IncomeDistributed(msg.sender, value);
@@ -85,7 +85,7 @@ contract HDT is IHDT, ERC20 {
         if (value > 0) {
             pointsPerShare =
                 pointsPerShare -
-                (value * pointsMultiplier) /
+                (value * Points_Multiplier) /
                 totalSupply();
             emit LossesDistributed(msg.sender, value);
         }
@@ -125,7 +125,7 @@ contract HDT is IHDT, ERC20 {
     /**
      * @notice Views the amount of funds that an address has earned in total.
      * @dev accumulativeFundsOf(_owner) = withdrawableFundsOf(_owner) + withdrawnFundsOf(_owner)
-     * = (pointsPerShare * balanceOf(_owner) + pointsCorrection[_owner]) / pointsMultiplier
+     * = (pointsPerShare * balanceOf(_owner) + pointsCorrection[_owner]) / Points_Multiplier
      * @param _owner The address of a token holder.
      * @return The amount of funds that `_owner` has earned in total.
      */
@@ -139,7 +139,7 @@ contract HDT is IHDT, ERC20 {
             uint256(
                 int256(pointsPerShare * balanceOf(_owner)) +
                     (pointsCorrection[_owner])
-            ) / pointsMultiplier;
+            ) / Points_Multiplier;
     }
 
     // *****************************
@@ -175,7 +175,7 @@ contract HDT is IHDT, ERC20 {
 
         pointsCorrection[account] =
             pointsCorrection[account] -
-            int256((pointsPerShare - pointsMultiplier) * value);
+            int256((pointsPerShare - Points_Multiplier) * value);
     }
 
     /**
