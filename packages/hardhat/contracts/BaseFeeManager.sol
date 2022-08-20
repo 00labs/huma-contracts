@@ -18,9 +18,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
     // Late fee, charged when the borrow is late for a pyament.
     uint256 public late_fee_flat;
     uint256 public late_fee_bps;
-    // Early payoff fee, charged when the borrow pays off prematurely
-    uint256 public back_loading_fee_flat;
-    uint256 public back_loading_fee_bps;
 
     // fixedPaymentPerOneMillion is a mapping from terms (# of multiple of 30 days) to
     // a mapping from interest rate to payment.
@@ -35,16 +32,12 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 _front_loading_fee_flat,
         uint256 _front_loading_fee_bps,
         uint256 _late_fee_flat,
-        uint256 _late_fee_bps,
-        uint256 _back_platform_fee_flat,
-        uint256 _back_platform_fee_bps
+        uint256 _late_fee_bps
     ) public onlyOwner {
         front_loading_fee_flat = _front_loading_fee_flat;
         front_loading_fee_bps = _front_loading_fee_bps;
         late_fee_flat = _late_fee_flat;
         late_fee_bps = _late_fee_bps;
-        back_loading_fee_flat = _back_platform_fee_flat;
-        back_loading_fee_bps = _back_platform_fee_bps;
     }
 
     function calcFrontLoadingFee(uint256 _amount)
@@ -57,13 +50,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
         if (front_loading_fee_bps > 0)
             fees += (_amount * front_loading_fee_bps) / 10000;
     }
-
-    function calcRecurringFee(uint256 _amount)
-        external
-        virtual
-        override
-        returns (uint256 fees)
-    {}
 
     function calcLateFee(
         uint256 _amount,
@@ -79,17 +65,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
             if (late_fee_bps > 0)
                 fees += (_amount * late_fee_bps) / BPS_DIVIDER;
         }
-    }
-
-    function calcBackLoadingFee(uint256 _amount)
-        public
-        virtual
-        override
-        returns (uint256 fees)
-    {
-        fees = back_loading_fee_flat;
-        if (back_loading_fee_bps > 0)
-            fees += (_amount * back_loading_fee_bps) / BPS_DIVIDER;
     }
 
     function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
@@ -184,7 +159,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
         // final payment
         if (_cr.remainingPayments == 1) {
-            fees += calcBackLoadingFee(_cr.loanAmount);
             principal = _cr.remainingPrincipal;
             paidOff = true;
         } else {
@@ -211,12 +185,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
                     // enough to cover back loading fee.
                     principal = _cr.remainingPrincipal;
                     extra -= (_cr.remainingPrincipal - principal);
-                    uint256 backloadingFee = calcBackLoadingFee(_cr.loanAmount);
 
-                    if (extra >= backloadingFee) {
-                        fees += backloadingFee;
-                        paidOff = true;
-                    }
+                    paidOff = true;
                 }
             }
         }
@@ -244,8 +214,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             front_loading_fee_bps,
             late_fee_flat,
             late_fee_bps,
-            back_loading_fee_flat,
-            back_loading_fee_bps
+            0,
+            0
         );
     }
 }
