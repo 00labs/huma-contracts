@@ -22,7 +22,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
 
-    string poolName;
+    string public poolName;
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
@@ -53,7 +53,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 internal poolAprInBps;
 
     // Indicates if the pool is interest only or not
-    bool interestOnly;
+    bool public interestOnly;
 
     // The collateral basis percentage required from lenders
     uint256 internal collateralRequiredInBps;
@@ -363,12 +363,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         view
         virtual
         returns (
-            uint256 _front_loading_fee_flat,
-            uint256 _front_loading_fee_bps,
-            uint256 _late_fee_flat,
-            uint256 _late_fee_bps,
-            uint256 _back_loading_fee_flat,
-            uint256 _back_loading_fee_bps
+            uint256 _frontLoadingFeeFlat,
+            uint256 _frontLoadingFeeBps,
+            uint256 _lateFeeFlat,
+            uint256 _lateFeeBps,
+            uint256 _unused1,
+            uint256 _unused2
         )
     {
         return IFeeManager(feeManagerAddress).getFees();

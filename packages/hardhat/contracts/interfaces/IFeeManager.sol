@@ -45,10 +45,10 @@ interface IFeeManager {
         external
         view
         returns (
-            uint256 front_loading_fee_flat,
-            uint256 front_loading_fee_bps,
-            uint256 late_fee_flat,
-            uint256 late_fee_bps,
+            uint256 frontLoadingFeeFlat,
+            uint256 frontLoadingFeeBps,
+            uint256 lateFeeFlat,
+            uint256 lateFeeBps,
             uint256 unused1,
             uint256 unused2
         );
