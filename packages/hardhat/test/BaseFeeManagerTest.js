@@ -5,10 +5,14 @@ const { solidity } = require("ethereum-waffle");
 
 use(solidity);
 
-const getLoanContractFromAddress = async function (address, signer) {
-  return ethers.getContractAt("HumaLoan", address, signer);
+let checkResult = function (r, v1, v2, v3, v4, v5, v6) {
+  expect(r.principal).to.equal(v1);
+  expect(r.interest).to.equal(v2);
+  expect(r.fees).to.equal(v3);
+  expect(r.isLate).to.equal(v4);
+  expect(r.markPaid).to.equal(v5);
+  expect(r.paidOff).to.equal(v6);
 };
-
 // Let us limit the depth of describe to be 2.
 //
 // In before() of "Huma Pool", all the key supporting contracts are deployed.
@@ -19,8 +23,8 @@ describe("Base Fee Manager", function () {
   let poolContract;
   let humaConfigContract;
   let humaPoolLockerFactoryContract;
-  let testTokenContract;
-  let feeManagerContract;
+  let testToken;
+  let feeManager;
   let owner;
   let lender;
   let borrower;
@@ -28,6 +32,8 @@ describe("Base Fee Manager", function () {
   let treasury;
   let creditApprover;
   let poolOwner;
+  let record;
+  let lastLateDate;
 
   before(async function () {
     [owner, lender, borrower, borrower2, treasury, creditApprover, poolOwner] =
@@ -44,36 +50,34 @@ describe("Base Fee Manager", function () {
 
     // Deploy Fee Manager
     const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
-    feeManagerContract = await feeManagerFactory.deploy();
+    feeManager = await feeManagerFactory.deploy();
+    await feeManager.setFees(10, 100, 20, 10000);
 
     const TestToken = await ethers.getContractFactory("TestToken");
-    testTokenContract = await TestToken.deploy();
+    testToken = await TestToken.deploy();
+    testToken.give1000To(lender.address);
 
-    // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
     poolContract = await BaseCreditPool.deploy(
-      testTokenContract.address,
+      testToken.address,
       humaConfigContract.address,
       poolLockerFactoryContract.address,
-      feeManagerContract.address,
+      feeManager.address,
       "Base Credit Pool",
       "Base HDT",
       "BHDT"
     );
     await poolContract.deployed();
 
-    await testTokenContract.approve(poolContract.address, 100);
-
     await poolContract.transferOwnership(poolOwner.address);
-    await feeManagerContract.transferOwnership(poolOwner.address);
+    await feeManager.transferOwnership(poolOwner.address);
 
-    await poolContract.enablePool();
-
-    await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100);
-
-    await testTokenContract.approve(poolContract.address, 100);
-
+    await testToken.approve(poolContract.address, 100);
     await poolContract.makeInitialDeposit(100);
+    await poolContract.enablePool();
+    await poolContract.setMinMaxBorrowAmount(10, 1000);
+
+    await testToken.approve(poolContract.address, 100);
   });
 
   beforeEach(async function () {});
@@ -82,27 +86,29 @@ describe("Base Fee Manager", function () {
     // todo Verify only pool admins can deployNewPool
 
     it("Should set the fees correctly", async function () {
-      var [f1, f2, f3, f4, f5, f6] = await feeManagerContract.getFees();
-      expect(f1).to.equal(10);
-      expect(f2).to.equal(100);
-      expect(f3).to.equal(20);
-      expect(f4).to.equal(100);
-    });
-
-    it("Should disallow non-owner to set the fees", async function () {
-      await expect(
-        feeManagerContract.connect(treasury).setFees(15, 150, 25, 250)
-      ).to.be.revertedWith("caller is not the owner"); // open zeppelin default error message
-    });
-
-    it("Should allow owner to set the fees", async function () {
-      await feeManagerContract.connect(poolOwner).setFees(15, 150, 25, 250);
-
-      var [f1, f2, f3, f4, f5, f6] = await feeManagerContract.getFees();
+      var [f1, f2, f3, f4] = await feeManager.getFees();
       expect(f1).to.equal(15);
       expect(f2).to.equal(150);
       expect(f3).to.equal(25);
       expect(f4).to.equal(250);
+    });
+
+    it("Should disallow non-owner to set the fees", async function () {
+      await expect(
+        feeManager.connect(treasury).setFees(10, 100, 20, 10000)
+      ).to.be.revertedWith("caller is not the owner"); // open zeppelin default error message
+    });
+
+    it("Should allow owner to set the fees", async function () {
+      await feeManager.connect(poolOwner).setFees(15, 150, 25, 250);
+
+      var [f1, f2, f3, f4] = await feeManager.getFees();
+      expect(f1).to.equal(15);
+      expect(f2).to.equal(150);
+      expect(f3).to.equal(25);
+      expect(f4).to.equal(250);
+
+      await feeManager.connect(poolOwner).setFees(10, 100, 20, 10000);
     });
   });
 
@@ -116,27 +122,23 @@ describe("Base Fee Manager", function () {
   describe("Fixed Payment Setting and Lookup", function () {
     it("Should disallow non-owner to set the payment", async function () {
       await expect(
-        feeManagerContract.connect(treasury).addFixedPayment(24, 500, 43871)
+        feeManager.connect(treasury).addFixedPayment(24, 500, 43871)
       ).to.be.revertedWith("caller is not the owner");
     });
 
     it("Should allow a single payment to be added", async function () {
-      await feeManagerContract
-        .connect(poolOwner)
-        .addFixedPayment(24, 500, 43871);
+      await feeManager.connect(poolOwner).addFixedPayment(24, 500, 43871);
 
-      const payment = await feeManagerContract
+      const payment = await feeManager
         .connect(poolOwner)
         .getFixedPaymentAmount(1000000, 500, 24);
       expect(payment).to.equal(43871);
     });
 
     it("Should allow existing record to be updated", async function () {
-      await feeManagerContract
-        .connect(poolOwner)
-        .addFixedPayment(24, 500, 43872);
+      await feeManager.connect(poolOwner).addFixedPayment(24, 500, 43872);
 
-      const payment = await feeManagerContract
+      const payment = await feeManager
         .connect(poolOwner)
         .getFixedPaymentAmount(1000000, 500, 24);
       expect(payment).to.equal(43872);
@@ -148,7 +150,7 @@ describe("Base Fee Manager", function () {
       let payments = [46260];
 
       await expect(
-        feeManagerContract
+        feeManager
           .connect(poolOwner)
           .addBatchOfFixedPayments(terms, aprInBps, payments)
       ).to.be.revertedWith("INPUT_ARRAY_SIZE_MISMATCH");
@@ -165,19 +167,19 @@ describe("Base Fee Manager", function () {
         45227, 45685, 46145, 46260,
       ];
 
-      await feeManagerContract
+      await feeManager
         .connect(poolOwner)
         .addBatchOfFixedPayments(terms, aprInBps, payments);
 
-      const payment1 = await feeManagerContract
+      const payment1 = await feeManager
         .connect(poolOwner)
         .getFixedPaymentAmount(10000000, 500, 12);
       expect(payment1).to.equal(856070);
-      const payment2 = await feeManagerContract
+      const payment2 = await feeManager
         .connect(poolOwner)
         .getFixedPaymentAmount(100000, 1025, 12);
       expect(payment2).to.equal(8803);
-      const payment3 = await feeManagerContract
+      const payment3 = await feeManager
         .connect(poolOwner)
         .getFixedPaymentAmount(1000000, 500, 24);
       expect(payment3).to.equal(43871);
@@ -185,84 +187,351 @@ describe("Base Fee Manager", function () {
   });
 
   describe("Caclulate nextDueAmount", function () {
-    // beforeEach(async function () {
-    //   // setAPRandInterestOnly() to set interestOnly
-    //   poolContract.
-    // });
-    afterEach(async function () {});
+    beforeEach(async function () {
+      const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
+      poolContract = await BaseCreditPool.deploy(
+        testToken.address,
+        humaConfigContract.address,
+        poolLockerFactoryContract.address,
+        feeManager.address,
+        "Base Credit Pool",
+        "Base HDT",
+        "BHDT"
+      );
+      await poolContract.deployed();
+      poolContract.addCreditApprover(creditApprover.address);
+
+      await testToken.approve(poolContract.address, 100);
+      await poolContract.makeInitialDeposit(100);
+      await poolContract.enablePool();
+      await poolContract.setMinMaxBorrowAmount(10, 1000);
+      await poolContract.connect(owner).transferOwnership(poolOwner.address);
+
+      await poolContract.connect(poolOwner).setAPRandInterestOnly(1200, true);
+      await poolContract.connect(borrower).requestCredit(400, 30, 12);
+      await poolContract
+        .connect(creditApprover)
+        .approveCredit(borrower.address);
+      await testToken.connect(lender).approve(poolContract.address, 300);
+      await poolContract.connect(lender).deposit(300);
+      await testToken.approve(poolContract.address, 400);
+      await poolContract.connect(borrower).originateCredit(400);
+
+      record = await poolContract.creditRecordMapping(borrower.address);
+      lastLateDate = await poolContract.lastLateFeeDateMapping(
+        borrower.address
+      );
+    });
     it("Should calculate interest only correctly", async function () {});
     it("Should calculate fixed payment amount correctly", async function () {});
     it("Should fallback properly when fixed payment amount lookup failed", async function () {});
   });
 
   // IntOnly := Interest Only, Fixed := Fixed monthly payment, backFee := backFee,
+  // If before(), deploy and setup the pool
+  // In describe(interest-only),
   describe("getNextPayment()", function () {
-    it("IntOnly - 1st pay - no backFee - amt < interest", async function () {});
-    it("IntOnly - 1st pay - no backFee - amt = interest", async function () {});
-    it("IntOnly - 1st pay - no backFee - late - amt = interest, thus < interst + late fee", async function () {});
-    it("IntOnly - 1st pay - no backFee - late - amt = interest + late fee", async function () {});
-    it("IntOnly - 1st pay - no backFee - amt between [interest, interest + principal]", async function () {});
-    it("IntOnly - 1st pay - no backFee - amt = interest + principal (early payoff)", async function () {});
-    it("IntOnly - 1st pay - no backFee - amt > interest + principal (early payoff, extra pay)", async function () {});
-    it("IntOnly - 1st pay - has backFee - amt = interest + principal + backFee (early payoff)", async function () {});
-    it("IntOnly - 1st pay - has backFee - amt > interest + principal + backFee (early payoff, extra pay)", async function () {});
-    it("IntOnly - 2nd pay - no backFee - amt < interest", async function () {});
-    it("IntOnly - 2nd pay - no backFee - amt = interest", async function () {});
-    it("IntOnly - 2nd pay - no backFee - late - amt = interest, thus < interst + late fee", async function () {});
-    it("IntOnly - 2nd pay - no backFee - late - amt = interest + late fee", async function () {});
-    it("IntOnly - 2nd pay - no backFee - amt between [interest, interest + principal]", async function () {});
-    it("IntOnly - 2nd pay - no backFee - amt = interest + principal (early payoff)", async function () {});
-    it("IntOnly - 2nd pay - no backFee - amt > interest + principal (early payoff, extra pay)", async function () {});
-    it("IntOnly - 2nd pay - has backFee - amt = interest + principal + backFee (early payoff)", async function () {});
-    it("IntOnly - 2nd pay - has backFee - amt > interest + principal + backFee (early payoff, extra pay)", async function () {});
-    it("IntOnly - final pay - no backFee - amt < interst", async function () {});
-    it("IntOnly - final pay - no backFee - amt b/w [interest, interst + principal]", async function () {});
-    it("IntOnly - final pay - no backFee - amt = interst + principal", async function () {});
-    it("IntOnly - final pay - no backFee - amt = interst + principal", async function () {});
-    it("IntOnly - final pay - no backFee - late - amt b/w [interst + principal, interst + principal + late fee]", async function () {});
-    it("IntOnly - final pay - no backFee - late - amt = interst + principal + late fee", async function () {});
-    it("IntOnly - final pay - no backFee - late - amt > interst + principal + late fee", async function () {});
-    it("IntOnly - final pay - has backFee - amt < interst", async function () {});
-    it("IntOnly - final pay - has backFee - amt = interest + principal", async function () {});
-    it("IntOnly - final pay - has backFee - amt b/w [interest + principal, interst + principal + backFee]", async function () {});
-    it("IntOnly - final pay - has backFee - amt = interst + principal + backFee", async function () {});
-    it("IntOnly - final pay - has backFee - amt > interst + principal + backFee", async function () {});
-    it("IntOnly - final pay - has backFee - late - amt < interst + principal + backFee + late fee", async function () {});
-    it("IntOnly - final pay - has backFee - late - amt = interst + principal + backFee + late fee", async function () {});
-    it("IntOnly - final pay - has backFee - late - amt > interst + principal + backFee + late fee", async function () {});
+    before(async function () {
+      const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
+      poolContract = await BaseCreditPool.deploy(
+        testToken.address,
+        humaConfigContract.address,
+        poolLockerFactoryContract.address,
+        feeManager.address,
+        "Base Credit Pool",
+        "Base HDT",
+        "BHDT"
+      );
+      await poolContract.deployed();
+      poolContract.addCreditApprover(creditApprover.address);
 
-    it("Fixed - 1st pay - no backFee - amt < interest", async function () {});
-    it("Fixed - 1st pay - no backFee - amt = interest", async function () {});
-    it("Fixed - 1st pay - no backFee - late - amt = interest, thus < interst + late fee", async function () {});
-    it("Fixed - 1st pay - no backFee - late - amt = interest + late fee", async function () {});
-    it("Fixed - 1st pay - no backFee - amt between [interest, interest + principal]", async function () {});
-    it("Fixed - 1st pay - no backFee - amt = interest + principal (early payoff)", async function () {});
-    it("Fixed - 1st pay - no backFee - amt > interest + principal (early payoff, extra pay)", async function () {});
-    it("Fixed - 1st pay - has backFee - amt = interest + principal + backFee (early payoff)", async function () {});
-    it("Fixed - 1st pay - has backFee - amt > interest + principal + backFee (early payoff, extra pay)", async function () {});
-    it("Fixed - 2nd pay - no backFee - amt < interest", async function () {});
-    it("Fixed - 2nd pay - no backFee - amt = interest", async function () {});
-    it("Fixed - 2nd pay - no backFee - late - amt = interest, thus < interst + late fee", async function () {});
-    it("Fixed - 2nd pay - no backFee - late - amt = interest + late fee", async function () {});
-    it("Fixed - 2nd pay - no backFee - amt between [interest, interest + principal]", async function () {});
-    it("Fixed - 2nd pay - no backFee - amt = interest + principal (early payoff)", async function () {});
-    it("Fixed - 2nd pay - no backFee - amt > interest + principal (early payoff, extra pay)", async function () {});
-    it("Fixed - 2nd pay - has backFee - amt = interest + principal + backFee (early payoff)", async function () {});
-    it("Fixed - 2nd pay - has backFee - amt > interest + principal + backFee (early payoff, extra pay)", async function () {});
-    it("Fixed - final pay - no backFee - amt < interst", async function () {});
-    it("Fixed - final pay - no backFee - amt b/w [interest, interst + principal]", async function () {});
-    it("Fixed - final pay - no backFee - amt = interst + principal", async function () {});
-    it("Fixed - final pay - no backFee - amt = interst + principal", async function () {});
-    it("Fixed - final pay - no backFee - late - amt b/w [interst + principal, interst + principal + late fee]", async function () {});
-    it("Fixed - final pay - no backFee - late - amt = interst + principal + late fee", async function () {});
-    it("Fixed - final pay - no backFee - late - amt > interst + principal + late fee", async function () {});
-    it("Fixed - final pay - has backFee - amt < interst", async function () {});
-    it("Fixed - final pay - has backFee - amt = interest + principal", async function () {});
-    it("Fixed - final pay - has backFee - amt b/w [interest + principal, interst + principal + backFee]", async function () {});
-    it("Fixed - final pay - has backFee - amt = interst + principal + backFee", async function () {});
-    it("Fixed - final pay - has backFee - amt > interst + principal + backFee", async function () {});
-    it("Fixed - final pay - has backFee - late - amt < interst + principal + backFee + late fee", async function () {});
-    it("Fixed - final pay - has backFee - late - amt = interst + principal + backFee + late fee", async function () {});
-    it("Fixed - final pay - has backFee - late - amt > interst + principal + backFee + late fee", async function () {});
+      // Setup the pool
+      await testToken.approve(poolContract.address, 100);
+      await poolContract.makeInitialDeposit(100);
+      await poolContract.enablePool();
+      await poolContract.setMinMaxBorrowAmount(10, 1000);
+      await poolContract.transferOwnership(poolOwner.address);
+      await poolContract.connect(poolOwner).setAPRandInterestOnly(1200, true);
+      await testToken.connect(lender).approve(poolContract.address, 300);
+      await poolContract.connect(lender).deposit(300);
+    });
+    describe.only("Interest-only", async function () {
+      before(async function () {
+        // Create a borrowing record
+        await poolContract.connect(borrower).requestCredit(400, 30, 12);
+        await poolContract
+          .connect(creditApprover)
+          .approveCredit(borrower.address);
+        await testToken.connect(lender).approve(poolContract.address, 300);
+        await poolContract.connect(borrower).originateCredit(400);
+
+        record = await poolContract.creditRecordMapping(borrower.address);
+        lastLateDate = await poolContract.lastLateFeeDateMapping(
+          borrower.address
+        );
+      });
+      describe("Interest-only + 1st Payment", async function () {
+        // After testing 1st payment, advance the payment schedule by making one payment
+        after(async function () {
+          console.log("*** In after interest-only+1st");
+          let creditInfo = await poolContract.getCreditInformation(
+            borrower.address
+          );
+          let oldDueDate = creditInfo.nextDueDate;
+          await testToken.connect(borrower).approve(poolContract.address, 28);
+          await poolContract
+            .connect(borrower)
+            .makePayment(testToken.address, 28);
+          creditInfo = await poolContract.getCreditInformation(
+            borrower.address
+          );
+          let newDueDate =
+            Number(oldDueDate) +
+            Number(creditInfo.paymentIntervalInDays * 3600 * 24);
+          expect(creditInfo.loanAmount).to.equal(400);
+          expect(creditInfo.nextAmountDue).to.equal(4);
+          expect(creditInfo.paymentIntervalInDays).to.equal(30);
+          expect(Number(creditInfo.nextDueDate)).to.equal(newDueDate);
+        });
+        describe("interest only + 1st payment + no late fee", async function () {
+          it("IntOnly - 1st pay - amt < interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 3);
+            checkResult(r, 0, 0, 0, false, false, false);
+          });
+          it("IntOnly - 1st pay - amt = interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 4);
+            checkResult(r, 0, 4, 0, false, true, false);
+          });
+          it("IntOnly - 1st pay - amt > interest && amt < interest + principal]", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 10);
+            checkResult(r, 6, 4, 0, false, true, false);
+          });
+          it("IntOnly - 1st pay - amt = interest + principal (early payoff)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 404);
+            checkResult(r, 400, 4, 0, false, true, true);
+          });
+          it("IntOnly - 1st pay - amt > interest + principal (early payoff, extra pay)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 500);
+            checkResult(r, 400, 4, 0, false, true, true);
+          });
+        }); // end of "interest only + 1st payment + no late fee"
+        describe("interest only + 1st payment + late fee", async function () {
+          before(async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 31]);
+            await ethers.provider.send("evm_mine", []);
+          });
+          after(async function () {});
+          it("IntOnly - 1st pay - late - amt < interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 3);
+            checkResult(r, 0, 0, 0, true, false, false);
+          });
+          it("IntOnly - 1st pay - late - amt = interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 28);
+            checkResult(r, 0, 4, 24, true, true, false);
+          });
+          it("IntOnly - 1st pay - late - amt > interest && amt < interest + principal]", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 50);
+            checkResult(r, 22, 4, 24, true, true, false);
+          });
+          it("IntOnly - 1st pay - late - amt = interest + principal (early payoff)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 428);
+            checkResult(r, 400, 4, 24, true, true, true);
+          });
+          it("IntOnly - 1st pay - late - amt > interest + principal (early payoff, extra pay)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 500);
+            checkResult(r, 400, 4, 24, true, true, true);
+          });
+        }); // "interest only + 1st payment + late fee"
+      }); // end of 1st payment
+
+      describe("IntOnly + 2nd payment", function () {
+        before(async function () {
+          record = await poolContract.creditRecordMapping(borrower.address);
+          lastLateDate = await poolContract.lastLateFeeDateMapping(
+            borrower.address
+          );
+        });
+        after(async function () {
+          // Make 10 more payments to get ready for the final payment test.
+          await testToken.connect(borrower).approve(poolContract.address, 64);
+          // Make the second payment with late fee.
+          await poolContract
+            .connect(borrower)
+            .makePayment(testToken.address, 28);
+          await ethers.provider.send("evm_increaseTime", [3600 * 24 * 27]);
+          await ethers.provider.send("evm_mine", []);
+
+          // Make the 3rd to 11th payments, no late fee
+          for (let i = 0; i < 9; i++) {
+            console.log("i=", i);
+            await poolContract
+              .connect(borrower)
+              .makePayment(testToken.address, 4);
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+          }
+          // Check if the credit record is correct.
+          creditInfo = await poolContract.getCreditInformation(
+            borrower.address
+          );
+          expect(creditInfo.remainingPrincipal).to.equal(400);
+          expect(creditInfo.nextAmountDue).to.equal(404);
+          expect(creditInfo.remainingPayments).to.equal(1);
+        });
+        describe("interest only + 2nd payment + no fee", function () {
+          it("IntOnly - 2nd pay - amt < interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 3);
+            checkResult(r, 0, 0, 0, false, false, false);
+          });
+          it("IntOnly - 2nd pay - amt = interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 4);
+            checkResult(r, 0, 4, 0, false, true, false);
+          });
+          it("IntOnly - 2nd pay - amt > interest && amt < interest + principal]", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 10);
+            checkResult(r, 6, 4, 0, false, true, false);
+          });
+          it("IntOnly - 2nd pay - amt = interest + principal (early payoff)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 404);
+            checkResult(r, 400, 4, 0, false, true, true);
+          });
+          it("IntOnly - 2nd pay - amt > interest + principal (early payoff, extra pay)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 500);
+            checkResult(r, 400, 4, 0, false, true, true);
+          });
+        }); // interest only + 2nd payment + no late fee
+        describe("interest only + 2nd payment + late fee", function () {
+          before(async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 31]);
+            await ethers.provider.send("evm_mine", []);
+          });
+          after(async function () {});
+          it("IntOnly - 2nd pay - late - amt < interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 3);
+            checkResult(r, 0, 0, 0, true, false, false);
+          });
+          it("IntOnly - 2nd pay - late - amt = interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 28);
+            checkResult(r, 0, 4, 24, true, true, false);
+          });
+          it("IntOnly - 2nd pay - late - amt > interest && amt < interest + principal]", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 50);
+            checkResult(r, 22, 4, 24, true, true, false);
+          });
+          it("IntOnly - 2nd pay - late - amt = interest + principal (early payoff)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 428);
+            checkResult(r, 400, 4, 24, true, true, true);
+          });
+          it("IntOnly - 2nd pay - late - amt > interest + principal (early payoff, extra pay)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 500);
+            checkResult(r, 400, 4, 24, true, true, true);
+          });
+        }); // "interest only + 2nd payment + late fee"
+      }); // end of IntOnly + 2nd payment
+
+      describe("Final payment + IntOnly", function () {
+        before(async function () {
+          record = await poolContract.creditRecordMapping(borrower.address);
+          lastLateDate = await poolContract.lastLateFeeDateMapping(
+            borrower.address
+          );
+        });
+        after(async function () {
+          // Make the final payment with late fee
+          testToken.give1000To(borrower.address);
+
+          await testToken.connect(borrower).approve(poolContract.address, 828);
+          console.log("");
+          await poolContract
+            .connect(borrower)
+            .makePayment(testToken.address, 828);
+          creditInfo = await poolContract.getCreditInformation(
+            borrower.address
+          );
+          expect(creditInfo.remainingPrincipal).to.equal(0);
+          expect(creditInfo.nextAmountDue).to.equal(0);
+          expect(creditInfo.nextDueDate).to.equal(0);
+          expect(creditInfo.deleted).to.equal(true);
+        });
+        describe("interest only + final payment + no fee", function () {
+          it("IntOnly - final pay - amt < interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 3);
+            checkResult(r, 0, 0, 0, false, false, false);
+          });
+          it("IntOnly - final pay - amt < interest + principal", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 4);
+            checkResult(r, 0, 0, 0, false, false, false);
+          });
+          it("IntOnly - final pay - amt = interest + principal (payoff)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 404);
+            checkResult(r, 400, 4, 0, false, true, true);
+          });
+          it("IntOnly - final pay - amt > interest + principal (payoff, extra pay)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 500);
+            checkResult(r, 400, 4, 0, false, true, true);
+          });
+        }); // interest only + final payment + no late fee
+        describe("interest only + final payment + late fee", function () {
+          before(async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 31]);
+            await ethers.provider.send("evm_mine", []);
+          });
+          after(async function () {});
+          it("IntOnly - final pay - late - amt < interest", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 3);
+            checkResult(r, 0, 0, 0, true, false, false);
+          });
+          it("IntOnly - final pay - late - amt = int. + fees < int. + fee + principal", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 28);
+            checkResult(r, 0, 0, 0, true, false, false);
+          });
+          it("IntOnly - final pay - late - amt = int. + fee + principal (payoff)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 828);
+            checkResult(r, 400, 4, 424, true, true, true);
+          });
+          it("IntOnly - final pay - late - amt > interest + fee + principal (payoff, extra pay)", async function () {
+            let r = await feeManager.getNextPayment(record, lastLateDate, 900);
+            checkResult(r, 400, 4, 424, true, true, true);
+          });
+        }); // "interest only + final payment + late fee"
+      }); // end of IntOnly + final payment
+    }); // end of IntOnly
+
+    describe("getNextPayment() - fixed payment + 1st payment", function () {
+      it("Fixed - 1st pay - amt < interest", async function () {});
+      it("Fixed - 1st pay - amt = interest", async function () {});
+      it("Fixed - 1st pay - amt < interest && < interest + principal]", async function () {});
+      it("Fixed - 1st pay - amt = interest + principal (early payoff)", async function () {});
+      it("Fixed - 1st pay - amt > interest + principal (early payoff, extra pay)", async function () {});
+      it("Fixed - 1st pay - late - amt = interest, thus < interst + late fee", async function () {});
+      it("Fixed - 1st pay - late - amt = interest + late fee", async function () {});
+      it("Fixed - 1st pay - late - amt = interest + principal && < interest + late + principal", async function () {});
+      it("Fixed - 1st pay - late - amt = interest + late + principal", async function () {});
+      it("Fixed - 1st pay - late - amt > interest + late + principal", async function () {});
+    });
+    describe("getNextPayment() - fixed payment + 2nd payment", function () {
+      it("Fixed - 2nd pay - amt < interest", async function () {});
+      it("Fixed - 2nd pay - amt = interest", async function () {});
+      it("Fixed - 2nd pay - amt < interest && < interest + principal]", async function () {});
+      it("Fixed - 2nd pay - amt = interest + principal (early payoff)", async function () {});
+      it("Fixed - 2nd pay - amt > interest + principal (early payoff, extra pay)", async function () {});
+      it("Fixed - 2nd pay - late - amt = interest, thus < interst + late fee", async function () {});
+      it("Fixed - 2nd pay - late - amt = interest + late fee", async function () {});
+      it("Fixed - 2nd pay - late - amt = interest + principal && < interest + late + principal", async function () {});
+      it("Fixed - 2nd pay - late - amt = interest + late + principal", async function () {});
+      it("Fixed - 2nd pay - late - amt > interest + late + principal", async function () {});
+    });
+    describe("getNextPayment() - fixed payment + final payment", function () {
+      it("Fixed - final pay - amt < interest", async function () {});
+      it("Fixed - final pay - amt = interest", async function () {});
+      it("Fixed - final pay - amt < interest && < interest + principal]", async function () {});
+      it("Fixed - final pay - amt = interest + principal (early payoff)", async function () {});
+      it("Fixed - final pay - amt > interest + principal (early payoff, extra pay)", async function () {});
+      it("Fixed - final pay - late - amt = interest, thus < interst + late fee", async function () {});
+      it("Fixed - final pay - late - amt = interest + late fee", async function () {});
+      it("Fixed - final pay - late - amt = interest + principal && < interest + late + principal", async function () {});
+      it("Fixed - final pay - late - amt = interest + late + principal", async function () {});
+      it("Fixed - final pay - late - amt > interest + late + principal", async function () {});
+    });
   });
 });
