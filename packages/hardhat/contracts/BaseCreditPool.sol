@@ -272,13 +272,14 @@ contract BaseCreditPool is ICredit, BasePool {
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
      * @dev "WRONG_ASSET" reverted when asset address does not match
-     *
+     * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
      */
     function makePayment(address _asset, uint256 _amount)
         external
         virtual
         override
     {
+        console.log("Entering makePayment()");
         protocolAndpoolOn();
 
         BaseStructs.CreditRecord memory cr = creditRecordMapping[msg.sender];
@@ -297,13 +298,19 @@ contract BaseCreditPool is ICredit, BasePool {
             feeManagerAddress
         ).getNextPayment(cr, lastLateFeeDateMapping[msg.sender], _amount);
 
-        uint256 totalDue = principal + interest + fees;
+        console.log("in makePayment, principal=", principal);
+        console.log("interest=", interest);
+        console.log("fees=", fees);
+        console.log("isLate=", isLate);
+        console.log("goodPay=", goodPay);
+        console.log("paidOff=", paidOff);
 
         // Do not accept partial payments. Requires _amount to be able to cover
         // the next payment and all the outstanding fees.
-        // todo figure out a good way to communicate back to the user when
-        // the amount is insufficient,
-        require(_amount >= totalDue, "AMOUNT_TOO_LOW");
+        require(goodPay, "AMOUNT_TOO_LOW");
+
+        // Reset the cycle that late fee has been charged.
+        if (isLate) lastLateFeeDateMapping[msg.sender] = cr.nextDueDate;
 
         if (paidOff) {
             cr.nextAmountDue = 0;
@@ -311,13 +318,21 @@ contract BaseCreditPool is ICredit, BasePool {
             cr.remainingPrincipal = 0;
             cr.feesAccrued = 0;
             cr.remainingPayments = 0;
-            invalidateApprovedCredit(msg.sender);
+            cr.deleted = true;
         } else {
             cr.remainingPrincipal = uint96(cr.remainingPrincipal - principal);
             cr.remainingPayments -= 1;
             cr.nextDueDate =
                 cr.nextDueDate +
                 uint64(cr.paymentIntervalInDays * SECONDS_IN_A_DAY);
+            if (cr.remainingPayments == 1) {
+                if (cr.interestOnly) cr.nextAmountDue += cr.remainingPrincipal;
+                else {
+                    cr.nextAmountDue =
+                        cr.remainingPrincipal *
+                        (1 + cr.aprInBps / 120000);
+                }
+            }
         }
         creditRecordMapping[msg.sender] = cr;
 
@@ -325,9 +340,28 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 poolIncome = interest + fees;
         distributeIncome(poolIncome);
 
-        // Transfer assets from the _borrower to pool locker
-        IERC20 assetIERC20 = IERC20(poolToken);
-        assetIERC20.transferFrom(msg.sender, poolLockerAddress, _amount);
+        uint256 amountToCollect = principal + interest + fees;
+        console.log("amountToCollect=", amountToCollect);
+        console.log(
+            "cr.nextDueDate=",
+            creditRecordMapping[msg.sender].nextDueDate
+        );
+        console.log("block.timestamp=", block.timestamp);
+        console.log(
+            "remainingPayments=",
+            creditRecordMapping[msg.sender].remainingPayments
+        );
+
+        // amountToCollect is different from _amount in two scenarios:
+        // 1) when _amount is smaller than the amount due, we do not support
+        // partial payment and only collect $0 2) when _amount is more than pay
+        //  off, we only collect the dues and the remaining principal.
+        if (amountToCollect > 0) {
+            // Transfer assets from the _borrower to pool locker
+            IERC20 token = IERC20(poolToken);
+            console.log("balance=", token.balanceOf(msg.sender));
+            token.transferFrom(msg.sender, poolLockerAddress, amountToCollect);
+        }
     }
 
     /**
