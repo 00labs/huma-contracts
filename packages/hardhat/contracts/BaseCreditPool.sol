@@ -279,7 +279,6 @@ contract BaseCreditPool is ICredit, BasePool {
         virtual
         override
     {
-        console.log("Entering makePayment()");
         protocolAndpoolOn();
 
         BaseStructs.CreditRecord memory cr = creditRecordMapping[msg.sender];
@@ -298,13 +297,6 @@ contract BaseCreditPool is ICredit, BasePool {
             feeManagerAddress
         ).getNextPayment(cr, lastLateFeeDateMapping[msg.sender], _amount);
 
-        console.log("in makePayment, principal=", principal);
-        console.log("interest=", interest);
-        console.log("fees=", fees);
-        console.log("isLate=", isLate);
-        console.log("goodPay=", goodPay);
-        console.log("paidOff=", paidOff);
-
         // Do not accept partial payments. Requires _amount to be able to cover
         // the next payment and all the outstanding fees.
         require(goodPay, "AMOUNT_TOO_LOW");
@@ -319,6 +311,7 @@ contract BaseCreditPool is ICredit, BasePool {
             cr.feesAccrued = 0;
             cr.remainingPayments = 0;
             cr.deleted = true;
+            cr.state = BaseStructs.CreditState.Deleted;
         } else {
             cr.remainingPrincipal = uint96(cr.remainingPrincipal - principal);
             cr.remainingPayments -= 1;
@@ -341,16 +334,6 @@ contract BaseCreditPool is ICredit, BasePool {
         distributeIncome(poolIncome);
 
         uint256 amountToCollect = principal + interest + fees;
-        console.log("amountToCollect=", amountToCollect);
-        console.log(
-            "cr.nextDueDate=",
-            creditRecordMapping[msg.sender].nextDueDate
-        );
-        console.log("block.timestamp=", block.timestamp);
-        console.log(
-            "remainingPayments=",
-            creditRecordMapping[msg.sender].remainingPayments
-        );
 
         // amountToCollect is different from _amount in two scenarios:
         // 1) when _amount is smaller than the amount due, we do not support
@@ -359,7 +342,6 @@ contract BaseCreditPool is ICredit, BasePool {
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             IERC20 token = IERC20(poolToken);
-            console.log("balance=", token.balanceOf(msg.sender));
             token.transferFrom(msg.sender, poolLockerAddress, amountToCollect);
         }
     }

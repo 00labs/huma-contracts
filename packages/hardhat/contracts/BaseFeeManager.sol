@@ -59,8 +59,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 _lastLateFeeDate,
         uint256 _paymentInterval
     ) public view virtual override returns (uint256 fees) {
-        console.log("in calcLateFee, block.timestamp=", block.timestamp);
-        console.log("in calcLateFee, dueDate=", _dueDate);
         if (
             block.timestamp > _dueDate &&
             _lastLateFeeDate < (block.timestamp - _paymentInterval)
@@ -130,10 +128,11 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 aprInBps,
         uint256 numOfPayments
     ) public view virtual override returns (uint256 paymentAmount) {
-        uint256 uintPrice = (fixedPaymentPerOneMillion[numOfPayments])[
+        uint256 unitPrice = (fixedPaymentPerOneMillion[numOfPayments])[
             aprInBps
         ];
-        paymentAmount = (uintPrice * creditAmount) / 1000000;
+        require(unitPrice > 0, "PRICE_NOT_EXIST");
+        paymentAmount = (unitPrice * creditAmount) / 1000000;
     }
 
     /**
@@ -163,25 +162,20 @@ contract BaseFeeManager is IFeeManager, Ownable {
             _lastLateFeeDate,
             _cr.paymentIntervalInDays
         );
-        console.log("in getNextPayment() fees=", fees);
         if (fees > 0) isLate = true;
         fees += _cr.feesAccrued;
         interest = (_cr.remainingPrincipal * _cr.aprInBps) / APR_BPS_DIVIDER;
 
         // final payment
         if (_cr.remainingPayments == 1) {
-            console.log("_cr.remainingPrincipal=", _cr.remainingPrincipal);
             uint256 due = fees + interest + _cr.remainingPrincipal;
-            console.log("due=", due);
 
             if (_paymentAmount >= due) {
-                console.log("cover everything.");
                 // Successful payoff. If overpaid, leave overpaid unallocated
                 markPaid = true;
                 paidOff = true;
                 principal = _cr.remainingPrincipal;
             } else {
-                console.log("unable to cover due.");
                 // Not enough to cover interest and late fees, do not accept any payment
                 markPaid = false;
                 fees = 0;
@@ -189,11 +183,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             }
         } else {
             uint256 due = _cr.nextAmountDue + fees;
-            console.log("due=", due);
-            console.log("_paymentAmount=", _paymentAmount);
 
             if (_paymentAmount >= due) {
-                console.log("able to cover due");
                 markPaid = true;
 
                 // Check if amount is good enough for payoff
@@ -201,7 +192,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
                 if (forPrincipal >= _cr.remainingPrincipal) {
                     // Early payoff
-                    console.log("early payoff");
                     principal = _cr.remainingPrincipal;
                     paidOff = true;
                 } else {
@@ -209,19 +199,12 @@ contract BaseFeeManager is IFeeManager, Ownable {
                     principal = forPrincipal;
                 }
             } else {
-                console.log("unable to cover due.");
                 // Not enough to cover the total due, reject the payment.
                 markPaid = false;
                 fees = 0;
                 interest = 0;
             }
         }
-        console.log("principal=", principal);
-        console.log("interest=", interest);
-        console.log("fees=", fees);
-        console.log("isLate=", isLate);
-        console.log("markPaid=", markPaid);
-        console.log("paidOff=", paidOff);
         return (principal, interest, fees, isLate, markPaid, paidOff);
     }
 
