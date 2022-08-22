@@ -72,12 +72,11 @@ contract BaseCreditPool is ICredit, BasePool {
     }
 
     /**
-     * @notice the initiation of a loan
+     * @notice initiation of a credit
      * @param _borrower the address of the borrower
      * @param _borrowAmount the amount of the liquidity asset that the borrower obtains
      * @param _collateralAsset the address of the collateral asset.
      * @param _collateralAmount the amount of the collateral asset
-     * todo remove dynamic array, need to coordinate with client for that change.
      */
     function initiate(
         address _borrower,
