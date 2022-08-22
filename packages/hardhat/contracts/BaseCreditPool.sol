@@ -203,7 +203,7 @@ contract BaseCreditPool is ICredit, BasePool {
             );
         } else {
             cr.nextAmountDue = uint96(
-                IFeeManager(feeManagerAddress).getFixedPaymentAmount(
+                IFeeManager(feeManagerAddress).getInstallmentAmount(
                     _borrowAmount,
                     cr.aprInBps,
                     cr.remainingPayments
