@@ -38,7 +38,7 @@ interface IFeeManager {
             bool
         );
 
-    function getFixedPaymentAmount(
+    function getInstallmentAmount(
         uint256 creditAmt,
         uint256 aprInBps,
         uint256 numOfPayments

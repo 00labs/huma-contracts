@@ -118,32 +118,32 @@ describe("Base Fee Manager", function() {
   //  * I = Interest rate, as a monthly percentage
   //  * N = Number of payments.
   // payment lookup table: shorturl.at/fY015
-  describe("Fixed-payment setting and lookup", function() {
+  describe("Installment setting and lookup", function() {
     it("Should disallow non-owner to set payment schedule", async function() {
       await expect(
-        feeManager.connect(treasury).addFixedPayment(24, 500, 43871)
+        feeManager.connect(treasury).addInstallment(24, 500, 43871)
       ).to.be.revertedWith("caller is not the owner");
     });
 
     it("Should allow a single payment schedule to be added", async function() {
-      await feeManager.connect(poolOwner).addFixedPayment(24, 500, 43871);
+      await feeManager.connect(poolOwner).addInstallment(24, 500, 43871);
 
       const payment = await feeManager
         .connect(poolOwner)
-        .getFixedPaymentAmount(1000000, 500, 24);
+        .getInstallmentAmount(1000000, 500, 24);
       expect(payment).to.equal(43871);
     });
 
     it("Should allow existing payment schedule  to be updated", async function() {
-      await feeManager.connect(poolOwner).addFixedPayment(24, 500, 43872);
+      await feeManager.connect(poolOwner).addInstallment(24, 500, 43872);
 
       const payment = await feeManager
         .connect(poolOwner)
-        .getFixedPaymentAmount(1000000, 500, 24);
+        .getInstallmentAmount(1000000, 500, 24);
       expect(payment).to.equal(43872);
     });
 
-    it("Should reject batch input of fixed-payment schedule if array lengths do not match", async function() {
+    it("Should reject batch input of installment schedule if array lengths do not match", async function() {
       let terms = [24, 24];
       let aprInBps = [1000, 1025];
       let payments = [46260];
@@ -151,11 +151,11 @@ describe("Base Fee Manager", function() {
       await expect(
         feeManager
           .connect(poolOwner)
-          .addBatchOfFixedPayments(terms, aprInBps, payments)
+          .addBatchOfInstallments(terms, aprInBps, payments)
       ).to.be.revertedWith("INPUT_ARRAY_SIZE_MISMATCH");
     });
 
-    it("Should allow list of fixed-payment schedule to be added", async function() {
+    it("Should allow list of installment schedule to be added", async function() {
       let terms = [12, 12, 12, 12, 12, 12, 12, 24, 24, 24, 24, 24, 24, 24];
       let aprInBps = [
         500,
@@ -192,19 +192,19 @@ describe("Base Fee Manager", function() {
 
       await feeManager
         .connect(poolOwner)
-        .addBatchOfFixedPayments(terms, aprInBps, payments);
+        .addBatchOfInstallments(terms, aprInBps, payments);
 
       const payment1 = await feeManager
         .connect(poolOwner)
-        .getFixedPaymentAmount(10000000, 500, 12);
+        .getInstallmentAmount(10000000, 500, 12);
       expect(payment1).to.equal(856070);
       const payment2 = await feeManager
         .connect(poolOwner)
-        .getFixedPaymentAmount(100000, 1025, 12);
+        .getInstallmentAmount(100000, 1025, 12);
       expect(payment2).to.equal(8803);
       const payment3 = await feeManager
         .connect(poolOwner)
-        .getFixedPaymentAmount(1000000, 500, 24);
+        .getInstallmentAmount(1000000, 500, 24);
       expect(payment3).to.equal(43871);
     });
   });
@@ -246,8 +246,8 @@ describe("Base Fee Manager", function() {
       expect(record.nextAmountDue).to.equal(4);
     });
 
-    it("Should revert when fixed-payment schedule lookup fails", async function() {
-      await feeManager.connect(poolOwner).addFixedPayment(12, 1000, 87916);
+    it("Should revert when installment schedule lookup fails", async function() {
+      await feeManager.connect(poolOwner).addInstallment(12, 1000, 87916);
       await poolContract.connect(poolOwner).setAPRandInterestOnly(1500, false);
       await poolContract.connect(borrower).requestCredit(1000, 30, 12);
       await poolContract
@@ -259,11 +259,11 @@ describe("Base Fee Manager", function() {
       ).to.revertedWith("PRICE_NOT_EXIST");
     });
 
-    it("Should calculate fixed-payment amount correctly", async function() {
-      await feeManager.connect(poolOwner).addFixedPayment(12, 1000, 87916);
-      expect(
-        await feeManager.getFixedPaymentAmount(1000000, 1000, 12)
-      ).to.equal(87916);
+    it("Should calculate installment amount correctly", async function() {
+      await feeManager.connect(poolOwner).addInstallment(12, 1000, 87916);
+      expect(await feeManager.getInstallmentAmount(1000000, 1000, 12)).to.equal(
+        87916
+      );
       await poolContract.connect(poolOwner).setAPRandInterestOnly(1000, false);
       await poolContract.connect(borrower).requestCredit(1000, 30, 12);
       await poolContract
@@ -551,10 +551,10 @@ describe("Base Fee Manager", function() {
       }); // end of IntOnly + final payment
     }); // end of IntOnly
 
-    describe("Fixed-payment", async function() {
+    describe("Installment", async function() {
       before(async function() {
-        await feeManager.connect(poolOwner).addFixedPayment(12, 1000, 87916);
-        // Set pool type to fixed-payment.
+        await feeManager.connect(poolOwner).addInstallment(12, 1000, 87916);
+        // Set pool type to installment.
         await poolContract.setAPRandInterestOnly(1000, false);
         await testToken.connect(lender).approve(poolContract.address, 10000);
         await poolContract.connect(lender).deposit(10000);
@@ -598,23 +598,23 @@ describe("Base Fee Manager", function() {
           expect(Number(creditInfo.nextDueDate)).to.equal(newDueDate);
         });
         describe("No late fee", async function() {
-          it("Fixed - 1st pay - amt < due", async function() {
+          it("Installment - 1st pay - amt < due", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 80);
             checkResult(r, 0, 0, 0, false, false, false);
           });
-          it("Fixed - 1st pay - amt = due", async function() {
+          it("Installment - 1st pay - amt = due", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 87);
             checkResult(r, 79, 8, 0, false, true, false);
           });
-          it("Fixed - 1st pay - amt > due && amt < due + remainingPrincipal", async function() {
+          it("Installment - 1st pay - amt > due && amt < due + remainingPrincipal", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1000);
             checkResult(r, 992, 8, 0, false, true, false);
           });
-          it("Fixed - 1st pay - amt = due + remainingPrincipal (early payoff)", async function() {
+          it("Installment - 1st pay - amt = due + remainingPrincipal (early payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1008);
             checkResult(r, 1000, 8, 0, false, true, true);
           });
-          it("Fixed - 1st pay - amt > interest + remainingPrincipal (early payoff, extra pay)", async function() {
+          it("Installment - 1st pay - amt > interest + remainingPrincipal (early payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1100);
             checkResult(r, 1000, 8, 0, false, true, true);
           });
@@ -626,23 +626,23 @@ describe("Base Fee Manager", function() {
             await ethers.provider.send("evm_mine", []);
           });
           after(async function() {});
-          it("Fixed - 1st pay - late - amt < monthly payment + late", async function() {
+          it("Installment - 1st pay - late - amt < monthly payment + late", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 87);
             checkResult(r, 0, 0, 0, true, false, false);
           });
-          it("Fixed - 1st pay - late - amt = monthly payment + late", async function() {
+          it("Installment - 1st pay - late - amt = monthly payment + late", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 194);
             checkResult(r, 79, 8, 107, true, true, false);
           });
-          it("Fixed - 1st pay - late - amt > monthly payment + late && amt < payoff", async function() {
+          it("Installment - 1st pay - late - amt > monthly payment + late && amt < payoff", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 200);
             checkResult(r, 85, 8, 107, true, true, false);
           });
-          it("Fixed - 1st pay - late - amt = monthly payment + late + principal delta (early payoff)", async function() {
+          it("Installment - 1st pay - late - amt = monthly payment + late + principal delta (early payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1115);
             checkResult(r, 1000, 8, 107, true, true, true);
           });
-          it("Fixed - 1st pay - late - amt > monthly payment + late + principal delta (early payoff, extra pay)", async function() {
+          it("Installment - 1st pay - late - amt > monthly payment + late + principal delta (early payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1200);
             checkResult(r, 1000, 8, 107, true, true, true);
           });
@@ -684,23 +684,23 @@ describe("Base Fee Manager", function() {
         });
 
         describe("No late fee", function() {
-          it("Fixed - 2nd pay - amt < monthlyPayment", async function() {
+          it("Installment - 2nd pay - amt < monthlyPayment", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 80);
             checkResult(r, 0, 0, 0, false, false, false);
           });
-          it("Fixed - 2nd pay - amt = monthlyPayment", async function() {
+          it("Installment - 2nd pay - amt = monthlyPayment", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 87);
             checkResult(r, 80, 7, 0, false, true, false);
           });
-          it("Fixed - 2nd pay - amt > monthlyPayment && amt < payoff", async function() {
+          it("Installment - 2nd pay - amt > monthlyPayment && amt < payoff", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 100);
             checkResult(r, 93, 7, 0, false, true, false);
           });
-          it("Fixed - 2nd pay - amt = monthlyPayment + remainingPrincipal (early payoff)", async function() {
+          it("Installment - 2nd pay - amt = monthlyPayment + remainingPrincipal (early payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 928);
             checkResult(r, 921, 7, 0, false, true, true);
           });
-          it("Fixed - 2nd pay - amt > monthlyPayment + remainingPrincipal (early payoff, extra pay)", async function() {
+          it("Installment - 2nd pay - amt > monthlyPayment + remainingPrincipal (early payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1000);
             checkResult(r, 921, 7, 0, false, true, true);
           });
@@ -711,23 +711,23 @@ describe("Base Fee Manager", function() {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 31]);
             await ethers.provider.send("evm_mine", []);
           });
-          it("Fixed - 2nd pay - late - amt < monthly due + fee", async function() {
+          it("Installment - 2nd pay - late - amt < monthly due + fee", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 87);
             checkResult(r, 0, 0, 0, true, false, false);
           });
-          it("Fixed - 2nd pay - late - amt = monthly due + fee", async function() {
+          it("Installment - 2nd pay - late - amt = monthly due + fee", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 194);
             checkResult(r, 80, 7, 107, true, true, false);
           });
-          it("Fixed - 2nd pay - late - amt > interest && amt < payoff", async function() {
+          it("Installment - 2nd pay - late - amt > interest && amt < payoff", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 900);
             checkResult(r, 786, 7, 107, true, true, false);
           });
-          it("Fixed - 2nd pay - late - amt = interest + remainingPrincipal (early payoff)", async function() {
+          it("Installment - 2nd pay - late - amt = interest + remainingPrincipal (early payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1035);
             checkResult(r, 921, 7, 107, true, true, true);
           });
-          it("Fixed - 2nd pay - late - amt > interest + remainingPrincipal (early payoff, extra pay)", async function() {
+          it("Installment - 2nd pay - late - amt > interest + remainingPrincipal (early payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1100);
             checkResult(r, 921, 7, 107, true, true, true);
           });
@@ -742,43 +742,43 @@ describe("Base Fee Manager", function() {
           );
         });
         describe("No late fee", function() {
-          it("Fixed - final pay - amt < due", async function() {
+          it("Installment - final pay - amt < due", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 80);
             checkResult(r, 0, 0, 0, false, false, false);
           });
-          it("Fixed - final pay - amt = due (payoff)", async function() {
+          it("Installment - final pay - amt = due (payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 92);
             checkResult(r, 92, 0, 0, false, true, true);
           });
-          it("Fixed - final pay - amt > due (payoff, extra pay)", async function() {
+          it("Installment - final pay - amt > due (payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 100);
             checkResult(r, 92, 0, 0, false, true, true);
           });
-        }); // Fixed-payment + final + no late fee
+        }); // Installment + final + no late fee
         describe("Late fee", function() {
           before(async function() {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 31]);
             await ethers.provider.send("evm_mine", []);
           });
           after(async function() {});
-          it("Fixed - final pay - late - amt < monthlyPayment < due + interest", async function() {
+          it("Installment - final pay - late - amt < monthlyPayment < due + interest", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 87);
             checkResult(r, 0, 0, 0, true, false, false);
           });
-          it("Fixed - final pay - late - amt = due", async function() {
+          it("Installment - final pay - late - amt = due", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 92);
             checkResult(r, 0, 0, 0, true, false, false);
           });
-          it("Fixed - final pay - late - amt = due + fee (payoff)", async function() {
+          it("Installment - final pay - late - amt = due + fee (payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 204);
             checkResult(r, 92, 0, 112, true, true, true);
           });
-          it("Fixed - final pay - late - amt > due + fee (payoff, extra pay)", async function() {
+          it("Installment - final pay - late - amt > due + fee (payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 300);
             checkResult(r, 92, 0, 112, true, true, true);
           });
-        }); // end of Fixed-payment + final payment + late fee
-      }); // end of Fixed-payment + final payment
-    }); // end of Fixed-payment
+        }); // end of Installment + final payment + late fee
+      }); // end of Installment + final payment
+    }); // end of Installment
   });
 });
