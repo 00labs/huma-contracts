@@ -291,7 +291,7 @@ describe("Huma Invoice Financing", function() {
         borrower.address
       );
 
-      expect(creditInfo.deleted).to.equal(true);
+      expect(creditInfo.state).to.equal(0); // Means "Deleted"
     });
   });
 

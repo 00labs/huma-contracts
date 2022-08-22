@@ -140,7 +140,7 @@ contract BaseCreditPool is ICredit, BasePool {
     {
         protocolAndpoolOn();
         onlyApprovers();
-        creditRecordMapping[_borrower].deleted = true;
+        creditRecordMapping[_borrower].state = BaseStructs.CreditState.Deleted;
     }
 
     function isApproved(address _borrower)
@@ -151,7 +151,6 @@ contract BaseCreditPool is ICredit, BasePool {
         returns (bool)
     {
         if (
-            (!creditRecordMapping[_borrower].deleted) &&
             (creditRecordMapping[_borrower].state >=
                 BaseStructs.CreditState.Approved)
         ) return true;
@@ -309,7 +308,6 @@ contract BaseCreditPool is ICredit, BasePool {
             cr.balance = 0;
             cr.feesAccrued = 0;
             cr.remainingPayments = 0;
-            cr.deleted = true;
             cr.state = BaseStructs.CreditState.Deleted;
         } else {
             cr.balance = uint96(cr.balance - principal);
@@ -400,7 +398,7 @@ contract BaseCreditPool is ICredit, BasePool {
             uint64 nextDueDate,
             uint96 balance,
             uint16 remainingPayments,
-            bool deleted
+            BaseStructs.CreditState state
         )
     {
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
@@ -412,7 +410,7 @@ contract BaseCreditPool is ICredit, BasePool {
             cr.nextDueDate,
             cr.balance,
             cr.remainingPayments,
-            cr.deleted
+            cr.state
         );
     }
 

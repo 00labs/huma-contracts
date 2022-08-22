@@ -503,7 +503,7 @@ describe("Base Fee Manager", function() {
           expect(creditInfo.balance).to.equal(0);
           expect(creditInfo.nextDueAmount).to.equal(0);
           expect(creditInfo.nextDueDate).to.equal(0);
-          expect(creditInfo.deleted).to.equal(true);
+          expect(creditInfo.state).to.equal(0); // Means "Deleted"
         });
 
         describe("No fee", function() {

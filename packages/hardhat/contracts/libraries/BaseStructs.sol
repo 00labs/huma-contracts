@@ -15,16 +15,15 @@ library BaseStructs {
     struct CreditRecord {
         // fields related to the overall picture of the loan
         uint96 creditLimit;
-        uint96 nextDueAmount;
-        uint64 nextDueDate;
         uint96 balance;
+        uint64 nextDueDate;
+        uint96 nextDueAmount;
         uint96 feesAccrued;
         uint16 paymentIntervalInDays;
         uint16 aprInBps;
         uint16 remainingPayments;
         CreditState state;
         bool interestOnly;
-        bool deleted;
     }
 
     /**
@@ -67,6 +66,5 @@ library BaseStructs {
         console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
         console.log("cr.remainingPayments=", uint256(cr.remainingPayments));
         console.log("cr.state=", uint256(cr.state));
-        console.log("cr.deleted=", cr.deleted);
     }
 }
