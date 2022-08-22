@@ -105,8 +105,8 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Populates basic credit info fields
         BaseStructs.CreditRecord memory cr;
-        cr.loanAmount = uint96(_borrowAmount);
-        cr.remainingPrincipal = uint96(_borrowAmount);
+        cr.creditLimit = uint96(_borrowAmount);
+        cr.balance = uint96(_borrowAmount);
         cr.aprInBps = uint16(_aprInBps);
         cr.interestOnly = _interestOnly;
         cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
@@ -185,10 +185,10 @@ contract BaseCreditPool is ICredit, BasePool {
 
         require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
 
-        // Critical to update cr.loanAmount since _borrowAmount
+        // Critical to update cr.creditLimit since _borrowAmount
         // might be lowered than the approved loan amount
         BaseStructs.CreditRecord memory cr = creditRecordMapping[_borrower];
-        cr.loanAmount = uint32(_borrowAmount);
+        cr.creditLimit = uint32(_borrowAmount);
         // // Calculates next payment amount and due date
         cr.nextDueDate = uint64(
             block.timestamp +
@@ -197,11 +197,11 @@ contract BaseCreditPool is ICredit, BasePool {
         );
         // Calculate the monthly payment (except the final payment)
         if (interestOnly) {
-            cr.nextAmountDue = uint32(
+            cr.nextDueAmount = uint32(
                 (_borrowAmount * cr.aprInBps) / BPS_DIVIDER
             );
         } else {
-            cr.nextAmountDue = uint96(
+            cr.nextDueAmount = uint96(
                 IFeeManager(feeManagerAddress).getInstallmentAmount(
                     _borrowAmount,
                     cr.aprInBps,
@@ -304,25 +304,23 @@ contract BaseCreditPool is ICredit, BasePool {
         if (isLate) lastLateFeeDateMapping[msg.sender] = cr.nextDueDate;
 
         if (paidOff) {
-            cr.nextAmountDue = 0;
+            cr.nextDueAmount = 0;
             cr.nextDueDate = 0;
-            cr.remainingPrincipal = 0;
+            cr.balance = 0;
             cr.feesAccrued = 0;
             cr.remainingPayments = 0;
             cr.deleted = true;
             cr.state = BaseStructs.CreditState.Deleted;
         } else {
-            cr.remainingPrincipal = uint96(cr.remainingPrincipal - principal);
+            cr.balance = uint96(cr.balance - principal);
             cr.remainingPayments -= 1;
             cr.nextDueDate =
                 cr.nextDueDate +
                 uint64(cr.paymentIntervalInDays * SECONDS_IN_A_DAY);
             if (cr.remainingPayments == 1) {
-                if (cr.interestOnly) cr.nextAmountDue += cr.remainingPrincipal;
+                if (cr.interestOnly) cr.nextDueAmount += cr.balance;
                 else {
-                    cr.nextAmountDue =
-                        cr.remainingPrincipal *
-                        (1 + cr.aprInBps / 120000);
+                    cr.nextDueAmount = cr.balance * (1 + cr.aprInBps / 120000);
                 }
             }
         }
@@ -382,7 +380,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // FeatureRequest: add staking logic
 
         // Trigger loss process
-        losses = creditRecordMapping[borrower].remainingPrincipal;
+        losses = creditRecordMapping[borrower].balance;
         distributeLosses(losses);
 
         return losses;
@@ -395,24 +393,24 @@ contract BaseCreditPool is ICredit, BasePool {
         external
         view
         returns (
-            uint96 loanAmount,
-            uint96 nextAmountDue,
+            uint96 creditLimit,
+            uint96 nextDueAmount,
             uint64 paymentIntervalInDays,
             uint16 aprInBps,
             uint64 nextDueDate,
-            uint96 remainingPrincipal,
+            uint96 balance,
             uint16 remainingPayments,
             bool deleted
         )
     {
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
         return (
-            cr.loanAmount,
-            cr.nextAmountDue,
+            cr.creditLimit,
+            cr.nextDueAmount,
             cr.paymentIntervalInDays,
             cr.aprInBps,
             cr.nextDueDate,
-            cr.remainingPrincipal,
+            cr.balance,
             cr.remainingPayments,
             cr.deleted
         );

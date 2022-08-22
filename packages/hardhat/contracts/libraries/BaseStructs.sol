@@ -14,10 +14,10 @@ library BaseStructs {
      */
     struct CreditRecord {
         // fields related to the overall picture of the loan
-        uint96 loanAmount;
-        uint96 nextAmountDue;
+        uint96 creditLimit;
+        uint96 nextDueAmount;
         uint64 nextDueDate;
-        uint96 remainingPrincipal;
+        uint96 balance;
         uint96 feesAccrued;
         uint16 paymentIntervalInDays;
         uint16 aprInBps;
@@ -56,9 +56,9 @@ library BaseStructs {
     // Debugging helper function. Please comment out after finishing debugging.
     function printCreditInfo(CreditRecord storage cr) public view {
         console.log("\n##### Status of the Credit #####");
-        console.log("cr.loanAmount=", uint256(cr.loanAmount));
+        console.log("cr.creditLimit=", uint256(cr.creditLimit));
         console.log("cr.nextDueDate=", uint256(cr.nextDueDate));
-        console.log("cr.remainingPrincipal=", uint256(cr.remainingPrincipal));
+        console.log("cr.balance=", uint256(cr.balance));
         console.log("cr.feesAccrued=", uint256(cr.feesAccrued));
         console.log(
             "cr.paymentIntervalInDays=",

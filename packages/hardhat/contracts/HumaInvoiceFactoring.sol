@@ -83,20 +83,20 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         require(asset == address(poolToken), "HumaIF:WRONG_ASSET");
 
         // todo decide what to do if the payment amount is insufficient.
-        require(amount >= cr.remainingPrincipal, "HumaIF:AMOUNT_TOO_LOW");
+        require(amount >= cr.balance, "HumaIF:AMOUNT_TOO_LOW");
 
         // todo verify that we have indeeded received the payment.
 
         uint256 lateFee = IFeeManager(feeManagerAddress).calcLateFee(
-            cr.nextAmountDue,
+            cr.nextDueAmount,
             cr.nextDueDate,
             lastLateFeeDateMapping[borrower],
             cr.paymentIntervalInDays
         );
-        uint256 refundAmount = amount - cr.remainingPrincipal - lateFee;
+        uint256 refundAmount = amount - cr.balance - lateFee;
 
         // Sends the remainder to the borrower
-        cr.remainingPrincipal = 0;
+        cr.balance = 0;
         cr.remainingPayments = 0;
 
         processRefund(borrower, refundAmount);

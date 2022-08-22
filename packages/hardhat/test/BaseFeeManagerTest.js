@@ -243,7 +243,7 @@ describe("Base Fee Manager", function() {
       await poolContract.connect(borrower).originateCredit(400);
 
       record = await poolContract.creditRecordMapping(borrower.address);
-      expect(record.nextAmountDue).to.equal(4);
+      expect(record.nextDueAmount).to.equal(4);
     });
 
     it("Should revert when installment schedule lookup fails", async function() {
@@ -274,7 +274,7 @@ describe("Base Fee Manager", function() {
       await poolContract.connect(borrower).originateCredit(1000);
 
       record = await poolContract.creditRecordMapping(borrower.address);
-      expect(record.nextAmountDue).to.be.within(87, 88);
+      expect(record.nextDueAmount).to.be.within(87, 88);
     });
   });
 
@@ -340,8 +340,8 @@ describe("Base Fee Manager", function() {
           let newDueDate =
             Number(oldDueDate) +
             Number(creditInfo.paymentIntervalInDays * 3600 * 24);
-          expect(creditInfo.loanAmount).to.equal(400);
-          expect(creditInfo.nextAmountDue).to.equal(4);
+          expect(creditInfo.creditLimit).to.equal(400);
+          expect(creditInfo.nextDueAmount).to.equal(4);
           expect(creditInfo.paymentIntervalInDays).to.equal(30);
           expect(Number(creditInfo.nextDueDate)).to.equal(newDueDate);
         });
@@ -426,8 +426,8 @@ describe("Base Fee Manager", function() {
           creditInfo = await poolContract.getCreditInformation(
             borrower.address
           );
-          expect(creditInfo.remainingPrincipal).to.equal(400);
-          expect(creditInfo.nextAmountDue).to.equal(404);
+          expect(creditInfo.balance).to.equal(400);
+          expect(creditInfo.nextDueAmount).to.equal(404);
           expect(creditInfo.remainingPayments).to.equal(1);
         });
 
@@ -500,8 +500,8 @@ describe("Base Fee Manager", function() {
           creditInfo = await poolContract.getCreditInformation(
             borrower.address
           );
-          expect(creditInfo.remainingPrincipal).to.equal(0);
-          expect(creditInfo.nextAmountDue).to.equal(0);
+          expect(creditInfo.balance).to.equal(0);
+          expect(creditInfo.nextDueAmount).to.equal(0);
           expect(creditInfo.nextDueDate).to.equal(0);
           expect(creditInfo.deleted).to.equal(true);
         });
@@ -591,9 +591,9 @@ describe("Base Fee Manager", function() {
           let newDueDate =
             Number(oldDueDate) +
             Number(creditInfo.paymentIntervalInDays * 3600 * 24);
-          expect(creditInfo.loanAmount).to.equal(1000);
-          expect(creditInfo.remainingPrincipal).to.equal(921);
-          expect(creditInfo.nextAmountDue).to.equal(87);
+          expect(creditInfo.creditLimit).to.equal(1000);
+          expect(creditInfo.balance).to.equal(921);
+          expect(creditInfo.nextDueAmount).to.equal(87);
           expect(creditInfo.paymentIntervalInDays).to.equal(30);
           expect(Number(creditInfo.nextDueDate)).to.equal(newDueDate);
         });
@@ -606,15 +606,15 @@ describe("Base Fee Manager", function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 87);
             checkResult(r, 79, 8, 0, false, true, false);
           });
-          it("Installment - 1st pay - amt > due && amt < due + remainingPrincipal", async function() {
+          it("Installment - 1st pay - amt > due && amt < due + balance", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1000);
             checkResult(r, 992, 8, 0, false, true, false);
           });
-          it("Installment - 1st pay - amt = due + remainingPrincipal (early payoff)", async function() {
+          it("Installment - 1st pay - amt = due + balance (early payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1008);
             checkResult(r, 1000, 8, 0, false, true, true);
           });
-          it("Installment - 1st pay - amt > interest + remainingPrincipal (early payoff, extra pay)", async function() {
+          it("Installment - 1st pay - amt > interest + balance (early payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1100);
             checkResult(r, 1000, 8, 0, false, true, true);
           });
@@ -678,8 +678,8 @@ describe("Base Fee Manager", function() {
           creditInfo = await poolContract.getCreditInformation(
             borrower.address
           );
-          expect(creditInfo.remainingPrincipal).to.equal(92);
-          expect(creditInfo.nextAmountDue).to.equal(92);
+          expect(creditInfo.balance).to.equal(92);
+          expect(creditInfo.nextDueAmount).to.equal(92);
           expect(creditInfo.remainingPayments).to.equal(1);
         });
 
@@ -696,11 +696,11 @@ describe("Base Fee Manager", function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 100);
             checkResult(r, 93, 7, 0, false, true, false);
           });
-          it("Installment - 2nd pay - amt = monthlyPayment + remainingPrincipal (early payoff)", async function() {
+          it("Installment - 2nd pay - amt = monthlyPayment + balance (early payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 928);
             checkResult(r, 921, 7, 0, false, true, true);
           });
-          it("Installment - 2nd pay - amt > monthlyPayment + remainingPrincipal (early payoff, extra pay)", async function() {
+          it("Installment - 2nd pay - amt > monthlyPayment + balance (early payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1000);
             checkResult(r, 921, 7, 0, false, true, true);
           });
@@ -723,11 +723,11 @@ describe("Base Fee Manager", function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 900);
             checkResult(r, 786, 7, 107, true, true, false);
           });
-          it("Installment - 2nd pay - late - amt = interest + remainingPrincipal (early payoff)", async function() {
+          it("Installment - 2nd pay - late - amt = interest + balance (early payoff)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1035);
             checkResult(r, 921, 7, 107, true, true, true);
           });
-          it("Installment - 2nd pay - late - amt > interest + remainingPrincipal (early payoff, extra pay)", async function() {
+          it("Installment - 2nd pay - late - amt > interest + balance (early payoff, extra pay)", async function() {
             let r = await feeManager.getNextPayment(record, lastLateDate, 1100);
             checkResult(r, 921, 7, 107, true, true, true);
           });

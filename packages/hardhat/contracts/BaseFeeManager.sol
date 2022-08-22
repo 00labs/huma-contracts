@@ -156,24 +156,24 @@ contract BaseFeeManager is IFeeManager, Ownable {
         )
     {
         fees = calcLateFee(
-            _cr.nextAmountDue,
+            _cr.nextDueAmount,
             _cr.nextDueDate,
             _lastLateFeeDate,
             _cr.paymentIntervalInDays
         );
         if (fees > 0) isLate = true;
         fees += _cr.feesAccrued;
-        interest = (_cr.remainingPrincipal * _cr.aprInBps) / APR_BPS_DIVIDER;
+        interest = (_cr.balance * _cr.aprInBps) / APR_BPS_DIVIDER;
 
         // final payment
         if (_cr.remainingPayments == 1) {
-            uint256 due = fees + interest + _cr.remainingPrincipal;
+            uint256 due = fees + interest + _cr.balance;
 
             if (_paymentAmount >= due) {
                 // Successful payoff. If overpaid, leave overpaid unallocated
                 markPaid = true;
                 paidOff = true;
-                principal = _cr.remainingPrincipal;
+                principal = _cr.balance;
             } else {
                 // Not enough to cover interest and late fees, do not accept any payment
                 markPaid = false;
@@ -181,7 +181,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 interest = 0;
             }
         } else {
-            uint256 due = _cr.nextAmountDue + fees;
+            uint256 due = _cr.nextDueAmount + fees;
 
             if (_paymentAmount >= due) {
                 markPaid = true;
@@ -189,9 +189,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 // Check if amount is good enough for payoff
                 uint256 forPrincipal = _paymentAmount - interest - fees;
 
-                if (forPrincipal >= _cr.remainingPrincipal) {
+                if (forPrincipal >= _cr.balance) {
                     // Early payoff
-                    principal = _cr.remainingPrincipal;
+                    principal = _cr.balance;
                     paidOff = true;
                 } else {
                     // Not enough for payoff, apply extra payment for principal
