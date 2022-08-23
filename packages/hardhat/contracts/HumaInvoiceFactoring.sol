@@ -90,7 +90,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 lateFee = IFeeManager(feeManagerAddress).calcLateFee(
             cr.dueAmount,
             cr.dueDate,
-            lastLateFeeDateMapping[borrower],
+            0,
             cr.paymentIntervalInDays
         );
         uint256 refundAmount = amount - cr.balance - lateFee;

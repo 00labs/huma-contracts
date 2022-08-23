@@ -25,8 +25,9 @@ contract BaseCreditPool is ICredit, BasePool {
     // mapping from wallet address to the collateral supplied by this wallet
     mapping(address => BaseStructs.CollateralInfo)
         internal collateralInfoMapping;
-    // mapping from wallet address to the last late fee charged date
-    mapping(address => uint256) public lastLateFeeDateMapping;
+
+    // // mapping from wallet address to the last late fee charged date
+    // mapping(address => uint256) public lastLateFeeDateMapping;
 
     constructor(
         address _poolToken,
@@ -291,14 +292,14 @@ contract BaseCreditPool is ICredit, BasePool {
 
         (principal, interest, fees, isLate, goodPay, paidOff) = IFeeManager(
             feeManagerAddress
-        ).getNextPayment(cr, lastLateFeeDateMapping[msg.sender], _amount);
+        ).getNextPayment(cr, 0, _amount);
 
         // Do not accept partial payments. Requires _amount to be able to cover
         // the next payment and all the outstanding fees.
         require(goodPay, "AMOUNT_TOO_LOW");
 
         // Reset the cycle that late fee has been charged.
-        if (isLate) lastLateFeeDateMapping[msg.sender] = cr.dueDate;
+        //if (isLate) lastLateFeeDateMapping[msg.sender] = cr.dueDate;
 
         if (paidOff) {
             cr.dueAmount = 0;

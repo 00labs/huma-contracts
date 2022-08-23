@@ -319,9 +319,10 @@ describe("Base Fee Manager", function() {
         await testToken.connect(lender).approve(poolContract.address, 300);
         await poolContract.connect(borrower).originateCredit(400);
         record = await poolContract.creditRecordMapping(borrower.address);
-        lastLateDate = await poolContract.lastLateFeeDateMapping(
-          borrower.address
-        );
+        lastLateDate = 0;
+        // lastLateDate = await poolContract.lastLateFeeDateMapping(
+        //   borrower.address
+        // );
       });
       describe("1st Payment", async function() {
         // After testing 1st payment, advance the payment schedule by making one payment
@@ -401,9 +402,10 @@ describe("Base Fee Manager", function() {
       describe("2nd payment", function() {
         before(async function() {
           record = await poolContract.creditRecordMapping(borrower.address);
-          lastLateDate = await poolContract.lastLateFeeDateMapping(
-            borrower.address
-          );
+          lastLateDate = 0;
+          // lastLateDate = await poolContract.lastLateFeeDateMapping(
+          //   borrower.address
+          // );
         });
         after(async function() {
           // Make 10 more payments to get ready for the final payment test.
@@ -486,9 +488,10 @@ describe("Base Fee Manager", function() {
       describe("Final payment", function() {
         before(async function() {
           record = await poolContract.creditRecordMapping(borrower.address);
-          lastLateDate = await poolContract.lastLateFeeDateMapping(
-            borrower.address
-          );
+          lastLateDate = 0;
+          // lastLateDate = await poolContract.lastLateFeeDateMapping(
+          //   borrower.address
+          // );
         });
         after(async function() {
           // Make the final payment with late fee so that we can delete the credit record
@@ -570,9 +573,10 @@ describe("Base Fee Manager", function() {
 
         record = await poolContract.creditRecordMapping(borrower.address);
 
-        lastLateDate = await poolContract.lastLateFeeDateMapping(
-          borrower.address
-        );
+        lastLateDate = 0;
+        // lastLateDate = await poolContract.lastLateFeeDateMapping(
+        //   borrower.address
+        // );
       });
       describe("1st Payment", async function() {
         // After testing 1st payment, advance the payment schedule by making one payment
@@ -652,9 +656,10 @@ describe("Base Fee Manager", function() {
       describe("2nd payment", function() {
         before(async function() {
           record = await poolContract.creditRecordMapping(borrower.address);
-          lastLateDate = await poolContract.lastLateFeeDateMapping(
-            borrower.address
-          );
+          lastLateDate = 0;
+          // lastLateDate = await poolContract.lastLateFeeDateMapping(
+          //   borrower.address
+          // );
         });
         after(async function() {
           // Make 10 more payments to get ready for the final payment test.
@@ -737,9 +742,10 @@ describe("Base Fee Manager", function() {
       describe("Final payment", function() {
         before(async function() {
           record = await poolContract.creditRecordMapping(borrower.address);
-          lastLateDate = await poolContract.lastLateFeeDateMapping(
-            borrower.address
-          );
+          lastLateDate = 0;
+          // lastLateDate = await poolContract.lastLateFeeDateMapping(
+          //   borrower.address
+          // );
         });
         describe("No late fee", function() {
           it("Installment - final pay - amt < due", async function() {
