@@ -53,7 +53,7 @@ contract BaseCreditPool is ICredit, BasePool {
      * @notice accepts a credit request from msg.sender
      */
     function requestCredit(
-        uint256 _borrowAmount,
+        uint256 _creditLimit,
         uint256 _paymentIntervalInDays,
         uint256 _numOfPayments
     ) external virtual override {
@@ -61,7 +61,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // Parameter and condition validation happens in initiate()
         initiate(
             msg.sender,
-            _borrowAmount,
+            _creditLimit,
             address(0),
             0,
             0,
@@ -75,13 +75,13 @@ contract BaseCreditPool is ICredit, BasePool {
     /**
      * @notice initiation of a credit
      * @param _borrower the address of the borrower
-     * @param _borrowAmount the amount of the liquidity asset that the borrower obtains
+     * @param _creditLimit the amount of the liquidity asset that the borrower obtains
      * @param _collateralAsset the address of the collateral asset.
      * @param _collateralAmount the amount of the collateral asset
      */
     function initiate(
         address _borrower,
-        uint256 _borrowAmount,
+        uint256 _creditLimit,
         address _collateralAsset,
         uint256 _collateralParam,
         uint256 _collateralAmount,
@@ -99,15 +99,16 @@ contract BaseCreditPool is ICredit, BasePool {
         );
 
         // Borrowing amount needs to be higher than min for the pool.
-        require(_borrowAmount >= minBorrowAmount, "SMALLER_THAN_LIMIT");
+        require(_creditLimit >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
         // Borrowing amount needs to be lower than max for the pool.
-        require(maxBorrowAmount >= _borrowAmount, "GREATER_THAN_LIMIT");
+        require(maxBorrowAmount >= _creditLimit, "GREATER_THAN_LIMIT");
 
         // Populates basic credit info fields
         BaseStructs.CreditRecord memory cr;
-        cr.creditLimit = uint96(_borrowAmount);
-        cr.balance = uint96(_borrowAmount);
+        cr.creditLimit = uint96(_creditLimit);
+        // todo 8/23 many tests are checking against balance after initiate(), need to change it.
+        cr.balance = uint96(_creditLimit);
         cr.aprInBps = uint16(_aprInBps);
         cr.option = _payScheduleOption;
         cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
