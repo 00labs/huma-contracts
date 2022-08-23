@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4 <0.9.0;
+import "../libraries/BaseStructs.sol";
 
 interface IPool {
     function setPoolName(string memory newName) external;
@@ -26,7 +27,10 @@ interface IPool {
     //     uint256 _lockoutPeriodInDays
     // ) external;
 
-    function setAPRandInterestOnly(uint256 _apr, bool _interestOnly) external;
+    function setAPRandPayScheduleOption(
+        uint256 _apr,
+        BaseStructs.PayScheduleOptions _payScheduleOption
+    ) external;
 
     function setCollateralRequiredInBps(uint256 _collateralRateInBps) external;
 

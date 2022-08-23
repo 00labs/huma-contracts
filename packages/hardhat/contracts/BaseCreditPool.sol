@@ -66,7 +66,7 @@ contract BaseCreditPool is ICredit, BasePool {
             0,
             0,
             poolAprInBps,
-            interestOnly,
+            payScheduleOption,
             _paymentIntervalInDays,
             _numOfPayments
         );
@@ -86,7 +86,7 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _collateralParam,
         uint256 _collateralAmount,
         uint256 _aprInBps,
-        bool _interestOnly,
+        BaseStructs.PayScheduleOptions _payScheduleOption,
         uint256 _paymentIntervalInDays,
         uint256 _remainingPayments
     ) internal virtual {
@@ -109,7 +109,7 @@ contract BaseCreditPool is ICredit, BasePool {
         cr.creditLimit = uint96(_borrowAmount);
         cr.balance = uint96(_borrowAmount);
         cr.aprInBps = uint16(_aprInBps);
-        cr.interestOnly = _interestOnly;
+        cr.option = _payScheduleOption;
         cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
         cr.remainingPayments = uint16(_remainingPayments);
         cr.state = BaseStructs.CreditState.Requested;
@@ -196,7 +196,7 @@ contract BaseCreditPool is ICredit, BasePool {
                 SECONDS_IN_A_DAY
         );
         // Calculate the monthly payment (except the final payment)
-        if (interestOnly) {
+        if (payScheduleOption == BaseStructs.PayScheduleOptions.InterestOnly) {
             cr.dueAmount = uint32((_borrowAmount * cr.aprInBps) / BPS_DIVIDER);
         } else {
             cr.dueAmount = uint96(
@@ -314,7 +314,8 @@ contract BaseCreditPool is ICredit, BasePool {
                 cr.dueDate +
                 uint64(cr.paymentIntervalInDays * SECONDS_IN_A_DAY);
             if (cr.remainingPayments == 1) {
-                if (cr.interestOnly) cr.dueAmount += cr.balance;
+                if (cr.option == BaseStructs.PayScheduleOptions.InterestOnly)
+                    cr.dueAmount += cr.balance;
                 else {
                     cr.dueAmount = cr.balance * (1 + cr.aprInBps / 120000);
                 }

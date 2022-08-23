@@ -115,7 +115,7 @@ describe("Huma Invoice Financing", function() {
 
     await invoiceContract.addCreditApprover(creditApprover.address);
 
-    await invoiceContract.connect(owner).setAPRandInterestOnly(0, true); //bps
+    await invoiceContract.connect(owner).setAPRandPayScheduleOption(0, 0); //bps
     await invoiceContract.setMinMaxBorrowAmount(10, 1000);
 
     await testTokenContract.give1000To(lender.address);
@@ -234,7 +234,7 @@ describe("Huma Invoice Financing", function() {
     it("Should post approved invoice financing successfully", async function() {
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
 
-      await invoiceContract.connect(owner).setAPRandInterestOnly(0, true);
+      await invoiceContract.connect(owner).setAPRandPayScheduleOption(0, 0);
 
       await invoiceContract
         .connect(creditApprover)
@@ -268,7 +268,7 @@ describe("Huma Invoice Financing", function() {
     // });
 
     it("Should allow credit approver to invalidate an approved invoice factoring record", async function() {
-      await invoiceContract.connect(owner).setAPRandInterestOnly(0, true);
+      await invoiceContract.connect(owner).setAPRandPayScheduleOption(0, 0);
 
       await invoiceContract
         .connect(creditApprover)
@@ -514,7 +514,7 @@ describe("Huma Invoice Financing", function() {
     it("Should post pre-approved IF successfully", async function() {
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
 
-      await invoiceContract.connect(owner).setAPRandInterestOnly(0, true);
+      await invoiceContract.connect(owner).setAPRandPayScheduleOption(0, 0);
 
       await invoiceContract
         .connect(creditApprover)
@@ -656,7 +656,7 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
 
-      await invoiceContract.connect(owner).setAPRandInterestOnly(0, true);
+      await invoiceContract.connect(owner).setAPRandPayScheduleOption(0, 0);
 
       await invoiceContract
         .connect(creditApprover)

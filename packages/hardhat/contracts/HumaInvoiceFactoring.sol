@@ -51,7 +51,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             collateralParam,
             collateralAmount,
             poolAprInBps,
-            interestOnly,
+            payScheduleOption,
             _paymentIntervalInDays,
             _remainingPayments
         );

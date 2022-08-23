@@ -234,7 +234,7 @@ describe("Base Fee Manager", function() {
     });
 
     it("Should calculate interest-only monthly payment correctly", async function() {
-      await poolContract.connect(poolOwner).setAPRandInterestOnly(1200, true);
+      await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1200, 0);
       await poolContract.connect(borrower).requestCredit(400, 30, 12);
       await poolContract
         .connect(creditApprover)
@@ -248,7 +248,7 @@ describe("Base Fee Manager", function() {
 
     it("Should revert when installment schedule lookup fails", async function() {
       await feeManager.connect(poolOwner).addInstallment(12, 1000, 87916);
-      await poolContract.connect(poolOwner).setAPRandInterestOnly(1500, false);
+      await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1500, 2);
       await poolContract.connect(borrower).requestCredit(1000, 30, 12);
       await poolContract
         .connect(creditApprover)
@@ -264,7 +264,7 @@ describe("Base Fee Manager", function() {
       expect(await feeManager.getInstallmentAmount(1000000, 1000, 12)).to.equal(
         87916
       );
-      await poolContract.connect(poolOwner).setAPRandInterestOnly(1000, false);
+      await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1000, 2);
       await poolContract.connect(borrower).requestCredit(1000, 30, 12);
       await poolContract
         .connect(creditApprover)
@@ -299,7 +299,7 @@ describe("Base Fee Manager", function() {
       await poolContract.enablePool();
       await poolContract.setMinMaxBorrowAmount(10, 1000);
       await poolContract.transferOwnership(poolOwner.address);
-      await poolContract.connect(poolOwner).setAPRandInterestOnly(1200, true);
+      await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1200, 0);
       await testToken.connect(lender).approve(poolContract.address, 300);
       await poolContract.connect(lender).deposit(300);
     });
@@ -558,7 +558,7 @@ describe("Base Fee Manager", function() {
       before(async function() {
         await feeManager.connect(poolOwner).addInstallment(12, 1000, 87916);
         // Set pool type to installment.
-        await poolContract.setAPRandInterestOnly(1000, false);
+        await poolContract.setAPRandPayScheduleOption(1000, 2);
         await testToken.connect(lender).approve(poolContract.address, 10000);
         await poolContract.connect(lender).deposit(10000);
 

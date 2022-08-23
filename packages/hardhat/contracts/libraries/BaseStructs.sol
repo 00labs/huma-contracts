@@ -23,7 +23,7 @@ library BaseStructs {
         uint16 remainingPayments;
         uint16 missedCycles;
         CreditState state;
-        bool interestOnly;
+        PayScheduleOptions option;
     }
 
     /**
@@ -49,6 +49,12 @@ library BaseStructs {
         PaidOff,
         InDefaultGracePeriod,
         Defaulted
+    }
+
+    enum PayScheduleOptions {
+        InterestOnly,
+        MonthlyMinimal,
+        Installment
     }
 
     // Please do NOT delete during development stage.
