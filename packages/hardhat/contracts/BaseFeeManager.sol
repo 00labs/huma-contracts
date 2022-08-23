@@ -156,13 +156,12 @@ contract BaseFeeManager is IFeeManager, Ownable {
         )
     {
         fees = calcLateFee(
-            _cr.nextDueAmount,
-            _cr.nextDueDate,
+            _cr.dueAmount,
+            _cr.dueDate,
             _lastLateFeeDate,
             _cr.paymentIntervalInDays
         );
         if (fees > 0) isLate = true;
-        fees += _cr.feesAccrued;
         interest = (_cr.balance * _cr.aprInBps) / APR_BPS_DIVIDER;
 
         // final payment
@@ -181,7 +180,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 interest = 0;
             }
         } else {
-            uint256 due = _cr.nextDueAmount + fees;
+            uint256 due = _cr.dueAmount + fees;
 
             if (_paymentAmount >= due) {
                 markPaid = true;

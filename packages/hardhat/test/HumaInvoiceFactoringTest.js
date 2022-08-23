@@ -800,7 +800,7 @@ describe("Huma Invoice Financing", function() {
         borrower.address
       );
       let gracePeriod = await invoiceContract.poolDefaultGracePeriodInSeconds();
-      let dueDate = creditInfo.nextDueDate;
+      let dueDate = creditInfo.dueDate;
       let current = Date.now();
 
       let timeNeeded = dueDate + gracePeriod - current;

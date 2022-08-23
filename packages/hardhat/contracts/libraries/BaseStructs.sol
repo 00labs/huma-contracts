@@ -13,15 +13,15 @@ library BaseStructs {
      * @dev each struct can have no more than 13 elements.
      */
     struct CreditRecord {
-        // fields related to the overall picture of the loan
-        uint96 creditLimit;
-        uint96 balance;
-        uint64 nextDueDate;
-        uint96 nextDueAmount;
-        uint96 feesAccrued;
+        uint96 creditLimit; // the limit of the credit line
+        uint96 balance; // the outstanding principal
+        uint64 dueDate; // the due date of oustanding balance
+        uint96 dueAmount; // the due amount
+        uint64 lastCycleProcessed;
         uint16 paymentIntervalInDays;
         uint16 aprInBps;
         uint16 remainingPayments;
+        uint16 missedCycles;
         CreditState state;
         bool interestOnly;
     }
@@ -56,9 +56,8 @@ library BaseStructs {
     function printCreditInfo(CreditRecord storage cr) public view {
         console.log("\n##### Status of the Credit #####");
         console.log("cr.creditLimit=", uint256(cr.creditLimit));
-        console.log("cr.nextDueDate=", uint256(cr.nextDueDate));
+        console.log("cr.dueDate=", uint256(cr.dueDate));
         console.log("cr.balance=", uint256(cr.balance));
-        console.log("cr.feesAccrued=", uint256(cr.feesAccrued));
         console.log(
             "cr.paymentIntervalInDays=",
             uint256(cr.paymentIntervalInDays)

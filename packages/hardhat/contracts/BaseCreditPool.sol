@@ -189,18 +189,16 @@ contract BaseCreditPool is ICredit, BasePool {
         BaseStructs.CreditRecord memory cr = creditRecordMapping[_borrower];
         cr.creditLimit = uint32(_borrowAmount);
         // // Calculates next payment amount and due date
-        cr.nextDueDate = uint64(
+        cr.dueDate = uint64(
             block.timestamp +
                 uint256(cr.paymentIntervalInDays) *
                 SECONDS_IN_A_DAY
         );
         // Calculate the monthly payment (except the final payment)
         if (interestOnly) {
-            cr.nextDueAmount = uint32(
-                (_borrowAmount * cr.aprInBps) / BPS_DIVIDER
-            );
+            cr.dueAmount = uint32((_borrowAmount * cr.aprInBps) / BPS_DIVIDER);
         } else {
-            cr.nextDueAmount = uint96(
+            cr.dueAmount = uint96(
                 IFeeManager(feeManagerAddress).getInstallmentAmount(
                     _borrowAmount,
                     cr.aprInBps,
@@ -300,25 +298,24 @@ contract BaseCreditPool is ICredit, BasePool {
         require(goodPay, "AMOUNT_TOO_LOW");
 
         // Reset the cycle that late fee has been charged.
-        if (isLate) lastLateFeeDateMapping[msg.sender] = cr.nextDueDate;
+        if (isLate) lastLateFeeDateMapping[msg.sender] = cr.dueDate;
 
         if (paidOff) {
-            cr.nextDueAmount = 0;
-            cr.nextDueDate = 0;
+            cr.dueAmount = 0;
+            cr.dueDate = 0;
             cr.balance = 0;
-            cr.feesAccrued = 0;
             cr.remainingPayments = 0;
             cr.state = BaseStructs.CreditState.Deleted;
         } else {
             cr.balance = uint96(cr.balance - principal);
             cr.remainingPayments -= 1;
-            cr.nextDueDate =
-                cr.nextDueDate +
+            cr.dueDate =
+                cr.dueDate +
                 uint64(cr.paymentIntervalInDays * SECONDS_IN_A_DAY);
             if (cr.remainingPayments == 1) {
-                if (cr.interestOnly) cr.nextDueAmount += cr.balance;
+                if (cr.interestOnly) cr.dueAmount += cr.balance;
                 else {
-                    cr.nextDueAmount = cr.balance * (1 + cr.aprInBps / 120000);
+                    cr.dueAmount = cr.balance * (1 + cr.aprInBps / 120000);
                 }
             }
         }
@@ -368,7 +365,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // check to make sure the default grace period has passed.
         require(
             block.timestamp >
-                creditRecordMapping[borrower].nextDueDate +
+                creditRecordMapping[borrower].dueDate +
                     poolDefaultGracePeriodInSeconds,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
@@ -392,10 +389,10 @@ contract BaseCreditPool is ICredit, BasePool {
         view
         returns (
             uint96 creditLimit,
-            uint96 nextDueAmount,
+            uint96 dueAmount,
             uint64 paymentIntervalInDays,
             uint16 aprInBps,
-            uint64 nextDueDate,
+            uint64 dueDate,
             uint96 balance,
             uint16 remainingPayments,
             BaseStructs.CreditState state
@@ -404,10 +401,10 @@ contract BaseCreditPool is ICredit, BasePool {
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
         return (
             cr.creditLimit,
-            cr.nextDueAmount,
+            cr.dueAmount,
             cr.paymentIntervalInDays,
             cr.aprInBps,
-            cr.nextDueDate,
+            cr.dueDate,
             cr.balance,
             cr.remainingPayments,
             cr.state

@@ -209,7 +209,7 @@ describe("Base Fee Manager", function() {
     });
   });
 
-  describe("Caclulate nextDueAmount", function() {
+  describe("Caclulate dueAmount", function() {
     beforeEach(async function() {
       const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
       poolContract = await BaseCreditPool.deploy(
@@ -243,7 +243,7 @@ describe("Base Fee Manager", function() {
       await poolContract.connect(borrower).originateCredit(400);
 
       record = await poolContract.creditRecordMapping(borrower.address);
-      expect(record.nextDueAmount).to.equal(4);
+      expect(record.dueAmount).to.equal(4);
     });
 
     it("Should revert when installment schedule lookup fails", async function() {
@@ -274,7 +274,7 @@ describe("Base Fee Manager", function() {
       await poolContract.connect(borrower).originateCredit(1000);
 
       record = await poolContract.creditRecordMapping(borrower.address);
-      expect(record.nextDueAmount).to.be.within(87, 88);
+      expect(record.dueAmount).to.be.within(87, 88);
     });
   });
 
@@ -329,7 +329,7 @@ describe("Base Fee Manager", function() {
           let creditInfo = await poolContract.getCreditInformation(
             borrower.address
           );
-          let oldDueDate = creditInfo.nextDueDate;
+          let oldDueDate = creditInfo.dueDate;
           await testToken.connect(borrower).approve(poolContract.address, 28);
           await poolContract
             .connect(borrower)
@@ -341,9 +341,9 @@ describe("Base Fee Manager", function() {
             Number(oldDueDate) +
             Number(creditInfo.paymentIntervalInDays * 3600 * 24);
           expect(creditInfo.creditLimit).to.equal(400);
-          expect(creditInfo.nextDueAmount).to.equal(4);
+          expect(creditInfo.dueAmount).to.equal(4);
           expect(creditInfo.paymentIntervalInDays).to.equal(30);
-          expect(Number(creditInfo.nextDueDate)).to.equal(newDueDate);
+          expect(Number(creditInfo.dueDate)).to.equal(newDueDate);
         });
 
         describe("No late fee", async function() {
@@ -427,7 +427,7 @@ describe("Base Fee Manager", function() {
             borrower.address
           );
           expect(creditInfo.balance).to.equal(400);
-          expect(creditInfo.nextDueAmount).to.equal(404);
+          expect(creditInfo.dueAmount).to.equal(404);
           expect(creditInfo.remainingPayments).to.equal(1);
         });
 
@@ -501,8 +501,8 @@ describe("Base Fee Manager", function() {
             borrower.address
           );
           expect(creditInfo.balance).to.equal(0);
-          expect(creditInfo.nextDueAmount).to.equal(0);
-          expect(creditInfo.nextDueDate).to.equal(0);
+          expect(creditInfo.dueAmount).to.equal(0);
+          expect(creditInfo.dueDate).to.equal(0);
           expect(creditInfo.state).to.equal(0); // Means "Deleted"
         });
 
@@ -580,7 +580,7 @@ describe("Base Fee Manager", function() {
           let creditInfo = await poolContract.getCreditInformation(
             borrower.address
           );
-          let oldDueDate = creditInfo.nextDueDate;
+          let oldDueDate = creditInfo.dueDate;
           await testToken.connect(borrower).approve(poolContract.address, 194);
           await poolContract
             .connect(borrower)
@@ -593,9 +593,9 @@ describe("Base Fee Manager", function() {
             Number(creditInfo.paymentIntervalInDays * 3600 * 24);
           expect(creditInfo.creditLimit).to.equal(1000);
           expect(creditInfo.balance).to.equal(921);
-          expect(creditInfo.nextDueAmount).to.equal(87);
+          expect(creditInfo.dueAmount).to.equal(87);
           expect(creditInfo.paymentIntervalInDays).to.equal(30);
-          expect(Number(creditInfo.nextDueDate)).to.equal(newDueDate);
+          expect(Number(creditInfo.dueDate)).to.equal(newDueDate);
         });
         describe("No late fee", async function() {
           it("Installment - 1st pay - amt < due", async function() {
@@ -679,7 +679,7 @@ describe("Base Fee Manager", function() {
             borrower.address
           );
           expect(creditInfo.balance).to.equal(92);
-          expect(creditInfo.nextDueAmount).to.equal(92);
+          expect(creditInfo.dueAmount).to.equal(92);
           expect(creditInfo.remainingPayments).to.equal(1);
         });
 
