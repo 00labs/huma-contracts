@@ -253,7 +253,7 @@ describe("Huma Invoice Financing", function() {
       );
 
       expect(creditInfo.creditLimit).to.equal(400);
-      expect(creditInfo.balance).to.equal(400);
+      expect(creditInfo.balance).to.equal(0);
       expect(creditInfo.remainingPayments).to.equal(1);
     });
   });

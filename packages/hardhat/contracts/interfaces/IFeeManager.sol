@@ -55,4 +55,9 @@ interface IFeeManager {
             uint256 unused1,
             uint256 unused2
         );
+
+    function getRecurringPayment(BaseStructs.CreditRecord memory _cr)
+        external
+        view
+        returns (uint256 amount);
 }

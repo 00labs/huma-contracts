@@ -230,4 +230,15 @@ contract BaseFeeManager is IFeeManager, Ownable {
             0
         );
     }
+
+    function getRecurringPayment(BaseStructs.CreditRecord memory _cr)
+        external
+        pure
+        virtual
+        override
+        returns (uint256 amount)
+    {
+        // todo implement this
+        return _cr.dueAmount;
+    }
 }

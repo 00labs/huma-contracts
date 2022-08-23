@@ -105,8 +105,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // Populates basic credit info fields
         BS.CreditRecord memory cr;
         cr.creditLimit = uint96(_creditLimit);
-        // todo 8/23 many tests are checking against balance after initiate(), need to change it.
-        cr.balance = uint96(_creditLimit);
+        // note, leaving balance at the default 0, update balance only after drawdown
         cr.aprInBps = uint16(_aprInBps);
         cr.option = _payScheduleOption;
         cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
@@ -179,25 +178,26 @@ contract BaseCreditPool is ICredit, BasePool {
         // Critical to update cr.creditLimit since _borrowAmount
         // might be lowered than the approved loan amount
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-        cr.creditLimit = uint32(_borrowAmount);
+        // console.log("cr.creditLimit=", cr.creditLimit);
+        // console.log("cr.balance=", cr.balance);
+        // console.log("_borrowAmount=", _borrowAmount);
+        require(
+            _borrowAmount <= cr.creditLimit - cr.balance,
+            "EXCEEDED_CREDIT_LMIIT"
+        );
+        cr.balance = uint96(uint256(cr.balance) + _borrowAmount);
+
         // // Calculates next payment amount and due date
         cr.dueDate = uint64(
             block.timestamp +
                 uint256(cr.paymentIntervalInDays) *
                 SECONDS_IN_A_DAY
         );
-        // Calculate the monthly payment (except the final payment)
-        if (payScheduleOption == BS.PayScheduleOptions.InterestOnly) {
-            cr.dueAmount = uint32((_borrowAmount * cr.aprInBps) / BPS_DIVIDER);
-        } else {
-            cr.dueAmount = uint96(
-                IFeeManager(feeManagerAddress).getInstallmentAmount(
-                    _borrowAmount,
-                    cr.aprInBps,
-                    cr.remainingPayments
-                )
-            );
-        }
+
+        // Set the monthly payment (except the final payment, hook for installment case
+        cr.dueAmount = uint96(
+            IFeeManager(feeManagerAddress).getRecurringPayment(cr)
+        );
         creditRecordMapping[_borrower] = cr;
 
         (
