@@ -334,14 +334,14 @@ describe("Huma Invoice Financing", function() {
     it("Should not allow loan funding while protocol is paused", async function() {
       await humaConfigContract.connect(owner).pauseProtocol();
       await expect(
-        invoiceContract.connect(borrower).originateCredit(400)
+        invoiceContract.connect(borrower).drawdown(400)
       ).to.be.revertedWith("PROTOCOL_PAUSED");
     });
 
     // todo This test throw VM Exception. More investigation needed
     it("Prevent loan funding before approval", async function() {
       // expect(
-      //     await invoiceContract.connect(borrower).originateCredit()
+      //     await invoiceContract.connect(borrower).drawdown()
       // ).to.be.revertedWith("CREDIT_NOT_APPROVED");
     });
 

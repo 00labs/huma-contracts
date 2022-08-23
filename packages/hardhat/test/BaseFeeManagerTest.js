@@ -240,7 +240,7 @@ describe("Base Fee Manager", function() {
         .connect(creditApprover)
         .approveCredit(borrower.address);
       await testToken.approve(poolContract.address, 400);
-      await poolContract.connect(borrower).originateCredit(400);
+      await poolContract.connect(borrower).drawdown(400);
 
       record = await poolContract.creditRecordMapping(borrower.address);
       expect(record.dueAmount).to.equal(4);
@@ -255,7 +255,7 @@ describe("Base Fee Manager", function() {
         .approveCredit(borrower.address);
 
       await expect(
-        poolContract.connect(borrower).originateCredit(1000)
+        poolContract.connect(borrower).drawdown(1000)
       ).to.revertedWith("PRICE_NOT_EXIST");
     });
 
@@ -271,7 +271,7 @@ describe("Base Fee Manager", function() {
         .approveCredit(borrower.address);
       await testToken.connect(lender).approve(poolContract.address, 1000);
       await poolContract.connect(lender).deposit(1000);
-      await poolContract.connect(borrower).originateCredit(1000);
+      await poolContract.connect(borrower).drawdown(1000);
 
       record = await poolContract.creditRecordMapping(borrower.address);
       expect(record.dueAmount).to.be.within(87, 88);
@@ -317,7 +317,7 @@ describe("Base Fee Manager", function() {
           .connect(creditApprover)
           .approveCredit(borrower.address);
         await testToken.connect(lender).approve(poolContract.address, 300);
-        await poolContract.connect(borrower).originateCredit(400);
+        await poolContract.connect(borrower).drawdown(400);
         record = await poolContract.creditRecordMapping(borrower.address);
         lastLateDate = 0;
         // lastLateDate = await poolContract.lastLateFeeDateMapping(
@@ -569,7 +569,7 @@ describe("Base Fee Manager", function() {
           .approveCredit(borrower.address);
         await testToken.connect(lender).approve(poolContract.address, 1000);
         //await poolContract.connect(lender).deposit(1000);
-        await poolContract.connect(borrower).originateCredit(1000);
+        await poolContract.connect(borrower).drawdown(1000);
 
         record = await poolContract.creditRecordMapping(borrower.address);
 

@@ -229,13 +229,13 @@ describe("Base Credit Pool", function() {
       it("Should not allow loan funding while protocol is paused", async function() {
         await humaConfigContract.connect(owner).pauseProtocol();
         await expect(
-          poolContract.connect(borrower).originateCredit(400)
+          poolContract.connect(borrower).drawdown(400)
         ).to.be.revertedWith("PROTOCOL_PAUSED");
       });
 
       it("Prevent loan funding before approval", async function() {
         await expect(
-          poolContract.connect(borrower).originateCredit(400)
+          poolContract.connect(borrower).drawdown(400)
         ).to.be.revertedWith("CREDIT_NOT_APPROVED");
       });
 
@@ -256,7 +256,7 @@ describe("Base Credit Pool", function() {
           )
         ).to.equal(false);
 
-        await poolContract.connect(borrower).originateCredit(200);
+        await poolContract.connect(borrower).drawdown(200);
 
         expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
           188
@@ -277,7 +277,7 @@ describe("Base Credit Pool", function() {
           await poolContract.getApprovalStatusForBorrower(borrower.address)
         ).to.equal(true);
 
-        await poolContract.connect(borrower).originateCredit(400);
+        await poolContract.connect(borrower).drawdown(400);
 
         expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
           386
@@ -300,7 +300,7 @@ describe("Base Credit Pool", function() {
         await poolContract
           .connect(creditApprover)
           .approveCredit(borrower.address);
-        await poolContract.connect(borrower).originateCredit(400);
+        await poolContract.connect(borrower).drawdown(400);
       });
 
       afterEach(async function() {

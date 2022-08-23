@@ -10,7 +10,7 @@ interface ICredit {
 
     function approveCredit(address borrower) external;
 
-    function originateCredit(uint256 _borrowAmount) external;
+    function drawdown(uint256 _borrowAmount) external;
 
     function originateCollateralizedCredit(
         address _borrower,

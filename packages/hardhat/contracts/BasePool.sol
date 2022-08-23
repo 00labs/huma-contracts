@@ -56,7 +56,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     // Indicates if the pool is interest only or not
 
-    BaseStructs.PayScheduleOptions payScheduleOption;
+    BaseStructs.PayScheduleOptions public payScheduleOption;
 
     // The collateral basis percentage required from lenders
     uint256 internal collateralRequiredInBps;
