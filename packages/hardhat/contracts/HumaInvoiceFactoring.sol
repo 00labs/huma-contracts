@@ -137,7 +137,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             _remainingPayments
         );
 
-        originateCollateralizedCredit(
+        drawdownWithCollateral(
             borrower,
             borrowAmount,
             collateralAsset,

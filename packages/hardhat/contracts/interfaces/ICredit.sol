@@ -12,7 +12,7 @@ interface ICredit {
 
     function drawdown(uint256 _borrowAmount) external;
 
-    function originateCollateralizedCredit(
+    function drawdownWithCollateral(
         address _borrower,
         uint256 borrowAmount,
         address collateralAsset,
