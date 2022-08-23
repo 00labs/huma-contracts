@@ -182,12 +182,6 @@ describe("Base Credit Pool", function() {
       ).to.be.revertedWith("POOL_NOT_ON");
     });
 
-    it("Cannot request loan lower than limit", async function() {
-      await expect(
-        poolContract.connect(borrower).requestCredit(5, 30, 12)
-      ).to.be.revertedWith("SMALLER_THAN_LIMIT");
-    });
-
     it("Cannot request loan greater than limit", async function() {
       await expect(
         poolContract.connect(borrower).requestCredit(9999, 30, 12)
@@ -237,6 +231,12 @@ describe("Base Credit Pool", function() {
         await expect(
           poolContract.connect(borrower).drawdown(400)
         ).to.be.revertedWith("CREDIT_NOT_APPROVED");
+      });
+
+      it("Cannot borrow amount lower than the min limit", async function() {
+        await expect(
+          poolContract.connect(borrower).drawdown(1)
+        ).to.be.revertedWith("SMALLER_THAN_LIMIT");
       });
 
       it("Borrow less than approved amount", async function() {

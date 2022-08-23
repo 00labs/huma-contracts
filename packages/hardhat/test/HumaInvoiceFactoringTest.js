@@ -199,22 +199,6 @@ describe("Huma Invoice Financing", function() {
       ).to.be.revertedWith("POOL_NOT_ON");
     });
 
-    it("Cannot post approved loan with amount lower than limit", async function() {
-      await expect(
-        invoiceContract
-          .connect(creditApprover)
-          .recordPreapprovedCreditRequest(
-            borrower.address,
-            5,
-            ethers.constants.AddressZero,
-            0,
-            0,
-            30,
-            1
-          )
-      ).to.be.revertedWith("SMALLER_THAN_LIMIT");
-    });
-
     it("Cannot post approved loan with amount greater than limit", async function() {
       await expect(
         invoiceContract
@@ -343,6 +327,24 @@ describe("Huma Invoice Financing", function() {
       // expect(
       //     await invoiceContract.connect(borrower).drawdown()
       // ).to.be.revertedWith("CREDIT_NOT_APPROVED");
+    });
+
+    it("Prevent borrowing amount lower than the min limit", async function() {
+      await invoiceContract
+        .connect(creditApprover)
+        .approveCredit(borrower.address);
+
+      await expect(
+        invoiceContract
+          .connect(borrower)
+          .drawdownWithCollateral(
+            borrower.address,
+            1,
+            invoiceNFTContract.address,
+            invoiceNFTTokenId,
+            1
+          )
+      ).to.be.revertedWith("SMALLER_THAN_LIMIT");
     });
 
     it("Should be able to borrow amount less than approved", async function() {

@@ -25,9 +25,6 @@ contract BaseCreditPool is ICredit, BasePool {
     // mapping from wallet address to the collateral supplied by this wallet
     mapping(address => BS.CollateralInfo) internal collateralInfoMapping;
 
-    // // mapping from wallet address to the last late fee charged date
-    // mapping(address => uint256) public lastLateFeeDateMapping;
-
     constructor(
         address _poolToken,
         address _humaConfig,
@@ -90,14 +87,12 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _remainingPayments
     ) internal virtual {
         protocolAndpoolOn();
-        // Borrowers must not have existing loans from this pool
+        // Borrowers cannot have two credit lines in one pool. They can request to increase line.
+        // todo add a test for this check
         require(
             creditRecordMapping[msg.sender].state == BS.CreditState.Deleted,
-            "DENY_EXISTING_LOAN"
+            "CREDIT_LINE_ALREADY_EXIST"
         );
-
-        // Borrowing amount needs to be higher than min for the pool.
-        require(_creditLimit >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
         // Borrowing amount needs to be lower than max for the pool.
         require(maxBorrowAmount >= _creditLimit, "GREATER_THAN_LIMIT");
@@ -124,11 +119,12 @@ contract BaseCreditPool is ICredit, BasePool {
     }
 
     /**
-     * Approves the loan request with the terms on record.
+     * Approves the credit request with the terms on record.
      */
     function approveCredit(address _borrower) public virtual override {
         protocolAndpoolOn();
         onlyApprovers();
+        // question shall we check to make sure the credit limit is lowered than the allowed max
         creditRecordMapping[_borrower].state = BS.CreditState.Approved;
     }
 
@@ -173,18 +169,19 @@ contract BaseCreditPool is ICredit, BasePool {
         // msg.sender needs to be the borrower themselvers or the approver.
         if (msg.sender != _borrower) onlyApprovers();
 
+        // Borrowing amount needs to be higher than min for the pool.
+        // todo 8/23 need to move some tests from requestCredit() to drawdown()
+        require(_borrowAmount >= minBorrowAmount, "SMALLER_THAN_LIMIT");
+
         require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
 
-        // Critical to update cr.creditLimit since _borrowAmount
-        // might be lowered than the approved loan amount
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-        // console.log("cr.creditLimit=", cr.creditLimit);
-        // console.log("cr.balance=", cr.balance);
-        // console.log("_borrowAmount=", _borrowAmount);
+        // todo 8/23 add a test for this check
         require(
             _borrowAmount <= cr.creditLimit - cr.balance,
             "EXCEEDED_CREDIT_LMIIT"
         );
+        // todo 8/23 add a check to make sure the account is in good standing.
         cr.balance = uint96(uint256(cr.balance) + _borrowAmount);
 
         // // Calculates next payment amount and due date
@@ -270,6 +267,8 @@ contract BaseCreditPool is ICredit, BasePool {
         BS.CreditRecord memory cr = creditRecordMapping[msg.sender];
 
         require(_asset == address(poolToken), "WRONG_ASSET");
+        require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
+        // todo 8/23 check to see if this condition is still needed
         require(cr.remainingPayments > 0, "LOAN_PAID_OFF_ALREADY");
 
         uint256 principal;
@@ -282,13 +281,6 @@ contract BaseCreditPool is ICredit, BasePool {
         (principal, interest, fees, isLate, goodPay, paidOff) = IFeeManager(
             feeManagerAddress
         ).getNextPayment(cr, 0, _amount);
-
-        // Do not accept partial payments. Requires _amount to be able to cover
-        // the next payment and all the outstanding fees.
-        require(goodPay, "AMOUNT_TOO_LOW");
-
-        // Reset the cycle that late fee has been charged.
-        //if (isLate) lastLateFeeDateMapping[msg.sender] = cr.dueDate;
 
         if (paidOff) {
             cr.dueAmount = 0;
@@ -313,15 +305,13 @@ contract BaseCreditPool is ICredit, BasePool {
         creditRecordMapping[msg.sender] = cr;
 
         // Distribute income
+        // todo 8/23 need to apply logic for protocol fee
         uint256 poolIncome = interest + fees;
         distributeIncome(poolIncome);
 
         uint256 amountToCollect = principal + interest + fees;
 
-        // amountToCollect is different from _amount in two scenarios:
-        // 1) when _amount is smaller than the amount due, we do not support
-        // partial payment and only collect $0 2) when _amount is more than pay
-        //  off, we only collect the dues and the remaining principal.
+        // when _amount is more than what is needed to pay off, we only collect payoff amount
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             IERC20 token = IERC20(poolToken);
