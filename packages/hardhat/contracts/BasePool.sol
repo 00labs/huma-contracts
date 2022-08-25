@@ -52,9 +52,6 @@ abstract contract BasePool is
     // The maximum amount of poolTokens that this pool allows in a single loan
     uint256 internal maxBorrowAmount;
 
-    // The min percentage of principal to be paid each cycle for credit line
-    uint256 public minPrincipalPaymentRate;
-
     // The interest rate this pool charges for loans
     uint256 internal poolAprInBps;
 
@@ -250,17 +247,6 @@ abstract contract BasePool is
         require(_maxBorrowAmount >= _minBorrowAmount, "MAX_LESS_THAN_MIN");
         minBorrowAmount = _minBorrowAmount;
         maxBorrowAmount = _maxBorrowAmount;
-    }
-
-    /**
-     * @notice Sets the min and max of each loan/credit allowed by the pool.
-     */
-    function setMinPrincipalPaymentRate(uint256 _minPrincipalPaymentRate)
-        external
-    {
-        onlyOwnerOrHumaMasterAdmin();
-        require(_minPrincipalPaymentRate < 50, "RATE_TOO_HIGH");
-        minPrincipalPaymentRate = _minPrincipalPaymentRate;
     }
 
     // Reject all future borrow applications and loans. Note that existing
