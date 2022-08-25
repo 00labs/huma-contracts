@@ -22,6 +22,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
     uint256 public lateFeeFlat;
     uint256 public lateFeeBps;
 
+    // The min percentage of principal to be paid each cycle for credit line
+    uint256 public minPrincipalPaymentRate;
+
     // installmentPaymentPerOneMillion is a mapping from terms (# of multiple of 30 days) to
     // a mapping from interest rate to payment.
     // It is used for efficiency and gas consideration. We pre-compute the monthly payments for
@@ -42,6 +45,17 @@ contract BaseFeeManager is IFeeManager, Ownable {
         frontLoadingFeeBps = _frontLoadingFeeBps;
         lateFeeFlat = _lateFeeFlat;
         lateFeeBps = _lateFeeBps;
+    }
+
+    /**
+     * @notice Sets the min and max of each loan/credit allowed by the pool.
+     */
+    function setMinPrincipalPaymentRate(uint256 _minPrincipalPaymentRate)
+        external
+        onlyOwner
+    {
+        require(_minPrincipalPaymentRate < 50, "RATE_TOO_HIGH");
+        minPrincipalPaymentRate = _minPrincipalPaymentRate;
     }
 
     function calcFrontLoadingFee(uint256 _amount)
@@ -238,8 +252,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // when there are outstanding late payments
             if (i == 1) interest = interest + _cr.offset;
 
-            // todo add a config for 5%.
-            totalDue = uint96(fees + interest + (balance * 5) / 100);
+            totalDue = uint96(
+                fees + interest + (balance * minPrincipalPaymentRate) / 100
+            );
             // todo add logic to make sure totalDue meets the min requirement.
         }
         feesDue = uint96(fees + interest);

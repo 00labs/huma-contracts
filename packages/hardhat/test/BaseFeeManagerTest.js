@@ -75,7 +75,7 @@ describe.skip("Base Fee Manager", function() {
     await poolContract.setMinMaxBorrowAmount(10, 1000);
   });
 
-  describe("Huma Pool Settings", function() {
+  describe("Base Fee Manager", function() {
     // todo Verify only pool admins can deployNewPool
 
     it("Should set the fees correctly", async function() {
@@ -101,6 +101,19 @@ describe.skip("Base Fee Manager", function() {
       expect(f3).to.equal(25);
       expect(f4).to.equal(250);
       await feeManager.connect(poolOwner).setFees(10, 100, 20, 10000);
+    });
+
+    it("Should be able to set min principal payment rate", async function() {
+      await feeManager.setMinPrincipalPaymentRate(5);
+      expect(await feeManager.minPrincipalPaymentRate()).to.equal(5);
+
+      await expect(
+        feeManager.setMinPrincipalPaymentRate(60)
+      ).to.be.revertedWith("RATE_TOO_HIGH");
+
+      await expect(
+        feeManager.connect(treasury).setMinPrincipalPaymentRate(60)
+      ).to.be.revertedWith("caller is not the owner");
     });
   });
 
