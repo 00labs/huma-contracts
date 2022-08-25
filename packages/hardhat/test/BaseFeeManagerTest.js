@@ -209,7 +209,7 @@ describe.skip("Base Fee Manager", function() {
     });
   });
 
-  describe("Caclulate dueAmount", function() {
+  describe("Caclulate totalDue", function() {
     beforeEach(async function() {
       const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
       poolContract = await BaseCreditPool.deploy(
@@ -243,7 +243,7 @@ describe.skip("Base Fee Manager", function() {
       await poolContract.connect(borrower).drawdown(400);
 
       record = await poolContract.creditRecordMapping(borrower.address);
-      expect(record.dueAmount).to.equal(4);
+      expect(record.totalDue).to.equal(4);
     });
 
     it("Should revert when installment schedule lookup fails", async function() {
@@ -274,7 +274,7 @@ describe.skip("Base Fee Manager", function() {
       await poolContract.connect(borrower).drawdown(1000);
 
       record = await poolContract.creditRecordMapping(borrower.address);
-      expect(record.dueAmount).to.be.within(87, 88);
+      expect(record.totalDue).to.be.within(87, 88);
     });
   });
 
@@ -339,11 +339,10 @@ describe.skip("Base Fee Manager", function() {
             borrower.address
           );
           let newDueDate =
-            Number(oldDueDate) +
-            Number(creditInfo.paymentIntervalInDays * 3600 * 24);
+            Number(oldDueDate) + Number(creditInfo.intervalInDays * 3600 * 24);
           expect(creditInfo.creditLimit).to.equal(400);
-          expect(creditInfo.dueAmount).to.equal(4);
-          expect(creditInfo.paymentIntervalInDays).to.equal(30);
+          expect(creditInfo.totalDue).to.equal(4);
+          expect(creditInfo.intervalInDays).to.equal(30);
           expect(Number(creditInfo.dueDate)).to.equal(newDueDate);
         });
 
@@ -429,7 +428,7 @@ describe.skip("Base Fee Manager", function() {
             borrower.address
           );
           expect(creditInfo.balance).to.equal(400);
-          expect(creditInfo.dueAmount).to.equal(404);
+          expect(creditInfo.totalDue).to.equal(404);
           expect(creditInfo.remainingPayments).to.equal(1);
         });
 
@@ -504,7 +503,7 @@ describe.skip("Base Fee Manager", function() {
             borrower.address
           );
           expect(creditInfo.balance).to.equal(0);
-          expect(creditInfo.dueAmount).to.equal(0);
+          expect(creditInfo.totalDue).to.equal(0);
           expect(creditInfo.dueDate).to.equal(0);
           expect(creditInfo.state).to.equal(0); // Means "Deleted"
         });
@@ -593,12 +592,11 @@ describe.skip("Base Fee Manager", function() {
             borrower.address
           );
           let newDueDate =
-            Number(oldDueDate) +
-            Number(creditInfo.paymentIntervalInDays * 3600 * 24);
+            Number(oldDueDate) + Number(creditInfo.intervalInDays * 3600 * 24);
           expect(creditInfo.creditLimit).to.equal(1000);
           expect(creditInfo.balance).to.equal(921);
-          expect(creditInfo.dueAmount).to.equal(87);
-          expect(creditInfo.paymentIntervalInDays).to.equal(30);
+          expect(creditInfo.totalDue).to.equal(87);
+          expect(creditInfo.intervalInDays).to.equal(30);
           expect(Number(creditInfo.dueDate)).to.equal(newDueDate);
         });
         describe("No late fee", async function() {
@@ -684,7 +682,7 @@ describe.skip("Base Fee Manager", function() {
             borrower.address
           );
           expect(creditInfo.balance).to.equal(92);
-          expect(creditInfo.dueAmount).to.equal(92);
+          expect(creditInfo.totalDue).to.equal(92);
           expect(creditInfo.remainingPayments).to.equal(1);
         });
 

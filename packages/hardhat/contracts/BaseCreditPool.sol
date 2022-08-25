@@ -50,7 +50,7 @@ contract BaseCreditPool is ICredit, BasePool {
      */
     function requestCredit(
         uint256 _creditLimit,
-        uint256 _paymentIntervalInDays,
+        uint256 _intervalInDays,
         uint256 _numOfPayments
     ) external virtual override {
         // Open access to the borrower
@@ -63,7 +63,7 @@ contract BaseCreditPool is ICredit, BasePool {
             0,
             poolAprInBps,
             payScheduleOption,
-            _paymentIntervalInDays,
+            _intervalInDays,
             _numOfPayments
         );
     }
@@ -83,7 +83,7 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _collateralAmount,
         uint256 _aprInBps,
         BS.PayScheduleOptions _payScheduleOption,
-        uint256 _paymentIntervalInDays,
+        uint256 _intervalInDays,
         uint256 _remainingPayments
     ) internal virtual {
         protocolAndpoolOn();
@@ -103,7 +103,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // note, leaving balance at the default 0, update balance only after drawdown
         cr.aprInBps = uint16(_aprInBps);
         cr.option = _payScheduleOption;
-        cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
+        cr.intervalInDays = uint16(_intervalInDays);
         cr.remainingPayments = uint16(_remainingPayments);
         cr.state = BS.CreditState.Requested;
         creditRecordMapping[_borrower] = cr;
@@ -186,13 +186,11 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // // Calculates next payment amount and due date
         cr.dueDate = uint64(
-            block.timestamp +
-                uint256(cr.paymentIntervalInDays) *
-                SECONDS_IN_A_DAY
+            block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
         );
 
         // Set the monthly payment (except the final payment, hook for installment case
-        cr.dueAmount = uint96(
+        cr.totalDue = uint96(
             IFeeManager(feeManagerAddress).getRecurringPayment(cr)
         );
         creditRecordMapping[_borrower] = cr;
@@ -271,45 +269,30 @@ contract BaseCreditPool is ICredit, BasePool {
         // todo 8/23 check to see if this condition is still needed
         require(cr.remainingPayments > 0, "LOAN_PAID_OFF_ALREADY");
 
-        uint256 principal;
-        uint256 interest;
-        uint256 fees;
-        bool isLate;
-        bool goodPay;
-        bool paidOff;
+        uint256 platformIncome;
+        uint256 amountToCollect;
+        uint256 cyclesPassed;
 
-        (principal, interest, fees, isLate, goodPay, paidOff) = IFeeManager(
-            feeManagerAddress
-        ).getNextPayment(cr, 0, _amount);
+        (
+            cr.balance,
+            cr.dueDate,
+            cr.totalDue,
+            cr.feesDue,
+            cyclesPassed,
+            amountToCollect
+        ) = IFeeManager(feeManagerAddress).applyPayment(cr, _amount);
 
-        if (paidOff) {
-            cr.dueAmount = 0;
-            cr.dueDate = 0;
-            cr.balance = 0;
-            cr.remainingPayments = 0;
-            cr.state = BS.CreditState.Deleted;
-        } else {
-            cr.balance = uint96(cr.balance - principal);
-            cr.remainingPayments -= 1;
-            cr.dueDate =
-                cr.dueDate +
-                uint64(cr.paymentIntervalInDays * SECONDS_IN_A_DAY);
-            if (cr.remainingPayments == 1) {
-                if (cr.option == BS.PayScheduleOptions.InterestOnly)
-                    cr.dueAmount += cr.balance;
-                else {
-                    cr.dueAmount = cr.balance * (1 + cr.aprInBps / 120000);
-                }
-            }
-        }
+        if (cr.totalDue > 0)
+            cr.missedCycles = uint16(cr.missedCycles + cyclesPassed);
+        cr.remainingPayments = uint16(cr.remainingPayments - cyclesPassed);
+
+        // todo payoff bookkeeping
+
         creditRecordMapping[msg.sender] = cr;
 
         // Distribute income
         // todo 8/23 need to apply logic for protocol fee
-        uint256 poolIncome = interest + fees;
-        distributeIncome(poolIncome);
-
-        uint256 amountToCollect = principal + interest + fees;
+        distributeIncome(platformIncome);
 
         // when _amount is more than what is needed to pay off, we only collect payoff amount
         if (amountToCollect > 0) {
@@ -370,8 +353,8 @@ contract BaseCreditPool is ICredit, BasePool {
         view
         returns (
             uint96 creditLimit,
-            uint96 dueAmount,
-            uint64 paymentIntervalInDays,
+            uint96 totalDue,
+            uint64 intervalInDays,
             uint16 aprInBps,
             uint64 dueDate,
             uint96 balance,
@@ -382,8 +365,8 @@ contract BaseCreditPool is ICredit, BasePool {
         BS.CreditRecord memory cr = creditRecordMapping[borrower];
         return (
             cr.creditLimit,
-            cr.dueAmount,
-            cr.paymentIntervalInDays,
+            cr.totalDue,
+            cr.intervalInDays,
             cr.aprInBps,
             cr.dueDate,
             cr.balance,

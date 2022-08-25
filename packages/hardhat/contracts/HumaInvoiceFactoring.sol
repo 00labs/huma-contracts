@@ -38,7 +38,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         address collateralAsset,
         uint256 collateralParam,
         uint256 collateralAmount,
-        uint256 _paymentIntervalInDays,
+        uint256 _intervalInDays,
         uint256 _remainingPayments
     ) public virtual override {
         onlyApprovers();
@@ -52,7 +52,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             collateralAmount,
             poolAprInBps,
             payScheduleOption,
-            _paymentIntervalInDays,
+            _intervalInDays,
             _remainingPayments
         );
 
@@ -88,10 +88,9 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // todo verify that we have indeeded received the payment.
 
         uint256 lateFee = IFeeManager(feeManagerAddress).calcLateFee(
-            cr.dueAmount,
             cr.dueDate,
-            0,
-            cr.paymentIntervalInDays
+            cr.totalDue,
+            cr.balance
         );
         uint256 refundAmount = amount - cr.balance - lateFee;
 
@@ -120,7 +119,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         address collateralAsset,
         uint256 collateralParam,
         uint256 collateralAmount,
-        uint256 _paymentIntervalInDays,
+        uint256 _intervalInDays,
         uint256 _remainingPayments
     ) external {
         // There are repeated calls to onlyApprovers() here and the called functions.
@@ -133,7 +132,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             collateralAsset,
             collateralParam,
             collateralAmount,
-            _paymentIntervalInDays,
+            _intervalInDays,
             _remainingPayments
         );
 

@@ -207,7 +207,7 @@ describe("Base Credit Pool", function() {
         borrower.address
       );
       expect(loanInformation.creditLimit).to.equal(400);
-      expect(loanInformation.paymentIntervalInDays).to.equal(30);
+      expect(loanInformation.intervalInDays).to.equal(30);
       expect(loanInformation.aprInBps).to.equal(1200);
     });
 

@@ -16,12 +16,14 @@ library BaseStructs {
         uint96 creditLimit; // the limit of the credit line
         uint96 balance; // the outstanding principal
         uint64 dueDate; // the due date of oustanding balance
-        uint96 dueAmount; // the due amount
-        uint64 lastCycleProcessed;
-        uint16 paymentIntervalInDays;
-        uint16 aprInBps;
-        uint16 remainingPayments;
+        uint96 offset; //
+        uint64 billedUntil;
+        uint96 totalDue; // the due amount
+        uint96 feesDue; // interest and fees
         uint16 missedCycles;
+        uint16 remainingPayments;
+        uint16 aprInBps;
+        uint16 intervalInDays;
         CreditState state;
         PayScheduleOptions option;
     }
@@ -64,10 +66,7 @@ library BaseStructs {
         console.log("cr.creditLimit=", uint256(cr.creditLimit));
         console.log("cr.dueDate=", uint256(cr.dueDate));
         console.log("cr.balance=", uint256(cr.balance));
-        console.log(
-            "cr.paymentIntervalInDays=",
-            uint256(cr.paymentIntervalInDays)
-        );
+        console.log("cr.intervalInDays=", uint256(cr.intervalInDays));
         console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
         console.log("cr.remainingPayments=", uint256(cr.remainingPayments));
         console.log("cr.state=", uint256(cr.state));
