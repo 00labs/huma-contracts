@@ -28,7 +28,6 @@ contract BaseCreditPool is ICredit, BasePool {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerAddress,
         address _feeManagerAddress,
         string memory _poolName,
         string memory _hdtName,
@@ -37,7 +36,6 @@ contract BaseCreditPool is ICredit, BasePool {
         BasePool(
             _poolToken,
             _humaConfig,
-            _poolLockerAddress,
             _feeManagerAddress,
             _poolName,
             _hdtName,
@@ -229,7 +227,7 @@ contract BaseCreditPool is ICredit, BasePool {
             if (_collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
                 IERC721(_collateralAsset).safeTransferFrom(
                     _borrower,
-                    poolLockerAddress,
+                    address(this),
                     _collateralParam
                 );
             } else if (
@@ -237,7 +235,7 @@ contract BaseCreditPool is ICredit, BasePool {
             ) {
                 IERC20(_collateralAsset).safeTransferFrom(
                     msg.sender,
-                    poolLockerAddress,
+                    address(this),
                     _collateralCount
                 );
             } else {
@@ -247,9 +245,8 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Transfer protocole fee and funds the _borrower
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
-        PoolLocker locker = PoolLocker(poolLockerAddress);
-        locker.transfer(treasuryAddress, protocolFee);
-        locker.transfer(_borrower, amtToBorrower);
+        poolToken.safeTransfer(treasuryAddress, protocolFee);
+        poolToken.safeTransfer(_borrower, amtToBorrower);
 
         // console.log("At the end of drawdown...");
         // console.log("block.timestamp=", block.timestamp);
@@ -310,7 +307,7 @@ contract BaseCreditPool is ICredit, BasePool {
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             IERC20 token = IERC20(poolToken);
-            token.transferFrom(msg.sender, poolLockerAddress, amountToCollect);
+            token.transferFrom(msg.sender, address(this), amountToCollect);
         }
     }
 

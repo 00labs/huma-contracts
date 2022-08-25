@@ -5,21 +5,25 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
-import "./interfaces/IPoolLocker.sol";
 import "./interfaces/IFeeManager.sol";
 import "./libraries/BaseStructs.sol";
 
 import "./HumaConfig.sol";
-import "./PoolLocker.sol";
-import "./PoolLockerFactory.sol";
 import "./HDT/HDT.sol";
 
 import "hardhat/console.sol";
 
-abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
+abstract contract BasePool is
+    HDT,
+    ILiquidityProvider,
+    IPool,
+    Ownable,
+    IERC721Receiver
+{
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
     using BaseStructs for BasePool;
@@ -29,9 +33,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
     address public humaConfig;
-
-    // Liquidity holder proxy contract for this pool
-    address public poolLockerAddress;
 
     // Address for the fee manager contract
     address public feeManagerAddress;
@@ -93,7 +94,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerFactory,
         address _feeManager,
         string memory _poolName,
         string memory _hdtName,
@@ -106,9 +106,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
         poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
-
-        poolLockerAddress = PoolLockerFactory(_poolLockerFactory)
-            .deployNewLocker(address(this), _poolToken);
 
         emit PoolDeployed(address(this));
     }
@@ -143,7 +140,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
         lenderInfo[lender] = li;
 
-        poolToken.safeTransferFrom(lender, poolLockerAddress, amount);
+        poolToken.safeTransferFrom(lender, address(this), amount);
 
         // Mint HDT for the LP to claim future income and losses
         _mint(lender, amount);
@@ -184,7 +181,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
         _burn(msg.sender, principalToReduce);
 
-        PoolLocker(poolLockerAddress).transfer(msg.sender, amount);
+        poolToken.transfer(msg.sender, amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, principalToReduce);
     }
@@ -252,16 +249,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         maxBorrowAmount = _maxBorrowAmount;
     }
 
-    function setPoolLocker(address _poolLockerAddress)
-        external
-        virtual
-        override
-    {
-        onlyOwnerOrHumaMasterAdmin();
-        denyZeroAddress(_poolLockerAddress);
-        poolLockerAddress = _poolLockerAddress;
-    }
-
     // Reject all future borrow applications and loans. Note that existing
     // loans will still be processed as expected.
     function disablePool() external virtual override {
@@ -318,7 +305,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     function getPoolLiquidity() public view returns (uint256) {
-        return poolToken.balanceOf(poolLockerAddress);
+        return poolToken.balanceOf(address(this));
     }
 
     function getPoolSummary()
@@ -388,5 +375,14 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     function denyZeroAddress(address addr) internal pure {
         require(addr != address(0), "ADDRESS_0_PROVIDED");
+    }
+
+    function onERC721Received(
+        address, /*operator*/
+        address, /*from*/
+        uint256, /*tokenId*/
+        bytes calldata /*data*/
+    ) external virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 }

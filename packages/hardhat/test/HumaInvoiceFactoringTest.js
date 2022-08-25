@@ -26,7 +26,6 @@ describe("Huma Invoice Financing", function() {
   let invoiceContract;
   let humaConfigContract;
   // let humaCreditFactoryContract;
-  let poolLockerFactoryContract;
   let testTokenContract;
   let invoiceNFTContract;
   let feeManagerContract;
@@ -52,11 +51,6 @@ describe("Huma Invoice Financing", function() {
     humaConfigContract = await HumaConfig.deploy(treasury.address);
     humaConfigContract.setHumaTreasury(treasury.address);
 
-    const poolLockerFactory = await ethers.getContractFactory(
-      "PoolLockerFactory"
-    );
-    poolLockerFactoryContract = await poolLockerFactory.deploy();
-
     const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
     feeManagerContract = await feeManagerFactory.deploy();
 
@@ -76,7 +70,6 @@ describe("Huma Invoice Financing", function() {
     invoiceContract = await HumaInvoiceFactoring.deploy(
       testTokenContract.address,
       humaConfigContract.address,
-      poolLockerFactoryContract.address,
       feeManagerContract.address,
       "Invoice Factory Pool",
       "HumaIF HDT",
@@ -87,20 +80,6 @@ describe("Huma Invoice Financing", function() {
     await testTokenContract.approve(invoiceContract.address, 100);
 
     await invoiceContract.enablePool();
-
-    // const tx = await poolLockerFactoryContract.deployNewLocker(
-    //     invoiceContract.address,
-    //     testTokenContract.address
-    // );
-    // const receipt = await tx.wait();
-    // let lockerAddress;
-    // for (const evt of receipt.events) {
-    //     if (evt.event === "PoolLockerDeployed") {
-    //         lockerAddress = evt.args[0];
-    //     }
-    // }
-
-    // await invoiceContract.connect(owner).setPoolLocker(lockerAddress);
 
     await testTokenContract.approve(invoiceContract.address, 100);
 
@@ -363,7 +342,7 @@ describe("Huma Invoice Financing", function() {
         );
 
       expect(await invoiceNFTContract.ownerOf(invoiceNFTTokenId)).to.equal(
-        await invoiceContract.poolLockerAddress()
+        invoiceContract.address
       );
 
       expect(await invoiceNFTContract.balanceOf);
@@ -389,7 +368,7 @@ describe("Huma Invoice Financing", function() {
         );
 
       expect(await invoiceNFTContract.ownerOf(invoiceNFTTokenId)).to.equal(
-        await invoiceContract.poolLockerAddress()
+        invoiceContract.address
       );
 
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386); // principal: 400, flat fee: 20, bps fee: 4
@@ -531,7 +510,7 @@ describe("Huma Invoice Financing", function() {
         );
 
       expect(await invoiceNFTContract.ownerOf(invoiceNFTTokenId)).to.equal(
-        await invoiceContract.poolLockerAddress()
+        invoiceContract.address
       );
 
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386); // principal: 400, flat fee: 20, bps fee: 4
@@ -764,12 +743,12 @@ describe("Huma Invoice Financing", function() {
 
       // await testTokenContract
       //     .connect(borrower)
-      //     .approve(invoiceContract.poolLockerAddress(), 210);
+      //     .approve(invoiceContract.address, 210);
 
       // simulates payments from payer.
       await testTokenContract
         .connect(payer)
-        .transfer(invoiceContract.poolLockerAddress(), 500);
+        .transfer(invoiceContract.address, 500);
 
       await testTokenContract
         .connect(borrower)

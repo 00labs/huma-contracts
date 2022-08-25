@@ -58,23 +58,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     100
   );
 
-  await deploy("PoolLockerFactory", {
-    from: deployer,
-    log: true,
-    waitConfirmations: 5
-  });
-  const PoolLockerFactory = await ethers.getContract(
-    "PoolLockerFactory",
-    deployer
-  );
-
   await deploy("HumaInvoiceFactoring", {
     from: deployer,
     log: true,
     args: [
       TestToken.address,
       HumaConfig.address,
-      PoolLockerFactory.address,
       BaseFeeManager.address,
       "Huma Invoice Factory Pool",
       "HumaIF HDT",
