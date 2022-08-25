@@ -123,7 +123,7 @@ contract BaseCreditPool is ICredit, BasePool {
      */
     function approveCredit(address _borrower) public virtual override {
         protocolAndpoolOn();
-        onlyApprovers();
+        onlyEvaluationAgents();
         // question shall we check to make sure the credit limit is lowered than the allowed max
         creditRecordMapping[_borrower].state = BS.CreditState.Approved;
     }
@@ -134,7 +134,7 @@ contract BaseCreditPool is ICredit, BasePool {
         override
     {
         protocolAndpoolOn();
-        onlyApprovers();
+        onlyEvaluationAgents();
         creditRecordMapping[_borrower].state = BS.CreditState.Deleted;
     }
 
@@ -166,8 +166,8 @@ contract BaseCreditPool is ICredit, BasePool {
     ) public virtual override {
         protocolAndpoolOn();
 
-        // msg.sender needs to be the borrower themselvers or the approver.
-        if (msg.sender != _borrower) onlyApprovers();
+        // msg.sender needs to be the borrower themselvers or the EA.
+        if (msg.sender != _borrower) onlyEvaluationAgents();
 
         // Borrowing amount needs to be higher than min for the pool.
         // todo 8/23 need to move some tests from requestCredit() to drawdown()
@@ -176,8 +176,8 @@ contract BaseCreditPool is ICredit, BasePool {
         require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
 
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-        console.log("In drawdown...");
-        cr.printCreditInfo();
+        // console.log("In drawdown...");
+        // cr.printCreditInfo();
         // todo 8/23 add a test for this check
         require(
             _borrowAmount <= cr.creditLimit - cr.balance,
@@ -251,9 +251,9 @@ contract BaseCreditPool is ICredit, BasePool {
         locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(_borrower, amtToBorrower);
 
-        console.log("At the end of drawdown...");
-        console.log("block.timestamp=", block.timestamp);
-        creditRecordMapping[_borrower].printCreditInfo();
+        // console.log("At the end of drawdown...");
+        // console.log("block.timestamp=", block.timestamp);
+        // creditRecordMapping[_borrower].printCreditInfo();
     }
 
     /**
@@ -292,7 +292,7 @@ contract BaseCreditPool is ICredit, BasePool {
             amountToCollect
         ) = IFeeManager(feeManagerAddress).applyPayment(cr, _amount);
 
-        cr.printCreditInfo();
+        // cr.printCreditInfo();
 
         if (cr.totalDue > 0)
             cr.missedCycles = uint16(cr.missedCycles + cyclesPassed);
@@ -395,7 +395,7 @@ contract BaseCreditPool is ICredit, BasePool {
         return creditRecordMapping[borrower].state >= BS.CreditState.Approved;
     }
 
-    function onlyApprovers() internal view {
-        require(creditApprovers[msg.sender] == true, "APPROVER_REQUIRED");
+    function onlyEvaluationAgents() internal view {
+        require(evaluationAgents[msg.sender] == true, "APPROVER_REQUIRED");
     }
 }

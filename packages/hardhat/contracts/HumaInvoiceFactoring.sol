@@ -41,7 +41,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 _intervalInDays,
         uint256 _remainingPayments
     ) public virtual override {
-        onlyApprovers();
+        onlyEvaluationAgents();
 
         // Pool status and data validation happens within initiate().
         initiate(
@@ -73,9 +73,9 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
     ) public virtual returns (bool) {
         // todo Need to  discuss more on whether to accept invoice pyaments from RN
         // when the protocol is paused.
-        // todo add security control to make sure the caller is either borrower or approver
+        // todo add security control to make sure the caller is either borrower or EA
         protocolAndpoolOn();
-        onlyApprovers();
+        onlyEvaluationAgents();
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
 
         // todo handle multiple payments.
@@ -122,9 +122,9 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 _intervalInDays,
         uint256 _remainingPayments
     ) external {
-        // There are repeated calls to onlyApprovers() here and the called functions.
+        // There are repeated calls to onlyEvaluationAgents() here and the called functions.
         // This is intentional in case we make changes and forget to add access control
-        onlyApprovers();
+        onlyEvaluationAgents();
 
         recordPreapprovedCreditRequest(
             borrower,

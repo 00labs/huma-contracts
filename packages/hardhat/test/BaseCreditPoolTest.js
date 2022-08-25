@@ -56,7 +56,7 @@ describe("Base Credit Pool", function() {
   let borrower;
   let borrower2;
   let treasury;
-  let creditApprover;
+  let evaluationAgent;
 
   before(async function() {
     [
@@ -65,7 +65,7 @@ describe("Base Credit Pool", function() {
       borrower,
       borrower2,
       treasury,
-      creditApprover
+      evaluationAgent
     ] = await ethers.getSigners();
 
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
@@ -131,7 +131,7 @@ describe("Base Credit Pool", function() {
     expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
     expect(await poolContract.getPoolLiquidity()).to.equal(100);
 
-    await poolContract.addCreditApprover(creditApprover.address);
+    await poolContract.addEvaluationAgent(evaluationAgent.address);
 
     await poolContract.setAPRandPayScheduleOption(1200, 0); //bps
     await poolContract.setMinMaxBorrowAmount(10, 1000);
@@ -241,7 +241,7 @@ describe("Base Credit Pool", function() {
 
       it("Borrow less than approved amount", async function() {
         await poolContract
-          .connect(creditApprover)
+          .connect(evaluationAgent)
           .approveCredit(borrower.address);
         expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
@@ -252,7 +252,7 @@ describe("Base Credit Pool", function() {
         // Should return false when no loan exists
         expect(
           await poolContract.getApprovalStatusForBorrower(
-            creditApprover.address
+            evaluationAgent.address
           )
         ).to.equal(false);
 
@@ -269,7 +269,7 @@ describe("Base Credit Pool", function() {
 
       it("Borrow full amount that has been approved", async function() {
         await poolContract
-          .connect(creditApprover)
+          .connect(evaluationAgent)
           .approveCredit(borrower.address);
         expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
@@ -298,7 +298,7 @@ describe("Base Credit Pool", function() {
         await poolContract.connect(borrower).requestCredit(400, 30, 12);
 
         await poolContract
-          .connect(creditApprover)
+          .connect(evaluationAgent)
           .approveCredit(borrower.address);
         await poolContract.connect(borrower).drawdown(400);
       });

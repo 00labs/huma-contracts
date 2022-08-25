@@ -149,8 +149,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 amountToCollect
         )
     {
-        console.log("At the top of applyPayment...");
-        _cr.printCreditInfo();
+        // console.log("At the top of applyPayment...");
+        // _cr.printCreditInfo();
 
         uint96 payoffAmount;
         (cyclesPassed, feesDue, totalDue, payoffAmount) = getDueInfo(_cr);
@@ -164,18 +164,18 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 amountToCollect = _amount;
             }
         } else {
-            console.log("Enough to cover totalDue");
+            // console.log("Enough to cover totalDue");
             totalDue = 0;
             if (_amount < payoffAmount) {
-                console.log("Not enought to payoff");
-                console.log("balance=", balance);
-                console.log("_amount=", _amount);
-                console.log("feesDue=", feesDue);
+                // console.log("Not enought to payoff");
+                // console.log("balance=", balance);
+                // console.log("_amount=", _amount);
+                // console.log("feesDue=", feesDue);
                 balance = uint96(_cr.balance - _amount + feesDue);
                 amountToCollect = _amount;
             } else {
                 // payoff
-                console.log("Enough to payoff");
+                // console.log("Enough to payoff");
                 balance = 0;
                 amountToCollect = payoffAmount;
             }
@@ -196,15 +196,15 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint96 payoffAmount
         )
     {
-        console.log("At the top of getDueInfo...");
-        _cr.printCreditInfo();
+        // console.log("At the top of getDueInfo...");
+        // _cr.printCreditInfo();
 
         // Without a cron job, the user may have missed multiple payments.
         if (block.timestamp < _cr.dueDate) {
-            console.log("Not late");
+            // console.log("Not late");
             // todo prorate the interest
             payoffAmount = feesDue + _cr.balance;
-            console.log("Payoff amount=", payoffAmount);
+            // console.log("Payoff amount=", payoffAmount);
             return (0, _cr.feesDue, _cr.totalDue, payoffAmount);
         }
 
@@ -213,7 +213,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             (block.timestamp - _cr.dueDate) /
             (_cr.intervalInDays * 86400);
 
-        console.log("Late time: ", cyclesPassed);
+        // console.log("Late time: ", cyclesPassed);
 
         uint256 i;
         uint256 fees;
@@ -247,11 +247,11 @@ contract BaseFeeManager is IFeeManager, Ownable {
         if (cyclesPassed >= _cr.remainingPayments - 1)
             totalDue = uint96(payoffAmount);
 
-        console.log("Before returning from getDueInfo");
-        console.log("cyclesPassed=", cyclesPassed);
-        console.log("feesDue=", feesDue);
-        console.log("totalDue=", totalDue);
-        console.log("payoffAmount=", payoffAmount);
+        // console.log("Before returning from getDueInfo");
+        // console.log("cyclesPassed=", cyclesPassed);
+        // console.log("feesDue=", feesDue);
+        // console.log("totalDue=", totalDue);
+        // console.log("payoffAmount=", payoffAmount);
         return (cyclesPassed, feesDue, totalDue, payoffAmount);
     }
 

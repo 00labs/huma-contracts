@@ -23,7 +23,7 @@ describe.skip("Base Fee Manager", function() {
   let lender;
   let borrower;
   let treasury;
-  let creditApprover;
+  let evaluationAgent;
   let poolOwner;
   let record;
   let lastLateDate;
@@ -34,7 +34,7 @@ describe.skip("Base Fee Manager", function() {
       lender,
       borrower,
       treasury,
-      creditApprover,
+      evaluationAgent,
       poolOwner
     ] = await ethers.getSigners();
 
@@ -222,7 +222,7 @@ describe.skip("Base Fee Manager", function() {
         "BHDT"
       );
       await poolContract.deployed();
-      poolContract.addCreditApprover(creditApprover.address);
+      poolContract.addEvaluationAgent(evaluationAgent.address);
 
       await testToken.approve(poolContract.address, 100);
       await poolContract.makeInitialDeposit(100);
@@ -237,7 +237,7 @@ describe.skip("Base Fee Manager", function() {
       await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1200, 0);
       await poolContract.connect(borrower).requestCredit(400, 30, 12);
       await poolContract
-        .connect(creditApprover)
+        .connect(evaluationAgent)
         .approveCredit(borrower.address);
       await testToken.approve(poolContract.address, 400);
       await poolContract.connect(borrower).drawdown(400);
@@ -251,7 +251,7 @@ describe.skip("Base Fee Manager", function() {
       await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1500, 2);
       await poolContract.connect(borrower).requestCredit(1000, 30, 12);
       await poolContract
-        .connect(creditApprover)
+        .connect(evaluationAgent)
         .approveCredit(borrower.address);
 
       await expect(
@@ -267,7 +267,7 @@ describe.skip("Base Fee Manager", function() {
       await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1000, 2);
       await poolContract.connect(borrower).requestCredit(1000, 30, 12);
       await poolContract
-        .connect(creditApprover)
+        .connect(evaluationAgent)
         .approveCredit(borrower.address);
       await testToken.connect(lender).approve(poolContract.address, 1000);
       await poolContract.connect(lender).deposit(1000);
@@ -292,7 +292,7 @@ describe.skip("Base Fee Manager", function() {
         "BHDT"
       );
       await poolContract.deployed();
-      poolContract.addCreditApprover(creditApprover.address);
+      poolContract.addEvaluationAgent(evaluationAgent.address);
       // Setup the pool
       await testToken.approve(poolContract.address, 100);
       await poolContract.makeInitialDeposit(100);
@@ -314,7 +314,7 @@ describe.skip("Base Fee Manager", function() {
         // Create a borrowing record
         await poolContract.connect(borrower).requestCredit(400, 30, 12);
         await poolContract
-          .connect(creditApprover)
+          .connect(evaluationAgent)
           .approveCredit(borrower.address);
         await testToken.connect(lender).approve(poolContract.address, 300);
         await poolContract.connect(borrower).drawdown(400);
@@ -564,7 +564,7 @@ describe.skip("Base Fee Manager", function() {
         // Create a borrowing record
         await poolContract.connect(borrower).requestCredit(1000, 30, 12);
         await poolContract
-          .connect(creditApprover)
+          .connect(evaluationAgent)
           .approveCredit(borrower.address);
         await testToken.connect(lender).approve(poolContract.address, 1000);
         //await poolContract.connect(lender).deposit(1000);

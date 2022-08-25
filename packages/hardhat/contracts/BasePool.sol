@@ -63,8 +63,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     PoolStatus public status = PoolStatus.Off;
 
-    // List of credit approvers who can approve credit requests.
-    mapping(address => bool) public creditApprovers;
+    // List of evaluation agents who can approve credit requests.
+    mapping(address => bool) public evaluationAgents;
 
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
@@ -209,13 +209,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     /**
-     * @notice Adds an approver to the list who can approve loans.
-     * @param approver the approver to be added
+     * @notice Adds an evaluation agent to the list who can approve loans.
+     * @param agent the evaluation agent to be added
      */
-    function addCreditApprover(address approver) external virtual override {
+    function addEvaluationAgent(address agent) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        denyZeroAddress(approver);
-        creditApprovers[approver] = true;
+        denyZeroAddress(agent);
+        evaluationAgents[agent] = true;
     }
 
     function setAPRandPayScheduleOption(
