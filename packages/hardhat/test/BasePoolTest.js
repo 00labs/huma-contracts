@@ -167,6 +167,19 @@ describe("Base Pool - LP and Admin functions", function() {
       );
     });
 
+    it("Should be able to set min principal payment rate", async function() {
+      await poolContract.setMinPrincipalPaymentRate(5);
+      expect(await poolContract.minPrincipalPaymentRate()).to.equal(5);
+
+      await expect(
+        poolContract.setMinPrincipalPaymentRate(60)
+      ).to.be.revertedWith("RATE_TOO_HIGH");
+
+      await expect(
+        poolContract.connect(treasury).setMinPrincipalPaymentRate(60)
+      ).to.be.revertedWith("PERMISSION_DENIED_NOT_ADMIN");
+    });
+
     it("Shall be able to set new value for the default grace period", async function() {
       await poolContract.setPoolDefaultGracePeriod(30);
 
