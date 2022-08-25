@@ -10,6 +10,7 @@ import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
 import "./interfaces/IPoolLocker.sol";
 import "./interfaces/IFeeManager.sol";
+import "./libraries/BaseStructs.sol";
 
 import "./HumaConfig.sol";
 import "./PoolLocker.sol";
@@ -21,6 +22,7 @@ import "hardhat/console.sol";
 abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
+    using BaseStructs for BasePool;
 
     string public poolName;
 
@@ -53,7 +55,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     uint256 internal poolAprInBps;
 
     // Indicates if the pool is interest only or not
-    bool public interestOnly;
+
+    BaseStructs.PayScheduleOptions public payScheduleOption;
 
     // The collateral basis percentage required from lenders
     uint256 internal collateralRequiredInBps;
@@ -215,15 +218,14 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         creditApprovers[approver] = true;
     }
 
-    function setAPRandInterestOnly(uint256 _aprInBps, bool _interestOnly)
-        external
-        virtual
-        override
-    {
+    function setAPRandPayScheduleOption(
+        uint256 _aprInBps,
+        BaseStructs.PayScheduleOptions _payScheduleOption
+    ) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(_aprInBps <= 10000, "INVALID_APR");
         poolAprInBps = _aprInBps;
-        interestOnly = _interestOnly;
+        payScheduleOption = _payScheduleOption;
     }
 
     function setCollateralRequiredInBps(uint256 _collateralInBps)

@@ -4,7 +4,7 @@ pragma solidity >=0.8.4 <0.9.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "./interfaces/ICredit.sol";
-import "./libraries/BaseStructs.sol";
+import {BaseStructs as BS} from "./libraries/BaseStructs.sol";
 
 import "./BaseFeeManager.sol";
 import "./BasePool.sol";
@@ -18,15 +18,12 @@ contract BaseCreditPool is ICredit, BasePool {
 
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
-    using BaseStructs for BaseCreditPool;
+    using BS for BS.CreditRecord;
 
     // mapping from wallet address to the credit record
-    mapping(address => BaseStructs.CreditRecord) public creditRecordMapping;
+    mapping(address => BS.CreditRecord) public creditRecordMapping;
     // mapping from wallet address to the collateral supplied by this wallet
-    mapping(address => BaseStructs.CollateralInfo)
-        internal collateralInfoMapping;
-    // mapping from wallet address to the last late fee charged date
-    mapping(address => uint256) public lastLateFeeDateMapping;
+    mapping(address => BS.CollateralInfo) internal collateralInfoMapping;
 
     constructor(
         address _poolToken,
@@ -52,72 +49,68 @@ contract BaseCreditPool is ICredit, BasePool {
      * @notice accepts a credit request from msg.sender
      */
     function requestCredit(
-        uint256 _borrowAmount,
-        uint256 _paymentIntervalInDays,
+        uint256 _creditLimit,
+        uint256 _intervalInDays,
         uint256 _numOfPayments
     ) external virtual override {
         // Open access to the borrower
         // Parameter and condition validation happens in initiate()
         initiate(
             msg.sender,
-            _borrowAmount,
+            _creditLimit,
             address(0),
             0,
             0,
             poolAprInBps,
-            interestOnly,
-            _paymentIntervalInDays,
+            payScheduleOption,
+            _intervalInDays,
             _numOfPayments
         );
     }
 
     /**
-     * @notice the initiation of a loan
+     * @notice initiation of a credit
      * @param _borrower the address of the borrower
-     * @param _borrowAmount the amount of the liquidity asset that the borrower obtains
+     * @param _creditLimit the amount of the liquidity asset that the borrower obtains
      * @param _collateralAsset the address of the collateral asset.
      * @param _collateralAmount the amount of the collateral asset
-     * todo remove dynamic array, need to coordinate with client for that change.
      */
     function initiate(
         address _borrower,
-        uint256 _borrowAmount,
+        uint256 _creditLimit,
         address _collateralAsset,
         uint256 _collateralParam,
         uint256 _collateralAmount,
         uint256 _aprInBps,
-        bool _interestOnly,
-        uint256 _paymentIntervalInDays,
+        BS.PayScheduleOptions _payScheduleOption,
+        uint256 _intervalInDays,
         uint256 _remainingPayments
     ) internal virtual {
         protocolAndpoolOn();
-        // Borrowers must not have existing loans from this pool
+        // Borrowers cannot have two credit lines in one pool. They can request to increase line.
+        // todo add a test for this check
         require(
-            creditRecordMapping[msg.sender].state ==
-                BaseStructs.CreditState.Deleted,
-            "DENY_EXISTING_LOAN"
+            creditRecordMapping[msg.sender].state == BS.CreditState.Deleted,
+            "CREDIT_LINE_ALREADY_EXIST"
         );
 
-        // Borrowing amount needs to be higher than min for the pool.
-        require(_borrowAmount >= minBorrowAmount, "SMALLER_THAN_LIMIT");
-
         // Borrowing amount needs to be lower than max for the pool.
-        require(maxBorrowAmount >= _borrowAmount, "GREATER_THAN_LIMIT");
+        require(maxBorrowAmount >= _creditLimit, "GREATER_THAN_LIMIT");
 
         // Populates basic credit info fields
-        BaseStructs.CreditRecord memory cr;
-        cr.loanAmount = uint96(_borrowAmount);
-        cr.remainingPrincipal = uint96(_borrowAmount);
+        BS.CreditRecord memory cr;
+        cr.creditLimit = uint96(_creditLimit);
+        // note, leaving balance at the default 0, update balance only after drawdown
         cr.aprInBps = uint16(_aprInBps);
-        cr.interestOnly = _interestOnly;
-        cr.paymentIntervalInDays = uint16(_paymentIntervalInDays);
+        cr.option = _payScheduleOption;
+        cr.intervalInDays = uint16(_intervalInDays);
         cr.remainingPayments = uint16(_remainingPayments);
-        cr.state = BaseStructs.CreditState.Requested;
+        cr.state = BS.CreditState.Requested;
         creditRecordMapping[_borrower] = cr;
 
         // Populates fields related to collateral
         if (_collateralAsset != address(0)) {
-            BaseStructs.CollateralInfo memory ci;
+            BS.CollateralInfo memory ci;
             ci.collateralAsset = _collateralAsset;
             ci.collateralParam = _collateralParam;
             ci.collateralAmount = uint88(_collateralAmount);
@@ -126,12 +119,13 @@ contract BaseCreditPool is ICredit, BasePool {
     }
 
     /**
-     * Approves the loan request with the terms on record.
+     * Approves the credit request with the terms on record.
      */
     function approveCredit(address _borrower) public virtual override {
         protocolAndpoolOn();
         onlyApprovers();
-        creditRecordMapping[_borrower].state = BaseStructs.CreditState.Approved;
+        // question shall we check to make sure the credit limit is lowered than the allowed max
+        creditRecordMapping[_borrower].state = BS.CreditState.Approved;
     }
 
     function invalidateApprovedCredit(address _borrower)
@@ -141,7 +135,7 @@ contract BaseCreditPool is ICredit, BasePool {
     {
         protocolAndpoolOn();
         onlyApprovers();
-        creditRecordMapping[_borrower].deleted = true;
+        creditRecordMapping[_borrower].state = BS.CreditState.Deleted;
     }
 
     function isApproved(address _borrower)
@@ -151,28 +145,19 @@ contract BaseCreditPool is ICredit, BasePool {
         override
         returns (bool)
     {
-        if (
-            (!creditRecordMapping[_borrower].deleted) &&
-            (creditRecordMapping[_borrower].state >=
-                BaseStructs.CreditState.Approved)
-        ) return true;
+        if ((creditRecordMapping[_borrower].state >= BS.CreditState.Approved))
+            return true;
         else return false;
     }
 
-    function originateCredit(uint256 borrowAmount) external virtual override {
+    function drawdown(uint256 borrowAmount) external virtual override {
         // Open access to the borrower
-        // Condition validation happens in originateCollateralizedCredit()
+        // Condition validation happens in drawdownWithCollateral()
         return
-            originateCollateralizedCredit(
-                msg.sender,
-                borrowAmount,
-                address(0),
-                0,
-                0
-            );
+            drawdownWithCollateral(msg.sender, borrowAmount, address(0), 0, 0);
     }
 
-    function originateCollateralizedCredit(
+    function drawdownWithCollateral(
         address _borrower,
         uint256 _borrowAmount,
         address _collateralAsset,
@@ -184,32 +169,33 @@ contract BaseCreditPool is ICredit, BasePool {
         // msg.sender needs to be the borrower themselvers or the approver.
         if (msg.sender != _borrower) onlyApprovers();
 
+        // Borrowing amount needs to be higher than min for the pool.
+        // todo 8/23 need to move some tests from requestCredit() to drawdown()
+        require(_borrowAmount >= minBorrowAmount, "SMALLER_THAN_LIMIT");
+
         require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
 
-        // Critical to update cr.loanAmount since _borrowAmount
-        // might be lowered than the approved loan amount
-        BaseStructs.CreditRecord memory cr = creditRecordMapping[_borrower];
-        cr.loanAmount = uint32(_borrowAmount);
-        // // Calculates next payment amount and due date
-        cr.nextDueDate = uint64(
-            block.timestamp +
-                uint256(cr.paymentIntervalInDays) *
-                SECONDS_IN_A_DAY
+        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        console.log("In drawdown...");
+        cr.printCreditInfo();
+        // todo 8/23 add a test for this check
+        require(
+            _borrowAmount <= cr.creditLimit - cr.balance,
+            "EXCEEDED_CREDIT_LMIIT"
         );
-        // Calculate the monthly payment (except the final payment)
-        if (interestOnly) {
-            cr.nextAmountDue = uint32(
-                (_borrowAmount * cr.aprInBps) / BPS_DIVIDER
-            );
-        } else {
-            cr.nextAmountDue = uint96(
-                IFeeManager(feeManagerAddress).getInstallmentAmount(
-                    _borrowAmount,
-                    cr.aprInBps,
-                    cr.remainingPayments
-                )
-            );
-        }
+        // todo 8/23 add a check to make sure the account is in good standing.
+        // todo 8/24 need to calcuate offset.
+        cr.balance = uint96(uint256(cr.balance) + _borrowAmount);
+
+        // // Calculates next payment amount and due date
+        cr.dueDate = uint64(
+            block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
+        );
+
+        // Set the monthly payment (except the final payment, hook for installment case
+        cr.totalDue = uint96(
+            IFeeManager(feeManagerAddress).getRecurringPayment(cr)
+        );
         creditRecordMapping[_borrower] = cr;
 
         (
@@ -225,9 +211,7 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // Record the collateral info.
         if (_collateralAsset != address(0)) {
-            BaseStructs.CollateralInfo memory ci = collateralInfoMapping[
-                _borrower
-            ];
+            BS.CollateralInfo memory ci = collateralInfoMapping[_borrower];
             if (ci.collateralAsset != address(0)) {
                 require(
                     _collateralAsset == ci.collateralAsset,
@@ -266,6 +250,10 @@ contract BaseCreditPool is ICredit, BasePool {
         PoolLocker locker = PoolLocker(poolLockerAddress);
         locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(_borrower, amtToBorrower);
+
+        console.log("At the end of drawdown...");
+        console.log("block.timestamp=", block.timestamp);
+        creditRecordMapping[_borrower].printCreditInfo();
     }
 
     /**
@@ -274,71 +262,51 @@ contract BaseCreditPool is ICredit, BasePool {
      * @dev "WRONG_ASSET" reverted when asset address does not match
      * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
      */
-    function makePayment(address _asset, uint256 _amount)
-        external
-        virtual
-        override
-    {
+    function makePayment(
+        address _borrower,
+        address _asset,
+        uint256 _amount
+    ) external virtual override {
         protocolAndpoolOn();
 
-        BaseStructs.CreditRecord memory cr = creditRecordMapping[msg.sender];
+        BS.CreditRecord memory cr = creditRecordMapping[msg.sender];
 
         require(_asset == address(poolToken), "WRONG_ASSET");
-        require(cr.remainingPayments > 0, "LOAN_PAID_OFF_ALREADY");
+        require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
+        // todo 8/23 check to see if this condition is still needed
+        require(
+            cr.balance > 0 && cr.remainingPayments > 0,
+            "LOAN_PAID_OFF_ALREADY"
+        );
 
-        uint256 principal;
-        uint256 interest;
-        uint256 fees;
-        bool isLate;
-        bool goodPay;
-        bool paidOff;
+        uint256 platformIncome;
+        uint256 amountToCollect;
+        uint256 cyclesPassed;
 
-        (principal, interest, fees, isLate, goodPay, paidOff) = IFeeManager(
-            feeManagerAddress
-        ).getNextPayment(cr, lastLateFeeDateMapping[msg.sender], _amount);
+        (
+            cr.balance,
+            cr.dueDate,
+            cr.totalDue,
+            cr.feesDue,
+            cyclesPassed,
+            amountToCollect
+        ) = IFeeManager(feeManagerAddress).applyPayment(cr, _amount);
 
-        // Do not accept partial payments. Requires _amount to be able to cover
-        // the next payment and all the outstanding fees.
-        require(goodPay, "AMOUNT_TOO_LOW");
+        cr.printCreditInfo();
 
-        // Reset the cycle that late fee has been charged.
-        if (isLate) lastLateFeeDateMapping[msg.sender] = cr.nextDueDate;
+        if (cr.totalDue > 0)
+            cr.missedCycles = uint16(cr.missedCycles + cyclesPassed);
+        cr.remainingPayments = uint16(cr.remainingPayments - cyclesPassed);
 
-        if (paidOff) {
-            cr.nextAmountDue = 0;
-            cr.nextDueDate = 0;
-            cr.remainingPrincipal = 0;
-            cr.feesAccrued = 0;
-            cr.remainingPayments = 0;
-            cr.deleted = true;
-            cr.state = BaseStructs.CreditState.Deleted;
-        } else {
-            cr.remainingPrincipal = uint96(cr.remainingPrincipal - principal);
-            cr.remainingPayments -= 1;
-            cr.nextDueDate =
-                cr.nextDueDate +
-                uint64(cr.paymentIntervalInDays * SECONDS_IN_A_DAY);
-            if (cr.remainingPayments == 1) {
-                if (cr.interestOnly) cr.nextAmountDue += cr.remainingPrincipal;
-                else {
-                    cr.nextAmountDue =
-                        cr.remainingPrincipal *
-                        (1 + cr.aprInBps / 120000);
-                }
-            }
-        }
+        // todo payoff bookkeeping
+
         creditRecordMapping[msg.sender] = cr;
 
         // Distribute income
-        uint256 poolIncome = interest + fees;
-        distributeIncome(poolIncome);
+        // todo 8/23 need to apply logic for protocol fee
+        distributeIncome(platformIncome);
 
-        uint256 amountToCollect = principal + interest + fees;
-
-        // amountToCollect is different from _amount in two scenarios:
-        // 1) when _amount is smaller than the amount due, we do not support
-        // partial payment and only collect $0 2) when _amount is more than pay
-        //  off, we only collect the dues and the remaining principal.
+        // when _amount is more than what is needed to pay off, we only collect payoff amount
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             IERC20 token = IERC20(poolToken);
@@ -373,7 +341,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // check to make sure the default grace period has passed.
         require(
             block.timestamp >
-                creditRecordMapping[borrower].nextDueDate +
+                creditRecordMapping[borrower].dueDate +
                     poolDefaultGracePeriodInSeconds,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
@@ -383,7 +351,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // FeatureRequest: add staking logic
 
         // Trigger loss process
-        losses = creditRecordMapping[borrower].remainingPrincipal;
+        losses = creditRecordMapping[borrower].balance;
         distributeLosses(losses);
 
         return losses;
@@ -396,26 +364,26 @@ contract BaseCreditPool is ICredit, BasePool {
         external
         view
         returns (
-            uint96 loanAmount,
-            uint96 nextAmountDue,
-            uint64 paymentIntervalInDays,
+            uint96 creditLimit,
+            uint96 totalDue,
+            uint64 intervalInDays,
             uint16 aprInBps,
-            uint64 nextDueDate,
-            uint96 remainingPrincipal,
+            uint64 dueDate,
+            uint96 balance,
             uint16 remainingPayments,
-            bool deleted
+            BS.CreditState state
         )
     {
-        BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
+        BS.CreditRecord memory cr = creditRecordMapping[borrower];
         return (
-            cr.loanAmount,
-            cr.nextAmountDue,
-            cr.paymentIntervalInDays,
+            cr.creditLimit,
+            cr.totalDue,
+            cr.intervalInDays,
             cr.aprInBps,
-            cr.nextDueDate,
-            cr.remainingPrincipal,
+            cr.dueDate,
+            cr.balance,
             cr.remainingPayments,
-            cr.deleted
+            cr.state
         );
     }
 
@@ -424,9 +392,7 @@ contract BaseCreditPool is ICredit, BasePool {
         view
         returns (bool)
     {
-        return
-            creditRecordMapping[borrower].state >=
-            BaseStructs.CreditState.Approved;
+        return creditRecordMapping[borrower].state >= BS.CreditState.Approved;
     }
 
     function onlyApprovers() internal view {

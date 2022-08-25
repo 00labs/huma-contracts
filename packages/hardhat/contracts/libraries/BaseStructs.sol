@@ -13,18 +13,18 @@ library BaseStructs {
      * @dev each struct can have no more than 13 elements.
      */
     struct CreditRecord {
-        // fields related to the overall picture of the loan
-        uint96 loanAmount;
-        uint96 nextAmountDue;
-        uint64 nextDueDate;
-        uint96 remainingPrincipal;
-        uint96 feesAccrued;
-        uint16 paymentIntervalInDays;
-        uint16 aprInBps;
+        uint96 creditLimit; // the limit of the credit line
+        uint96 balance; // the outstanding principal
+        uint64 dueDate; // the due date of oustanding balance
+        uint96 offset; //
+        uint96 totalDue; // the due amount
+        uint96 feesDue; // interest and fees
+        uint16 missedCycles;
         uint16 remainingPayments;
+        uint16 aprInBps;
+        uint16 intervalInDays;
         CreditState state;
-        bool interestOnly;
-        bool deleted;
+        PayScheduleOptions option;
     }
 
     /**
@@ -52,21 +52,27 @@ library BaseStructs {
         Defaulted
     }
 
+    enum PayScheduleOptions {
+        InterestOnly,
+        MonthlyMinimal,
+        Installment
+    }
+
     // Please do NOT delete during development stage.
     // Debugging helper function. Please comment out after finishing debugging.
-    function printCreditInfo(CreditRecord storage cr) public view {
+    function printCreditInfo(CreditRecord memory cr) internal view {
         console.log("\n##### Status of the Credit #####");
-        console.log("cr.loanAmount=", uint256(cr.loanAmount));
-        console.log("cr.nextDueDate=", uint256(cr.nextDueDate));
-        console.log("cr.remainingPrincipal=", uint256(cr.remainingPrincipal));
-        console.log("cr.feesAccrued=", uint256(cr.feesAccrued));
-        console.log(
-            "cr.paymentIntervalInDays=",
-            uint256(cr.paymentIntervalInDays)
-        );
-        console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
+        console.log("cr.creditLimit=", uint256(cr.creditLimit));
+        console.log("cr.balance=", uint256(cr.balance));
+        console.log("cr.dueDate=", uint256(cr.dueDate));
+        console.log("cr.offset=", uint256(cr.offset));
+        console.log("cr.totalDue=", uint256(cr.totalDue));
+        console.log("cr.feesDue=", uint256(cr.feesDue));
+        console.log("cr.missedCycles=", uint256(cr.missedCycles));
         console.log("cr.remainingPayments=", uint256(cr.remainingPayments));
+        console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
+        console.log("cr.intervalInDays=", uint256(cr.intervalInDays));
         console.log("cr.state=", uint256(cr.state));
-        console.log("cr.deleted=", cr.deleted);
+        console.log("cr.option=", uint256(cr.option));
     }
 }

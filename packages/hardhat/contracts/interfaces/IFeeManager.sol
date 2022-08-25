@@ -8,10 +8,9 @@ interface IFeeManager {
         returns (uint256 fees);
 
     function calcLateFee(
-        uint256 _amount,
-        uint256 _dueDate,
-        uint256 _lastLateFeeDate,
-        uint256 _paymentInterval
+        uint256 dueDate,
+        uint256 totalDue,
+        uint256 balance
     ) external view returns (uint256 fees);
 
     function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
@@ -22,21 +21,48 @@ interface IFeeManager {
             uint256 poolIncome
         );
 
-    function getNextPayment(
-        BaseStructs.CreditRecord memory _cr,
-        uint256 _lastLateFeeDate,
-        uint256 _paymentAmount
+    function applyPayment(
+        BaseStructs.CreditRecord calldata _cr,
+        uint256 _amount
     )
         external
         view
         returns (
-            uint256,
-            uint256,
-            uint256,
-            bool,
-            bool,
-            bool
+            uint96 balance,
+            uint64 dueDate,
+            uint96 totalDue,
+            uint96 feesDue,
+            uint256 cyclesPassed,
+            uint256 amountToCollect
         );
+
+    // function getDueInfo(BaseStructs.CreditRecord calldata _cr)
+    //     external
+    //     view
+    //     returns (
+    //         uint256 dueDate,
+    //         uint256 totalDue,
+    //         uint256 interestAndFees,
+    //         uint256 principal,
+    //         uint256 payoffAmount,
+    //         uint256 numOfLates
+    //     );
+
+    // function getNextPayment(
+    //     BaseStructs.CreditRecord memory _cr,
+    //     uint256 _lastLateFeeDate,
+    //     uint256 _paymentAmount
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint256,
+    //         uint256,
+    //         uint256,
+    //         bool,
+    //         bool,
+    //         bool
+    //     );
 
     function getInstallmentAmount(
         uint256 creditAmt,
@@ -55,4 +81,9 @@ interface IFeeManager {
             uint256 unused1,
             uint256 unused2
         );
+
+    function getRecurringPayment(BaseStructs.CreditRecord memory _cr)
+        external
+        view
+        returns (uint256 amount);
 }
