@@ -312,20 +312,23 @@ describe("Base Credit Pool", function() {
         await expect(
           poolContract
             .connect(borrower)
-            .makePayment(testTokenContract.address, 5)
+            .makePayment(borrower.address, testTokenContract.address, 5)
         ).to.be.revertedWith("PROTOCOL_PAUSED");
       });
 
       // todo if the pool is stopped, shall we accept payback?
 
       it("Process payback", async function() {
+        await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+        await ethers.provider.send("evm_mine", []);
+
         await testTokenContract
           .connect(borrower)
           .approve(poolContract.address, 5);
 
         await poolContract
           .connect(borrower)
-          .makePayment(testTokenContract.address, 5);
+          .makePayment(borrower.address, testTokenContract.address, 5);
 
         let creditInfo = await poolContract.getCreditInformation(
           borrower.address
@@ -344,7 +347,7 @@ describe("Base Credit Pool", function() {
           .approve(poolContract.address, 4);
         await poolContract
           .connect(borrower)
-          .makePayment(testTokenContract.address, 4);
+          .makePayment(borrower.address, testTokenContract.address, 4);
         expect(
           await poolContract.withdrawableFundsOf(owner.address)
         ).to.be.within(102, 104); // target 3

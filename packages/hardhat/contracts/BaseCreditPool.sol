@@ -18,7 +18,7 @@ contract BaseCreditPool is ICredit, BasePool {
 
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
-    using BS for BaseCreditPool;
+    using BS for BS.CreditRecord;
 
     // mapping from wallet address to the credit record
     mapping(address => BS.CreditRecord) public creditRecordMapping;
@@ -176,12 +176,15 @@ contract BaseCreditPool is ICredit, BasePool {
         require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
 
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        console.log("In drawdown...");
+        cr.printCreditInfo();
         // todo 8/23 add a test for this check
         require(
             _borrowAmount <= cr.creditLimit - cr.balance,
             "EXCEEDED_CREDIT_LMIIT"
         );
         // todo 8/23 add a check to make sure the account is in good standing.
+        // todo 8/24 need to calcuate offset.
         cr.balance = uint96(uint256(cr.balance) + _borrowAmount);
 
         // // Calculates next payment amount and due date
@@ -247,6 +250,10 @@ contract BaseCreditPool is ICredit, BasePool {
         PoolLocker locker = PoolLocker(poolLockerAddress);
         locker.transfer(treasuryAddress, protocolFee);
         locker.transfer(_borrower, amtToBorrower);
+
+        console.log("At the end of drawdown...");
+        console.log("block.timestamp=", block.timestamp);
+        creditRecordMapping[_borrower].printCreditInfo();
     }
 
     /**
@@ -255,11 +262,11 @@ contract BaseCreditPool is ICredit, BasePool {
      * @dev "WRONG_ASSET" reverted when asset address does not match
      * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
      */
-    function makePayment(address _asset, uint256 _amount)
-        external
-        virtual
-        override
-    {
+    function makePayment(
+        address _borrower,
+        address _asset,
+        uint256 _amount
+    ) external virtual override {
         protocolAndpoolOn();
 
         BS.CreditRecord memory cr = creditRecordMapping[msg.sender];
@@ -267,7 +274,10 @@ contract BaseCreditPool is ICredit, BasePool {
         require(_asset == address(poolToken), "WRONG_ASSET");
         require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
         // todo 8/23 check to see if this condition is still needed
-        require(cr.remainingPayments > 0, "LOAN_PAID_OFF_ALREADY");
+        require(
+            cr.balance > 0 && cr.remainingPayments > 0,
+            "LOAN_PAID_OFF_ALREADY"
+        );
 
         uint256 platformIncome;
         uint256 amountToCollect;
@@ -281,6 +291,8 @@ contract BaseCreditPool is ICredit, BasePool {
             cyclesPassed,
             amountToCollect
         ) = IFeeManager(feeManagerAddress).applyPayment(cr, _amount);
+
+        cr.printCreditInfo();
 
         if (cr.totalDue > 0)
             cr.missedCycles = uint16(cr.missedCycles + cyclesPassed);

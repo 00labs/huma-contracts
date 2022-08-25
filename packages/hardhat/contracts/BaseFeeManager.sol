@@ -5,10 +5,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IFeeManager.sol";
 import "./HumaConfig.sol";
-import "./libraries/BaseStructs.sol";
+import {BaseStructs as BS} from "./libraries/BaseStructs.sol";
 import "hardhat/console.sol";
 
 contract BaseFeeManager is IFeeManager, Ownable {
+    using BS for BS.CreditRecord;
+
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 public constant BPS_DIVIDER = 10000;
     uint256 public constant APR_BPS_DIVIDER = 120000;
@@ -147,6 +149,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 amountToCollect
         )
     {
+        console.log("At the top of applyPayment...");
+        _cr.printCreditInfo();
+
         uint96 payoffAmount;
         (cyclesPassed, feesDue, totalDue, payoffAmount) = getDueInfo(_cr);
 
@@ -155,16 +160,22 @@ contract BaseFeeManager is IFeeManager, Ownable {
             if (_amount <= feesDue) {
                 amountToCollect = _amount;
             } else {
-                balance = uint96(balance - _amount + feesDue);
+                balance = uint96(_cr.balance - _amount + feesDue);
                 amountToCollect = _amount;
             }
         } else {
+            console.log("Enough to cover totalDue");
             totalDue = 0;
             if (_amount < payoffAmount) {
-                balance = uint96(balance - _amount + feesDue);
+                console.log("Not enought to payoff");
+                console.log("balance=", balance);
+                console.log("_amount=", _amount);
+                console.log("feesDue=", feesDue);
+                balance = uint96(_cr.balance - _amount + feesDue);
                 amountToCollect = _amount;
             } else {
                 // payoff
+                console.log("Enough to payoff");
                 balance = 0;
                 amountToCollect = payoffAmount;
             }
@@ -185,15 +196,24 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint96 payoffAmount
         )
     {
-        // Without a cron job, the user may have missed multiple payments.
-        cyclesPassed =
-            (block.timestamp - _cr.billedUntil) /
-            (_cr.intervalInDays * 86400);
+        console.log("At the top of getDueInfo...");
+        _cr.printCreditInfo();
 
-        if (cyclesPassed == 0) {
+        // Without a cron job, the user may have missed multiple payments.
+        if (block.timestamp < _cr.dueDate) {
+            console.log("Not late");
+            // todo prorate the interest
             payoffAmount = feesDue + _cr.balance;
+            console.log("Payoff amount=", payoffAmount);
             return (0, _cr.feesDue, _cr.totalDue, payoffAmount);
         }
+
+        cyclesPassed =
+            1 +
+            (block.timestamp - _cr.dueDate) /
+            (_cr.intervalInDays * 86400);
+
+        console.log("Late time: ", cyclesPassed);
 
         uint256 i;
         uint256 fees;
@@ -227,6 +247,11 @@ contract BaseFeeManager is IFeeManager, Ownable {
         if (cyclesPassed >= _cr.remainingPayments - 1)
             totalDue = uint96(payoffAmount);
 
+        console.log("Before returning from getDueInfo");
+        console.log("cyclesPassed=", cyclesPassed);
+        console.log("feesDue=", feesDue);
+        console.log("totalDue=", totalDue);
+        console.log("payoffAmount=", payoffAmount);
         return (cyclesPassed, feesDue, totalDue, payoffAmount);
     }
 

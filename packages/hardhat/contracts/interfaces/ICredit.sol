@@ -22,7 +22,11 @@ interface ICredit {
 
     function invalidateApprovedCredit(address _borrower) external;
 
-    function makePayment(address _asset, uint256 _amount) external;
+    function makePayment(
+        address _borrower,
+        address _asset,
+        uint256 _amount
+    ) external;
 
     function payoff(
         address borrower,

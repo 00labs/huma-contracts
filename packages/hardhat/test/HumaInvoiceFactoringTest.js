@@ -737,7 +737,7 @@ describe("Huma Invoice Financing", function() {
       await expect(
         invoiceContract
           .connect(borrower)
-          .makePayment(testTokenContract.address, 5)
+          .makePayment(borrower.address, testTokenContract.address, 5)
       ).to.be.revertedWith("PROTOCOL_PAUSED");
     });
 
