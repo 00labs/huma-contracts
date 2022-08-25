@@ -212,7 +212,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @notice Adds an evaluation agent to the list who can approve loans.
      * @param agent the evaluation agent to be added
      */
-    function addEvaluationAgents(address agent) external virtual override {
+    function addEvaluationAgent(address agent) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         denyZeroAddress(agent);
         evaluationAgents[agent] = true;
