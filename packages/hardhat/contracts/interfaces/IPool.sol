@@ -5,7 +5,7 @@ import "../libraries/BaseStructs.sol";
 interface IPool {
     function setPoolName(string memory newName) external;
 
-    function addCreditApprover(address approver) external;
+    function addEvaluationAgents(address agent) external;
 
     function disablePool() external;
 

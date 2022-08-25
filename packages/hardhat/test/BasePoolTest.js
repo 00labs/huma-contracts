@@ -26,7 +26,7 @@ describe("Base Pool - LP and Admin functions", function() {
   let borrower;
   let borrower2;
   let treasury;
-  let creditApprover;
+  let evaluationAgent;
 
   before(async function() {
     [
@@ -35,7 +35,7 @@ describe("Base Pool - LP and Admin functions", function() {
       borrower,
       borrower2,
       treasury,
-      creditApprover
+      evaluationAgent
     ] = await ethers.getSigners();
 
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
@@ -98,7 +98,7 @@ describe("Base Pool - LP and Admin functions", function() {
     expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
     expect(await poolContract.getPoolLiquidity()).to.equal(100);
 
-    await poolContract.addCreditApprover(creditApprover.address);
+    await poolContract.addEvaluationAgent(evaluationAgent.address);
 
     await poolContract.setAPRandPayScheduleOption(1200, 0); //bps
     await poolContract.setMinMaxBorrowAmount(10, 1000);
