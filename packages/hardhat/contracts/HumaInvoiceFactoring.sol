@@ -11,11 +11,11 @@ import "./BaseCreditPool.sol";
  */
 contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
     using BaseStructs for HumaInvoiceFactoring;
+    using SafeERC20 for IERC20;
 
     constructor(
         address _poolToken,
         address _humaConfig,
-        address _poolLockerAddress,
         address _feeManagerAddress,
         string memory _poolName,
         string memory _hdtName,
@@ -24,7 +24,6 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         BaseCreditPool(
             _poolToken,
             _humaConfig,
-            _poolLockerAddress,
             _feeManagerAddress,
             _poolName,
             _hdtName,
@@ -107,8 +106,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         internal
         returns (bool)
     {
-        PoolLocker locker = PoolLocker(poolLockerAddress);
-        locker.transfer(receiver, amount);
+        poolToken.safeTransfer(receiver, amount);
 
         return true;
     }

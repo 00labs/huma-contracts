@@ -43,12 +43,6 @@ describe.skip("Base Fee Manager", function() {
     humaConfigContract = await HumaConfig.deploy(treasury.address);
     humaConfigContract.setHumaTreasury(treasury.address);
 
-    // Deploy PoolLockerFactory
-    const poolLockerFactory = await ethers.getContractFactory(
-      "PoolLockerFactory"
-    );
-    poolLockerFactoryContract = await poolLockerFactory.deploy();
-
     // Deploy Fee Manager
     const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
     feeManager = await feeManagerFactory.deploy();
@@ -64,7 +58,6 @@ describe.skip("Base Fee Manager", function() {
     poolContract = await BaseCreditPool.deploy(
       testToken.address,
       humaConfigContract.address,
-      poolLockerFactoryContract.address,
       feeManager.address,
       "Base Credit Pool",
       "Base HDT",
@@ -215,7 +208,6 @@ describe.skip("Base Fee Manager", function() {
       poolContract = await BaseCreditPool.deploy(
         testToken.address,
         humaConfigContract.address,
-        poolLockerFactoryContract.address,
         feeManager.address,
         "Base Credit Pool",
         "Base HDT",
@@ -285,7 +277,6 @@ describe.skip("Base Fee Manager", function() {
       poolContract = await BaseCreditPool.deploy(
         testToken.address,
         humaConfigContract.address,
-        poolLockerFactoryContract.address,
         feeManager.address,
         "Base Credit Pool",
         "Base HDT",

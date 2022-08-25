@@ -18,7 +18,6 @@ const getLoanContractFromAddress = async function(address, signer) {
 describe("Base Pool - LP and Admin functions", function() {
   let poolContract;
   let humaConfigContract;
-  let humaPoolLockerFactoryContract;
   let testTokenContract;
   let feeManagerContract;
   let owner;
@@ -46,11 +45,6 @@ describe("Base Pool - LP and Admin functions", function() {
     feeManagerContract = await feeManagerFactory.deploy();
 
     await feeManagerContract.setFees(10, 100, 20, 100);
-
-    const poolLockerFactory = await ethers.getContractFactory(
-      "PoolLockerFactory"
-    );
-    poolLockerFactoryContract = await poolLockerFactory.deploy();
   });
 
   beforeEach(async function() {
@@ -61,7 +55,6 @@ describe("Base Pool - LP and Admin functions", function() {
     poolContract = await BaseCreditPool.deploy(
       testTokenContract.address,
       humaConfigContract.address,
-      poolLockerFactoryContract.address,
       feeManagerContract.address,
       "Base Credit Pool",
       "Base Credit HDT",
@@ -72,20 +65,6 @@ describe("Base Pool - LP and Admin functions", function() {
     await testTokenContract.approve(poolContract.address, 100);
 
     await poolContract.enablePool();
-
-    // const tx = await poolLockerFactoryContract.deployNewLocker(
-    //     poolContract.address,
-    //     testTokenContract.address
-    // );
-    // const receipt = await tx.wait();
-    // let lockerAddress;
-    // for (const evt of receipt.events) {
-    //     if (evt.event === "PoolLockerDeployed") {
-    //         lockerAddress = evt.args[0];
-    //     }
-    // }
-
-    // await poolContract.connect(owner).setPoolLocker(lockerAddress);
 
     await testTokenContract.approve(poolContract.address, 100);
 

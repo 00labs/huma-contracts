@@ -41,8 +41,6 @@ interface IPool {
 
     function setPoolLiquidityCap(uint256 _liquidityCap) external;
 
-    function setPoolLocker(address _poolLocker) external;
-
     function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays) external;
 
     function getPoolSummary()

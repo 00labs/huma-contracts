@@ -49,7 +49,6 @@ describe("Base Credit Pool", function() {
   let humaConfigContract;
   let feeManagerContract;
   let humaCreditFactoryContract;
-  let humaPoolLockerFactoryContract;
   let testTokenContract;
   let owner;
   let lender;
@@ -72,11 +71,6 @@ describe("Base Credit Pool", function() {
     humaConfigContract = await HumaConfig.deploy(treasury.address);
     humaConfigContract.setHumaTreasury(treasury.address);
 
-    const poolLockerFactory = await ethers.getContractFactory(
-      "PoolLockerFactory"
-    );
-    poolLockerFactoryContract = await poolLockerFactory.deploy();
-
     const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
     feeManagerContract = await feeManagerFactory.deploy();
 
@@ -94,7 +88,6 @@ describe("Base Credit Pool", function() {
     poolContract = await BaseCreditPool.deploy(
       testTokenContract.address,
       humaConfigContract.address,
-      poolLockerFactoryContract.address,
       feeManagerContract.address,
       "Base Credit Pool",
       "Base Credit HDT",
@@ -117,8 +110,6 @@ describe("Base Credit Pool", function() {
     //         lockerAddress = evt.args[0];
     //     }
     // }
-
-    // await poolContract.connect(owner).setPoolLocker(lockerAddress);
 
     await testTokenContract.approve(poolContract.address, 100);
 
