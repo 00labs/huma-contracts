@@ -81,7 +81,7 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _collateralAmount,
         uint256 _aprInBps,
         uint256 _intervalInDays,
-        uint256 _remainingPayments
+        uint256 _remainingCycles
     ) internal virtual {
         protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
@@ -100,7 +100,7 @@ contract BaseCreditPool is ICredit, BasePool {
         // note, leaving balance at the default 0, update balance only after drawdown
         cr.aprInBps = uint16(_aprInBps);
         cr.intervalInDays = uint16(_intervalInDays);
-        cr.remainingPayments = uint16(_remainingPayments);
+        cr.remainingCycles = uint16(_remainingCycles);
         cr.state = BS.CreditState.Requested;
         creditRecordMapping[_borrower] = cr;
 
@@ -274,7 +274,7 @@ contract BaseCreditPool is ICredit, BasePool {
         require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
         // todo 8/23 check to see if this condition is still needed
         require(
-            cr.balance > 0 && cr.remainingPayments > 0,
+            cr.balance > 0 && cr.remainingCycles > 0,
             "LOAN_PAID_OFF_ALREADY"
         );
 
@@ -296,7 +296,7 @@ contract BaseCreditPool is ICredit, BasePool {
 
         if (cr.totalDue > 0)
             cr.missedCycles = uint16(cr.missedCycles + cyclesPassed);
-        cr.remainingPayments = uint16(cr.remainingPayments - cyclesPassed);
+        cr.remainingCycles = uint16(cr.remainingCycles - cyclesPassed);
 
         // todo payoff bookkeeping
 
@@ -392,7 +392,7 @@ contract BaseCreditPool is ICredit, BasePool {
             uint16 aprInBps,
             uint64 dueDate,
             uint96 balance,
-            uint16 remainingPayments,
+            uint16 remainingCycles,
             BS.CreditState state
         )
     {
@@ -404,7 +404,7 @@ contract BaseCreditPool is ICredit, BasePool {
             cr.aprInBps,
             cr.dueDate,
             cr.balance,
-            cr.remainingPayments,
+            cr.remainingCycles,
             cr.state
         );
     }

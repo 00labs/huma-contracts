@@ -19,7 +19,7 @@ library BaseStructs {
         uint96 totalDue; // the due amount of the next payment
         uint96 feesDue; // interest and fees due for the next payment
         uint16 missedCycles; // # of consecutive missed payments, for default processing
-        uint16 remainingPayments; // # of payment cycles until the maturity of the credit line
+        uint16 remainingCycles; // # of payment cycles until the maturity of the credit line
         uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
         uint16 intervalInDays; // # of days in one billing cycle
         CreditState state; // status of the credit line
@@ -61,7 +61,7 @@ library BaseStructs {
         console.log("cr.totalDue=", uint256(cr.totalDue));
         console.log("cr.feesDue=", uint256(cr.feesDue));
         console.log("cr.missedCycles=", uint256(cr.missedCycles));
-        console.log("cr.remainingPayments=", uint256(cr.remainingPayments));
+        console.log("cr.remainingCycles=", uint256(cr.remainingCycles));
         console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
         console.log("cr.intervalInDays=", uint256(cr.intervalInDays));
         console.log("cr.state=", uint256(cr.state));

@@ -326,7 +326,7 @@ describe("Base Credit Pool", function() {
         );
 
         expect(creditInfo.balance).to.equal(399);
-        expect(creditInfo.remainingPayments).to.equal(11);
+        expect(creditInfo.remainingCycles).to.equal(11);
       });
 
       // Default flow. Designed to include one payment successfully followed by a default.
