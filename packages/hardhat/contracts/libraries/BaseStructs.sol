@@ -12,16 +12,18 @@ library BaseStructs {
     struct CreditRecord {
         uint96 creditLimit; // the limit of the credit line
         uint96 balance; // the outstanding principal
-        uint64 dueDate; // the due date of oustanding balance
-        int96 correction; //
-        uint96 totalDue; // the due amount
-        uint96 feesDue; // interest and fees
-        uint16 missedCycles;
-        uint16 remainingPayments;
-        uint16 aprInBps;
-        uint16 intervalInDays;
-        CreditState state;
-        PayScheduleOptions option;
+        uint64 dueDate; // the due date of the next payment
+        // correction is the adjustment of interest over or under-counted becasue of drawdown
+        // or principal payment in the middle of a month
+        int96 correction;
+        uint96 totalDue; // the due amount of the next payment
+        uint96 feesDue; // interest and fees due for the next payment
+        uint16 missedCycles; // # of consecutive missed payments, for default processing
+        uint16 remainingPayments; // # of payment cycles until the maturity of the credit line
+        uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
+        uint16 intervalInDays; // # of days in one billing cycle
+        CreditState state; // status of the credit line
+        PayScheduleOptions option; // InterestOnly, Installment, MinimalMonthPay
     }
 
     /**
@@ -51,8 +53,7 @@ library BaseStructs {
 
     enum PayScheduleOptions {
         InterestOnly,
-        MonthlyMinimal,
-        Installment
+        MonthlyMinimal
     }
 
     // Please do NOT delete during development stage.

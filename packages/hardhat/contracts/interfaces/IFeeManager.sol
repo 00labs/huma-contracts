@@ -64,12 +64,6 @@ interface IFeeManager {
     //         bool
     //     );
 
-    function getInstallmentAmount(
-        uint256 creditAmt,
-        uint256 aprInBps,
-        uint256 numOfPayments
-    ) external view returns (uint256 paymentAmount);
-
     function getFees()
         external
         view
