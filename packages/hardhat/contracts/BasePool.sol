@@ -19,8 +19,6 @@ import "hardhat/console.sol";
 
 abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
-    using ERC165Checker for address;
-    using BaseStructs for BasePool;
 
     string public poolName;
 
@@ -69,7 +67,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         // this field may not be needed. it should equal to hdt.balanceOf(user). todo check later & remove struct
         uint96 principalAmount;
         uint64 mostRecentCreditTimestamp;
-        bool deleted;
     }
 
     enum PoolStatus {

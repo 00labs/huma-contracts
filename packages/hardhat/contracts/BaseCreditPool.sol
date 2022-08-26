@@ -87,7 +87,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
         // todo add a test for this check
         require(
-            creditRecordMapping[_borrower].state == BS.CreditState.Deleted,
+            creditRecordMapping[_borrower].creditLimit == 0,
             "CREDIT_LINE_ALREADY_EXIST"
         );
 
@@ -131,7 +131,10 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     {
         protocolAndPoolOn();
         onlyEvaluationAgents();
-        creditRecordMapping[_borrower].state = BS.CreditState.Deleted;
+        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        cr.state = BS.CreditState.Deleted;
+        cr.creditLimit = 0;
+        creditRecordMapping[_borrower] = cr;
     }
 
     function isApproved(address _borrower)
