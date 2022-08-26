@@ -73,7 +73,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         // todo Need to  discuss more on whether to accept invoice pyaments from RN
         // when the protocol is paused.
         // todo add security control to make sure the caller is either borrower or EA
-        protocolAndpoolOn();
+        protocolAndPoolOn();
         onlyEvaluationAgents();
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
 
