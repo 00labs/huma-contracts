@@ -4,9 +4,6 @@ import "../interfaces/IFeeManager.sol";
 import "hardhat/console.sol";
 
 library BaseStructs {
-    // Divider to get monthly interest rate from APR BPS. 10000 * 12
-    uint256 public constant BPS_DIVIDER = 120000;
-
     /**
      * @notice CreditRecord stores the overall info and status about a credit originated.
      * @dev amounts are stored in uint96, all counts are stored in uint16
@@ -16,7 +13,7 @@ library BaseStructs {
         uint96 creditLimit; // the limit of the credit line
         uint96 balance; // the outstanding principal
         uint64 dueDate; // the due date of oustanding balance
-        uint96 offset; //
+        int96 correction; //
         uint96 totalDue; // the due amount
         uint96 feesDue; // interest and fees
         uint16 missedCycles;
@@ -65,7 +62,7 @@ library BaseStructs {
         console.log("cr.creditLimit=", uint256(cr.creditLimit));
         console.log("cr.balance=", uint256(cr.balance));
         console.log("cr.dueDate=", uint256(cr.dueDate));
-        console.log("cr.offset=", uint256(cr.offset));
+        console.logInt(cr.correction);
         console.log("cr.totalDue=", uint256(cr.totalDue));
         console.log("cr.feesDue=", uint256(cr.feesDue));
         console.log("cr.missedCycles=", uint256(cr.missedCycles));

@@ -15,6 +15,7 @@ contract BaseCreditPool is ICredit, BasePool {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 public constant BPS_DIVIDER = 120000;
     uint256 public constant HUNDRED_PERCENT_IN_BPS = 10000;
+    uint256 public constant SECONDS_IN_A_YEAR = 31536000;
 
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
@@ -84,11 +85,11 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _intervalInDays,
         uint256 _remainingPayments
     ) internal virtual {
-        protocolAndpoolOn();
+        protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
         // todo add a test for this check
         require(
-            creditRecordMapping[msg.sender].state == BS.CreditState.Deleted,
+            creditRecordMapping[_borrower].state == BS.CreditState.Deleted,
             "CREDIT_LINE_ALREADY_EXIST"
         );
 
@@ -120,7 +121,7 @@ contract BaseCreditPool is ICredit, BasePool {
      * Approves the credit request with the terms on record.
      */
     function approveCredit(address _borrower) public virtual override {
-        protocolAndpoolOn();
+        protocolAndPoolOn();
         onlyEvaluationAgents();
         // question shall we check to make sure the credit limit is lowered than the allowed max
         creditRecordMapping[_borrower].state = BS.CreditState.Approved;
@@ -131,7 +132,7 @@ contract BaseCreditPool is ICredit, BasePool {
         virtual
         override
     {
-        protocolAndpoolOn();
+        protocolAndPoolOn();
         onlyEvaluationAgents();
         creditRecordMapping[_borrower].state = BS.CreditState.Deleted;
     }
@@ -162,7 +163,7 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _collateralParam,
         uint256 _collateralCount
     ) public virtual override {
-        protocolAndpoolOn();
+        protocolAndPoolOn();
 
         // msg.sender needs to be the borrower themselvers or the EA.
         if (msg.sender != _borrower) onlyEvaluationAgents();
@@ -182,13 +183,17 @@ contract BaseCreditPool is ICredit, BasePool {
             "EXCEEDED_CREDIT_LMIIT"
         );
         // todo 8/23 add a check to make sure the account is in good standing.
-        // todo 8/24 need to calcuate offset.
+
         cr.balance = uint96(uint256(cr.balance) + _borrowAmount);
 
-        // // Calculates next payment amount and due date
+        // todo this logic does not work for credit line.
         cr.dueDate = uint64(
             block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
         );
+
+        // With drawdown, balance increases, cycle-end interest charge will be higher than
+        // it should be, thus record a negative correction to be applied at the end of the cycle
+        cr.correction -= int96(uint96(calcCorrection(cr, _borrowAmount)));
 
         // Set the monthly payment (except the final payment, hook for installment case
         cr.totalDue = uint96(
@@ -264,9 +269,9 @@ contract BaseCreditPool is ICredit, BasePool {
         address _asset,
         uint256 _amount
     ) external virtual override {
-        protocolAndpoolOn();
+        protocolAndPoolOn();
 
-        BS.CreditRecord memory cr = creditRecordMapping[msg.sender];
+        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
 
         require(_asset == address(poolToken), "WRONG_ASSET");
         require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
@@ -276,6 +281,7 @@ contract BaseCreditPool is ICredit, BasePool {
             "LOAN_PAID_OFF_ALREADY"
         );
 
+        uint96 oldBalance = cr.balance;
         uint256 platformIncome;
         uint256 amountToCollect;
         uint256 cyclesPassed;
@@ -297,13 +303,19 @@ contract BaseCreditPool is ICredit, BasePool {
 
         // todo payoff bookkeeping
 
-        creditRecordMapping[msg.sender] = cr;
+        creditRecordMapping[_borrower] = cr;
 
         // Distribute income
         // todo 8/23 need to apply logic for protocol fee
         distributeIncome(platformIncome);
 
-        // when _amount is more than what is needed to pay off, we only collect payoff amount
+        // adjust cr.correction if the borrower has paid principal
+        if (oldBalance > cr.balance) {
+            cr.correction += int96(
+                uint96(calcCorrection(cr, oldBalance - cr.balance))
+            );
+        }
+
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             IERC20 token = IERC20(poolToken);
@@ -333,7 +345,8 @@ contract BaseCreditPool is ICredit, BasePool {
         override
         returns (uint256 losses)
     {
-        protocolAndpoolOn();
+        protocolAndPoolOn();
+        // todo add security check
 
         // check to make sure the default grace period has passed.
         require(
@@ -348,10 +361,25 @@ contract BaseCreditPool is ICredit, BasePool {
         // FeatureRequest: add staking logic
 
         // Trigger loss process
+        // todo double check if we need to include fees into losses
         losses = creditRecordMapping[borrower].balance;
         distributeLosses(losses);
 
         return losses;
+    }
+
+    function calcCorrection(BS.CreditRecord memory _cr, uint256 amount)
+        internal
+        view
+        returns (uint256 correction)
+    {
+        return
+            (amount *
+                _cr.aprInBps *
+                (block.timestamp -
+                    (_cr.dueDate - _cr.intervalInDays * 86400))) /
+            SECONDS_IN_A_YEAR /
+            10000;
     }
 
     /**

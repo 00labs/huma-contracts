@@ -14,6 +14,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 public constant BPS_DIVIDER = 10000;
     uint256 public constant APR_BPS_DIVIDER = 120000;
+    uint256 public constant SECONDS_IN_A_YEAR = 31536000;
 
     // Platform fee, charged when a loan is originated
     uint256 public frontLoadingFeeFlat;
@@ -246,11 +247,11 @@ contract BaseFeeManager is IFeeManager, Ownable {
             balance += totalDue;
             interest = (balance * _cr.aprInBps) / APR_BPS_DIVIDER;
 
-            // If r.offset is negative, its absolute value is guaranteed to be
+            // If r.correction is negative, its absolute value is guaranteed to be
             // no more than interest. Thus, the following statement is safe.
-            // No offset after the 1st cycle since no drawdown is allowed
+            // No correction after the 1st cycle since no drawdown is allowed
             // when there are outstanding late payments
-            if (i == 1) interest = interest + _cr.offset;
+            if (i == 1) interest = uint256(int256(interest) + _cr.correction);
 
             totalDue = uint96(
                 fees + interest + (balance * minPrincipalPaymentRate) / 100

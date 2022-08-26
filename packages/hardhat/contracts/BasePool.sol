@@ -123,7 +123,7 @@ abstract contract BasePool is
     }
 
     function deposit(uint256 amount) external virtual override {
-        protocolAndpoolOn();
+        protocolAndPoolOn();
         // todo (by RL) Need to check if the pool is open to msg.sender to deposit
         // todo (by RL) Need to add maximal pool size support and check if it has reached the size
         return _deposit(msg.sender, amount);
@@ -158,7 +158,7 @@ abstract contract BasePool is
      * @dev Error checking sequence: 1) is the pool on 2) is the amount right 3)
      */
     function withdraw(uint256 amount) public virtual override {
-        protocolAndpoolOn();
+        protocolAndPoolOn();
         LenderInfo memory li = lenderInfo[msg.sender];
         require(
             block.timestamp >=
@@ -365,7 +365,7 @@ abstract contract BasePool is
 
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
-    function protocolAndpoolOn() internal view {
+    function protocolAndPoolOn() internal view {
         require(
             HumaConfig(humaConfig).isProtocolPaused() == false,
             "PROTOCOL_PAUSED"
