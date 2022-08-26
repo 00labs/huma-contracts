@@ -146,6 +146,44 @@ describe("Base Credit Pool", function() {
 
   afterEach(async function() {});
 
+  describe("BaseCreditPool settings", function() {
+    it("Should not allow credit line to be changed when protocol is paused", async function() {
+      await humaConfigContract.connect(owner).pauseProtocol();
+      await expect(
+        poolContract
+          .connect(evaluationAgent)
+          .changeCreditLine(borrower.address, 500)
+      ).to.be.revertedWith("PROTOCOL_PAUSED");
+      await humaConfigContract.connect(owner).unpauseProtocol();
+    });
+    it("Should not allow non-EA to change credit line", async function() {
+      await expect(
+        poolContract.connect(borrower).changeCreditLine(borrower.address, 500)
+      ).to.be.revertedWith("APPROVER_REQUIRED");
+    });
+    it("Should not allow credit line to be changed to above maximal credit line", async function() {
+      await expect(
+        poolContract
+          .connect(evaluationAgent)
+          .changeCreditLine(borrower.address, 5000)
+      ).to.be.revertedWith("GREATER_THAN_LIMIT");
+    });
+    it("Should not allow credit line to be changed to be below min borrowing amount", async function() {
+      await expect(
+        poolContract
+          .connect(evaluationAgent)
+          .changeCreditLine(borrower.address, 1)
+      ).to.be.revertedWith("SMALLER_THAN_LIMIT");
+    });
+    it("Should allow credit limit to be changed", async function() {
+      await poolContract
+        .connect(evaluationAgent)
+        .changeCreditLine(borrower.address, 1000);
+      let result = await poolContract.creditRecordMapping(borrower.address);
+      expect(result.creditLimit).to.equal(1000);
+    });
+  });
+
   // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
   // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
   describe("Borrowing request", function() {

@@ -92,7 +92,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         );
 
         // Borrowing amount needs to be lower than max for the pool.
-        require(maxBorrowAmount >= _creditLimit, "GREATER_THAN_LIMIT");
+        require(maxCreditLine >= _creditLimit, "GREATER_THAN_LIMIT");
 
         // Populates basic credit info fields
         BS.CreditRecord memory cr;
@@ -122,6 +122,20 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         onlyEvaluationAgents();
         // question shall we check to make sure the credit limit is lowered than the allowed max
         creditRecordMapping[_borrower].state = BS.CreditState.Approved;
+    }
+
+    function changeCreditLine(address _borrower, uint256 _newLine) public {
+        protocolAndPoolOn();
+        onlyEvaluationAgents();
+        // Borrowing amount needs to be lower than max for the pool.
+        require(maxCreditLine >= _newLine, "GREATER_THAN_LIMIT");
+        require(_newLine >= minBorrowAmount, "SMALLER_THAN_LIMIT");
+
+        require(
+            creditRecordMapping[_borrower].creditLimit == 0,
+            "CREDIT_LINE_NOT_EXIST"
+        );
+        creditRecordMapping[_borrower].creditLimit = uint96(_newLine);
     }
 
     function invalidateApprovedCredit(address _borrower)
