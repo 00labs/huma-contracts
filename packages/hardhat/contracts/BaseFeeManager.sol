@@ -26,16 +26,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
     // The min percentage of principal to be paid each cycle for credit line
     uint256 public minPrincipalPaymentRate;
 
-    // installmentPaymentPerOneMillion is a mapping from terms (# of multiple of 30 days) to
-    // a mapping from interest rate to payment.
-    // It is used for efficiency and gas consideration. We pre-compute the monthly payments for
-    // different combination of terms and interest rate off-chain and load it on-chain when
-    // the contract is initiazed by the pool owner. At run time, intead of using complicated
-    // formula to get monthly payment for every request to a mortgage type of loan on the fly,
-    // we will just do a lookup.
-    mapping(uint256 => mapping(uint256 => uint256))
-        public installmentPaymentPerOneMillion;
-
     function setFees(
         uint256 _frontLoadingFeeFlat,
         uint256 _frontLoadingFeeBps,
@@ -106,45 +96,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
         amtToBorrower = borrowAmount - platformFees;
 
         return (amtToBorrower, protocolFee, poolIncome);
-    }
-
-    function addBatchOfInstallments(
-        uint256[] calldata numOfPayments,
-        uint256[] calldata aprInBps,
-        uint256[] calldata payments
-    ) external onlyOwner {
-        uint256 length = numOfPayments.length;
-        require(
-            (length == aprInBps.length) && (aprInBps.length == payments.length),
-            "INPUT_ARRAY_SIZE_MISMATCH"
-        );
-
-        uint256 i;
-        for (i = 0; i < length; i++) {
-            addInstallment(numOfPayments[i], aprInBps[i], payments[i]);
-        }
-    }
-
-    function addInstallment(
-        uint256 numberOfPayments,
-        uint256 aprInBps,
-        uint256 payment
-    ) public onlyOwner {
-        mapping(uint256 => uint256)
-            storage tempMap = installmentPaymentPerOneMillion[numberOfPayments];
-        tempMap[aprInBps] = payment;
-    }
-
-    function getInstallmentAmount(
-        uint256 creditAmount,
-        uint256 aprInBps,
-        uint256 numOfPayments
-    ) public view virtual override returns (uint256 paymentAmount) {
-        uint256 unitPrice = (installmentPaymentPerOneMillion[numOfPayments])[
-            aprInBps
-        ];
-        require(unitPrice > 0, "PRICE_NOT_EXIST");
-        paymentAmount = (unitPrice * creditAmount) / 1000000;
     }
 
     function applyPayment(
