@@ -18,6 +18,9 @@ import "./HDT/HDT.sol";
 import "hardhat/console.sol";
 
 abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
+    uint256 public constant SECONDS_IN_A_DAY = 86400;
+    uint256 public constant SECONDS_IN_180_DAYS = 15552000;
+
     using SafeERC20 for IERC20;
 
     string public poolName;
@@ -57,9 +60,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     // How long after the last deposit that a lender needs to wait
     // before they can withdraw their capital
-    uint256 public constant SECONDS_IN_180_DAYS = 15552000;
     uint256 public withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS;
-    uint256 public constant SECONDS_IN_A_DAY = 86400;
 
     uint256 public poolDefaultGracePeriodInSeconds;
 
@@ -264,7 +265,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        withdrawalLockoutPeriodInSeconds = _lockoutPeriodInDays;
+        withdrawalLockoutPeriodInSeconds =
+            _lockoutPeriodInDays *
+            SECONDS_IN_A_DAY;
     }
 
     /**
@@ -277,18 +280,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     {
         onlyOwnerOrHumaMasterAdmin();
         liquidityCap = _liquidityCap;
-    }
-
-    function getLenderInfo(address _lender)
-        public
-        view
-        returns (LenderInfo memory)
-    {
-        return lenderInfo[_lender];
-    }
-
-    function getPoolLiquidity() public view returns (uint256) {
-        return poolToken.balanceOf(address(this));
     }
 
     function getPoolSummary()
