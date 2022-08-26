@@ -11,7 +11,7 @@ import "./BasePool.sol";
 
 import "hardhat/console.sol";
 
-contract BaseCreditPool is ICredit, BasePool {
+contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 public constant BPS_DIVIDER = 120000;
     uint256 public constant HUNDRED_PERCENT_IN_BPS = 10000;
@@ -377,6 +377,15 @@ contract BaseCreditPool is ICredit, BasePool {
                     (_cr.dueDate - _cr.intervalInDays * 86400))) /
             SECONDS_IN_A_YEAR /
             10000;
+    }
+
+    function onERC721Received(
+        address, /*operator*/
+        address, /*from*/
+        uint256, /*tokenId*/
+        bytes calldata /*data*/
+    ) external virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 
     /**

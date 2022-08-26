@@ -17,13 +17,7 @@ import "./HDT/HDT.sol";
 
 import "hardhat/console.sol";
 
-abstract contract BasePool is
-    HDT,
-    ILiquidityProvider,
-    IPool,
-    Ownable,
-    IERC721Receiver
-{
+abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
     using BaseStructs for BasePool;
@@ -367,14 +361,5 @@ abstract contract BasePool is
 
     function denyZeroAddress(address addr) internal pure {
         require(addr != address(0), "ADDRESS_0_PROVIDED");
-    }
-
-    function onERC721Received(
-        address, /*operator*/
-        address, /*from*/
-        uint256, /*tokenId*/
-        bytes calldata /*data*/
-    ) external virtual override returns (bytes4) {
-        return this.onERC721Received.selector;
     }
 }
