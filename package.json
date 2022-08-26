@@ -2,13 +2,9 @@
   "name": "@scaffold-eth/hardhat",
   "version": "1.0.0",
   "main": "index.js",
+
   "license": "MIT",
   "devDependencies": {
-    "eslint": "^7.5.0",
-    "eslint-config-airbnb": "^18.2.0",
-    "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-babel": "^5.3.1",
-    "eslint-plugin-prettier": "^3.4.0",
     "hardhat-contract-sizer": "^2.6.1"
   },
   "dependencies": {

@@ -1,0 +1,17 @@
+# Environment variables
+.env
+
+# Hardhat files
+cache
+artifacts
+deployments
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.idea
+
+# dependencies
+node_modules
