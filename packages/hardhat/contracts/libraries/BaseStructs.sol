@@ -23,7 +23,6 @@ library BaseStructs {
         uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
         uint16 intervalInDays; // # of days in one billing cycle
         CreditState state; // status of the credit line
-        PayScheduleOptions option; // InterestOnly, Installment, MinimalMonthPay
     }
 
     /**
@@ -51,11 +50,6 @@ library BaseStructs {
         Defaulted
     }
 
-    enum PayScheduleOptions {
-        InterestOnly,
-        MonthlyMinimal
-    }
-
     // Please do NOT delete during development stage.
     // Debugging helper function. Please comment out after finishing debugging.
     function printCreditInfo(CreditRecord memory cr) internal view {
@@ -71,6 +65,5 @@ library BaseStructs {
         console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
         console.log("cr.intervalInDays=", uint256(cr.intervalInDays));
         console.log("cr.state=", uint256(cr.state));
-        console.log("cr.option=", uint256(cr.option));
     }
 }

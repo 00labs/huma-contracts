@@ -55,10 +55,6 @@ abstract contract BasePool is
     // The interest rate this pool charges for loans
     uint256 internal poolAprInBps;
 
-    // Indicates if the pool is interest only or not
-
-    BaseStructs.PayScheduleOptions public payScheduleOption;
-
     // The collateral basis percentage required from lenders
     uint256 internal collateralRequiredInBps;
 
@@ -215,14 +211,10 @@ abstract contract BasePool is
         evaluationAgents[agent] = true;
     }
 
-    function setAPRandPayScheduleOption(
-        uint256 _aprInBps,
-        BaseStructs.PayScheduleOptions _payScheduleOption
-    ) external virtual override {
+    function setAPR(uint256 _aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(_aprInBps <= 10000, "INVALID_APR");
         poolAprInBps = _aprInBps;
-        payScheduleOption = _payScheduleOption;
     }
 
     function setCollateralRequiredInBps(uint256 _collateralInBps)

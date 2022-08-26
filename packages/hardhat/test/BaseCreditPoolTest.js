@@ -124,7 +124,7 @@ describe("Base Credit Pool", function() {
 
     await poolContract.addEvaluationAgent(evaluationAgent.address);
 
-    await poolContract.setAPRandPayScheduleOption(1200, 0); //bps
+    await poolContract.setAPR(1200); //bps
     await poolContract.setMinMaxBorrowAmount(10, 1000);
     await poolContract.enablePool();
 
@@ -182,7 +182,7 @@ describe("Base Credit Pool", function() {
     it("Loan requested by borrower initiates correctly", async function() {
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
 
-      await poolContract.connect(owner).setAPRandPayScheduleOption(1200, 0);
+      await poolContract.connect(owner).setAPR(1200);
 
       await testTokenContract
         .connect(borrower)
@@ -285,7 +285,7 @@ describe("Base Credit Pool", function() {
       beforeEach(async function() {
         let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
-        await poolContract.connect(owner).setAPRandPayScheduleOption(1200, 0);
+        await poolContract.connect(owner).setAPR(1200);
         await poolContract.connect(borrower).requestCredit(400, 30, 12);
 
         await poolContract

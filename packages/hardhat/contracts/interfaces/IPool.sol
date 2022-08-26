@@ -27,10 +27,7 @@ interface IPool {
     //     uint256 _lockoutPeriodInDays
     // ) external;
 
-    function setAPRandPayScheduleOption(
-        uint256 _apr,
-        BaseStructs.PayScheduleOptions _payScheduleOption
-    ) external;
+    function setAPR(uint256 _apr) external;
 
     function setCollateralRequiredInBps(uint256 _collateralRateInBps) external;
 
