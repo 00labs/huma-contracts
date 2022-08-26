@@ -33,8 +33,7 @@ library BaseStructs {
      */
     struct CollateralInfo {
         address collateralAsset;
-        uint88 collateralAmount;
-        bool deleted;
+        uint96 collateralAmount;
         uint256 collateralParam;
     }
 
@@ -42,10 +41,8 @@ library BaseStructs {
         Deleted,
         Requested,
         Approved,
-        Originated,
         GoodStanding,
         Delayed,
-        PaidOff,
         InDefaultGracePeriod,
         Defaulted
     }
