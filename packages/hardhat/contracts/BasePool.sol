@@ -44,8 +44,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // the min amount each loan/credit.
     uint256 internal minBorrowAmount;
 
-    // The maximum amount of poolTokens that this pool allows in a single loan
-    uint256 internal maxBorrowAmount;
+    // The maximum credit line in terms of the amount of poolTokens
+    uint256 internal maxCreditLine;
 
     // The interest rate this pool charges for loans
     uint256 internal poolAprInBps;
@@ -224,13 +224,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      */
     function setMinMaxBorrowAmount(
         uint256 _minBorrowAmount,
-        uint256 _maxBorrowAmount
+        uint256 _maxCreditLine
     ) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(_minBorrowAmount > 0, "MINAMT_IS_ZERO");
-        require(_maxBorrowAmount >= _minBorrowAmount, "MAX_LESS_THAN_MIN");
+        require(_maxCreditLine >= _minBorrowAmount, "MAX_LESS_THAN_MIN");
         minBorrowAmount = _minBorrowAmount;
-        maxBorrowAmount = _maxBorrowAmount;
+        maxCreditLine = _maxCreditLine;
     }
 
     // Reject all future borrow applications and loans. Note that existing
@@ -303,7 +303,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
             address(poolToken),
             poolAprInBps,
             minBorrowAmount,
-            maxBorrowAmount,
+            maxCreditLine,
             liquidityCap,
             erc20Contract.name(),
             erc20Contract.symbol(),
