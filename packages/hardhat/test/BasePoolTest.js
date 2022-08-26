@@ -79,7 +79,7 @@ describe("Base Pool - LP and Admin functions", function() {
 
     await poolContract.addEvaluationAgent(evaluationAgent.address);
 
-    await poolContract.setAPRandPayScheduleOption(1200, 0); //bps
+    await poolContract.setAPR(1200); //bps
     await poolContract.setMinMaxBorrowAmount(10, 1000);
     await poolContract.enablePool();
 

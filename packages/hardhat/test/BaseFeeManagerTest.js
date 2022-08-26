@@ -141,7 +141,7 @@ describe.skip("Base Fee Manager", function() {
     });
 
     it("Should calculate interest-only monthly payment correctly", async function() {
-      await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1200, 0);
+      await poolContract.connect(poolOwner).setAPR(1200);
       await poolContract.connect(borrower).requestCredit(400, 30, 12);
       await poolContract
         .connect(evaluationAgent)
@@ -174,7 +174,7 @@ describe.skip("Base Fee Manager", function() {
       await poolContract.enablePool();
       await poolContract.setMinMaxBorrowAmount(10, 1000);
       await poolContract.transferOwnership(poolOwner.address);
-      await poolContract.connect(poolOwner).setAPRandPayScheduleOption(1200, 0);
+      await poolContract.connect(poolOwner).setAPR(1200);
       await testToken.connect(lender).approve(poolContract.address, 300);
       await poolContract.connect(lender).deposit(300);
     });

@@ -61,7 +61,6 @@ contract BaseCreditPool is ICredit, BasePool {
             0,
             0,
             poolAprInBps,
-            payScheduleOption,
             _intervalInDays,
             _numOfPayments
         );
@@ -81,7 +80,6 @@ contract BaseCreditPool is ICredit, BasePool {
         uint256 _collateralParam,
         uint256 _collateralAmount,
         uint256 _aprInBps,
-        BS.PayScheduleOptions _payScheduleOption,
         uint256 _intervalInDays,
         uint256 _remainingPayments
     ) internal virtual {
@@ -101,7 +99,6 @@ contract BaseCreditPool is ICredit, BasePool {
         cr.creditLimit = uint96(_creditLimit);
         // note, leaving balance at the default 0, update balance only after drawdown
         cr.aprInBps = uint16(_aprInBps);
-        cr.option = _payScheduleOption;
         cr.intervalInDays = uint16(_intervalInDays);
         cr.remainingPayments = uint16(_remainingPayments);
         cr.state = BS.CreditState.Requested;
