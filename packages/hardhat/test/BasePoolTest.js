@@ -72,10 +72,12 @@ describe("Base Pool - LP and Admin functions", function() {
 
     const lenderInfo = await poolContract
       .connect(owner)
-      .getLenderInfo(owner.address);
+      .lenderInfo(owner.address);
     expect(lenderInfo.principalAmount).to.equal(100);
     expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-    expect(await poolContract.getPoolLiquidity()).to.equal(100);
+    expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+      100
+    );
 
     await poolContract.addEvaluationAgent(evaluationAgent.address);
 
@@ -93,11 +95,13 @@ describe("Base Pool - LP and Admin functions", function() {
     it("Should have correct liquidity post beforeEach() run", async function() {
       const lenderInfo = await poolContract
         .connect(owner)
-        .getLenderInfo(owner.address);
+        .lenderInfo(owner.address);
       expect(lenderInfo.principalAmount).to.equal(100);
       expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
 
-      expect(await poolContract.getPoolLiquidity()).to.equal(100);
+      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+        100
+      );
 
       expect(await poolContract.balanceOf(owner.address)).to.equal(100);
 
@@ -186,10 +190,12 @@ describe("Base Pool - LP and Admin functions", function() {
       await poolContract.connect(lender).deposit(100);
       const lenderInfo = await poolContract
         .connect(lender)
-        .getLenderInfo(lender.address);
+        .lenderInfo(lender.address);
       expect(lenderInfo.principalAmount).to.equal(100);
       expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-      expect(await poolContract.getPoolLiquidity()).to.equal(200);
+      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+        200
+      );
 
       expect(await poolContract.balanceOf(lender.address)).to.equal(100);
       expect(await poolContract.balanceOf(owner.address)).to.equal(100);
@@ -249,10 +255,12 @@ describe("Base Pool - LP and Admin functions", function() {
 
       const lenderInfo = await poolContract
         .connect(lender)
-        .getLenderInfo(lender.address);
+        .lenderInfo(lender.address);
       expect(lenderInfo.principalAmount).to.equal(0);
 
-      expect(await poolContract.getPoolLiquidity()).to.equal(100);
+      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+        100
+      );
 
       expect(await poolContract.balanceOf(lender.address)).to.equal(0);
       expect(await poolContract.balanceOf(owner.address)).to.equal(100);

@@ -117,10 +117,12 @@ describe("Base Credit Pool", function() {
 
     const lenderInfo = await poolContract
       .connect(owner)
-      .getLenderInfo(owner.address);
+      .lenderInfo(owner.address);
     expect(lenderInfo.principalAmount).to.equal(100);
     expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-    expect(await poolContract.getPoolLiquidity()).to.equal(100);
+    expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+      100
+    );
 
     await poolContract.addEvaluationAgent(evaluationAgent.address);
 
@@ -254,8 +256,9 @@ describe("Base Credit Pool", function() {
         ); // fees: 12. pool: 11, protocol: 1
 
         expect(await testTokenContract.balanceOf(treasury.address)).to.equal(1);
-
-        expect(await poolContract.getPoolLiquidity()).to.equal(211);
+        expect(
+          await testTokenContract.balanceOf(poolContract.address)
+        ).to.equal(211);
       });
 
       it("Borrow full amount that has been approved", async function() {
@@ -276,7 +279,9 @@ describe("Base Credit Pool", function() {
 
         expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
 
-        expect(await poolContract.getPoolLiquidity()).to.equal(12);
+        expect(
+          await testTokenContract.balanceOf(poolContract.address)
+        ).to.equal(12);
       });
     });
 

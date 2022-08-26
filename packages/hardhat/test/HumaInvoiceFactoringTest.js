@@ -87,10 +87,12 @@ describe("Huma Invoice Financing", function() {
 
     const lenderInfo = await invoiceContract
       .connect(owner)
-      .getLenderInfo(owner.address);
+      .lenderInfo(owner.address);
     expect(lenderInfo.principalAmount).to.equal(100);
     expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-    expect(await invoiceContract.getPoolLiquidity()).to.equal(100);
+    expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(
+      100
+    );
 
     await invoiceContract.addEvaluationAgent(evaluationAgent.address);
 
@@ -348,7 +350,9 @@ describe("Huma Invoice Financing", function() {
       expect(await invoiceNFTContract.balanceOf);
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(1);
 
-      expect(await invoiceContract.getPoolLiquidity()).to.equal(211);
+      expect(
+        await testTokenContract.balanceOf(invoiceContract.address)
+      ).to.equal(211);
     });
 
     it("Should be able to borrow the full approved amount", async function() {
@@ -375,7 +379,9 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
 
-      expect(await invoiceContract.getPoolLiquidity()).to.equal(12);
+      expect(
+        await testTokenContract.balanceOf(invoiceContract.address)
+      ).to.equal(12);
     });
   });
 
@@ -517,7 +523,9 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
 
-      expect(await invoiceContract.getPoolLiquidity()).to.equal(12);
+      expect(
+        await testTokenContract.balanceOf(invoiceContract.address)
+      ).to.equal(12);
     });
   });
 
@@ -661,7 +669,9 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
 
-      expect(await invoiceContract.getPoolLiquidity()).to.equal(12);
+      expect(
+        await testTokenContract.balanceOf(invoiceContract.address)
+      ).to.equal(12);
     });
   });
 
@@ -760,7 +770,9 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
-      expect(await invoiceContract.getPoolLiquidity()).to.equal(412);
+      expect(
+        await testTokenContract.balanceOf(invoiceContract.address)
+      ).to.equal(412);
 
       // test withdraw to make sure the income is allocated properly.
       expect(await invoiceContract.balanceOf(lender.address)).to.equal(300);
