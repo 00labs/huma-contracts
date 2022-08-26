@@ -211,7 +211,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         }
         feesDue = uint96(fees + interest);
         payoffAmount = uint96(balance + feesDue);
-        if (cyclesPassed >= _cr.remainingPayments - 1)
+        if (cyclesPassed >= _cr.remainingCycles - 1)
             totalDue = uint96(payoffAmount);
 
         // console.log("Before returning from getDueInfo");
@@ -248,7 +248,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     //     interest = (_cr.balance * _cr.aprInBps) / APR_BPS_DIVIDER;
 
     //     // final payment
-    //     if (_cr.remainingPayments == 1) {
+    //     if (_cr.remainingCycles == 1) {
     //         uint256 due = fees + interest + _cr.balance;
 
     //         if (_paymentAmount >= due) {

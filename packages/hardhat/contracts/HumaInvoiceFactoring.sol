@@ -38,7 +38,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 collateralParam,
         uint256 collateralAmount,
         uint256 _intervalInDays,
-        uint256 _remainingPayments
+        uint256 _remainingCycles
     ) public virtual override {
         onlyEvaluationAgents();
 
@@ -51,7 +51,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             collateralAmount,
             poolAprInBps,
             _intervalInDays,
-            _remainingPayments
+            _remainingCycles
         );
 
         approveCredit(borrower);
@@ -94,7 +94,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
 
         // Sends the remainder to the borrower
         cr.balance = 0;
-        cr.remainingPayments = 0;
+        cr.remainingCycles = 0;
 
         processRefund(borrower, refundAmount);
 
@@ -117,7 +117,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 collateralParam,
         uint256 collateralAmount,
         uint256 _intervalInDays,
-        uint256 _remainingPayments
+        uint256 _remainingCycles
     ) external {
         // There are repeated calls to onlyEvaluationAgents() here and the called functions.
         // This is intentional in case we make changes and forget to add access control
@@ -130,7 +130,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             collateralParam,
             collateralAmount,
             _intervalInDays,
-            _remainingPayments
+            _remainingCycles
         );
 
         drawdownWithCollateral(

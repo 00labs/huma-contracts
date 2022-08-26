@@ -304,7 +304,7 @@ describe.skip("Base Fee Manager", function() {
           );
           expect(creditInfo.balance).to.equal(400);
           expect(creditInfo.totalDue).to.equal(404);
-          expect(creditInfo.remainingPayments).to.equal(1);
+          expect(creditInfo.remainingCycles).to.equal(1);
         });
 
         describe("No late fee", function() {
