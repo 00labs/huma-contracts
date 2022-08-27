@@ -81,7 +81,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         uint256 _collateralAmount,
         uint256 _aprInBps,
         uint256 _intervalInDays,
-        uint256 _remainingCycles
+        uint256 _remainingPeriods
     ) internal virtual {
         protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
@@ -100,7 +100,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // note, leaving balance at the default 0, update balance only after drawdown
         cr.aprInBps = uint16(_aprInBps);
         cr.intervalInDays = uint16(_intervalInDays);
-        cr.remainingCycles = uint16(_remainingCycles);
+        cr.remainingPeriods = uint16(_remainingPeriods);
         cr.state = BS.CreditState.Requested;
         creditRecordMapping[_borrower] = cr;
 
@@ -193,20 +193,22 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // cr.printCreditInfo();
         // todo 8/23 add a test for this check
         require(
-            _borrowAmount <= cr.creditLimit - cr.balance,
+            _borrowAmount <= cr.creditLimit - cr.unbilledPrincipal,
             "EXCEEDED_CREDIT_LMIIT"
         );
         // todo 8/23 add a check to make sure the account is in good standing.
 
-        cr.balance = uint96(uint256(cr.balance) + _borrowAmount);
+        cr.unbilledPrincipal = uint96(
+            uint256(cr.unbilledPrincipal) + _borrowAmount
+        );
 
         // todo this logic does not work for credit line.
         cr.dueDate = uint64(
             block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
         );
 
-        // With drawdown, balance increases, cycle-end interest charge will be higher than
-        // it should be, thus record a negative correction to be applied at the end of the cycle
+        // With drawdown, balance increases, period-end interest charge will be higher than
+        // it should be, thus record a negative correction to be applied at the end of the period
         cr.correction -= int96(uint96(calcCorrection(cr, _borrowAmount)));
 
         // Set the monthly payment (except the final payment, hook for installment case
@@ -291,29 +293,29 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
         // todo 8/23 check to see if this condition is still needed
         require(
-            cr.balance > 0 && cr.remainingCycles > 0,
+            cr.unbilledPrincipal > 0 && cr.remainingPeriods > 0,
             "LOAN_PAID_OFF_ALREADY"
         );
 
-        uint96 oldBalance = cr.balance;
+        uint96 oldBalance = cr.unbilledPrincipal;
         uint256 platformIncome;
         uint256 amountToCollect;
-        uint256 cyclesPassed;
+        uint256 periodsPassed;
 
         (
-            cr.balance,
+            cr.unbilledPrincipal,
             cr.dueDate,
             cr.totalDue,
-            cr.feesDue,
-            cyclesPassed,
+            cr.feesAndInterestDue,
+            periodsPassed,
             amountToCollect
         ) = IFeeManager(feeManagerAddress).applyPayment(cr, _amount);
 
         // cr.printCreditInfo();
 
         if (cr.totalDue > 0)
-            cr.missedCycles = uint16(cr.missedCycles + cyclesPassed);
-        cr.remainingCycles = uint16(cr.remainingCycles - cyclesPassed);
+            cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed);
+        cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
 
         // todo payoff bookkeeping
 
@@ -324,9 +326,9 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         distributeIncome(platformIncome);
 
         // adjust cr.correction if the borrower has paid principal
-        if (oldBalance > cr.balance) {
+        if (oldBalance > cr.unbilledPrincipal) {
             cr.correction += int96(
-                uint96(calcCorrection(cr, oldBalance - cr.balance))
+                uint96(calcCorrection(cr, oldBalance - cr.unbilledPrincipal))
             );
         }
 
@@ -365,7 +367,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         // Trigger loss process
         // todo double check if we need to include fees into losses
-        losses = creditRecordMapping[borrower].balance;
+        BS.CreditRecord memory cr = creditRecordMapping[borrower];
+        losses = cr.unbilledPrincipal + cr.totalDue;
         distributeLosses(losses);
 
         return losses;
@@ -407,7 +410,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             uint16 aprInBps,
             uint64 dueDate,
             uint96 balance,
-            uint16 remainingCycles,
+            uint16 remainingPeriods,
             BS.CreditState state
         )
     {
@@ -418,8 +421,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             cr.intervalInDays,
             cr.aprInBps,
             cr.dueDate,
-            cr.balance,
-            cr.remainingCycles,
+            cr.unbilledPrincipal,
+            cr.remainingPeriods,
             cr.state
         );
     }

@@ -31,8 +31,8 @@ interface IFeeManager {
             uint96 balance,
             uint64 dueDate,
             uint96 totalDue,
-            uint96 feesDue,
-            uint256 cyclesPassed,
+            uint96 feesAndInterestDue,
+            uint256 periodsPassed,
             uint256 amountToCollect
         );
 

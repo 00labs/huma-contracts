@@ -9,6 +9,6 @@ interface IPreapprovedCredit {
         uint256 collateralAmount,
         uint256 collateralParam,
         uint256 _intervalInDays,
-        uint256 _remainingCycles
+        uint256 _remainingPeriods
     ) external;
 }

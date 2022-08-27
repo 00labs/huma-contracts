@@ -11,17 +11,17 @@ library BaseStructs {
      */
     struct CreditRecord {
         uint96 creditLimit; // the limit of the credit line
-        uint96 balance; // the outstanding principal
+        uint96 unbilledPrincipal; // the amount of principal not included in the bill
         uint64 dueDate; // the due date of the next payment
         // correction is the adjustment of interest over or under-counted becasue of drawdown
         // or principal payment in the middle of a month
         int96 correction;
         uint96 totalDue; // the due amount of the next payment
-        uint96 feesDue; // interest and fees due for the next payment
-        uint16 missedCycles; // # of consecutive missed payments, for default processing
-        uint16 remainingCycles; // # of payment cycles until the maturity of the credit line
+        uint96 feesAndInterestDue; // interest and fees due for the next payment
+        uint16 missedPeriods; // # of consecutive missed payments, for default processing
+        uint16 remainingPeriods; // # of payment periods until the maturity of the credit line
         uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
-        uint16 intervalInDays; // # of days in one billing cycle
+        uint16 intervalInDays; // # of days in one billing period
         CreditState state; // status of the credit line
     }
 
@@ -52,13 +52,13 @@ library BaseStructs {
     function printCreditInfo(CreditRecord memory cr) internal view {
         console.log("\n##### Status of the Credit #####");
         console.log("cr.creditLimit=", uint256(cr.creditLimit));
-        console.log("cr.balance=", uint256(cr.balance));
+        console.log("cr.unbilledPrincipal=", uint256(cr.unbilledPrincipal));
         console.log("cr.dueDate=", uint256(cr.dueDate));
         console.logInt(cr.correction);
         console.log("cr.totalDue=", uint256(cr.totalDue));
-        console.log("cr.feesDue=", uint256(cr.feesDue));
-        console.log("cr.missedCycles=", uint256(cr.missedCycles));
-        console.log("cr.remainingCycles=", uint256(cr.remainingCycles));
+        console.log("cr.feesAndInterestDue=", uint256(cr.feesAndInterestDue));
+        console.log("cr.missedPeriods=", uint256(cr.missedPeriods));
+        console.log("cr.remainingPeriods=", uint256(cr.remainingPeriods));
         console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
         console.log("cr.intervalInDays=", uint256(cr.intervalInDays));
         console.log("cr.state=", uint256(cr.state));

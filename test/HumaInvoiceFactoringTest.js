@@ -38,14 +38,7 @@ describe("Huma Invoice Financing", function() {
   let invoiceNFTTokenId;
 
   before(async function() {
-    [
-      owner,
-      lender,
-      borrower,
-      treasury,
-      evaluationAgent,
-      payer
-    ] = await ethers.getSigners();
+    [owner, lender, borrower, treasury, evaluationAgent, payer] = await ethers.getSigners();
 
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     humaConfigContract = await HumaConfig.deploy(treasury.address);
@@ -64,9 +57,7 @@ describe("Huma Invoice Financing", function() {
     const TestToken = await ethers.getContractFactory("TestToken");
     testTokenContract = await TestToken.deploy();
 
-    const HumaInvoiceFactoring = await ethers.getContractFactory(
-      "HumaInvoiceFactoring"
-    );
+    const HumaInvoiceFactoring = await ethers.getContractFactory("HumaInvoiceFactoring");
     invoiceContract = await HumaInvoiceFactoring.deploy(
       testTokenContract.address,
       humaConfigContract.address,
@@ -85,14 +76,10 @@ describe("Huma Invoice Financing", function() {
 
     await invoiceContract.makeInitialDeposit(100);
 
-    const lenderInfo = await invoiceContract
-      .connect(owner)
-      .lenderInfo(owner.address);
+    const lenderInfo = await invoiceContract.connect(owner).lenderInfo(owner.address);
     expect(lenderInfo.principalAmount).to.equal(100);
     expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-    expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(
-      100
-    );
+    expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(100);
 
     await invoiceContract.addEvaluationAgent(evaluationAgent.address);
 
@@ -100,28 +87,21 @@ describe("Huma Invoice Financing", function() {
     await invoiceContract.setMinMaxBorrowAmount(10, 1000);
 
     await testTokenContract.give1000To(lender.address);
-    await testTokenContract
-      .connect(lender)
-      .approve(invoiceContract.address, 400);
+    await testTokenContract.connect(lender).approve(invoiceContract.address, 400);
 
     let lenderBalance = await testTokenContract.balanceOf(lender.address);
-    if (lenderBalance < 1000)
-      await testTokenContract.mint(lender.address, 1000 - lenderBalance);
+    if (lenderBalance < 1000) await testTokenContract.mint(lender.address, 1000 - lenderBalance);
 
     let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
     if (lenderBalance > 0)
-      await testTokenContract
-        .connect(borrower)
-        .burn(borrower.address, borrowerBalance);
+      await testTokenContract.connect(borrower).burn(borrower.address, borrowerBalance);
   });
 
   describe("Post Approved Invoice Factoring", function() {
     // Makes sure there is liquidity in the pool for borrowing
     beforeEach(async function() {
       await invoiceContract.connect(lender).deposit(300);
-      await testTokenContract
-        .connect(borrower)
-        .approve(invoiceContract.address, 99999);
+      await testTokenContract.connect(borrower).approve(invoiceContract.address, 99999);
     });
 
     afterEach(async function() {
@@ -213,13 +193,11 @@ describe("Huma Invoice Financing", function() {
           1
         );
 
-      const creditInfo = await invoiceContract.getCreditInformation(
-        borrower.address
-      );
+      const creditInfo = await invoiceContract.getCreditInformation(borrower.address);
 
       expect(creditInfo.creditLimit).to.equal(400);
       expect(creditInfo.balance).to.equal(0);
-      expect(creditInfo.remainingCycles).to.equal(1);
+      expect(creditInfo.remainingPeriods).to.equal(1);
     });
   });
 
@@ -247,14 +225,10 @@ describe("Huma Invoice Financing", function() {
           1
         );
 
-      await invoiceContract
-        .connect(evaluationAgent)
-        .invalidateApprovedCredit(borrower.address);
+      await invoiceContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
 
       //await invoiceContract.printDetailStatus(borrower.address);
-      const creditInfo = await invoiceContract.getCreditInformation(
-        borrower.address
-      );
+      const creditInfo = await invoiceContract.getCreditInformation(borrower.address);
 
       expect(creditInfo.state).to.equal(0); // Means "Deleted"
     });
@@ -298,9 +272,9 @@ describe("Huma Invoice Financing", function() {
 
     it("Should not allow loan funding while protocol is paused", async function() {
       await humaConfigContract.connect(owner).pauseProtocol();
-      await expect(
-        invoiceContract.connect(borrower).drawdown(400)
-      ).to.be.revertedWith("PROTOCOL_PAUSED");
+      await expect(invoiceContract.connect(borrower).drawdown(400)).to.be.revertedWith(
+        "PROTOCOL_PAUSED"
+      );
     });
 
     // todo This test throw VM Exception. More investigation needed
@@ -311,9 +285,7 @@ describe("Huma Invoice Financing", function() {
     });
 
     it("Prevent borrowing amount lower than the min limit", async function() {
-      await invoiceContract
-        .connect(evaluationAgent)
-        .approveCredit(borrower.address);
+      await invoiceContract.connect(evaluationAgent).approveCredit(borrower.address);
 
       await expect(
         invoiceContract
@@ -329,9 +301,7 @@ describe("Huma Invoice Financing", function() {
     });
 
     it("Should be able to borrow amount less than approved", async function() {
-      await invoiceContract
-        .connect(evaluationAgent)
-        .approveCredit(borrower.address);
+      await invoiceContract.connect(evaluationAgent).approveCredit(borrower.address);
 
       await invoiceContract
         .connect(borrower)
@@ -350,15 +320,11 @@ describe("Huma Invoice Financing", function() {
       expect(await invoiceNFTContract.balanceOf);
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(1);
 
-      expect(
-        await testTokenContract.balanceOf(invoiceContract.address)
-      ).to.equal(211);
+      expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(211);
     });
 
     it("Should be able to borrow the full approved amount", async function() {
-      await invoiceContract
-        .connect(evaluationAgent)
-        .approveCredit(borrower.address);
+      await invoiceContract.connect(evaluationAgent).approveCredit(borrower.address);
       // expect(await invoiceContract.isApproved()).to.equal(true);
 
       await invoiceContract
@@ -379,9 +345,7 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
 
-      expect(
-        await testTokenContract.balanceOf(invoiceContract.address)
-      ).to.equal(12);
+      expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(12);
     });
   });
 
@@ -389,9 +353,7 @@ describe("Huma Invoice Financing", function() {
     // Makes sure there is liquidity in the pool for borrowing
     beforeEach(async function() {
       await invoiceContract.connect(lender).deposit(300);
-      await testTokenContract
-        .connect(borrower)
-        .approve(invoiceContract.address, 99999);
+      await testTokenContract.connect(borrower).approve(invoiceContract.address, 99999);
 
       // Mint InvoiceNFT to the borrower
       const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
@@ -523,9 +485,7 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
 
-      expect(
-        await testTokenContract.balanceOf(invoiceContract.address)
-      ).to.equal(12);
+      expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(12);
     });
   });
 
@@ -533,9 +493,7 @@ describe("Huma Invoice Financing", function() {
     // Makes sure there is liquidity in the pool for borrowing
     beforeEach(async function() {
       await invoiceContract.connect(lender).deposit(300);
-      await testTokenContract
-        .connect(borrower)
-        .approve(invoiceContract.address, 99999);
+      await testTokenContract.connect(borrower).approve(invoiceContract.address, 99999);
     });
 
     afterEach(async function() {
@@ -659,9 +617,7 @@ describe("Huma Invoice Financing", function() {
           1
         );
 
-      const invoiceInfo = await invoiceContract.getCreditInformation(
-        borrower.address
-      );
+      const invoiceInfo = await invoiceContract.getCreditInformation(borrower.address);
 
       expect(invoiceInfo.creditLimit).to.equal(400);
 
@@ -669,9 +625,7 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
 
-      expect(
-        await testTokenContract.balanceOf(invoiceContract.address)
-      ).to.equal(12);
+      expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(12);
     });
   });
 
@@ -756,13 +710,9 @@ describe("Huma Invoice Financing", function() {
       //     .approve(invoiceContract.address, 210);
 
       // simulates payments from payer.
-      await testTokenContract
-        .connect(payer)
-        .transfer(invoiceContract.address, 500);
+      await testTokenContract.connect(payer).transfer(invoiceContract.address, 500);
 
-      await testTokenContract
-        .connect(borrower)
-        .approve(invoiceContract.address, 100);
+      await testTokenContract.connect(borrower).approve(invoiceContract.address, 100);
 
       await invoiceContract
         .connect(evaluationAgent)
@@ -770,28 +720,20 @@ describe("Huma Invoice Financing", function() {
 
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
-      expect(
-        await testTokenContract.balanceOf(invoiceContract.address)
-      ).to.equal(412);
+      expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(412);
 
       // test withdraw to make sure the income is allocated properly.
       expect(await invoiceContract.balanceOf(lender.address)).to.equal(300);
-      expect(
-        await invoiceContract.withdrawableFundsOf(lender.address)
-      ).to.be.within(308, 310); // use within to handle rounding error
-      expect(
-        await invoiceContract.withdrawableFundsOf(owner.address)
-      ).to.be.within(102, 104); // use within to handle rounding error
+      expect(await invoiceContract.withdrawableFundsOf(lender.address)).to.be.within(308, 310); // use within to handle rounding error
+      expect(await invoiceContract.withdrawableFundsOf(owner.address)).to.be.within(102, 104); // use within to handle rounding error
     });
 
     it("Default flow", async function() {
-      await expect(
-        invoiceContract.triggerDefault(borrower.address)
-      ).to.be.revertedWith("DEFAULT_TRIGGERED_TOO_EARLY");
-
-      const creditInfo = await invoiceContract.getCreditInformation(
-        borrower.address
+      await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
+        "DEFAULT_TRIGGERED_TOO_EARLY"
       );
+
+      const creditInfo = await invoiceContract.getCreditInformation(borrower.address);
       let gracePeriod = await invoiceContract.poolDefaultGracePeriodInSeconds();
       let dueDate = creditInfo.dueDate;
       let current = Date.now();
@@ -802,12 +744,8 @@ describe("Huma Invoice Financing", function() {
 
       await invoiceContract.triggerDefault(borrower.address);
 
-      expect(
-        await invoiceContract.withdrawableFundsOf(owner.address)
-      ).to.be.within(2, 4);
-      expect(
-        await invoiceContract.withdrawableFundsOf(lender.address)
-      ).to.be.within(8, 10);
+      expect(await invoiceContract.withdrawableFundsOf(owner.address)).to.be.within(2, 4);
+      expect(await invoiceContract.withdrawableFundsOf(lender.address)).to.be.within(8, 10);
     });
   });
 });
