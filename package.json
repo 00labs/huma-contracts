@@ -43,6 +43,7 @@
     "generate": "hardhat generate",
     "account": "hardhat account",
     "verify": "hardhat verify",
-    "lint-solidity": "yarn solhint -f table 'contracts/**/*.sol'"
+    "lint-solidity": "yarn solhint -f table 'contracts/**/*.sol'",
+    "postinstall": "husky install"
   }
 }
