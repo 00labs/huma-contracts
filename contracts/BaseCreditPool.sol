@@ -338,17 +338,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     }
 
     /**
-     * @notice Borrower requests to payoff the credit
-     */
-    function payoff(
-        address borrower,
-        address asset,
-        uint256 amount
-    ) external virtual override {
-        //todo to implement
-    }
-
-    /**
      * @notice Triggers the default process
      * @return losses the amount of remaining losses to the pool after collateral
      * liquidation, pool cover, and staking.
