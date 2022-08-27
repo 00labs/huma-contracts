@@ -1,11 +1,10 @@
 {
-  "name": "@scaffold-eth/hardhat",
+  "name": "huma-contract",
   "version": "1.0.0",
-  "main": "index.js",
-
   "license": "MIT",
   "devDependencies": {
-    "hardhat-contract-sizer": "^2.6.1"
+    "hardhat-contract-sizer": "^2.6.1",
+    "husky": "^8.0.1"
   },
   "dependencies": {
     "@chainlink/contracts": "^0.4.1",
