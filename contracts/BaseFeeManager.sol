@@ -138,12 +138,16 @@ contract BaseFeeManager is IFeeManager, Ownable {
             periodsPassed,
             feesAndInterestDue,
             totalDue,
-            payoffAmount,
-            unbilledPrincipal
+            payoffAmount
         ) = getDueInfo(_cr);
 
-        console.log("\nAt beginning of applyPayment");
-        _cr.printCreditInfo();
+        console.log("unbilledPrincipal=", _cr.unbilledPrincipal);
+        console.log("principal due=", (totalDue - feesAndInterestDue));
+
+        unbilledPrincipal =
+            (_cr.unbilledPrincipal + _cr.totalDue) -
+            (totalDue - feesAndInterestDue);
+        console.log("unbilledPrincipal=", unbilledPrincipal);
 
         if (_amount < totalDue) {
             // Insufficient payment. No impact on unbilledPrincipal.
@@ -156,9 +160,19 @@ contract BaseFeeManager is IFeeManager, Ownable {
             }
         } else {
             if (_amount < payoffAmount) {
-                amountToCollect = _amount;
                 console.log(
                     "In applyPayment, enough to cover this payment, not enought to payoff"
+                );
+                console.log("extra amount:", _amount - totalDue);
+                console.log(
+                    "before adjusting, unbilledPrincipal:",
+                    unbilledPrincipal
+                );
+                amountToCollect = _amount;
+                unbilledPrincipal -= uint96(_amount - totalDue);
+                console.log(
+                    "after adjusting, unbilledPrincipal:",
+                    unbilledPrincipal
                 );
             } else {
                 // payoff
@@ -177,7 +191,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
             "Before return from applyPayment(), unbilledPrincipal=",
             unbilledPrincipal
         );
-        console.log("feesAndInterestDue=", feesAndInterestDue);
         console.log("dueDate=", dueDate);
         console.log("totalDue=", totalDue);
         console.log("feesAndInterestDue=", feesAndInterestDue);
@@ -203,8 +216,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 periodsPassed,
             uint96 feesAndInterestDue,
             uint96 totalDue,
-            uint96 payoffAmount,
-            uint96 unbilledPrincipal
+            uint96 payoffAmount
         )
     {
         console.log(
@@ -224,13 +236,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 ) + _cr.correction
             );
             console.log("Payoff amount=", payoffAmount);
-            return (
-                0,
-                _cr.feesAndInterestDue,
-                _cr.totalDue,
-                payoffAmount,
-                _cr.unbilledPrincipal
-            );
+            return (0, _cr.feesAndInterestDue, _cr.totalDue, payoffAmount);
         }
 
         periodsPassed =
@@ -238,13 +244,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
             (block.timestamp - _cr.dueDate) /
             (_cr.intervalInDays * SECONDS_IN_A_DAY);
 
-        console.log("periods passed: ", periodsPassed);
+        console.log("\nPeriods passed: ", periodsPassed);
 
         uint256 i;
         uint256 fees;
         uint256 interest;
         for (i = 0; i < periodsPassed; i++) {
-            console.log("i=", i);
+            console.log("\ni=", i);
             if (_cr.totalDue > 0)
                 fees = calcLateFee(
                     _cr.dueDate + i * _cr.intervalInDays * SECONDS_IN_A_DAY,
@@ -255,7 +261,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             console.log("New fees=", fees);
             _cr.unbilledPrincipal += _cr.totalDue;
             console.log(
-                "beginning of calcu, _cr.unbilledPrincipal=",
+                "beginning of calculating interest, _cr.unbilledPrincipal=",
                 _cr.unbilledPrincipal
             );
             interest =
@@ -303,8 +309,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             periodsPassed,
             _cr.feesAndInterestDue,
             _cr.totalDue,
-            payoffAmount,
-            _cr.unbilledPrincipal
+            payoffAmount
         );
     }
 
