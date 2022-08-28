@@ -21,20 +21,29 @@ interface IFeeManager {
             uint256 poolIncome
         );
 
-    function applyPayment(
-        BaseStructs.CreditRecord calldata _cr,
-        uint256 _amount
-    )
+    function getDueInfo(BaseStructs.CreditRecord memory _cr)
         external
         view
         returns (
-            uint96 balance,
-            uint64 dueDate,
-            uint96 totalDue,
-            uint96 feesAndInterestDue,
             uint256 periodsPassed,
-            uint256 amountToCollect
+            uint96 feesAndInterestDue,
+            uint96 totalDue,
+            uint96 payoffAmount,
+            uint96 unbilledPrincipal
         );
+
+    // function applyPayment(
+    //     BaseStructs.CreditRecord calldata _cr,
+    //     uint256 _amount
+    // )
+    //     external
+    //     view
+    //     returns (
+    //         uint64 dueDate,
+    //         uint256 periodsPassed,
+    //         uint96 forFeesAndInterest,
+    //         uint96 forPrincipal
+    //     );
 
     function calcCorrection(BaseStructs.CreditRecord memory _cr, uint256 amount)
         external

@@ -304,45 +304,71 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             "LOAN_PAID_OFF_ALREADY"
         );
 
-        uint96 oldPrincipal = cr.unbilledPrincipal +
-            (cr.totalDue - cr.feesAndInterestDue);
-
-        uint256 platformIncome;
-        uint256 amountToCollect;
         uint256 periodsPassed;
-
-        console.log("in makePayment, before applyPayment()");
+        uint96 feesAndInterestDue;
+        uint96 totalDue;
+        uint96 payoffAmount;
         (
-            cr.unbilledPrincipal,
-            cr.dueDate,
-            cr.totalDue,
-            cr.feesAndInterestDue,
             periodsPassed,
-            amountToCollect
-        ) = IFeeManager(feeManagerAddress).applyPayment(cr, _amount);
+            feesAndInterestDue,
+            totalDue,
+            payoffAmount,
+            cr.unbilledPrincipal
+        ) = IFeeManager(feeManagerAddress).getDueInfo(cr);
 
-        console.log("in makePayment, after applyPayment");
+        uint256 principalPayment;
+        uint256 amountToCollect;
 
-        // applyPayment() has factored in and consumed all existing correction.
-        cr.correction = 0;
+        console.log("cr.unbilledPrincipal=", cr.unbilledPrincipal);
+        console.log("cr.totalDue=", cr.totalDue);
+        console.log(
+            "totalDue - feesAndInterestDue=",
+            totalDue - feesAndInterestDue
+        );
 
-        // If there is principal payment, calcuate new correction
-        if (
-            oldPrincipal >
-            cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue)
-        ) {
-            cr.correction = int96(
-                uint96(
-                    IFeeManager(feeManagerAddress).calcCorrection(
-                        cr,
-                        oldPrincipal - cr.unbilledPrincipal
-                    )
-                )
-            );
+        // cr.unbilledPrincipal =
+        //     cr.unbilledPrincipal +
+        //     cr.totalDue -
+        //     (totalDue - feesAndInterestDue);
+
+        if (_amount < totalDue) {
+            amountToCollect = _amount;
+            cr.totalDue = uint96(totalDue - _amount);
+
+            if (_amount <= feesAndInterestDue) {
+                cr.feesAndInterestDue = uint96(feesAndInterestDue - _amount);
+            } else {
+                cr.feesAndInterestDue = 0;
+                principalPayment = _amount - feesAndInterestDue;
+            }
+        } else {
+            cr.feesAndInterestDue = 0;
+            cr.totalDue = 0;
+            if (_amount < payoffAmount) {
+                amountToCollect = _amount;
+                principalPayment = _amount - feesAndInterestDue;
+                cr.unbilledPrincipal = uint96(
+                    cr.unbilledPrincipal - (_amount - totalDue)
+                );
+            } else {
+                console.log("cr.unbilledPrincipal=", cr.unbilledPrincipal);
+                console.log("totalDue=", totalDue);
+                console.log("feesAndInterestDue=", feesAndInterestDue);
+                principalPayment =
+                    cr.unbilledPrincipal +
+                    totalDue -
+                    feesAndInterestDue;
+                console.log("principalPayment=", principalPayment);
+                cr.unbilledPrincipal = 0;
+                // note need to check to make sure the payoff interest is included.
+                amountToCollect = payoffAmount;
+            }
         }
 
-        console.log("in makePayment, correction=");
-        console.logInt(cr.correction);
+        cr.dueDate = uint64(
+            cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY
+        );
+        cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
 
         if (cr.totalDue == 0) {
             cr.missedPeriods = 0;
@@ -354,19 +380,41 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             //todo add configuration on when to consider as default.
         }
 
-        cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
+        // Correction is used when moving to a new payment cycle, ready for reset.
+        // However, correction has not been used if it is still the same cycle, cannot reset
+        if (periodsPassed > 0) cr.correction = 0;
 
-        // todo payoff bookkeeping
+        // If there is principal payment, calcuate new correction
+        if (principalPayment > 0) {
+            cr.correction += int96(
+                uint96(
+                    IFeeManager(feeManagerAddress).calcCorrection(
+                        cr,
+                        principalPayment
+                    )
+                )
+            );
+        }
+        console.log("in makePayment, correction=");
+        console.logInt(cr.correction);
+        if (amountToCollect == payoffAmount) {
+            amountToCollect = amountToCollect - uint256(uint96(cr.correction));
+            cr.correction = 0;
+        }
 
         creditRecordMapping[_borrower] = cr;
 
         // Distribute income
         // todo 8/23 need to apply logic for protocol fee
-        distributeIncome(platformIncome);
+        distributeIncome(feesAndInterestDue);
 
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             IERC20 token = IERC20(poolToken);
+            console.log("Before transfer:");
+            console.log(token.balanceOf(msg.sender));
+            console.log(token.allowance(msg.sender, address(this)));
+            console.log("amount collect", amountToCollect);
             token.transferFrom(msg.sender, address(this), amountToCollect);
         }
     }

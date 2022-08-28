@@ -113,90 +113,64 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * When there is no "cron" to process statements, it is possible that the user is late
      * for several payment periods, it also returns the number of periods being late.
      */
-    function applyPayment(
-        BaseStructs.CreditRecord calldata _cr,
-        uint256 _amount
-    )
-        external
-        view
-        virtual
-        override
-        returns (
-            uint96 unbilledPrincipal,
-            uint64 dueDate,
-            uint96 totalDue,
-            uint96 feesAndInterestDue,
-            uint256 periodsPassed,
-            uint256 amountToCollect
-        )
-    {
-        console.log("\n****At the top of applyPayment...");
-        _cr.printCreditInfo();
+    // function applyPayment(
+    //     BaseStructs.CreditRecord calldata _cr,
+    //     uint256 _amount
+    // )
+    //     external
+    //     view
+    //     virtual
+    //     override
+    //     returns (
+    //         uint64 dueDate,
+    //         uint256 periodsPassed,
+    //         uint96 forFeesAndInterest,
+    //         uint96 forPrincipal
+    //     )
+    // {
+    //     // console.log("\n****At the top of applyPayment...");
+    //     // _cr.printCreditInfo();
 
-        uint96 payoffAmount;
-        (
-            periodsPassed,
-            feesAndInterestDue,
-            totalDue,
-            payoffAmount
-        ) = getDueInfo(_cr);
+    //     uint96 feesAndInterestDue;
+    //     uint96 totalDue;
+    //     uint96 payoffAmount;
+    //     (
+    //         periodsPassed,
+    //         feesAndInterestDue,
+    //         totalDue,
+    //         payoffAmount
+    //     ) = getDueInfo(_cr);
 
-        console.log("unbilledPrincipal=", _cr.unbilledPrincipal);
-        console.log("principal due=", (totalDue - feesAndInterestDue));
+    //     if (_amount < totalDue) {
+    //         if (_amount <= feesAndInterestDue) {
+    //             forFeesAndInterest = uint96(_amount);
+    //         } else {
+    //             forFeesAndInterest = feesAndInterestDue;
+    //             forPrincipal = uint96(_amount - feesAndInterestDue);
+    //         }
+    //     } else {
+    //         if (_amount < payoffAmount) {
+    //             forFeesAndInterest = feesAndInterestDue;
+    //             forPrincipal = uint96(_amount - feesAndInterestDue);
+    //         } else {
+    //             forFeesAndInterest = feesAndInterestDue;
+    //             forPrincipal = uint96(payoffAmount - feesAndInterestDue);
+    //         }
+    //     }
 
-        unbilledPrincipal =
-            (_cr.unbilledPrincipal + _cr.totalDue) -
-            (totalDue - feesAndInterestDue);
-        console.log("unbilledPrincipal=", unbilledPrincipal);
-
-        if (_amount < totalDue) {
-            // Insufficient payment. No impact on unbilledPrincipal.
-            amountToCollect = _amount;
-            totalDue = uint96(totalDue - _amount);
-            if (_amount <= feesAndInterestDue) {
-                feesAndInterestDue = uint96(feesAndInterestDue - _amount);
-            } else {
-                feesAndInterestDue = 0;
-            }
-        } else {
-            if (_amount < payoffAmount) {
-                console.log(
-                    "In applyPayment, enough to cover this payment, not enought to payoff"
-                );
-                console.log("extra amount:", _amount - totalDue);
-                console.log(
-                    "before adjusting, unbilledPrincipal:",
-                    unbilledPrincipal
-                );
-                amountToCollect = _amount;
-                unbilledPrincipal -= uint96(_amount - totalDue);
-                console.log(
-                    "after adjusting, unbilledPrincipal:",
-                    unbilledPrincipal
-                );
-            } else {
-                // payoff
-                console.log("In applyPayment, enough to payoff");
-                unbilledPrincipal = 0;
-                amountToCollect = payoffAmount;
-            }
-            totalDue = 0;
-            feesAndInterestDue = 0;
-        }
-
-        dueDate = uint64(
-            _cr.dueDate + periodsPassed * _cr.intervalInDays * SECONDS_IN_A_DAY
-        );
-        console.log(
-            "Before return from applyPayment(), unbilledPrincipal=",
-            unbilledPrincipal
-        );
-        console.log("dueDate=", dueDate);
-        console.log("totalDue=", totalDue);
-        console.log("feesAndInterestDue=", feesAndInterestDue);
-        console.log("periodsPassed=", periodsPassed);
-        console.log("amountToCollect=", amountToCollect);
-    }
+    //     dueDate = uint64(
+    //         _cr.dueDate + periodsPassed * _cr.intervalInDays * SECONDS_IN_A_DAY
+    //     );
+    //     // console.log(
+    //     //     "Before return from applyPayment(), unbilledPrincipal=",
+    //     //     unbilledPrincipal
+    //     // );
+    //     // console.log("dueDate=", dueDate);
+    //     // console.log("totalDue=", totalDue);
+    //     // console.log("feesAndInterestDue=", feesAndInterestDue);
+    //     // console.log("periodsPassed=", periodsPassed);
+    //     // console.log("amountToCollect=", amountToCollect);
+    // }
 
     /**
      * @notice Gets the current total due, fees and interest due, and payoff amount
@@ -212,11 +186,14 @@ contract BaseFeeManager is IFeeManager, Ownable {
     function getDueInfo(BaseStructs.CreditRecord memory _cr)
         public
         view
+        virtual
+        override
         returns (
             uint256 periodsPassed,
             uint96 feesAndInterestDue,
             uint96 totalDue,
-            uint96 payoffAmount
+            uint96 payoffAmount,
+            uint96 unbilledPrincipal
         )
     {
         console.log(
@@ -236,7 +213,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 ) + _cr.correction
             );
             console.log("Payoff amount=", payoffAmount);
-            return (0, _cr.feesAndInterestDue, _cr.totalDue, payoffAmount);
+            return (
+                0,
+                _cr.feesAndInterestDue,
+                _cr.totalDue,
+                payoffAmount,
+                _cr.unbilledPrincipal
+            );
         }
 
         periodsPassed =
@@ -309,7 +292,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             periodsPassed,
             _cr.feesAndInterestDue,
             _cr.totalDue,
-            payoffAmount
+            payoffAmount,
+            _cr.unbilledPrincipal
         );
     }
 

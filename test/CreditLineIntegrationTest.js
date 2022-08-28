@@ -150,9 +150,9 @@ describe.only("Credit Line Integration Test", async function() {
     advanceClock(15);
     let dueDate = initialTimestamp + 2592000 * 2;
 
-    let applyPaymentResult = await feeManager.applyPayment(record, 230);
-    console.log("applyPaymentResult=", applyPaymentResult);
-    checkApplyPaymentResult(applyPaymentResult, 3800, dueDate, 0, 0, 1, 230);
+    // let applyPaymentResult = await feeManager.applyPayment(record, 230);
+    // console.log("applyPaymentResult=", applyPaymentResult);
+    // checkApplyPaymentResult(applyPaymentResult, 3800, dueDate, 0, 0, 1, 230);
 
     await testToken.connect(borrower).approve(poolContract.address, 230);
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 230);
@@ -175,9 +175,9 @@ describe.only("Credit Line Integration Test", async function() {
 
     let dueDate = initialTimestamp + 2592000 * 3;
 
-    let applyPaymentResult = await feeManager.applyPayment(record, 100);
-    console.log("applyPaymentResult=", applyPaymentResult);
-    checkApplyPaymentResult(applyPaymentResult, 3610, dueDate, 129, 0, 1, 100);
+    // let applyPaymentResult = await feeManager.applyPayment(record, 100);
+    // console.log("applyPaymentResult=", applyPaymentResult);
+    // checkApplyPaymentResult(applyPaymentResult, 3610, dueDate, 129, 0, 1, 100);
 
     await testToken.connect(borrower).approve(poolContract.address, 100);
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 100);
@@ -198,9 +198,9 @@ describe.only("Credit Line Integration Test", async function() {
     advanceClock(15);
     let dueDate = initialTimestamp + 2592000 * 4;
 
-    let applyPaymentResult = await feeManager.applyPayment(record, 500);
-    console.log("applyPaymentResult=", applyPaymentResult);
-    checkApplyPaymentResult(applyPaymentResult, 3482, dueDate, 0, 0, 1, 500);
+    // let applyPaymentResult = await feeManager.applyPayment(record, 500);
+    // console.log("applyPaymentResult=", applyPaymentResult);
+    // checkApplyPaymentResult(applyPaymentResult, 3482, dueDate, 0, 0, 1, 500);
 
     await testToken.connect(borrower).approve(poolContract.address, 500);
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 500);
@@ -213,35 +213,50 @@ describe.only("Credit Line Integration Test", async function() {
 
     let dueDate = initialTimestamp + 2592000 * 4;
 
-    let applyPaymentResult = await feeManager.applyPayment(record, 400);
-    console.log("applyPaymentResult=", applyPaymentResult);
-    checkApplyPaymentResult(applyPaymentResult, 3082, dueDate, 0, 0, 0, 400);
+    // let applyPaymentResult = await feeManager.applyPayment(record, 400);
+    // console.log("applyPaymentResult=", applyPaymentResult);
+    // checkApplyPaymentResult(applyPaymentResult, 3082, dueDate, 0, 0, 0, 400);
 
     await testToken.connect(borrower).approve(poolContract.address, 400);
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 400);
     record = await poolContract.creditRecordMapping(borrower.address);
-    checkRecord(record, 5000, 3082, dueDate, 2, 0, 0, 0, 9, 1217, 30, 3);
+    checkRecord(record, 5000, 3082, dueDate, 3, 0, 0, 0, 9, 1217, 30, 3);
   });
 
-  // it("Day 120: 4th statement", async function() {
-  //   advanceClock(15);
+  it("Day 120: 4th statement", async function() {
+    advanceClock(10);
 
-  //   let r = await feeManager.getDueInfo(record);
-  //   checkResult(r, 1, 243, 429, 4019, 3553);
-  // });
+    let r = await feeManager.getDueInfo(record);
+    checkResult(r, 1, 33, 187, 3145, 2928);
+  });
 
-  // it("Day 135: 3rd payment (full payment)", async function() {
-  //   advanceClock(15);
+  it("Day 150: first late", async function() {
+    advanceClock(30);
+    let r = await feeManager.getDueInfo(record);
+    checkResult(r, 2, 206, 361, 3352, 2960);
+  });
 
-  //   let dueDate = initialTimestamp + 2592000 * 4;
+  it("Day 180: second late", async function() {
+    advanceClock(30);
+    let r = await feeManager.getDueInfo(record);
+    checkResult(r, 3, 219, 385, 3573, 3155);
+  });
 
-  //   let applyPaymentResult = await feeManager.applyPayment(record, 429);
-  //   console.log("applyPaymentResult=", applyPaymentResult);
-  //   checkApplyPaymentResult(applyPaymentResult, 3553, dueDate, 0, 0, 1, 429);
+  it("Day 210: third late", async function() {
+    advanceClock(30);
+    let r = await feeManager.getDueInfo(record);
+    checkResult(r, 4, 232, 409, 3807, 3363);
+  });
 
-  //   await testToken.connect(borrower).approve(poolContract.address, 429);
-  //   await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 429);
-  //   record = await poolContract.creditRecordMapping(borrower.address);
-  //   checkRecord(record, 5000, 3553, dueDate, 0, 0, 0, 0, 9, 1217, 30, 3);
-  // });
+  it("Day 225: third late", async function() {
+    advanceClock(15);
+    let dueDate = initialTimestamp + 2592000 * 8;
+
+    await testToken.give1000To(borrower.address);
+
+    await testToken.connect(borrower).approve(poolContract.address, 3807);
+    await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 3807);
+    record = await poolContract.creditRecordMapping(borrower.address);
+    checkRecord(record, 5000, 0, dueDate, 0, 0, 0, 0, 5, 1217, 30, 3);
+  });
 });
