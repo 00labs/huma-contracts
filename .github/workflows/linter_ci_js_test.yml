@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: yarn install
+      - name: Check coding styles
+        run: yarn lint-solidity
+      - name: run tests
+        run: yarn test
