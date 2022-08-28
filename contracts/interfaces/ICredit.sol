@@ -28,12 +28,6 @@ interface ICredit {
         uint256 _amount
     ) external;
 
-    function payoff(
-        address borrower,
-        address asset,
-        uint256 amount
-    ) external;
-
     function triggerDefault(address borrower) external returns (uint256 losses);
 
     // function assessLateFee(address borrower) external returns (uint256 fees);

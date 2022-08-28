@@ -38,7 +38,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 collateralParam,
         uint256 collateralAmount,
         uint256 _intervalInDays,
-        uint256 _remainingCycles
+        uint256 _remainingPeriods
     ) public virtual override {
         onlyEvaluationAgents();
 
@@ -51,7 +51,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             collateralAmount,
             poolAprInBps,
             _intervalInDays,
-            _remainingCycles
+            _remainingPeriods
         );
 
         approveCredit(borrower);
@@ -81,20 +81,20 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         require(asset == address(poolToken), "HumaIF:WRONG_ASSET");
 
         // todo decide what to do if the payment amount is insufficient.
-        require(amount >= cr.balance, "HumaIF:AMOUNT_TOO_LOW");
+        require(amount >= cr.unbilledPrincipal, "HumaIF:AMOUNT_TOO_LOW");
 
         // todo verify that we have indeeded received the payment.
 
         uint256 lateFee = IFeeManager(feeManagerAddress).calcLateFee(
             cr.dueDate,
             cr.totalDue,
-            cr.balance
+            cr.unbilledPrincipal
         );
-        uint256 refundAmount = amount - cr.balance - lateFee;
+        uint256 refundAmount = amount - cr.unbilledPrincipal - lateFee;
 
         // Sends the remainder to the borrower
-        cr.balance = 0;
-        cr.remainingCycles = 0;
+        cr.unbilledPrincipal = 0;
+        cr.remainingPeriods = 0;
 
         processRefund(borrower, refundAmount);
 
@@ -117,7 +117,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
         uint256 collateralParam,
         uint256 collateralAmount,
         uint256 _intervalInDays,
-        uint256 _remainingCycles
+        uint256 _remainingPeriods
     ) external {
         // There are repeated calls to onlyEvaluationAgents() here and the called functions.
         // This is intentional in case we make changes and forget to add access control
@@ -130,7 +130,7 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
             collateralParam,
             collateralAmount,
             _intervalInDays,
-            _remainingCycles
+            _remainingPeriods
         );
 
         drawdownWithCollateral(
