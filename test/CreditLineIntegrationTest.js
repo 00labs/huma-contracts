@@ -193,4 +193,12 @@ describe.only("Credit Line Integration Test", async function() {
     // Advance 15 days to the next cycle
     advanceClock(15);
   });
+
+  it("Day 90: 3nd statement (late due to partial payment", async function() {
+    let r = await feeManager.getDueInfo(record);
+    checkResult(r, 1, 243, 429, 4019, 3553);
+
+    // Advance 15 days for a mid-cycle event
+    advanceClock(15);
+  });
 });
