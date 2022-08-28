@@ -81,7 +81,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         uint256 _collateralAmount,
         uint256 _aprInBps,
         uint256 _intervalInDays,
-        uint256 _remainingCycles
+        uint256 _remainingPeriods
     ) internal virtual {
         protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
@@ -100,7 +100,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // note, leaving balance at the default 0, update balance only after drawdown
         cr.aprInBps = uint16(_aprInBps);
         cr.intervalInDays = uint16(_intervalInDays);
-        cr.remainingCycles = uint16(_remainingCycles);
+        cr.remainingPeriods = uint16(_remainingPeriods);
         cr.state = BS.CreditState.Requested;
         creditRecordMapping[_borrower] = cr;
 
@@ -186,33 +186,48 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // todo 8/23 need to move some tests from requestCredit() to drawdown()
         require(_borrowAmount >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
-        require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
-
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-        // console.log("In drawdown...");
-        // cr.printCreditInfo();
+
+        require(
+            cr.state == BS.CreditState.Approved ||
+                cr.state == BS.CreditState.GoodStanding,
+            "NOT_APPROVED_OR_IN_GOOD_STANDING"
+        );
+
         // todo 8/23 add a test for this check
         require(
-            _borrowAmount <= cr.creditLimit - cr.balance,
+            _borrowAmount <= cr.creditLimit - cr.unbilledPrincipal,
             "EXCEEDED_CREDIT_LMIIT"
         );
-        // todo 8/23 add a check to make sure the account is in good standing.
 
-        cr.balance = uint96(uint256(cr.balance) + _borrowAmount);
+        // Set the due date to be one billing cycle ahead if this is the first drawdown
+        if (cr.dueDate == 0) {
+            cr.dueDate = uint64(
+                block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
+            );
+        } else if (block.timestamp > cr.dueDate) {
+            uint256 periodsPassed;
+            uint96 payoffAmount;
+            (periodsPassed, payoffAmount) = _updateDueInfo(_borrower);
+            cr = creditRecordMapping[_borrower];
 
-        // todo this logic does not work for credit line.
-        cr.dueDate = uint64(
-            block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
+            require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
+        }
+
+        cr.unbilledPrincipal = uint96(
+            uint256(cr.unbilledPrincipal) + _borrowAmount
         );
 
-        // With drawdown, balance increases, cycle-end interest charge will be higher than
-        // it should be, thus record a negative correction to be applied at the end of the cycle
-        cr.correction -= int96(uint96(calcCorrection(cr, _borrowAmount)));
-
-        // Set the monthly payment (except the final payment, hook for installment case
-        cr.totalDue = uint96(
-            IFeeManager(feeManagerAddress).getRecurringPayment(cr)
+        // With drawdown, balance increases, period-end interest charge will be higher than
+        // it should be, thus record a negative correction to be applied at the end of the period
+        cr.correction -= int96(
+            uint96(
+                IFeeManager(feeManagerAddress).calcCorrection(cr, _borrowAmount)
+            )
         );
+
+        cr.state = BS.CreditState.GoodStanding;
+
         creditRecordMapping[_borrower] = cr;
 
         (
@@ -266,10 +281,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         poolToken.safeTransfer(treasuryAddress, protocolFee);
         poolToken.safeTransfer(_borrower, amtToBorrower);
-
-        // console.log("At the end of drawdown...");
-        // console.log("block.timestamp=", block.timestamp);
-        // creditRecordMapping[_borrower].printCreditInfo();
     }
 
     /**
@@ -285,56 +296,118 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     ) external virtual override {
         protocolAndPoolOn();
 
-        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-
         require(_asset == address(poolToken), "WRONG_ASSET");
         require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
+
+        uint256 periodsPassed;
+        uint96 payoffAmount;
+        (periodsPassed, payoffAmount) = _updateDueInfo(_borrower);
+        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
         // todo 8/23 check to see if this condition is still needed
-        require(
-            cr.balance > 0 && cr.remainingCycles > 0,
-            "LOAN_PAID_OFF_ALREADY"
-        );
+        // require(
+        //     cr.unbilledPrincipal > 0 && cr.remainingPeriods > 0,
+        //     "LOAN_PAID_OFF_ALREADY"
+        // );
 
-        uint96 oldBalance = cr.balance;
-        uint256 platformIncome;
+        uint256 principalPayment;
         uint256 amountToCollect;
-        uint256 cyclesPassed;
 
-        (
-            cr.balance,
-            cr.dueDate,
-            cr.totalDue,
-            cr.feesDue,
-            cyclesPassed,
-            amountToCollect
-        ) = IFeeManager(feeManagerAddress).applyPayment(cr, _amount);
+        if (_amount < cr.totalDue) {
+            amountToCollect = _amount;
+            cr.totalDue = uint96(cr.totalDue - _amount);
 
-        // cr.printCreditInfo();
+            if (_amount <= cr.feesAndInterestDue) {
+                cr.feesAndInterestDue = uint96(cr.feesAndInterestDue - _amount);
+            } else {
+                cr.feesAndInterestDue = 0;
+                principalPayment = _amount - cr.feesAndInterestDue;
+            }
+        } else {
+            if (_amount < payoffAmount) {
+                amountToCollect = _amount;
+                principalPayment = _amount - cr.feesAndInterestDue;
+                cr.unbilledPrincipal = uint96(
+                    cr.unbilledPrincipal - (_amount - cr.totalDue)
+                );
+            } else {
+                principalPayment =
+                    cr.unbilledPrincipal +
+                    cr.totalDue -
+                    cr.feesAndInterestDue;
+                cr.unbilledPrincipal = 0;
+                amountToCollect = payoffAmount;
+            }
+            cr.feesAndInterestDue = 0;
+            cr.totalDue = 0;
+            cr.missedPeriods = 0;
+            cr.state = BS.CreditState.GoodStanding;
+        }
 
-        if (cr.totalDue > 0)
-            cr.missedCycles = uint16(cr.missedCycles + cyclesPassed);
-        cr.remainingCycles = uint16(cr.remainingCycles - cyclesPassed);
+        // Correction is used when moving to a new payment cycle, ready for reset.
+        // However, correction has not been used if it is still the same cycle, cannot reset
+        if (periodsPassed > 0) cr.correction = 0;
 
-        // todo payoff bookkeeping
+        // If there is principal payment, calcuate new correction
+        if (principalPayment > 0) {
+            cr.correction += int96(
+                uint96(
+                    IFeeManager(feeManagerAddress).calcCorrection(
+                        cr,
+                        principalPayment
+                    )
+                )
+            );
+        }
+        if (amountToCollect == payoffAmount) {
+            amountToCollect = amountToCollect - uint256(uint96(cr.correction));
+            cr.correction = 0;
+        }
 
         creditRecordMapping[_borrower] = cr;
 
         // Distribute income
         // todo 8/23 need to apply logic for protocol fee
-        distributeIncome(platformIncome);
-
-        // adjust cr.correction if the borrower has paid principal
-        if (oldBalance > cr.balance) {
-            cr.correction += int96(
-                uint96(calcCorrection(cr, oldBalance - cr.balance))
-            );
-        }
+        if (cr.feesAndInterestDue > amountToCollect)
+            distributeIncome(cr.feesAndInterestDue);
+        else distributeIncome(amountToCollect);
 
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             IERC20 token = IERC20(poolToken);
             token.transferFrom(msg.sender, address(this), amountToCollect);
         }
+    }
+
+    function _updateDueInfo(address _borrower)
+        internal
+        virtual
+        returns (uint256 periodsPassed, uint96 payoffAmount)
+    {
+        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        (
+            periodsPassed,
+            cr.feesAndInterestDue,
+            cr.totalDue,
+            payoffAmount,
+            cr.unbilledPrincipal
+        ) = IFeeManager(feeManagerAddress).getDueInfo(cr);
+
+        cr.dueDate = uint64(
+            cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY
+        );
+        cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
+
+        if (cr.totalDue == 0) {
+            cr.missedPeriods = 0;
+            cr.state = BS.CreditState.GoodStanding;
+        } else {
+            // note the design of missedPeriods is awkward. need to find a simpler solution
+            cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
+            if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
+        }
+        creditRecordMapping[_borrower] = cr;
+
+        return (periodsPassed, payoffAmount);
     }
 
     /**
@@ -365,24 +438,11 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         // Trigger loss process
         // todo double check if we need to include fees into losses
-        losses = creditRecordMapping[borrower].balance;
+        BS.CreditRecord memory cr = creditRecordMapping[borrower];
+        losses = cr.unbilledPrincipal + cr.totalDue;
         distributeLosses(losses);
 
         return losses;
-    }
-
-    function calcCorrection(BS.CreditRecord memory _cr, uint256 amount)
-        internal
-        view
-        returns (uint256 correction)
-    {
-        return
-            (amount *
-                _cr.aprInBps *
-                (block.timestamp -
-                    (_cr.dueDate - _cr.intervalInDays * 86400))) /
-            SECONDS_IN_A_YEAR /
-            10000;
     }
 
     function onERC721Received(
@@ -407,7 +467,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             uint16 aprInBps,
             uint64 dueDate,
             uint96 balance,
-            uint16 remainingCycles,
+            uint16 remainingPeriods,
             BS.CreditState state
         )
     {
@@ -418,8 +478,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             cr.intervalInDays,
             cr.aprInBps,
             cr.dueDate,
-            cr.balance,
-            cr.remainingCycles,
+            cr.unbilledPrincipal,
+            cr.remainingPeriods,
             cr.state
         );
     }
