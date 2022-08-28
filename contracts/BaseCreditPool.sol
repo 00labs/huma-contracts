@@ -304,11 +304,14 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             "LOAN_PAID_OFF_ALREADY"
         );
 
-        uint96 oldBalance = cr.unbilledPrincipal;
+        uint96 oldBalance = cr.unbilledPrincipal +
+            cr.totalDue -
+            cr.feesAndInterestDue;
         uint256 platformIncome;
         uint256 amountToCollect;
         uint256 periodsPassed;
 
+        console.log("in makePayment, before applyPayment()");
         (
             cr.unbilledPrincipal,
             cr.dueDate,
@@ -318,10 +321,40 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             amountToCollect
         ) = IFeeManager(feeManagerAddress).applyPayment(cr, _amount);
 
-        // cr.printCreditInfo();
+        console.log("in makePayment, after applyPayment");
 
-        if (cr.totalDue > 0)
-            cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed);
+        // Existing correction should have been consumed by applyPayment().
+        // If there is principal payment, calcuate new correction, otherwise, set it to 0.
+        // todo add a test when there are multiple payments towards paying down principal
+        if (
+            oldBalance >
+            cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
+        ) {
+            cr.correction = int96(
+                uint96(
+                    IFeeManager(feeManagerAddress).calcCorrection(
+                        cr,
+                        oldBalance - cr.unbilledPrincipal
+                    )
+                )
+            );
+        } else {
+            cr.correction = 0;
+        }
+
+        console.log("in makePayment, correction=");
+        console.logInt(cr.correction);
+
+        if (cr.totalDue == 0) {
+            cr.missedPeriods = 0;
+            cr.state = BS.CreditState.GoodStanding;
+        } else {
+            // note the design of missedPeriods is awkward. need to find a simpler solution
+            cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
+            if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
+            //todo add configuration on when to consider as default.
+        }
+
         cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
 
         // todo payoff bookkeeping
@@ -331,18 +364,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // Distribute income
         // todo 8/23 need to apply logic for protocol fee
         distributeIncome(platformIncome);
-
-        // adjust cr.correction if the borrower has paid principal
-        if (oldBalance > cr.unbilledPrincipal) {
-            cr.correction += int96(
-                uint96(
-                    IFeeManager(feeManagerAddress).calcCorrection(
-                        cr,
-                        oldBalance - cr.unbilledPrincipal
-                    )
-                )
-            );
-        }
 
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker

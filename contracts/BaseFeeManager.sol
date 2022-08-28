@@ -106,6 +106,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
         return (amtToBorrower, protocolFee, poolIncome);
     }
 
+    /**
+     * @notice Simulate if a payment _amount is applied towards the current credit line,
+     * what is the post-payment unbilledPrincipal,totalDue,feesAndInterestDue.
+     * If the amount is more than payoff, it also returns how much to collect for the payoff.
+     * When there is no "cron" to process statements, it is possible that the user is late
+     * for several payment periods, it also returns the number of periods being late.
+     */
     function applyPayment(
         BaseStructs.CreditRecord calldata _cr,
         uint256 _amount
@@ -115,7 +122,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         virtual
         override
         returns (
-            uint96 balance,
+            uint96 unbilledPrincipal,
             uint64 dueDate,
             uint96 totalDue,
             uint96 feesAndInterestDue,
@@ -123,50 +130,59 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 amountToCollect
         )
     {
-        // console.log("At the top of applyPayment...");
-        // _cr.printCreditInfo();
+        console.log("\n****At the top of applyPayment...");
+        _cr.printCreditInfo();
 
         uint96 payoffAmount;
         (
             periodsPassed,
             feesAndInterestDue,
             totalDue,
-            payoffAmount
+            payoffAmount,
+            unbilledPrincipal
         ) = getDueInfo(_cr);
 
+        console.log("\nAt beginning of applyPayment");
+        _cr.printCreditInfo();
+
         if (_amount < totalDue) {
+            // Insufficient payment. No impact on unbilledPrincipal.
+            amountToCollect = _amount;
             totalDue = uint96(totalDue - _amount);
             if (_amount <= feesAndInterestDue) {
-                amountToCollect = _amount;
+                feesAndInterestDue = uint96(feesAndInterestDue - _amount);
             } else {
-                balance = uint96(
-                    _cr.unbilledPrincipal - _amount + feesAndInterestDue
-                );
-                amountToCollect = _amount;
+                feesAndInterestDue = 0;
             }
         } else {
-            // console.log("Enough to cover totalDue");
-            totalDue = 0;
             if (_amount < payoffAmount) {
-                // console.log("Not enought to payoff");
-                // console.log("balance=", balance);
-                // console.log("_amount=", _amount);
-                // console.log("feesAndInterestDue=", feesAndInterestDue);
-                balance = uint96(
-                    _cr.unbilledPrincipal - _amount + feesAndInterestDue
-                );
                 amountToCollect = _amount;
+                console.log(
+                    "In applyPayment, enough to cover this payment, not enought to payoff"
+                );
             } else {
                 // payoff
-                // console.log("Enough to payoff");
-                balance = 0;
+                console.log("In applyPayment, enough to payoff");
+                unbilledPrincipal = 0;
                 amountToCollect = payoffAmount;
             }
+            totalDue = 0;
+            feesAndInterestDue = 0;
         }
 
         dueDate = uint64(
             _cr.dueDate + periodsPassed * _cr.intervalInDays * SECONDS_IN_A_DAY
         );
+        console.log(
+            "Before return from applyPayment(), unbilledPrincipal=",
+            unbilledPrincipal
+        );
+        console.log("feesAndInterestDue=", feesAndInterestDue);
+        console.log("dueDate=", dueDate);
+        console.log("totalDue=", totalDue);
+        console.log("feesAndInterestDue=", feesAndInterestDue);
+        console.log("periodsPassed=", periodsPassed);
+        console.log("amountToCollect=", amountToCollect);
     }
 
     /**
@@ -187,7 +203,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 periodsPassed,
             uint96 feesAndInterestDue,
             uint96 totalDue,
-            uint96 payoffAmount
+            uint96 payoffAmount,
+            uint96 unbilledPrincipal
         )
     {
         console.log(
@@ -207,7 +224,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 ) + _cr.correction
             );
             console.log("Payoff amount=", payoffAmount);
-            return (0, _cr.feesAndInterestDue, _cr.totalDue, payoffAmount);
+            return (
+                0,
+                _cr.feesAndInterestDue,
+                _cr.totalDue,
+                payoffAmount,
+                _cr.unbilledPrincipal
+            );
         }
 
         periodsPassed =
@@ -280,7 +303,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             periodsPassed,
             _cr.feesAndInterestDue,
             _cr.totalDue,
-            payoffAmount
+            payoffAmount,
+            _cr.unbilledPrincipal
         );
     }
 
@@ -328,6 +352,36 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 remainder = timePassed % SECONDS_IN_A_DAY;
         if (remainder > 43200) numOfDays++;
         console.log("numOfDays = ", numOfDays);
+
+        console.log("\n****IN calcCorrection()****");
+        console.log("amount=", amount);
+        console.log("_cr.aprInBps=", _cr.aprInBps);
+        console.log("numOfDays=", numOfDays);
+        console.log("SECONDS_IN_A_DAY=", SECONDS_IN_A_DAY);
+        console.log("SECONDS_IN_A_YEAR=", SECONDS_IN_A_YEAR);
+        console.log("amount * _cr.aprInBps=", amount * _cr.aprInBps);
+        console.log(
+            "amount * _cr.aprInBps * numOfDays=",
+            amount * _cr.aprInBps * numOfDays
+        );
+        console.log(
+            "amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY=",
+            amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY
+        );
+        console.log(
+            "first division",
+            (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
+                SECONDS_IN_A_YEAR
+        );
+        console.log(
+            "final division=",
+            (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
+                SECONDS_IN_A_YEAR /
+                10000
+        );
+        (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
+            SECONDS_IN_A_YEAR /
+            10000;
 
         return
             (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
