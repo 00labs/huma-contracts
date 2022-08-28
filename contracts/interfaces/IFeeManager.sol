@@ -36,6 +36,11 @@ interface IFeeManager {
             uint256 amountToCollect
         );
 
+    function calcCorrection(BaseStructs.CreditRecord memory _cr, uint256 amount)
+        external
+        view
+        returns (uint256 correction);
+
     // function getDueInfo(BaseStructs.CreditRecord calldata _cr)
     //     external
     //     view

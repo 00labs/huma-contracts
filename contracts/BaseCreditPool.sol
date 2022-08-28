@@ -189,8 +189,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
 
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-        // console.log("In drawdown...");
-        // cr.printCreditInfo();
+        console.log("In drawdown...");
+        cr.printCreditInfo();
         // todo 8/23 add a test for this check
         require(
             _borrowAmount <= cr.creditLimit - cr.unbilledPrincipal,
@@ -202,19 +202,26 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             uint256(cr.unbilledPrincipal) + _borrowAmount
         );
 
-        // todo this logic does not work for credit line.
-        cr.dueDate = uint64(
-            block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
-        );
+        // Set the due date to be one billing cycle away if this is the first drawdown
+        console.log("In drawdown, block.timestamp=", block.timestamp);
+        if (cr.dueDate == 0) {
+            cr.dueDate = uint64(
+                block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
+            );
+        }
 
         // With drawdown, balance increases, period-end interest charge will be higher than
         // it should be, thus record a negative correction to be applied at the end of the period
-        cr.correction -= int96(uint96(calcCorrection(cr, _borrowAmount)));
-
-        // Set the monthly payment (except the final payment, hook for installment case
-        cr.totalDue = uint96(
-            IFeeManager(feeManagerAddress).getRecurringPayment(cr)
+        cr.correction -= int96(
+            uint96(
+                IFeeManager(feeManagerAddress).calcCorrection(cr, _borrowAmount)
+            )
         );
+        console.log("In drawdown, cr.correction is:");
+        console.logInt(cr.correction);
+
+        cr.state = BS.CreditState.GoodStanding;
+
         creditRecordMapping[_borrower] = cr;
 
         (
@@ -328,7 +335,12 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // adjust cr.correction if the borrower has paid principal
         if (oldBalance > cr.unbilledPrincipal) {
             cr.correction += int96(
-                uint96(calcCorrection(cr, oldBalance - cr.unbilledPrincipal))
+                uint96(
+                    IFeeManager(feeManagerAddress).calcCorrection(
+                        cr,
+                        oldBalance - cr.unbilledPrincipal
+                    )
+                )
             );
         }
 
@@ -372,20 +384,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         distributeLosses(losses);
 
         return losses;
-    }
-
-    function calcCorrection(BS.CreditRecord memory _cr, uint256 amount)
-        internal
-        view
-        returns (uint256 correction)
-    {
-        return
-            (amount *
-                _cr.aprInBps *
-                (block.timestamp -
-                    (_cr.dueDate - _cr.intervalInDays * 86400))) /
-            SECONDS_IN_A_YEAR /
-            10000;
     }
 
     function onERC721Received(

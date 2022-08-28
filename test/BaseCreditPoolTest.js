@@ -18,7 +18,7 @@ const getLoanContractFromAddress = async function(address, signer) {
 //
 // The full testing scenario is designed as:
 // m0-1: Owner contributes 100 initial liquidity
-// m0-2: Set up fees=(10, 100, 20, 100, 30, 100), APR=1200, protocol fee=50.
+// m0-2: Set up fees=(10, 100, 20, 100, 30, 100), APR=1217, protocol fee=50.
 // m0-3: Lender contributes 300, together with owner's 100, the pool size is 400. PPS=1
 // m0-4. Borrower borrows 400 with interest-only. 14 fee charged (12 pool fee, 2 protocol fee). Borrower get 386
 //       PPS=1.03, withdrawable(owner, lender)=(103,309)
@@ -115,7 +115,7 @@ describe("Base Credit Pool", function() {
 
     await poolContract.addEvaluationAgent(evaluationAgent.address);
 
-    await poolContract.setAPR(1200); //bps
+    await poolContract.setAPR(1217); //bps
     await poolContract.setMinMaxBorrowAmount(10, 1000);
     await poolContract.enablePool();
 
@@ -198,7 +198,7 @@ describe("Base Credit Pool", function() {
     it("Loan requested by borrower initiates correctly", async function() {
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
 
-      await poolContract.connect(owner).setAPR(1200);
+      await poolContract.connect(owner).setAPR(1217);
 
       await testTokenContract.connect(borrower).approve(poolContract.address, 0);
 
@@ -209,7 +209,7 @@ describe("Base Credit Pool", function() {
       const loanInformation = await poolContract.getCreditInformation(borrower.address);
       expect(loanInformation.creditLimit).to.equal(400);
       expect(loanInformation.intervalInDays).to.equal(30);
-      expect(loanInformation.aprInBps).to.equal(1200);
+      expect(loanInformation.aprInBps).to.equal(1217);
     });
 
     describe("Loan Funding", function() {
@@ -280,7 +280,7 @@ describe("Base Credit Pool", function() {
       beforeEach(async function() {
         let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
-        await poolContract.connect(owner).setAPR(1200);
+        await poolContract.connect(owner).setAPR(1217);
         await poolContract.connect(borrower).requestCredit(400, 30, 12);
 
         await poolContract.connect(evaluationAgent).approveCredit(borrower.address);

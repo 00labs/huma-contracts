@@ -50,7 +50,7 @@ library BaseStructs {
     // Please do NOT delete during development stage.
     // Debugging helper function. Please comment out after finishing debugging.
     function printCreditInfo(CreditRecord memory cr) internal view {
-        console.log("\n##### Status of the Credit #####");
+        console.log("##### Status of the Credit #####");
         console.log("cr.creditLimit=", uint256(cr.creditLimit));
         console.log("cr.unbilledPrincipal=", uint256(cr.unbilledPrincipal));
         console.log("cr.dueDate=", uint256(cr.dueDate));

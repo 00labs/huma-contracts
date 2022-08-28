@@ -15,6 +15,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     uint256 public constant BPS_DIVIDER = 10000;
     uint256 public constant APR_BPS_DIVIDER = 120000;
     uint256 public constant SECONDS_IN_A_YEAR = 31536000;
+    uint256 public constant SECONDS_IN_A_DAY = 86400;
 
     // Platform fee, charged when a loan is originated
     uint256 public frontLoadingFeeFlat;
@@ -65,7 +66,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 totalDue,
         uint256 totalBalance
     ) public view virtual override returns (uint256 fees) {
-        if (block.timestamp > dueDate && totalDue > 0) {
+        console.log("In calcLateFee, block.timestamp=", block.timestamp);
+        console.log("dueDate=", dueDate);
+        console.log("totalDue=", totalDue);
+        if (block.timestamp >= dueDate && totalDue > 0) {
             console.log("late fee triggered.");
             fees = lateFeeFlat;
             if (lateFeeBps > 0)
@@ -161,7 +165,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         }
 
         dueDate = uint64(
-            _cr.dueDate + periodsPassed * _cr.intervalInDays * 86400
+            _cr.dueDate + periodsPassed * _cr.intervalInDays * SECONDS_IN_A_DAY
         );
     }
 
@@ -187,7 +191,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         )
     {
         console.log(
-            "At the top of getDueInfo, block.timestamp=",
+            "\nAt the top of getDueInfo, block.timestamp=",
             block.timestamp
         );
         _cr.printCreditInfo();
@@ -195,10 +199,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // Without a cron job, the user may have missed multiple payments.
         if (block.timestamp < _cr.dueDate) {
             // console.log("Not late");
-            payoffAmount =
-                _cr.feesAndInterestDue +
-                _cr.unbilledPrincipal +
-                calcPayoffInterest(_cr);
+            payoffAmount = uint96(
+                int96(
+                    _cr.feesAndInterestDue +
+                        _cr.unbilledPrincipal +
+                        calcPayoffInterest(_cr)
+                ) + _cr.correction
+            );
             console.log("Payoff amount=", payoffAmount);
             return (0, _cr.feesAndInterestDue, _cr.totalDue, payoffAmount);
         }
@@ -206,7 +213,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         periodsPassed =
             1 +
             (block.timestamp - _cr.dueDate) /
-            (_cr.intervalInDays * 86400);
+            (_cr.intervalInDays * SECONDS_IN_A_DAY);
 
         console.log("periods passed: ", periodsPassed);
 
@@ -217,14 +224,24 @@ contract BaseFeeManager is IFeeManager, Ownable {
             console.log("i=", i);
             if (_cr.totalDue > 0)
                 fees = calcLateFee(
-                    _cr.dueDate + i * _cr.intervalInDays * 86400,
+                    _cr.dueDate + i * _cr.intervalInDays * SECONDS_IN_A_DAY,
                     _cr.totalDue,
                     _cr.unbilledPrincipal + _cr.totalDue
                 );
 
             console.log("New fees=", fees);
             _cr.unbilledPrincipal += _cr.totalDue;
-            interest = (_cr.unbilledPrincipal * _cr.aprInBps) / APR_BPS_DIVIDER;
+            console.log(
+                "beginning of calcu, _cr.unbilledPrincipal=",
+                _cr.unbilledPrincipal
+            );
+            interest =
+                (_cr.unbilledPrincipal *
+                    _cr.aprInBps *
+                    _cr.intervalInDays *
+                    SECONDS_IN_A_DAY) /
+                SECONDS_IN_A_YEAR /
+                BPS_DIVIDER;
             console.log("New interest=", interest);
 
             // If r.correction is negative, its absolute value is guaranteed to be
@@ -285,9 +302,37 @@ contract BaseFeeManager is IFeeManager, Ownable {
         );
         payoffInterest = uint96(
             ((_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue) *
-                _cr.aprInBps) / APR_BPS_DIVIDER
+                _cr.aprInBps *
+                _cr.intervalInDays *
+                SECONDS_IN_A_DAY) /
+                SECONDS_IN_A_YEAR /
+                BPS_DIVIDER
         );
         console.log("payoffInterest=", payoffInterest);
+    }
+
+    function calcCorrection(BS.CreditRecord memory _cr, uint256 amount)
+        external
+        view
+        virtual
+        override
+        returns (uint256 correction)
+    {
+        console.log("In calcCorrection, block.timestamp=", block.timestamp);
+        console.log("_cr.dueDate=", _cr.dueDate);
+        console.log("_cr.intervalInDays=", _cr.intervalInDays);
+        // rounding to days
+        uint256 timePassed = block.timestamp -
+            (_cr.dueDate - _cr.intervalInDays * SECONDS_IN_A_DAY);
+        uint256 numOfDays = timePassed / SECONDS_IN_A_DAY;
+        uint256 remainder = timePassed % SECONDS_IN_A_DAY;
+        if (remainder > 43200) numOfDays++;
+        console.log("numOfDays = ", numOfDays);
+
+        return
+            (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
+            SECONDS_IN_A_YEAR /
+            10000;
     }
 
     /**
