@@ -66,16 +66,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 totalDue,
         uint256 totalBalance
     ) public view virtual override returns (uint256 fees) {
-        console.log("In calcLateFee, block.timestamp=", block.timestamp);
-        console.log("dueDate=", dueDate);
-        console.log("totalDue=", totalDue);
         if (block.timestamp >= dueDate && totalDue > 0) {
-            console.log("late fee triggered.");
             fees = lateFeeFlat;
             if (lateFeeBps > 0)
                 fees += (totalBalance * lateFeeBps) / BPS_DIVIDER;
-        } else {
-            console.log("no late fee.");
         }
     }
 
@@ -107,72 +101,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
     }
 
     /**
-     * @notice Simulate if a payment _amount is applied towards the current credit line,
-     * what is the post-payment unbilledPrincipal,totalDue,feesAndInterestDue.
-     * If the amount is more than payoff, it also returns how much to collect for the payoff.
-     * When there is no "cron" to process statements, it is possible that the user is late
-     * for several payment periods, it also returns the number of periods being late.
-     */
-    // function applyPayment(
-    //     BaseStructs.CreditRecord calldata _cr,
-    //     uint256 _amount
-    // )
-    //     external
-    //     view
-    //     virtual
-    //     override
-    //     returns (
-    //         uint64 dueDate,
-    //         uint256 periodsPassed,
-    //         uint96 forFeesAndInterest,
-    //         uint96 forPrincipal
-    //     )
-    // {
-    //     // console.log("\n****At the top of applyPayment...");
-    //     // _cr.printCreditInfo();
-
-    //     uint96 feesAndInterestDue;
-    //     uint96 totalDue;
-    //     uint96 payoffAmount;
-    //     (
-    //         periodsPassed,
-    //         feesAndInterestDue,
-    //         totalDue,
-    //         payoffAmount
-    //     ) = getDueInfo(_cr);
-
-    //     if (_amount < totalDue) {
-    //         if (_amount <= feesAndInterestDue) {
-    //             forFeesAndInterest = uint96(_amount);
-    //         } else {
-    //             forFeesAndInterest = feesAndInterestDue;
-    //             forPrincipal = uint96(_amount - feesAndInterestDue);
-    //         }
-    //     } else {
-    //         if (_amount < payoffAmount) {
-    //             forFeesAndInterest = feesAndInterestDue;
-    //             forPrincipal = uint96(_amount - feesAndInterestDue);
-    //         } else {
-    //             forFeesAndInterest = feesAndInterestDue;
-    //             forPrincipal = uint96(payoffAmount - feesAndInterestDue);
-    //         }
-    //     }
-
-    //     dueDate = uint64(
-    //         _cr.dueDate + periodsPassed * _cr.intervalInDays * SECONDS_IN_A_DAY
-    //     );
-    //     // console.log(
-    //     //     "Before return from applyPayment(), unbilledPrincipal=",
-    //     //     unbilledPrincipal
-    //     // );
-    //     // console.log("dueDate=", dueDate);
-    //     // console.log("totalDue=", totalDue);
-    //     // console.log("feesAndInterestDue=", feesAndInterestDue);
-    //     // console.log("periodsPassed=", periodsPassed);
-    //     // console.log("amountToCollect=", amountToCollect);
-    // }
-
-    /**
      * @notice Gets the current total due, fees and interest due, and payoff amount
      * @dev the difference between totalDue and feesAndInterestDue is required principal payment
      * @dev payoffAmount is good until the next statement date. It includes the interest for the
@@ -196,15 +124,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint96 unbilledPrincipal
         )
     {
-        console.log(
-            "\nAt the top of getDueInfo, block.timestamp=",
-            block.timestamp
-        );
-        _cr.printCreditInfo();
-
         // Without a cron job, the user may have missed multiple payments.
         if (block.timestamp < _cr.dueDate) {
-            // console.log("Not late");
             payoffAmount = uint96(
                 int96(
                     _cr.feesAndInterestDue +
@@ -212,7 +133,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
                         calcPayoffInterest(_cr)
                 ) + _cr.correction
             );
-            console.log("Payoff amount=", payoffAmount);
             return (
                 0,
                 _cr.feesAndInterestDue,
@@ -227,13 +147,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
             (block.timestamp - _cr.dueDate) /
             (_cr.intervalInDays * SECONDS_IN_A_DAY);
 
-        console.log("\nPeriods passed: ", periodsPassed);
-
         uint256 i;
         uint256 fees;
         uint256 interest;
         for (i = 0; i < periodsPassed; i++) {
-            console.log("\ni=", i);
             if (_cr.totalDue > 0)
                 fees = calcLateFee(
                     _cr.dueDate + i * _cr.intervalInDays * SECONDS_IN_A_DAY,
@@ -241,12 +158,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                     _cr.unbilledPrincipal + _cr.totalDue
                 );
 
-            console.log("New fees=", fees);
             _cr.unbilledPrincipal += _cr.totalDue;
-            console.log(
-                "beginning of calculating interest, _cr.unbilledPrincipal=",
-                _cr.unbilledPrincipal
-            );
             interest =
                 (_cr.unbilledPrincipal *
                     _cr.aprInBps *
@@ -254,7 +166,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
                     SECONDS_IN_A_DAY) /
                 SECONDS_IN_A_YEAR /
                 BPS_DIVIDER;
-            console.log("New interest=", interest);
 
             // If r.correction is negative, its absolute value is guaranteed to be
             // no more than interest. Thus, the following statement is safe.
@@ -269,9 +180,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
             _cr.unbilledPrincipal = uint96(
                 _cr.unbilledPrincipal - principalToBill
             );
-            console.log("principalToBill=", principalToBill);
-            console.log("unbilledPrincipal=", _cr.unbilledPrincipal);
-            console.log("New totalDue=", _cr.totalDue);
             // todo add logic to make sure totalDue meets the min requirement.
         }
 
@@ -283,11 +191,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
         if (periodsPassed >= _cr.remainingPeriods - 1)
             totalDue = uint96(payoffAmount);
 
-        console.log("Before returning from getDueInfo");
-        console.log("periodsPassed=", periodsPassed);
-        console.log("feesAndInterestDue=", _cr.feesAndInterestDue);
-        console.log("totalDue=", _cr.totalDue);
-        console.log("payoffAmount=", payoffAmount);
         return (
             periodsPassed,
             _cr.feesAndInterestDue,
@@ -301,18 +204,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
     // todo add a test to final interest calculation
     function calcPayoffInterest(BS.CreditRecord memory _cr)
         internal
-        view
+        pure
         returns (uint96 payoffInterest)
     {
-        console.log(
-            "In calcPayoffInterest, _cr.unbilledPrincipal=",
-            _cr.unbilledPrincipal
-        );
-        console.log("In calcPayoffInterest, _cr.totalDue=", _cr.totalDue);
-        console.log(
-            "In calcPayoffInterest, _cr.feesAndInterestDue=",
-            _cr.totalDue
-        );
         payoffInterest = uint96(
             ((_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue) *
                 _cr.aprInBps *
@@ -321,7 +215,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 SECONDS_IN_A_YEAR /
                 BPS_DIVIDER
         );
-        console.log("payoffInterest=", payoffInterest);
     }
 
     function calcCorrection(BS.CreditRecord memory _cr, uint256 amount)
@@ -331,43 +224,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
         override
         returns (uint256 correction)
     {
-        console.log("In calcCorrection, block.timestamp=", block.timestamp);
-        console.log("_cr.dueDate=", _cr.dueDate);
-        console.log("_cr.intervalInDays=", _cr.intervalInDays);
         // rounding to days
         uint256 timePassed = block.timestamp -
             (_cr.dueDate - _cr.intervalInDays * SECONDS_IN_A_DAY);
         uint256 numOfDays = timePassed / SECONDS_IN_A_DAY;
         uint256 remainder = timePassed % SECONDS_IN_A_DAY;
         if (remainder > 43200) numOfDays++;
-        console.log("numOfDays = ", numOfDays);
 
-        console.log("\n****IN calcCorrection()****");
-        console.log("amount=", amount);
-        console.log("_cr.aprInBps=", _cr.aprInBps);
-        console.log("numOfDays=", numOfDays);
-        console.log("SECONDS_IN_A_DAY=", SECONDS_IN_A_DAY);
-        console.log("SECONDS_IN_A_YEAR=", SECONDS_IN_A_YEAR);
-        console.log("amount * _cr.aprInBps=", amount * _cr.aprInBps);
-        console.log(
-            "amount * _cr.aprInBps * numOfDays=",
-            amount * _cr.aprInBps * numOfDays
-        );
-        console.log(
-            "amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY=",
-            amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY
-        );
-        console.log(
-            "first division",
-            (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
-                SECONDS_IN_A_YEAR
-        );
-        console.log(
-            "final division=",
-            (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
-                SECONDS_IN_A_YEAR /
-                10000
-        );
         (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
             SECONDS_IN_A_YEAR /
             10000;
@@ -377,73 +240,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
             SECONDS_IN_A_YEAR /
             10000;
     }
-
-    /**
-     * @dev Never accept partial payment for minimal due (interest + fees).
-     */
-    // function getNextPayment(
-    //     BaseStructs.CreditRecord memory _cr,
-    //     uint256 _lastLateFeeDate,
-    //     uint256 _paymentAmount
-    // )
-    //     public
-    //     view
-    //     virtual
-    //     override
-    //     returns (
-    //         uint256 principal,
-    //         uint256 interest,
-    //         uint256 fees,
-    //         bool isLate,
-    //         bool markPaid,
-    //         bool paidOff
-    //     )
-    // {
-    //     fees = calcLateFee(_cr.dueDate, _cr.totalDue, _cr.unbilledPrincipal);
-    //     if (fees > 0) isLate = true;
-    //     interest = (_cr.unbilledPrincipal * _cr.aprInBps) / APR_BPS_DIVIDER;
-
-    //     // final payment
-    //     if (_cr.remainingPeriods == 1) {
-    //         uint256 due = fees + interest + _cr.unbilledPrincipal;
-
-    //         if (_paymentAmount >= due) {
-    //             // Successful payoff. If overpaid, leave overpaid unallocated
-    //             markPaid = true;
-    //             paidOff = true;
-    //             principal = _cr.unbilledPrincipal;
-    //         } else {
-    //             // Not enough to cover interest and late fees, do not accept any payment
-    //             markPaid = false;
-    //             fees = 0;
-    //             interest = 0;
-    //         }
-    //     } else {
-    //         uint256 due = _cr.totalDue + fees;
-
-    //         if (_paymentAmount >= due) {
-    //             markPaid = true;
-
-    //             // Check if amount is good enough for payoff
-    //             uint256 forPrincipal = _paymentAmount - interest - fees;
-
-    //             if (forPrincipal >= _cr.unbilledPrincipal) {
-    //                 // Early payoff
-    //                 principal = _cr.unbilledPrincipal;
-    //                 paidOff = true;
-    //             } else {
-    //                 // Not enough for payoff, apply extra payment for principal
-    //                 principal = forPrincipal;
-    //             }
-    //         } else {
-    //             // Not enough to cover the total due, reject the payment.
-    //             markPaid = false;
-    //             fees = 0;
-    //             interest = 0;
-    //         }
-    //     }
-    //     return (principal, interest, fees, isLate, markPaid, paidOff);
-    // }
 
     /// returns the four fields for fees. The last two fields are unused. Kept it for compatibility.
     function getFees()

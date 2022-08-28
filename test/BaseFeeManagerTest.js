@@ -164,7 +164,6 @@ describe("Base Fee Manager", function() {
         it("IntOnly", async function() {
           await feeManager.connect(poolOwner).setMinPrincipalRateInBps(0);
           let r = await feeManager.getDueInfo(record);
-          console.log("r=", r);
           checkResult(r, 1, 4, 4, 408);
         });
         it("WithMinPrincipal", async function() {

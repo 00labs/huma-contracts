@@ -230,7 +230,7 @@ describe("Base Credit Pool", function() {
 
       it("Prevent loan funding before approval", async function() {
         await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-          "CREDIT_NOT_APPROVED"
+          "NOT_APPROVED_OR_IN_GOOD_STANDING"
         );
       });
 
@@ -337,7 +337,7 @@ describe("Base Credit Pool", function() {
         await poolContract.triggerDefault(borrower.address);
 
         expect(await poolContract.withdrawableFundsOf(owner.address)).to.be.within(3, 5); // target 4
-        expect(await poolContract.withdrawableFundsOf(lender.address)).to.be.within(11, 13); // target 12
+        expect(await poolContract.withdrawableFundsOf(lender.address)).to.be.within(11, 14); // target 12
       });
     });
   });

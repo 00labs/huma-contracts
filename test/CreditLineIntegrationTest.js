@@ -96,7 +96,7 @@ async function deployAndSetupPool(principalRateInBps) {
   await poolContract.connect(lender).deposit(10000);
 }
 
-describe.only("Credit Line Integration Test", async function() {
+describe("Credit Line Integration Test", async function() {
   before(async function() {
     [owner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
 
@@ -150,10 +150,6 @@ describe.only("Credit Line Integration Test", async function() {
     advanceClock(15);
     let dueDate = initialTimestamp + 2592000 * 2;
 
-    // let applyPaymentResult = await feeManager.applyPayment(record, 230);
-    // console.log("applyPaymentResult=", applyPaymentResult);
-    // checkApplyPaymentResult(applyPaymentResult, 3800, dueDate, 0, 0, 1, 230);
-
     await testToken.connect(borrower).approve(poolContract.address, 230);
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 230);
     record = await poolContract.creditRecordMapping(borrower.address);
@@ -175,10 +171,6 @@ describe.only("Credit Line Integration Test", async function() {
 
     let dueDate = initialTimestamp + 2592000 * 3;
 
-    // let applyPaymentResult = await feeManager.applyPayment(record, 100);
-    // console.log("applyPaymentResult=", applyPaymentResult);
-    // checkApplyPaymentResult(applyPaymentResult, 3610, dueDate, 129, 0, 1, 100);
-
     await testToken.connect(borrower).approve(poolContract.address, 100);
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 100);
     record = await poolContract.creditRecordMapping(borrower.address);
@@ -198,10 +190,6 @@ describe.only("Credit Line Integration Test", async function() {
     advanceClock(15);
     let dueDate = initialTimestamp + 2592000 * 4;
 
-    // let applyPaymentResult = await feeManager.applyPayment(record, 500);
-    // console.log("applyPaymentResult=", applyPaymentResult);
-    // checkApplyPaymentResult(applyPaymentResult, 3482, dueDate, 0, 0, 1, 500);
-
     await testToken.connect(borrower).approve(poolContract.address, 500);
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 500);
     record = await poolContract.creditRecordMapping(borrower.address);
@@ -212,10 +200,6 @@ describe.only("Credit Line Integration Test", async function() {
     advanceClock(5);
 
     let dueDate = initialTimestamp + 2592000 * 4;
-
-    // let applyPaymentResult = await feeManager.applyPayment(record, 400);
-    // console.log("applyPaymentResult=", applyPaymentResult);
-    // checkApplyPaymentResult(applyPaymentResult, 3082, dueDate, 0, 0, 0, 400);
 
     await testToken.connect(borrower).approve(poolContract.address, 400);
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 400);
@@ -258,5 +242,33 @@ describe.only("Credit Line Integration Test", async function() {
     await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 3807);
     record = await poolContract.creditRecordMapping(borrower.address);
     checkRecord(record, 5000, 0, dueDate, 0, 0, 0, 0, 5, 1217, 30, 3);
+  });
+
+  it("Day 330: Borrow again", async function() {
+    advanceClock(105);
+    let dueDate = initialTimestamp + 2592000 * 12;
+
+    await testToken.connect(owner).approve(poolContract.address, 4000);
+    await poolContract.connect(borrower).drawdown(4000);
+    record = await poolContract.creditRecordMapping(borrower.address);
+    checkRecord(record, 5000, 4000, dueDate, 0, 0, 0, 0, 1, 1217, 30, 3);
+  });
+
+  it("Day 360: Final statement, all principal due", async function() {
+    advanceClock(30);
+    let r = await feeManager.getDueInfo(record);
+    checkResult(r, 1, 40, 240, 4080, 3800);
+  });
+
+  it("Day 370: Additional drawdown blocked", async function() {
+    advanceClock(10);
+    await testToken.connect(owner).approve(poolContract.address, 400);
+    await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
+      "CREDIT_LINE_EXPIRED"
+    );
+  });
+
+  it("Day 375: Payoff, credit line closed", async function() {
+    advanceClock(5);
   });
 });

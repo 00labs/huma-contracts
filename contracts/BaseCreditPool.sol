@@ -186,29 +186,37 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // todo 8/23 need to move some tests from requestCredit() to drawdown()
         require(_borrowAmount >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
-        require(isApproved(_borrower), "CREDIT_NOT_APPROVED");
-
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-        console.log("In drawdown...");
-        cr.printCreditInfo();
+
+        require(
+            cr.state == BS.CreditState.Approved ||
+                cr.state == BS.CreditState.GoodStanding,
+            "NOT_APPROVED_OR_IN_GOOD_STANDING"
+        );
+
         // todo 8/23 add a test for this check
         require(
             _borrowAmount <= cr.creditLimit - cr.unbilledPrincipal,
             "EXCEEDED_CREDIT_LMIIT"
         );
-        // todo 8/23 add a check to make sure the account is in good standing.
 
-        cr.unbilledPrincipal = uint96(
-            uint256(cr.unbilledPrincipal) + _borrowAmount
-        );
-
-        // Set the due date to be one billing cycle away if this is the first drawdown
-        console.log("In drawdown, block.timestamp=", block.timestamp);
+        // Set the due date to be one billing cycle ahead if this is the first drawdown
         if (cr.dueDate == 0) {
             cr.dueDate = uint64(
                 block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
             );
+        } else if (block.timestamp > cr.dueDate) {
+            uint256 periodsPassed;
+            uint96 payoffAmount;
+            (periodsPassed, payoffAmount) = _updateDueInfo(_borrower);
+            cr = creditRecordMapping[_borrower];
+
+            require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
         }
+
+        cr.unbilledPrincipal = uint96(
+            uint256(cr.unbilledPrincipal) + _borrowAmount
+        );
 
         // With drawdown, balance increases, period-end interest charge will be higher than
         // it should be, thus record a negative correction to be applied at the end of the period
@@ -217,8 +225,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 IFeeManager(feeManagerAddress).calcCorrection(cr, _borrowAmount)
             )
         );
-        console.log("In drawdown, cr.correction is:");
-        console.logInt(cr.correction);
 
         cr.state = BS.CreditState.GoodStanding;
 
@@ -275,10 +281,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
         poolToken.safeTransfer(treasuryAddress, protocolFee);
         poolToken.safeTransfer(_borrower, amtToBorrower);
-
-        // console.log("At the end of drawdown...");
-        // console.log("block.timestamp=", block.timestamp);
-        // creditRecordMapping[_borrower].printCreditInfo();
     }
 
     /**
@@ -294,90 +296,51 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     ) external virtual override {
         protocolAndPoolOn();
 
-        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-
         require(_asset == address(poolToken), "WRONG_ASSET");
         require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
-        // todo 8/23 check to see if this condition is still needed
-        require(
-            cr.unbilledPrincipal > 0 && cr.remainingPeriods > 0,
-            "LOAN_PAID_OFF_ALREADY"
-        );
 
         uint256 periodsPassed;
-        uint96 feesAndInterestDue;
-        uint96 totalDue;
         uint96 payoffAmount;
-        (
-            periodsPassed,
-            feesAndInterestDue,
-            totalDue,
-            payoffAmount,
-            cr.unbilledPrincipal
-        ) = IFeeManager(feeManagerAddress).getDueInfo(cr);
+        (periodsPassed, payoffAmount) = _updateDueInfo(_borrower);
+        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        // todo 8/23 check to see if this condition is still needed
+        // require(
+        //     cr.unbilledPrincipal > 0 && cr.remainingPeriods > 0,
+        //     "LOAN_PAID_OFF_ALREADY"
+        // );
 
         uint256 principalPayment;
         uint256 amountToCollect;
 
-        console.log("cr.unbilledPrincipal=", cr.unbilledPrincipal);
-        console.log("cr.totalDue=", cr.totalDue);
-        console.log(
-            "totalDue - feesAndInterestDue=",
-            totalDue - feesAndInterestDue
-        );
-
-        // cr.unbilledPrincipal =
-        //     cr.unbilledPrincipal +
-        //     cr.totalDue -
-        //     (totalDue - feesAndInterestDue);
-
-        if (_amount < totalDue) {
+        if (_amount < cr.totalDue) {
             amountToCollect = _amount;
-            cr.totalDue = uint96(totalDue - _amount);
+            cr.totalDue = uint96(cr.totalDue - _amount);
 
-            if (_amount <= feesAndInterestDue) {
-                cr.feesAndInterestDue = uint96(feesAndInterestDue - _amount);
+            if (_amount <= cr.feesAndInterestDue) {
+                cr.feesAndInterestDue = uint96(cr.feesAndInterestDue - _amount);
             } else {
                 cr.feesAndInterestDue = 0;
-                principalPayment = _amount - feesAndInterestDue;
+                principalPayment = _amount - cr.feesAndInterestDue;
             }
         } else {
-            cr.feesAndInterestDue = 0;
-            cr.totalDue = 0;
             if (_amount < payoffAmount) {
                 amountToCollect = _amount;
-                principalPayment = _amount - feesAndInterestDue;
+                principalPayment = _amount - cr.feesAndInterestDue;
                 cr.unbilledPrincipal = uint96(
-                    cr.unbilledPrincipal - (_amount - totalDue)
+                    cr.unbilledPrincipal - (_amount - cr.totalDue)
                 );
             } else {
-                console.log("cr.unbilledPrincipal=", cr.unbilledPrincipal);
-                console.log("totalDue=", totalDue);
-                console.log("feesAndInterestDue=", feesAndInterestDue);
                 principalPayment =
                     cr.unbilledPrincipal +
-                    totalDue -
-                    feesAndInterestDue;
-                console.log("principalPayment=", principalPayment);
+                    cr.totalDue -
+                    cr.feesAndInterestDue;
                 cr.unbilledPrincipal = 0;
-                // note need to check to make sure the payoff interest is included.
                 amountToCollect = payoffAmount;
             }
-        }
-
-        cr.dueDate = uint64(
-            cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY
-        );
-        cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
-
-        if (cr.totalDue == 0) {
+            cr.feesAndInterestDue = 0;
+            cr.totalDue = 0;
             cr.missedPeriods = 0;
             cr.state = BS.CreditState.GoodStanding;
-        } else {
-            // note the design of missedPeriods is awkward. need to find a simpler solution
-            cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
-            if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
-            //todo add configuration on when to consider as default.
         }
 
         // Correction is used when moving to a new payment cycle, ready for reset.
@@ -395,8 +358,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 )
             );
         }
-        console.log("in makePayment, correction=");
-        console.logInt(cr.correction);
         if (amountToCollect == payoffAmount) {
             amountToCollect = amountToCollect - uint256(uint96(cr.correction));
             cr.correction = 0;
@@ -406,17 +367,47 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         // Distribute income
         // todo 8/23 need to apply logic for protocol fee
-        distributeIncome(feesAndInterestDue);
+        if (cr.feesAndInterestDue > amountToCollect)
+            distributeIncome(cr.feesAndInterestDue);
+        else distributeIncome(amountToCollect);
 
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             IERC20 token = IERC20(poolToken);
-            console.log("Before transfer:");
-            console.log(token.balanceOf(msg.sender));
-            console.log(token.allowance(msg.sender, address(this)));
-            console.log("amount collect", amountToCollect);
             token.transferFrom(msg.sender, address(this), amountToCollect);
         }
+    }
+
+    function _updateDueInfo(address _borrower)
+        internal
+        virtual
+        returns (uint256 periodsPassed, uint96 payoffAmount)
+    {
+        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        (
+            periodsPassed,
+            cr.feesAndInterestDue,
+            cr.totalDue,
+            payoffAmount,
+            cr.unbilledPrincipal
+        ) = IFeeManager(feeManagerAddress).getDueInfo(cr);
+
+        cr.dueDate = uint64(
+            cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY
+        );
+        cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
+
+        if (cr.totalDue == 0) {
+            cr.missedPeriods = 0;
+            cr.state = BS.CreditState.GoodStanding;
+        } else {
+            // note the design of missedPeriods is awkward. need to find a simpler solution
+            cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
+            if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
+        }
+        creditRecordMapping[_borrower] = cr;
+
+        return (periodsPassed, payoffAmount);
     }
 
     /**
