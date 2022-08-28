@@ -31,15 +31,6 @@ let checkRecord = function(r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
   if (v11 != "SKIP") expect(r.state).to.equal(v11);
 };
 
-let checkApplyPaymentResult = function(result, v1, v2, v3, v4, v5, v6) {
-  expect(result.unbilledPrincipal).to.equal(v1);
-  expect(result.dueDate).to.be.within(v2 - 60, v2 + 60);
-  expect(result.totalDue).to.equal(v3);
-  expect(result.feesAndInterestDue).to.equal(v4);
-  expect(result.periodsPassed).to.equal(v5);
-  expect(result.amountToCollect).to.equal(v6);
-};
-
 let checkResult = function(r, v1, v2, v3, v4) {
   expect(r.periodsPassed).to.equal(v1);
   expect(r.feesAndInterestDue).to.equal(v2);
