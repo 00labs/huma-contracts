@@ -304,9 +304,9 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             "LOAN_PAID_OFF_ALREADY"
         );
 
-        uint96 oldBalance = cr.unbilledPrincipal +
-            cr.totalDue -
-            cr.feesAndInterestDue;
+        uint96 oldPrincipal = cr.unbilledPrincipal +
+            (cr.totalDue - cr.feesAndInterestDue);
+
         uint256 platformIncome;
         uint256 amountToCollect;
         uint256 periodsPassed;
@@ -323,23 +323,22 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         console.log("in makePayment, after applyPayment");
 
-        // Existing correction should have been consumed by applyPayment().
-        // If there is principal payment, calcuate new correction, otherwise, set it to 0.
-        // todo add a test when there are multiple payments towards paying down principal
+        // applyPayment() has factored in and consumed all existing correction.
+        cr.correction = 0;
+
+        // If there is principal payment, calcuate new correction
         if (
-            oldBalance >
-            cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
+            oldPrincipal >
+            cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue)
         ) {
             cr.correction = int96(
                 uint96(
                     IFeeManager(feeManagerAddress).calcCorrection(
                         cr,
-                        oldBalance - cr.unbilledPrincipal
+                        oldPrincipal - cr.unbilledPrincipal
                     )
                 )
             );
-        } else {
-            cr.correction = 0;
         }
 
         console.log("in makePayment, correction=");
