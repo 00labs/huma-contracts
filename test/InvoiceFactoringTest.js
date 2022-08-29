@@ -6,7 +6,7 @@ const { solidity } = require("ethereum-waffle");
 use(solidity);
 
 const getInvoiceContractFromAddress = async function(address, signer) {
-  return ethers.getContractAt("HumaInvoiceFactoring", address, signer);
+  return ethers.getContractAt("InvoiceFactoring", address, signer);
 };
 
 // Let us limit the depth of describe to be 2.
@@ -57,8 +57,8 @@ describe("Huma Invoice Financing", function() {
     const TestToken = await ethers.getContractFactory("TestToken");
     testTokenContract = await TestToken.deploy();
 
-    const HumaInvoiceFactoring = await ethers.getContractFactory("HumaInvoiceFactoring");
-    invoiceContract = await HumaInvoiceFactoring.deploy(
+    const InvoiceFactoring = await ethers.getContractFactory("InvoiceFactoring");
+    invoiceContract = await InvoiceFactoring.deploy(
       testTokenContract.address,
       humaConfigContract.address,
       feeManagerContract.address,
@@ -112,7 +112,7 @@ describe("Huma Invoice Financing", function() {
       await expect(
         invoiceContract
           .connect(lender)
-          .recordPreapprovedCreditRequest(
+          .recordPreapprovedCredit(
             borrower.address,
             400,
             ethers.constants.AddressZero,
@@ -130,7 +130,7 @@ describe("Huma Invoice Financing", function() {
       await expect(
         invoiceContract
           .connect(evaluationAgent)
-          .recordPreapprovedCreditRequest(
+          .recordPreapprovedCredit(
             borrower.address,
             400,
             ethers.constants.AddressZero,
@@ -148,7 +148,7 @@ describe("Huma Invoice Financing", function() {
       await expect(
         invoiceContract
           .connect(evaluationAgent)
-          .recordPreapprovedCreditRequest(
+          .recordPreapprovedCredit(
             borrower.address,
             400,
             ethers.constants.AddressZero,
@@ -164,7 +164,7 @@ describe("Huma Invoice Financing", function() {
       await expect(
         invoiceContract
           .connect(evaluationAgent)
-          .recordPreapprovedCreditRequest(
+          .recordPreapprovedCredit(
             borrower.address,
             9999,
             ethers.constants.AddressZero,
@@ -183,15 +183,7 @@ describe("Huma Invoice Financing", function() {
 
       await invoiceContract
         .connect(evaluationAgent)
-        .recordPreapprovedCreditRequest(
-          borrower.address,
-          400,
-          ethers.constants.AddressZero,
-          0,
-          0,
-          30,
-          1
-        );
+        .recordPreapprovedCredit(borrower.address, 400, ethers.constants.AddressZero, 0, 0, 30, 1);
 
       const creditInfo = await invoiceContract.getCreditInformation(borrower.address);
 
@@ -215,15 +207,7 @@ describe("Huma Invoice Financing", function() {
 
       await invoiceContract
         .connect(evaluationAgent)
-        .recordPreapprovedCreditRequest(
-          borrower.address,
-          400,
-          ethers.constants.AddressZero,
-          0,
-          0,
-          30,
-          1
-        );
+        .recordPreapprovedCredit(borrower.address, 400, ethers.constants.AddressZero, 0, 0, 30, 1);
 
       await invoiceContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
 
@@ -241,15 +225,7 @@ describe("Huma Invoice Financing", function() {
 
       await invoiceContract
         .connect(evaluationAgent)
-        .recordPreapprovedCreditRequest(
-          borrower.address,
-          400,
-          ethers.constants.AddressZero,
-          0,
-          0,
-          30,
-          1
-        );
+        .recordPreapprovedCredit(borrower.address, 400, ethers.constants.AddressZero, 0, 0, 30, 1);
 
       // Mint InvoiceNFT to the borrower
       const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
@@ -368,7 +344,7 @@ describe("Huma Invoice Financing", function() {
       await invoiceContract.connect(lender).deposit(300);
       await invoiceContract
         .connect(evaluationAgent)
-        .recordPreapprovedCreditRequest(
+        .recordPreapprovedCredit(
           borrower.address,
           400,
           invoiceNFTContract.address,
@@ -411,7 +387,7 @@ describe("Huma Invoice Financing", function() {
       await expect(
         invoiceContract
           .connect(borrower)
-          .receivedPayment(borrower.address, testTokenContract.address, 500)
+          .onReceivedPayment(borrower.address, testTokenContract.address, 500)
       ).to.be.revertedWith("APPROVER_REQUIRED");
     });
 
@@ -436,7 +412,7 @@ describe("Huma Invoice Financing", function() {
 
       await invoiceContract
         .connect(evaluationAgent)
-        .receivedPayment(borrower.address, testTokenContract.address, 500);
+        .onReceivedPayment(borrower.address, testTokenContract.address, 500);
 
       expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
       expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
