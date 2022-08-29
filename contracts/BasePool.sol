@@ -365,22 +365,6 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         );
     }
 
-    function getPoolFees()
-        external
-        view
-        virtual
-        returns (
-            uint256 _frontLoadingFeeFlat,
-            uint256 _frontLoadingFeeBps,
-            uint256 _lateFeeFlat,
-            uint256 _lateFeeBps,
-            uint256 _unused1,
-            uint256 _unused2
-        )
-    {
-        return IFeeManager(feeManagerAddress).getFees();
-    }
-
     // Allow for sensitive pool functions only to be called by
     // the pool owner and the huma master admin
     function onlyOwnerOrHumaMasterAdmin() internal view {

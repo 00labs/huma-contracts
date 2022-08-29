@@ -85,9 +85,7 @@ interface IFeeManager {
             uint256 frontLoadingFeeFlat,
             uint256 frontLoadingFeeBps,
             uint256 lateFeeFlat,
-            uint256 lateFeeBps,
-            uint256 unused1,
-            uint256 unused2
+            uint256 lateFeeBps
         );
 
     function getRecurringPayment(BaseStructs.CreditRecord memory _cr)

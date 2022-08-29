@@ -248,21 +248,17 @@ contract BaseFeeManager is IFeeManager, Ownable {
         virtual
         override
         returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint256 _frontLoadingFeeFlat,
+            uint256 _frontLoadingFeeBps,
+            uint256 _lateFeeFlat,
+            uint256 _lateFeeBps
         )
     {
         return (
             frontLoadingFeeFlat,
             frontLoadingFeeBps,
             lateFeeFlat,
-            lateFeeBps,
-            0,
-            0
+            lateFeeBps
         );
     }
 
