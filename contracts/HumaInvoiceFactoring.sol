@@ -109,36 +109,4 @@ contract HumaInvoiceFactoring is IPreapprovedCredit, BaseCreditPool {
 
         return true;
     }
-
-    function originatePreapprovedCredit(
-        address borrower,
-        uint256 borrowAmount,
-        address collateralAsset,
-        uint256 collateralParam,
-        uint256 collateralAmount,
-        uint256 _intervalInDays,
-        uint256 _remainingPeriods
-    ) external {
-        // There are repeated calls to onlyEvaluationAgents() here and the called functions.
-        // This is intentional in case we make changes and forget to add access control
-        onlyEvaluationAgents();
-
-        recordPreapprovedCreditRequest(
-            borrower,
-            borrowAmount,
-            collateralAsset,
-            collateralParam,
-            collateralAmount,
-            _intervalInDays,
-            _remainingPeriods
-        );
-
-        drawdownWithCollateral(
-            borrower,
-            borrowAmount,
-            collateralAsset,
-            collateralParam,
-            collateralAmount
-        );
-    }
 }
