@@ -28,14 +28,7 @@ describe("Base Pool - LP and Admin functions", function() {
   let evaluationAgent;
 
   before(async function() {
-    [
-      owner,
-      lender,
-      borrower,
-      borrower2,
-      treasury,
-      evaluationAgent
-    ] = await ethers.getSigners();
+    [owner, lender, borrower, borrower2, treasury, evaluationAgent] = await ethers.getSigners();
 
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     humaConfigContract = await HumaConfig.deploy(treasury.address);
@@ -70,14 +63,10 @@ describe("Base Pool - LP and Admin functions", function() {
 
     await poolContract.makeInitialDeposit(100);
 
-    const lenderInfo = await poolContract
-      .connect(owner)
-      .lenderInfo(owner.address);
+    const lenderInfo = await poolContract.connect(owner).lenderInfo(owner.address);
     expect(lenderInfo.principalAmount).to.equal(100);
     expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-    expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-      100
-    );
+    expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
     await poolContract.addEvaluationAgent(evaluationAgent.address);
 
@@ -93,19 +82,15 @@ describe("Base Pool - LP and Admin functions", function() {
     // todo Verify only pool admins can deployNewPool
 
     it("Should have correct liquidity post beforeEach() run", async function() {
-      const lenderInfo = await poolContract
-        .connect(owner)
-        .lenderInfo(owner.address);
+      const lenderInfo = await poolContract.connect(owner).lenderInfo(owner.address);
       expect(lenderInfo.principalAmount).to.equal(100);
       expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
 
-      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-        100
-      );
+      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
       expect(await poolContract.balanceOf(owner.address)).to.equal(100);
 
-      const fees = await poolContract.getPoolFees();
+      const fees = await feeManagerContract.getFees();
 
       expect(fees._frontLoadingFeeFlat).to.equal(10);
       expect(fees._frontLoadingFeeBps).to.equal(100);
@@ -153,9 +138,7 @@ describe("Base Pool - LP and Admin functions", function() {
     it("Shall be able to set new value for the default grace period", async function() {
       await poolContract.setPoolDefaultGracePeriod(30);
 
-      expect(await poolContract.poolDefaultGracePeriodInSeconds()).to.equal(
-        30 * 24 * 3600
-      );
+      expect(await poolContract.poolDefaultGracePeriodInSeconds()).to.equal(30 * 24 * 3600);
     });
   });
 
@@ -166,16 +149,14 @@ describe("Base Pool - LP and Admin functions", function() {
 
     it("Cannot deposit while protocol is paused", async function() {
       await humaConfigContract.connect(owner).pauseProtocol();
-      await expect(
-        poolContract.connect(lender).deposit(100)
-      ).to.be.revertedWith("PROTOCOL_PAUSED");
+      await expect(poolContract.connect(lender).deposit(100)).to.be.revertedWith(
+        "PROTOCOL_PAUSED"
+      );
     });
 
     it("Cannot deposit while pool is off", async function() {
       await poolContract.disablePool();
-      await expect(
-        poolContract.connect(lender).deposit(100)
-      ).to.be.revertedWith("POOL_NOT_ON");
+      await expect(poolContract.connect(lender).deposit(100)).to.be.revertedWith("POOL_NOT_ON");
     });
 
     it("Cannot deposit when pool max liquidity has been reached", async function() {
@@ -188,14 +169,10 @@ describe("Base Pool - LP and Admin functions", function() {
 
     it("Pool deposit works correctly", async function() {
       await poolContract.connect(lender).deposit(100);
-      const lenderInfo = await poolContract
-        .connect(lender)
-        .lenderInfo(lender.address);
+      const lenderInfo = await poolContract.connect(lender).lenderInfo(lender.address);
       expect(lenderInfo.principalAmount).to.equal(100);
       expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-        200
-      );
+      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(200);
 
       expect(await poolContract.balanceOf(lender.address)).to.equal(100);
       expect(await poolContract.balanceOf(owner.address)).to.equal(100);
@@ -215,9 +192,9 @@ describe("Base Pool - LP and Admin functions", function() {
 
     it("Should not withdraw while protocol is paused", async function() {
       await humaConfigContract.connect(owner).pauseProtocol();
-      await expect(
-        poolContract.connect(lender).withdraw(100)
-      ).to.be.revertedWith("PROTOCOL_PAUSED");
+      await expect(poolContract.connect(lender).withdraw(100)).to.be.revertedWith(
+        "PROTOCOL_PAUSED"
+      );
     });
 
     it("Should reject if the protocol is off", async function() {
@@ -229,38 +206,30 @@ describe("Base Pool - LP and Admin functions", function() {
     });
 
     it("Should reject when withdraw too early", async function() {
-      await expect(
-        poolContract.connect(lender).withdraw(100)
-      ).to.be.revertedWith("WITHDRAW_TOO_SOON");
+      await expect(poolContract.connect(lender).withdraw(100)).to.be.revertedWith(
+        "WITHDRAW_TOO_SOON"
+      );
     });
 
     it("Should reject if the withdraw amount is higher than deposit", async function() {
       const loanWithdrawalLockout = await poolContract.withdrawalLockoutPeriodInSeconds();
-      await ethers.provider.send("evm_increaseTime", [
-        loanWithdrawalLockout.toNumber()
-      ]);
-      await expect(
-        poolContract.connect(lender).withdraw(500)
-      ).to.be.revertedWith("WITHDRAW_AMT_TOO_GREAT");
+      await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
+      await expect(poolContract.connect(lender).withdraw(500)).to.be.revertedWith(
+        "WITHDRAW_AMT_TOO_GREAT"
+      );
     });
 
     it("Pool withdrawal works correctly", async function() {
       // Increment block by lockout period
       const loanWithdrawalLockout = await poolContract.withdrawalLockoutPeriodInSeconds();
-      await ethers.provider.send("evm_increaseTime", [
-        loanWithdrawalLockout.toNumber()
-      ]);
+      await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
 
       await poolContract.connect(lender).withdraw(100);
 
-      const lenderInfo = await poolContract
-        .connect(lender)
-        .lenderInfo(lender.address);
+      const lenderInfo = await poolContract.connect(lender).lenderInfo(lender.address);
       expect(lenderInfo.principalAmount).to.equal(0);
 
-      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-        100
-      );
+      expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
       expect(await poolContract.balanceOf(lender.address)).to.equal(0);
       expect(await poolContract.balanceOf(owner.address)).to.equal(100);
