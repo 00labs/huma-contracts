@@ -2,6 +2,8 @@
 pragma solidity >=0.8.4 <0.9.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "./interfaces/ICredit.sol";
 import {BaseStructs as BS} from "./libraries/BaseStructs.sol";
