@@ -23,9 +23,9 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     using ERC165Checker for address;
     using BS for BS.CreditRecord;
 
-    // mapping from wallet address to the credit record
+    /// mapping from wallet address to the credit record
     mapping(address => BS.CreditRecord) public creditRecordMapping;
-    // mapping from wallet address to the collateral supplied by this wallet
+    /// mapping from wallet address to the collateral supplied by this wallet
     mapping(address => BS.CollateralInfo) internal collateralInfoMapping;
 
     constructor(
@@ -48,12 +48,18 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
     /**
      * @notice accepts a credit request from msg.sender
+     * @param _creditLimit the credit line (number of pool token)
+     * @param _intervalInDays duration of a payment cycle, typically 30 days
+     * @param _numOfPayments number of cycles for the credit line to be valid.
      */
     function requestCredit(
         uint256 _creditLimit,
         uint256 _intervalInDays,
         uint256 _numOfPayments
     ) external virtual override {
+        // todo _internalInDays and _numOfPayments are set by the pool owner.
+        // Need to add these two in pool settings and remove them from the constructor parameter.
+
         // Open access to the borrower
         // Parameter and condition validation happens in initiate()
         initiate(
@@ -69,7 +75,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     }
 
     /**
-     * @notice initiation of a credit
+     * @notice initiation of a credit line
      * @param _borrower the address of the borrower
      * @param _creditLimit the amount of the liquidity asset that the borrower obtains
      * @param _collateralAsset the address of the collateral asset.
@@ -118,14 +124,24 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
     /**
      * Approves the credit request with the terms on record.
+     * @dev only Evaluation Agent can call
      */
     function approveCredit(address _borrower) public virtual override {
         protocolAndPoolOn();
         onlyEvaluationAgents();
-        // question shall we check to make sure the credit limit is lowered than the allowed max
+
+        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        require(cr.creditLimit <= maxCreditLine, "GREATER_THAN_LIMIT");
+
         creditRecordMapping[_borrower].state = BS.CreditState.Approved;
     }
 
+    /**
+     * @notice changes the limit of the borrower's credit line
+     * @param _borrower the owner of the credit line
+     * @param _newLine the new limit of the line in the unit of pool token
+     * @dev only Evaluation Agent can call
+     */
     function changeCreditLine(address _borrower, uint256 _newLine) public {
         protocolAndPoolOn();
         onlyEvaluationAgents();
@@ -140,6 +156,10 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         creditRecordMapping[_borrower].creditLimit = uint96(_newLine);
     }
 
+    /**
+     * @notice Invalidate the credit line
+     * @dev If the credit limit is 0, we treat the line as deleted.
+     */
     function invalidateApprovedCredit(address _borrower)
         public
         virtual
@@ -165,6 +185,11 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         else return false;
     }
 
+    /**
+     * @notice allows the borrower to borrow against an approved credit line
+     * The borrower can borrow and pay back as many times as they would like.
+     * @param borrowAmount the amount to borrow
+     */
     function drawdown(uint256 borrowAmount) external virtual override {
         // Open access to the borrower
         // Condition validation happens in drawdownWithCollateral()
@@ -172,20 +197,28 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             drawdownWithCollateral(msg.sender, borrowAmount, address(0), 0, 0);
     }
 
+    /**
+     * @notice allows the borrower to borrow using a collateral / covenant
+     * @param _borrower the borrower
+     * @param _borrowAmount the amount to borrow
+     * @param _collateralAsset the contract address of the collateral
+     * @param _collateralParam is additional parameter of the collateral asset, such as NFT Tokenid
+     * @param _collateralAmount the amount of the collateral asset
+     */
     function drawdownWithCollateral(
         address _borrower,
         uint256 _borrowAmount,
         address _collateralAsset,
         uint256 _collateralParam,
-        uint256 _collateralCount
+        uint256 _collateralAmount
     ) public virtual override {
         protocolAndPoolOn();
 
-        // msg.sender needs to be the borrower themselvers or the EA.
+        ///msg.sender needs to be the borrower themselvers or the EA.
         if (msg.sender != _borrower) onlyEvaluationAgents();
 
         // Borrowing amount needs to be higher than min for the pool.
-        // todo 8/23 need to move some tests from requestCredit() to drawdown()
+        // 8/23 need to move some tests from requestCredit() to drawdown()
         require(_borrowAmount >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
@@ -202,7 +235,10 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             "EXCEEDED_CREDIT_LMIIT"
         );
 
-        // Set the due date to be one billing cycle ahead if this is the first drawdown
+        // For the first drawdown, set the first due date exactly one billing cycle away
+        // For existing credit line, the account might have been dormant for months.
+        // Bring the account current by moving forward cycles to allow the due date of
+        // the current cycle to be ahead of block.timestamp.
         if (cr.dueDate == 0) {
             cr.dueDate = uint64(
                 block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
@@ -220,14 +256,15 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             uint256(cr.unbilledPrincipal) + _borrowAmount
         );
 
-        // With drawdown, balance increases, period-end interest charge will be higher than
-        // it should be, thus record a negative correction to be applied at the end of the period
+        // With drawdown, balance increases, interest charge will be higher than it should be,
+        // thus record a negative correction to compensate it at the end of the period
         cr.correction -= int96(
             uint96(
                 IFeeManager(feeManagerAddress).calcCorrection(cr, _borrowAmount)
             )
         );
 
+        // Set account status in good standing
         cr.state = BS.CreditState.GoodStanding;
 
         creditRecordMapping[_borrower] = cr;
@@ -253,7 +290,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 );
             }
             // todo check to make sure the collateral amount meets the requirements
-            ci.collateralAmount = uint88(_collateralCount);
+            ci.collateralAmount = uint88(_collateralAmount);
             ci.collateralParam = _collateralParam;
             collateralInfoMapping[_borrower] = ci;
         }
@@ -272,7 +309,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 IERC20(_collateralAsset).safeTransferFrom(
                     msg.sender,
                     address(this),
-                    _collateralCount
+                    _collateralAmount
                 );
             } else {
                 revert("COLLATERAL_ASSET_NOT_SUPPORTED");
@@ -303,15 +340,17 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         uint256 periodsPassed;
         uint96 payoffAmount;
+
+        // Bring the account current. This is necessary since the account might have been dormant for
+        // several cycles.
         (periodsPassed, payoffAmount) = _updateDueInfo(_borrower);
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
-        // todo 8/23 check to see if this condition is still needed
-        // require(
-        //     cr.unbilledPrincipal > 0 && cr.remainingPeriods > 0,
-        //     "LOAN_PAID_OFF_ALREADY"
-        // );
 
+        // How many amount will be applied towards principal
         uint256 principalPayment;
+
+        // The amount to be collected from the borrower. When _amount is more than what is needed
+        // for payoff, only the payoff amount will be transferred
         uint256 amountToCollect;
 
         if (_amount < cr.totalDue) {
@@ -360,6 +399,10 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 )
             );
         }
+
+        // `payoffAmount` includes interest for the final billing period.
+        // If the user pays off before the end of the cycle, we will subtract
+        // the `correction` amount in the transfer.
         if (amountToCollect == payoffAmount) {
             amountToCollect = amountToCollect - uint256(uint96(cr.correction));
             cr.correction = 0;
@@ -368,7 +411,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         creditRecordMapping[_borrower] = cr;
 
         // Distribute income
-        // todo 8/23 need to apply logic for protocol fee
+        // todo need to apply logic for protocol fee
         if (cr.feesAndInterestDue > amountToCollect)
             distributeIncome(cr.feesAndInterestDue);
         else distributeIncome(amountToCollect);
@@ -380,12 +423,22 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         }
     }
 
+    /**
+     * @notice updates CreditRecord for `_borrower` using the most up to date information.
+     * @dev this is used in both makePayment() and drawdown() to bring the account current
+     * @dev getDueInfo() gets the due information of the most current cycle. This function
+     * updates the record in creditRecordMapping for `_borrower`
+     */
     function _updateDueInfo(address _borrower)
         internal
         virtual
         returns (uint256 periodsPassed, uint96 payoffAmount)
     {
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+
+        // Gets the up-to-date due information for the borrower. If the account has been
+        // late or dormant for multiple cycles, getDueInfo() will bring it current and
+        // return the most up-to-date due information.
         (
             periodsPassed,
             cr.feesAndInterestDue,
