@@ -2,11 +2,12 @@
 pragma solidity >=0.8.4 <0.9.0;
 
 /**
- * @notice Interface to for contracts that can receive off-contract payback
+ * @notice Interface for contracts to receive payback from sources other than the borrower
  */
 interface IIndirectPayment {
     /**
-     * @notice reports after an off-contract payment is received for the borrower
+     * @notice reports after an payment is received for the borrower from a source
+     * other than the borrower wallet
      */
     function onReceivedPayment(
         address borrower,
