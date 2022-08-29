@@ -4,12 +4,11 @@ pragma solidity >=0.8.4 <0.9.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
+import "./interfaces/IFeeManager.sol";
 import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
-import "./interfaces/IFeeManager.sol";
+
 import "./libraries/BaseStructs.sol";
 
 import "./HumaConfig.sol";
@@ -41,27 +40,30 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
 
-    // the min amount each loan/credit.
+    // the min amount that the borrower can borrow in one transaction
     uint256 internal minBorrowAmount;
 
-    // The maximum credit line in terms of the amount of poolTokens
+    // the maximum credit line for an address in terms of the amount of poolTokens
     uint256 internal maxCreditLine;
 
-    // The interest rate this pool charges for loans
+    // the default APR for the pool in terms of basis points.
     uint256 internal poolAprInBps;
 
-    // The collateral basis percentage required from lenders
+    // Percentage of collateral required for credits in this pool in terms of bais points
+    // For over collateralization, use more than 100%, for no collateral, use 0.
     uint256 internal collateralRequiredInBps;
 
+    // whether the pool is ON or OFF
     PoolStatus public status = PoolStatus.Off;
 
-    // List of evaluation agents who can approve credit requests.
+    // Evaluation Agents (EA) are the risk underwriting agents that associated with the pool.
+    // Expect one pool to have one EA, but the protocol support moultiple.
     mapping(address => bool) public evaluationAgents;
 
-    // How long after the last deposit that a lender needs to wait
-    // before they can withdraw their capital
+    // How long a lender has to wait after the last deposit before they can withdraw
     uint256 public withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS;
 
+    // the grace period at the pool level before a Default can be triggered
     uint256 public poolDefaultGracePeriodInSeconds;
 
     struct LenderInfo {
@@ -78,7 +80,25 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     event LiquidityDeposited(address by, uint256 principal);
     event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
     event PoolDeployed(address _poolAddress);
+    event EvaluationAgentAdded(address agent, address by);
+    event PoolNameChanged(string newName, address by);
+    event PoolDisabled(address by);
+    event PoolEnabled(address by);
+    event PoolDefaultGracePeriodChanged(uint256 _gracePeriodInDays, address by);
+    event WithdrawalLockoutPeriodUpdated(
+        uint256 _lockoutPeriodInDays,
+        address by
+    );
+    event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
 
+    /**
+     * @param _poolToken the token supported by the pool. In v1, only stablecoin is supported.
+     * @param _humaConfig the configurator for the protocol
+     * @param _feeManager support key calculations for each pool
+     * @param _poolName the name for the pool
+     * @param _hdtName the name of the HDT token
+     * @param _hdtSymbol the symbol for the HDT token
+     */
     constructor(
         address _poolToken,
         address _humaConfig,
@@ -106,21 +126,22 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @notice LP deposits to the pool to earn interest, and share losses
      * @param amount the number of `poolToken` to be deposited
      */
-    function makeInitialDeposit(uint256 amount) external virtual override {
-        return _deposit(msg.sender, amount);
-    }
-
     function deposit(uint256 amount) external virtual override {
         protocolAndPoolOn();
-        // todo (by RL) Need to check if the pool is open to msg.sender to deposit
         // todo (by RL) Need to add maximal pool size support and check if it has reached the size
         return _deposit(msg.sender, amount);
     }
 
+    /**
+     * @notice Allows the pool owner to make initial deposit before the pool goes live
+     * @param amount the number of `poolToken` to be deposited
+     */
+    function makeInitialDeposit(uint256 amount) external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        return _deposit(msg.sender, amount);
+    }
+
     function _deposit(address lender, uint256 amount) internal {
-        // Update weighted deposit date:
-        // prevDate + (now - prevDate) * (amount / (balance + amount))
-        // NOTE: prevDate = 0 implies balance = 0, and equation reduces to now
         LenderInfo memory li = lenderInfo[lender];
 
         li.principalAmount += uint96(amount);
@@ -137,7 +158,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     /**
-     * @notice Withdraw principal that was deposited into the pool before in the unit of `poolTokens`
+     * @notice Withdraw capital from the pool in the unit of `poolTokens`
      * @dev Withdrawals are not allowed when 1) the pool withdraw is paused or
      *      2) the LP has not reached lockout period since their last depisit
      *      3) the requested amount is higher than the LP's remaining principal
@@ -178,7 +199,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @notice Withdraw all balance from the pool.
      */
     function withdrawAll() external virtual override {
-        return withdraw(lenderInfo[msg.sender].principalAmount);
+        return withdraw(withdrawableFundsOf(msg.sender));
     }
 
     /********************************************/
@@ -191,6 +212,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     function setPoolName(string memory newName) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         poolName = newName;
+        emit PoolNameChanged(newName, msg.sender);
     }
 
     /**
@@ -201,14 +223,23 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         onlyOwnerOrHumaMasterAdmin();
         denyZeroAddress(agent);
         evaluationAgents[agent] = true;
+        emit EvaluationAgentAdded(agent, msg.sender);
     }
 
+    /**
+     * @notice change the default APR for the pool
+     * @param _aprInBps APR in basis points, use 500 for 5%
+     */
     function setAPR(uint256 _aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(_aprInBps <= 10000, "INVALID_APR");
         poolAprInBps = _aprInBps;
     }
 
+    /**
+     * @notice Set the collateral rate in terms of basis points. 
+     @ param _collateralInBps the percentage. A percentage over 10000 means overcollateralization.
+     */
     function setCollateralRequiredInBps(uint256 _collateralInBps)
         external
         virtual
@@ -221,6 +252,8 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
 
     /**
      * @notice Sets the min and max of each loan/credit allowed by the pool.
+     * @param _minBorrowAmount the min amount allowed to borrow in a transaction
+     * @param _maxCreditLine the max amount of a credit line
      */
     function setMinMaxBorrowAmount(
         uint256 _minBorrowAmount,
@@ -233,17 +266,23 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         maxCreditLine = _maxCreditLine;
     }
 
-    // Reject all future borrow applications and loans. Note that existing
-    // loans will still be processed as expected.
+    /**
+     * @notice turns off the pool
+     * Note that existing loans will still be processed as expected.
+     */
     function disablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.Off;
+        emit PoolDisabled(msg.sender);
     }
 
-    // Allow borrow applications and loans to be processed by this pool.
+    /**
+     * @notice turns on the pool
+     */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         status = PoolStatus.On;
+        emit PoolEnabled(msg.sender);
     }
 
     /**
@@ -257,8 +296,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     {
         onlyOwnerOrHumaMasterAdmin();
         poolDefaultGracePeriodInSeconds = _gracePeriodInDays * SECONDS_IN_A_DAY;
+        emit PoolDefaultGracePeriodChanged(_gracePeriodInDays, msg.sender);
     }
 
+    /**
+     * Sets withdrawal lockout period after the lender makes the last deposit
+     * @param _lockoutPeriodInDays the lockout period in terms of days
+     */
     function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays)
         external
         virtual
@@ -268,10 +312,12 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         withdrawalLockoutPeriodInSeconds =
             _lockoutPeriodInDays *
             SECONDS_IN_A_DAY;
+        emit WithdrawalLockoutPeriodUpdated(_lockoutPeriodInDays, msg.sender);
     }
 
     /**
      * @notice Sets the cap of the pool liquidity.
+     * @param _liquidityCap the upper bound that the pool accepts liquidity from the depositers
      */
     function setPoolLiquidityCap(uint256 _liquidityCap)
         external
@@ -280,8 +326,16 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     {
         onlyOwnerOrHumaMasterAdmin();
         liquidityCap = _liquidityCap;
+        emit PoolLiquidityCapChanged(_liquidityCap, msg.sender);
     }
 
+    /**
+     * Returns a summary information of the pool.
+     * @return token the address of the pool token
+     * @return apr the default APR of the pool
+     * @return minCreditAmount the min amount that one can borrow in a transaction
+     * @return maxCreditAmount the max amount for the credit line
+     */
     function getPoolSummary()
         public
         view
