@@ -175,7 +175,7 @@ describe("Base Fee Manager", function() {
       describe("Late fee scenarios", async function() {
         describe("Late for 1 period", async function() {
           before(async function() {
-            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30 + 10]);
             await ethers.provider.send("evm_mine", []);
           });
           it("IntOnly", async function() {
@@ -238,7 +238,7 @@ describe("Base Fee Manager", function() {
       let r = await feeManager.getDueInfo(record);
       checkResult(r, 0, 0, 0, 4040);
 
-      await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+      await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30 + 10]);
       await ethers.provider.send("evm_mine", []);
     });
     describe("1st statement", async function() {
@@ -251,7 +251,7 @@ describe("Base Fee Manager", function() {
       describe("Late fee scenarios", async function() {
         describe("Late for 1 period", async function() {
           before(async function() {
-            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30 + 10]);
             await ethers.provider.send("evm_mine", []);
           });
           it("WithMinPrincipal", async function() {

@@ -245,8 +245,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             );
         } else if (block.timestamp > cr.dueDate) {
             uint256 periodsPassed;
-            uint96 payoffAmount;
-            (periodsPassed, payoffAmount) = _updateDueInfo(_borrower);
+            (periodsPassed, ) = _updateDueInfo(_borrower);
             cr = creditRecordMapping[_borrower];
 
             require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
