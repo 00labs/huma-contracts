@@ -137,6 +137,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         require(maxCreditLine >= _newLine, "GREATER_THAN_LIMIT");
         require(_newLine >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
+        // TODO, the check condition mismatches the message
         require(creditRecordMapping[_borrower].creditLimit == 0, "CREDIT_LINE_NOT_EXIST");
         creditRecordMapping[_borrower].creditLimit = uint96(_newLine);
     }
@@ -240,17 +241,14 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // Record the collateral info.
         if (_collateralAsset != address(0)) {
             BS.CollateralInfo memory ci = collateralInfoMapping[_borrower];
+
+            // TODO remvoe this check (and _colleteralAsset parameter), use ci.collateralAsset direclty,
+            // if user providers wrong assets, below safeTransferFrom will revert
             if (ci.collateralAsset != address(0)) {
                 require(_collateralAsset == ci.collateralAsset, "COLLATERAL_MISMATCH");
             }
-            // todo check to make sure the collateral amount meets the requirements
-            ci.collateralAmount = uint88(_collateralAmount);
-            ci.collateralParam = _collateralParam;
-            collateralInfoMapping[_borrower] = ci;
-        }
 
-        // // Transfers collateral asset
-        if (_collateralAsset != address(0)) {
+            // transfer assets first
             if (_collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
                 IERC721(_collateralAsset).safeTransferFrom(
                     _borrower,
@@ -259,13 +257,19 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 );
             } else if (_collateralAsset.supportsInterface(type(IERC20).interfaceId)) {
                 IERC20(_collateralAsset).safeTransferFrom(
-                    msg.sender,
+                    _borrower,
                     address(this),
                     _collateralAmount
                 );
             } else {
                 revert("COLLATERAL_ASSET_NOT_SUPPORTED");
             }
+
+            // todo check to make sure the collateral amount meets the requirements
+            // update data second
+            ci.collateralAmount = uint88(_collateralAmount);
+            ci.collateralParam = _collateralParam;
+            collateralInfoMapping[_borrower] = ci;
         }
 
         // Transfer protocole fee and funds the _borrower

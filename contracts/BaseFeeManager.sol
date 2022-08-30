@@ -71,7 +71,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * @param _amount the borrowing amount
      * @return fees the amount of fees to be charged for this borrowing
      */
-    function calcFrontLoadingFee(uint256 _amount) public virtual override returns (uint256 fees) {
+    function calcFrontLoadingFee(uint256 _amount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 fees)
+    {
         fees = frontLoadingFeeFlat;
         if (frontLoadingFeeBps > 0) fees += (_amount * frontLoadingFeeBps) / 10000;
     }
@@ -106,6 +112,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
      */
     function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
         external
+        view
         virtual
         override
         returns (
@@ -120,6 +127,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // Split the fee between treasury and the pool
         protocolFee = (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmount) / 10000;
 
+        // TODO remove it, ^0.8.0 substraction can ensure this check
         assert(platformFees >= protocolFee);
 
         poolIncome = platformFees - protocolFee;
@@ -223,7 +231,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // no more than interest. Thus, the following statement is safe.
             // No correction after the 1st period since no drawdown is allowed
             // when there are outstanding late payments
-            if (i == 0) interest = uint256(int256(interest) + _cr.correction);
+            if (_cr.correction != 0) {
+                interest = uint256(int256(interest) + _cr.correction);
+                _cr.correction = 0;
+            }
 
             // step 5. compute principal due and adjust unbilled principal
             uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) / 10000;
