@@ -11,11 +11,7 @@ import "./BaseCreditPool.sol";
  * for immediate access to portion of the fund tied with the invoices, and receive the remainder
  * minus fees after the invoice is paid in full.
  */
-contract InvoiceFactoring is
-    BaseCreditPool,
-    IPreapprovedCredit,
-    IIndirectPayment
-{
+contract InvoiceFactoring is BaseCreditPool, IPreapprovedCredit, IIndirectPayment {
     using BaseStructs for InvoiceFactoring;
     using SafeERC20 for IERC20;
 

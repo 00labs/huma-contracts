@@ -61,14 +61,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 remainder = timePassed % SECONDS_IN_A_DAY;
         if (remainder > 43200) numOfDays++;
 
-        (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
-            SECONDS_IN_A_YEAR /
-            10000;
+        (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) / SECONDS_IN_A_YEAR / 10000;
 
-        return
-            (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) /
-            SECONDS_IN_A_YEAR /
-            10000;
+        return (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) / SECONDS_IN_A_YEAR / 10000;
     }
 
     /**
@@ -76,15 +71,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * @param _amount the borrowing amount
      * @return fees the amount of fees to be charged for this borrowing
      */
-    function calcFrontLoadingFee(uint256 _amount)
-        public
-        virtual
-        override
-        returns (uint256 fees)
-    {
+    function calcFrontLoadingFee(uint256 _amount) public virtual override returns (uint256 fees) {
         fees = frontLoadingFeeFlat;
-        if (frontLoadingFeeBps > 0)
-            fees += (_amount * frontLoadingFeeBps) / 10000;
+        if (frontLoadingFeeBps > 0) fees += (_amount * frontLoadingFeeBps) / 10000;
     }
 
     /**
@@ -102,8 +91,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     ) public view virtual override returns (uint256 fees) {
         if (block.timestamp > dueDate && totalDue > 0) {
             fees = lateFeeFlat;
-            if (lateFeeBps > 0)
-                fees += (totalBalance * lateFeeBps) / BPS_DIVIDER;
+            if (lateFeeBps > 0) fees += (totalBalance * lateFeeBps) / BPS_DIVIDER;
         }
     }
 
@@ -130,9 +118,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 platformFees = calcFrontLoadingFee(borrowAmount);
 
         // Split the fee between treasury and the pool
-        protocolFee =
-            (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmount) /
-            10000;
+        protocolFee = (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmount) / 10000;
 
         assert(platformFees >= protocolFee);
 
@@ -187,19 +173,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // or payment happened past last due date (i.e. to be included in the next period)
             payoffAmount = uint96(
                 // todo add a test for this code path
-                int96(
-                    _cr.totalDue +
-                        _cr.unbilledPrincipal +
-                        calcPayoffInterest(_cr)
-                ) + _cr.correction
+                int96(_cr.totalDue + _cr.unbilledPrincipal + calcPayoffInterest(_cr)) +
+                    _cr.correction
             );
-            return (
-                0,
-                _cr.feesAndInterestDue,
-                _cr.totalDue,
-                payoffAmount,
-                _cr.unbilledPrincipal
-            );
+            return (0, _cr.feesAndInterestDue, _cr.totalDue, payoffAmount, _cr.unbilledPrincipal);
         }
 
         // Computes how many billing periods have passed. 1+ is needed since Solidity always
@@ -237,10 +214,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
             // step 3. computer interest
             interest =
-                (_cr.unbilledPrincipal *
-                    _cr.aprInBps *
-                    _cr.intervalInDays *
-                    SECONDS_IN_A_DAY) /
+                (_cr.unbilledPrincipal * _cr.aprInBps * _cr.intervalInDays * SECONDS_IN_A_DAY) /
                 SECONDS_IN_A_YEAR /
                 BPS_DIVIDER;
 
@@ -252,24 +226,18 @@ contract BaseFeeManager is IFeeManager, Ownable {
             if (i == 0) interest = uint256(int256(interest) + _cr.correction);
 
             // step 5. compute principal due and adjust unbilled principal
-            uint256 principalToBill = (_cr.unbilledPrincipal *
-                minPrincipalRateInBps) / 10000;
+            uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) / 10000;
             _cr.feesAndInterestDue = uint96(fees + interest);
             _cr.totalDue = uint96(fees + interest + principalToBill);
-            _cr.unbilledPrincipal = uint96(
-                _cr.unbilledPrincipal - principalToBill
-            );
+            _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);
         }
 
         // todo add logic to make sure totalDue meets the min requirement.
 
-        payoffAmount = uint96(
-            _cr.unbilledPrincipal + _cr.totalDue + calcPayoffInterest(_cr)
-        );
+        payoffAmount = uint96(_cr.unbilledPrincipal + _cr.totalDue + calcPayoffInterest(_cr));
 
         // If passed final period, all principal is due
-        if (periodsPassed >= _cr.remainingPeriods - 1)
-            totalDue = uint96(payoffAmount);
+        if (periodsPassed >= _cr.remainingPeriods - 1) totalDue = uint96(payoffAmount);
 
         return (
             periodsPassed,
@@ -335,12 +303,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 _lateFeeBps
         )
     {
-        return (
-            frontLoadingFeeFlat,
-            frontLoadingFeeBps,
-            lateFeeFlat,
-            lateFeeBps
-        );
+        return (frontLoadingFeeFlat, frontLoadingFeeBps, lateFeeFlat, lateFeeBps);
     }
 
     /**

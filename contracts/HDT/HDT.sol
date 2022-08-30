@@ -63,10 +63,7 @@ contract HDT is IHDT, ERC20 {
         require(totalSupply() > 0, "HDT:SUPPLY_IS_ZERO");
 
         if (value > 0) {
-            pointsPerShare =
-                pointsPerShare +
-                (value * POINTS_MULTIPLIER) /
-                totalSupply();
+            pointsPerShare = pointsPerShare + (value * POINTS_MULTIPLIER) / totalSupply();
 
             emit IncomeDistributed(msg.sender, value);
         }
@@ -83,10 +80,7 @@ contract HDT is IHDT, ERC20 {
         require(totalSupply() > 0, "HDT:SUPPLY_IS_ZERO");
 
         if (value > 0) {
-            pointsPerShare =
-                pointsPerShare -
-                (value * POINTS_MULTIPLIER) /
-                totalSupply();
+            pointsPerShare = pointsPerShare - (value * POINTS_MULTIPLIER) / totalSupply();
             emit LossesDistributed(msg.sender, value);
         }
     }
@@ -103,13 +97,7 @@ contract HDT is IHDT, ERC20 {
      * @param _owner The address of a token holder.
      * @return The amount funds that `_owner` can withdraw.
      */
-    function withdrawableFundsOf(address _owner)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
+    function withdrawableFundsOf(address _owner) public view virtual override returns (uint256) {
         return accumulativeFundsOf(_owner) - (withdrawnFunds[_owner]);
     }
 
@@ -129,17 +117,10 @@ contract HDT is IHDT, ERC20 {
      * @param _owner The address of a token holder.
      * @return The amount of funds that `_owner` has earned in total.
      */
-    function accumulativeFundsOf(address _owner)
-        public
-        view
-        virtual
-        returns (uint256)
-    {
+    function accumulativeFundsOf(address _owner) public view virtual returns (uint256) {
         return
-            uint256(
-                int256(pointsPerShare * balanceOf(_owner)) +
-                    (pointsCorrection[_owner])
-            ) / POINTS_MULTIPLIER;
+            uint256(int256(pointsPerShare * balanceOf(_owner)) + (pointsCorrection[_owner])) /
+            POINTS_MULTIPLIER;
     }
 
     // *****************************
@@ -187,8 +168,6 @@ contract HDT is IHDT, ERC20 {
     function _burn(address account, uint256 value) internal virtual override {
         super._burn(account, value);
 
-        pointsCorrection[account] =
-            pointsCorrection[account] +
-            int256(pointsPerShare * value);
+        pointsCorrection[account] = pointsCorrection[account] + int256(pointsPerShare * value);
     }
 }
