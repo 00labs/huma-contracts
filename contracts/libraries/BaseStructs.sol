@@ -26,15 +26,13 @@ library BaseStructs {
     }
 
     /**
-     * @notice CollateralInfo stores collateral used for credits.
-     * @dev Used uint88 for collateralAmount to pack the entire struct in 2 storage units
-     * @dev deleted is used to mark the entry as deleted in mappings
-     * @dev collateralParam is used to store info such as NFT tokenId
+     * @notice ReceivableInfo stores receivable used for credits.
+     * @dev receivableParam is used to store info such as NFT tokenId
      */
-    struct CollateralInfo {
-        address collateralAsset;
-        uint96 collateralAmount;
-        uint256 collateralParam;
+    struct ReceivableInfo {
+        address receivableAsset;
+        uint96 receivableAmount;
+        uint256 receivableParam;
     }
 
     enum CreditState {

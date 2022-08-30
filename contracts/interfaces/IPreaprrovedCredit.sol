@@ -8,18 +8,18 @@ interface IPreapprovedCredit {
     /**
      * @param _borrower the borrower address
      * @param _creditAmount the limit of the credit
-     * @param _collateralAsset the collateral asset used for this credit
-     * @param _collateralParam additional parameter of the collateral asset, e.g. NFT tokenid
-     * @param _collateralAmount amount of the collateral asset
+     * @param _receivableAsset the receivable asset used for this credit
+     * @param _receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
+     * @param _receivableAmount amount of the receivable asset
      * @param _intervalInDays time interval for each payback in units of days
      * @param _remainingPeriods the number of pay periods for this credit
      */
     function recordPreapprovedCredit(
         address _borrower,
         uint256 _creditAmount,
-        address _collateralAsset,
-        uint256 _collateralAmount,
-        uint256 _collateralParam,
+        address _receivableAsset,
+        uint256 _receivableAmount,
+        uint256 _receivableParam,
         uint256 _intervalInDays,
         uint256 _remainingPeriods
     ) external;
