@@ -232,7 +232,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @notice Set the receivable rate in terms of basis points. 
      @ param _receivableInBps the percentage. A percentage over 10000 means overreceivableization.
      */
-    function setCollateralRequiredInBps(uint256 _collateralInBps) external virtual override {
+    function setReceivableRequiredInBps(uint256 _receivableInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(_receivableInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
         receivableRequiredInBps = _receivableInBps;

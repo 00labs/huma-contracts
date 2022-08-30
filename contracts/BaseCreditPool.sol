@@ -166,8 +166,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
      */
     function drawdown(uint256 borrowAmount) external virtual override {
         // Open access to the borrower
-        // Condition validation happens in drawdownWithCollateral()
-        return drawdownWithCollateral(msg.sender, borrowAmount, address(0), 0, 0);
+        // Condition validation happens in drawdownWithReceivable()
+        return drawdownWithReceivable(msg.sender, borrowAmount, address(0), 0, 0);
     }
 
     /**
@@ -237,11 +237,11 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         if (poolIncome > 0) distributeIncome(poolIncome);
 
-        // Record the collateral info.
-        if (_collateralAsset != address(0)) {
-            BS.CollateralInfo memory ci = collateralInfoMapping[_borrower];
-            if (ci.collateralAsset != address(0)) {
-                require(_collateralAsset == ci.collateralAsset, "COLLATERAL_MISMATCH");
+        // Record the receivable info.
+        if (_receivableAsset != address(0)) {
+            BS.ReceivableInfo memory ci = receivableInfoMapping[_borrower];
+            if (ci.receivableAsset != address(0)) {
+                require(_receivableAsset == ci.receivableAsset, "COLLATERAL_MISMATCH");
             }
             // todo check to make sure the receivable amount meets the requirements
             ci.receivableAmount = uint88(_receivableAmount);
@@ -257,8 +257,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                     address(this),
                     _receivableParam
                 );
-            } else if (_collateralAsset.supportsInterface(type(IERC20).interfaceId)) {
-                IERC20(_collateralAsset).safeTransferFrom(
+            } else if (_receivableAsset.supportsInterface(type(IERC20).interfaceId)) {
+                IERC20(_receivableAsset).safeTransferFrom(
                     msg.sender,
                     address(this),
                     _receivableAmount
