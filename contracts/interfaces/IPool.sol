@@ -13,7 +13,7 @@ interface IPool {
 
     // function setKeySettings(
     //     uint256 _apr,
-    //     uint256 _collateralRateInBps,
+    //     uint256 _receivableRateInBps,
     //     uint256 _minAmount,
     //     uint256 _maxAmount,
     //     uint256 _front_fee_flat,
@@ -29,7 +29,7 @@ interface IPool {
 
     function setAPR(uint256 _apr) external;
 
-    function setCollateralRequiredInBps(uint256 _collateralRateInBps) external;
+    function setReceivableRequiredInBps(uint256 _receivableRateInBps) external;
 
     function setMinMaxBorrowAmount(uint256 _minAmount, uint256 _maxAmount)
         external;

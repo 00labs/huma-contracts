@@ -49,9 +49,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // the default APR for the pool in terms of basis points.
     uint256 internal poolAprInBps;
 
-    // Percentage of collateral required for credits in this pool in terms of bais points
-    // For over collateralization, use more than 100%, for no collateral, use 0.
-    uint256 internal collateralRequiredInBps;
+    // Percentage of receivable required for credits in this pool in terms of bais points
+    // For over receivableization, use more than 100%, for no receivable, use 0.
+    uint256 internal receivableRequiredInBps;
 
     // whether the pool is ON or OFF
     PoolStatus public status = PoolStatus.Off;
@@ -229,13 +229,13 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     /**
-     * @notice Set the collateral rate in terms of basis points. 
-     @ param _collateralInBps the percentage. A percentage over 10000 means overcollateralization.
+     * @notice Set the receivable rate in terms of basis points. 
+     @ param _receivableInBps the percentage. A percentage over 10000 means overreceivableization.
      */
     function setCollateralRequiredInBps(uint256 _collateralInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        require(_collateralInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
-        collateralRequiredInBps = _collateralInBps;
+        require(_receivableInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
+        receivableRequiredInBps = _receivableInBps;
     }
 
     /**

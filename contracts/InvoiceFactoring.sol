@@ -39,9 +39,9 @@ contract InvoiceFactoring is BaseCreditPool, IPreapprovedCredit, IIndirectPaymen
      * the borrower to drawdown (borrow) from the approved credit.
      * @param _borrower the borrower address
      * @param _creditAmount the limit of the credit
-     * @param _collateralAsset the collateral asset used for this credit
-     * @param _collateralParam additional parameter of the collateral asset, e.g. NFT tokenid
-     * @param _collateralAmount amount of the collateral asset
+     * @param _receivableAsset the receivable asset used for this credit
+     * @param _receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
+     * @param _receivableAmount amount of the receivable asset
      * @param _intervalInDays time interval for each payback in units of days
      * @param _remainingPeriods the number of pay periods for this credit
      * @dev Only Evaluation Agents for this contract can call this function.
@@ -49,9 +49,9 @@ contract InvoiceFactoring is BaseCreditPool, IPreapprovedCredit, IIndirectPaymen
     function recordPreapprovedCredit(
         address _borrower,
         uint256 _creditAmount,
-        address _collateralAsset,
-        uint256 _collateralParam,
-        uint256 _collateralAmount,
+        address _receivableAsset,
+        uint256 _receivableParam,
+        uint256 _receivableAmount,
         uint256 _intervalInDays,
         uint256 _remainingPeriods
     ) public virtual override {
@@ -61,9 +61,9 @@ contract InvoiceFactoring is BaseCreditPool, IPreapprovedCredit, IIndirectPaymen
         initiate(
             _borrower,
             _creditAmount,
-            _collateralAsset,
-            _collateralParam,
-            _collateralAmount,
+            _receivableAsset,
+            _receivableParam,
+            _receivableAmount,
             poolAprInBps,
             _intervalInDays,
             _remainingPeriods

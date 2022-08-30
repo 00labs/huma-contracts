@@ -25,8 +25,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
     /// mapping from wallet address to the credit record
     mapping(address => BS.CreditRecord) public creditRecordMapping;
-    /// mapping from wallet address to the collateral supplied by this wallet
-    mapping(address => BS.CollateralInfo) internal collateralInfoMapping;
+    /// mapping from wallet address to the receivable supplied by this wallet
+    mapping(address => BS.ReceivableInfo) internal receivableInfoMapping;
 
     constructor(
         address _poolToken,
@@ -69,15 +69,15 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
      * @notice initiation of a credit line
      * @param _borrower the address of the borrower
      * @param _creditLimit the amount of the liquidity asset that the borrower obtains
-     * @param _collateralAsset the address of the collateral asset.
-     * @param _collateralAmount the amount of the collateral asset
+     * @param _receivableAsset the address of the receivable asset.
+     * @param _receivableAmount the amount of the receivable asset
      */
     function initiate(
         address _borrower,
         uint256 _creditLimit,
-        address _collateralAsset,
-        uint256 _collateralParam,
-        uint256 _collateralAmount,
+        address _receivableAsset,
+        uint256 _receivableParam,
+        uint256 _receivableAmount,
         uint256 _aprInBps,
         uint256 _intervalInDays,
         uint256 _remainingPeriods
@@ -100,13 +100,13 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         cr.state = BS.CreditState.Requested;
         creditRecordMapping[_borrower] = cr;
 
-        // Populates fields related to collateral
-        if (_collateralAsset != address(0)) {
-            BS.CollateralInfo memory ci;
-            ci.collateralAsset = _collateralAsset;
-            ci.collateralParam = _collateralParam;
-            ci.collateralAmount = uint88(_collateralAmount);
-            collateralInfoMapping[_borrower] = ci;
+        // Populates fields related to receivable
+        if (_receivableAsset != address(0)) {
+            BS.ReceivableInfo memory ci;
+            ci.receivableAsset = _receivableAsset;
+            ci.receivableParam = _receivableParam;
+            ci.receivableAmount = uint88(_receivableAmount);
+            receivableInfoMapping[_borrower] = ci;
         }
     }
 
@@ -171,19 +171,19 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     }
 
     /**
-     * @notice allows the borrower to borrow using a collateral / covenant
+     * @notice allows the borrower to borrow using a receivable / covenant
      * @param _borrower the borrower
      * @param _borrowAmount the amount to borrow
-     * @param _collateralAsset the contract address of the collateral
-     * @param _collateralParam is additional parameter of the collateral asset, such as NFT Tokenid
-     * @param _collateralAmount the amount of the collateral asset
+     * @param _receivableAsset the contract address of the receivable
+     * @param _receivableParam is additional parameter of the receivable asset, such as NFT Tokenid
+     * @param _receivableAmount the amount of the receivable asset
      */
-    function drawdownWithCollateral(
+    function drawdownWithReceivable(
         address _borrower,
         uint256 _borrowAmount,
-        address _collateralAsset,
-        uint256 _collateralParam,
-        uint256 _collateralAmount
+        address _receivableAsset,
+        uint256 _receivableParam,
+        uint256 _receivableAmount
     ) public virtual override {
         protocolAndPoolOn();
 
@@ -243,25 +243,25 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             if (ci.collateralAsset != address(0)) {
                 require(_collateralAsset == ci.collateralAsset, "COLLATERAL_MISMATCH");
             }
-            // todo check to make sure the collateral amount meets the requirements
-            ci.collateralAmount = uint88(_collateralAmount);
-            ci.collateralParam = _collateralParam;
-            collateralInfoMapping[_borrower] = ci;
+            // todo check to make sure the receivable amount meets the requirements
+            ci.receivableAmount = uint88(_receivableAmount);
+            ci.receivableParam = _receivableParam;
+            receivableInfoMapping[_borrower] = ci;
         }
 
-        // // Transfers collateral asset
-        if (_collateralAsset != address(0)) {
-            if (_collateralAsset.supportsInterface(type(IERC721).interfaceId)) {
-                IERC721(_collateralAsset).safeTransferFrom(
+        // // Transfers receivable asset
+        if (_receivableAsset != address(0)) {
+            if (_receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
+                IERC721(_receivableAsset).safeTransferFrom(
                     _borrower,
                     address(this),
-                    _collateralParam
+                    _receivableParam
                 );
             } else if (_collateralAsset.supportsInterface(type(IERC20).interfaceId)) {
                 IERC20(_collateralAsset).safeTransferFrom(
                     msg.sender,
                     address(this),
-                    _collateralAmount
+                    _receivableAmount
                 );
             } else {
                 revert("COLLATERAL_ASSET_NOT_SUPPORTED");
@@ -406,7 +406,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
     /**
      * @notice Triggers the default process
-     * @return losses the amount of remaining losses to the pool after collateral
+     * @return losses the amount of remaining losses to the pool after receivable
      * liquidation, pool cover, and staking.
      */
     function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
