@@ -85,10 +85,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     event PoolDisabled(address by);
     event PoolEnabled(address by);
     event PoolDefaultGracePeriodChanged(uint256 _gracePeriodInDays, address by);
-    event WithdrawalLockoutPeriodUpdated(
-        uint256 _lockoutPeriodInDays,
-        address by
-    );
+    event WithdrawalLockoutPeriodUpdated(uint256 _lockoutPeriodInDays, address by);
     event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
 
     /**
@@ -112,8 +109,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         humaConfig = _humaConfig;
         feeManagerAddress = _feeManager;
 
-        poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
-            .protocolDefaultGracePeriod();
+        poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig).protocolDefaultGracePeriod();
 
         emit PoolDeployed(address(this));
     }
@@ -171,20 +167,16 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
         LenderInfo memory li = lenderInfo[msg.sender];
         require(
             block.timestamp >=
-                uint256(li.mostRecentCreditTimestamp) +
-                    withdrawalLockoutPeriodInSeconds,
+                uint256(li.mostRecentCreditTimestamp) + withdrawalLockoutPeriodInSeconds,
             "WITHDRAW_TOO_SOON"
         );
         uint256 withdrawableAmount = withdrawableFundsOf(msg.sender);
         require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
 
         // Calcuate the corresponding principal amount to reduce
-        uint256 principalToReduce = (balanceOf(msg.sender) * amount) /
-            withdrawableAmount;
+        uint256 principalToReduce = (balanceOf(msg.sender) * amount) / withdrawableAmount;
 
-        li.principalAmount = uint96(
-            uint256(li.principalAmount) - principalToReduce
-        );
+        li.principalAmount = uint96(uint256(li.principalAmount) - principalToReduce);
 
         lenderInfo[msg.sender] = li;
 
@@ -240,11 +232,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @notice Set the collateral rate in terms of basis points. 
      @ param _collateralInBps the percentage. A percentage over 10000 means overcollateralization.
      */
-    function setCollateralRequiredInBps(uint256 _collateralInBps)
-        external
-        virtual
-        override
-    {
+    function setCollateralRequiredInBps(uint256 _collateralInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(_collateralInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
         collateralRequiredInBps = _collateralInBps;
@@ -255,10 +243,11 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @param _minBorrowAmount the min amount allowed to borrow in a transaction
      * @param _maxCreditLine the max amount of a credit line
      */
-    function setMinMaxBorrowAmount(
-        uint256 _minBorrowAmount,
-        uint256 _maxCreditLine
-    ) external virtual override {
+    function setMinMaxBorrowAmount(uint256 _minBorrowAmount, uint256 _maxCreditLine)
+        external
+        virtual
+        override
+    {
         onlyOwnerOrHumaMasterAdmin();
         require(_minBorrowAmount > 0, "MINAMT_IS_ZERO");
         require(_maxCreditLine >= _minBorrowAmount, "MAX_LESS_THAN_MIN");
@@ -289,11 +278,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * Sets the default grace period for this pool.
      * @param _gracePeriodInDays the desired grace period in days.
      */
-    function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays)
-        external
-        virtual
-        override
-    {
+    function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         poolDefaultGracePeriodInSeconds = _gracePeriodInDays * SECONDS_IN_A_DAY;
         emit PoolDefaultGracePeriodChanged(_gracePeriodInDays, msg.sender);
@@ -303,15 +288,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * Sets withdrawal lockout period after the lender makes the last deposit
      * @param _lockoutPeriodInDays the lockout period in terms of days
      */
-    function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays)
-        external
-        virtual
-        override
-    {
+    function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        withdrawalLockoutPeriodInSeconds =
-            _lockoutPeriodInDays *
-            SECONDS_IN_A_DAY;
+        withdrawalLockoutPeriodInSeconds = _lockoutPeriodInDays * SECONDS_IN_A_DAY;
         emit WithdrawalLockoutPeriodUpdated(_lockoutPeriodInDays, msg.sender);
     }
 
@@ -319,11 +298,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      * @notice Sets the cap of the pool liquidity.
      * @param _liquidityCap the upper bound that the pool accepts liquidity from the depositers
      */
-    function setPoolLiquidityCap(uint256 _liquidityCap)
-        external
-        virtual
-        override
-    {
+    function setPoolLiquidityCap(uint256 _liquidityCap) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         liquidityCap = _liquidityCap;
         emit PoolLiquidityCapChanged(_liquidityCap, msg.sender);
@@ -369,8 +344,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // the pool owner and the huma master admin
     function onlyOwnerOrHumaMasterAdmin() internal view {
         require(
-            (msg.sender == owner() ||
-                msg.sender == HumaConfig(humaConfig).owner()),
+            (msg.sender == owner() || msg.sender == HumaConfig(humaConfig).owner()),
             "PERMISSION_DENIED_NOT_ADMIN"
         );
     }
@@ -378,10 +352,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
     function protocolAndPoolOn() internal view {
-        require(
-            HumaConfig(humaConfig).isProtocolPaused() == false,
-            "PROTOCOL_PAUSED"
-        );
+        require(HumaConfig(humaConfig).isProtocolPaused() == false, "PROTOCOL_PAUSED");
         require(status == PoolStatus.On, "POOL_NOT_ON");
     }
 

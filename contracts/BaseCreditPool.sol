@@ -35,16 +35,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         string memory _poolName,
         string memory _hdtName,
         string memory _hdtSymbol
-    )
-        BasePool(
-            _poolToken,
-            _humaConfig,
-            _feeManagerAddress,
-            _poolName,
-            _hdtName,
-            _hdtSymbol
-        )
-    {}
+    ) BasePool(_poolToken, _humaConfig, _feeManagerAddress, _poolName, _hdtName, _hdtSymbol) {}
 
     /**
      * @notice accepts a credit request from msg.sender
@@ -94,10 +85,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
         // todo add a test for this check
-        require(
-            creditRecordMapping[_borrower].creditLimit == 0,
-            "CREDIT_LINE_ALREADY_EXIST"
-        );
+        require(creditRecordMapping[_borrower].creditLimit == 0, "CREDIT_LINE_ALREADY_EXIST");
 
         // Borrowing amount needs to be lower than max for the pool.
         require(maxCreditLine >= _creditLimit, "GREATER_THAN_LIMIT");
@@ -149,10 +137,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         require(maxCreditLine >= _newLine, "GREATER_THAN_LIMIT");
         require(_newLine >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
-        require(
-            creditRecordMapping[_borrower].creditLimit == 0,
-            "CREDIT_LINE_NOT_EXIST"
-        );
+        require(creditRecordMapping[_borrower].creditLimit == 0, "CREDIT_LINE_NOT_EXIST");
         creditRecordMapping[_borrower].creditLimit = uint96(_newLine);
     }
 
@@ -160,11 +145,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
      * @notice Invalidate the credit line
      * @dev If the credit limit is 0, we treat the line as deleted.
      */
-    function invalidateApprovedCredit(address _borrower)
-        public
-        virtual
-        override
-    {
+    function invalidateApprovedCredit(address _borrower) public virtual override {
         protocolAndPoolOn();
         onlyEvaluationAgents();
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
@@ -173,15 +154,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         creditRecordMapping[_borrower] = cr;
     }
 
-    function isApproved(address _borrower)
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        if ((creditRecordMapping[_borrower].state >= BS.CreditState.Approved))
-            return true;
+    function isApproved(address _borrower) public view virtual override returns (bool) {
+        if ((creditRecordMapping[_borrower].state >= BS.CreditState.Approved)) return true;
         else return false;
     }
 
@@ -193,8 +167,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     function drawdown(uint256 borrowAmount) external virtual override {
         // Open access to the borrower
         // Condition validation happens in drawdownWithCollateral()
-        return
-            drawdownWithCollateral(msg.sender, borrowAmount, address(0), 0, 0);
+        return drawdownWithCollateral(msg.sender, borrowAmount, address(0), 0, 0);
     }
 
     /**
@@ -224,25 +197,19 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
 
         require(
-            cr.state == BS.CreditState.Approved ||
-                cr.state == BS.CreditState.GoodStanding,
+            cr.state == BS.CreditState.Approved || cr.state == BS.CreditState.GoodStanding,
             "NOT_APPROVED_OR_IN_GOOD_STANDING"
         );
 
         // todo 8/23 add a test for this check
-        require(
-            _borrowAmount <= cr.creditLimit - cr.unbilledPrincipal,
-            "EXCEEDED_CREDIT_LMIIT"
-        );
+        require(_borrowAmount <= cr.creditLimit - cr.unbilledPrincipal, "EXCEEDED_CREDIT_LMIIT");
 
         // For the first drawdown, set the first due date exactly one billing cycle away
         // For existing credit line, the account might have been dormant for months.
         // Bring the account current by moving forward cycles to allow the due date of
         // the current cycle to be ahead of block.timestamp.
         if (cr.dueDate == 0) {
-            cr.dueDate = uint64(
-                block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY
-            );
+            cr.dueDate = uint64(block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY);
         } else if (block.timestamp > cr.dueDate) {
             uint256 periodsPassed;
             (periodsPassed, ) = _updateDueInfo(_borrower);
@@ -251,16 +218,12 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
         }
 
-        cr.unbilledPrincipal = uint96(
-            uint256(cr.unbilledPrincipal) + _borrowAmount
-        );
+        cr.unbilledPrincipal = uint96(uint256(cr.unbilledPrincipal) + _borrowAmount);
 
         // With drawdown, balance increases, interest charge will be higher than it should be,
         // thus record a negative correction to compensate it at the end of the period
         cr.correction -= int96(
-            uint96(
-                IFeeManager(feeManagerAddress).calcCorrection(cr, _borrowAmount)
-            )
+            uint96(IFeeManager(feeManagerAddress).calcCorrection(cr, _borrowAmount))
         );
 
         // Set account status in good standing
@@ -268,14 +231,9 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         creditRecordMapping[_borrower] = cr;
 
-        (
-            uint256 amtToBorrower,
-            uint256 protocolFee,
-            uint256 poolIncome
-        ) = IFeeManager(feeManagerAddress).distBorrowingAmount(
-                _borrowAmount,
-                humaConfig
-            );
+        (uint256 amtToBorrower, uint256 protocolFee, uint256 poolIncome) = IFeeManager(
+            feeManagerAddress
+        ).distBorrowingAmount(_borrowAmount, humaConfig);
 
         if (poolIncome > 0) distributeIncome(poolIncome);
 
@@ -283,10 +241,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         if (_collateralAsset != address(0)) {
             BS.CollateralInfo memory ci = collateralInfoMapping[_borrower];
             if (ci.collateralAsset != address(0)) {
-                require(
-                    _collateralAsset == ci.collateralAsset,
-                    "COLLATERAL_MISMATCH"
-                );
+                require(_collateralAsset == ci.collateralAsset, "COLLATERAL_MISMATCH");
             }
             // todo check to make sure the collateral amount meets the requirements
             ci.collateralAmount = uint88(_collateralAmount);
@@ -302,9 +257,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                     address(this),
                     _collateralParam
                 );
-            } else if (
-                _collateralAsset.supportsInterface(type(IERC20).interfaceId)
-            ) {
+            } else if (_collateralAsset.supportsInterface(type(IERC20).interfaceId)) {
                 IERC20(_collateralAsset).safeTransferFrom(
                     msg.sender,
                     address(this),
@@ -366,14 +319,9 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             if (_amount < payoffAmount) {
                 amountToCollect = _amount;
                 principalPayment = _amount - cr.feesAndInterestDue;
-                cr.unbilledPrincipal = uint96(
-                    cr.unbilledPrincipal - (_amount - cr.totalDue)
-                );
+                cr.unbilledPrincipal = uint96(cr.unbilledPrincipal - (_amount - cr.totalDue));
             } else {
-                principalPayment =
-                    cr.unbilledPrincipal +
-                    cr.totalDue -
-                    cr.feesAndInterestDue;
+                principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
                 cr.unbilledPrincipal = 0;
                 amountToCollect = payoffAmount;
             }
@@ -390,12 +338,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // If there is principal payment, calcuate new correction
         if (principalPayment > 0) {
             cr.correction += int96(
-                uint96(
-                    IFeeManager(feeManagerAddress).calcCorrection(
-                        cr,
-                        principalPayment
-                    )
-                )
+                uint96(IFeeManager(feeManagerAddress).calcCorrection(cr, principalPayment))
             );
         }
 
@@ -411,8 +354,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         // Distribute income
         // todo need to apply logic for protocol fee
-        if (cr.feesAndInterestDue > amountToCollect)
-            distributeIncome(cr.feesAndInterestDue);
+        if (cr.feesAndInterestDue > amountToCollect) distributeIncome(cr.feesAndInterestDue);
         else distributeIncome(amountToCollect);
 
         if (amountToCollect > 0) {
@@ -446,9 +388,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             cr.unbilledPrincipal
         ) = IFeeManager(feeManagerAddress).getDueInfo(cr);
 
-        cr.dueDate = uint64(
-            cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY
-        );
+        cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
         cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
 
         if (cr.totalDue == 0) {
@@ -469,20 +409,14 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
      * @return losses the amount of remaining losses to the pool after collateral
      * liquidation, pool cover, and staking.
      */
-    function triggerDefault(address borrower)
-        external
-        virtual
-        override
-        returns (uint256 losses)
-    {
+    function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
         protocolAndPoolOn();
         // todo add security check
 
         // check to make sure the default grace period has passed.
         require(
             block.timestamp >
-                creditRecordMapping[borrower].dueDate +
-                    poolDefaultGracePeriodInSeconds,
+                creditRecordMapping[borrower].dueDate + poolDefaultGracePeriodInSeconds,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
 
@@ -538,11 +472,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         );
     }
 
-    function getApprovalStatusForBorrower(address borrower)
-        external
-        view
-        returns (bool)
-    {
+    function getApprovalStatusForBorrower(address borrower) external view returns (bool) {
         return creditRecordMapping[borrower].state >= BS.CreditState.Approved;
     }
 
