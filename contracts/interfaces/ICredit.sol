@@ -12,12 +12,12 @@ interface ICredit {
 
     function drawdown(uint256 _borrowAmount) external;
 
-    function drawdownWithCollateral(
+    function drawdownWithReceivable(
         address _borrower,
         uint256 borrowAmount,
-        address collateralAsset,
-        uint256 collateralParam,
-        uint256 collateralCount
+        address receivableAsset,
+        uint256 receivableParam,
+        uint256 receivableCount
     ) external;
 
     function invalidateApprovedCredit(address _borrower) external;
