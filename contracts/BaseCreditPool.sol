@@ -202,6 +202,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         );
 
         // todo 8/23 add a test for this check
+        // review cr.unbilledPrincipal is not all principal,
+        // all principal is cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
         require(_borrowAmount <= cr.creditLimit - cr.unbilledPrincipal, "EXCEEDED_CREDIT_LMIIT");
 
         // For the first drawdown, set the first due date exactly one billing cycle away
@@ -212,10 +214,11 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             cr.dueDate = uint64(block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY);
         } else if (block.timestamp > cr.dueDate) {
             uint256 periodsPassed;
-            (periodsPassed, ) = _updateDueInfo(_borrower);
-            cr = creditRecordMapping[_borrower];
+            (periodsPassed, , cr) = _updateDueInfo(_borrower);
 
             require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
+
+            // review check if state is delayed? and credit limit again?
         }
 
         cr.unbilledPrincipal = uint96(uint256(cr.unbilledPrincipal) + _borrowAmount);
@@ -241,16 +244,10 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         if (_receivableAsset != address(0)) {
             BS.ReceivableInfo memory ci = receivableInfoMapping[_borrower];
             if (ci.receivableAsset != address(0)) {
+                // review remove this check and _receivableAsset parameter, use ci.receivableAsset directly
                 require(_receivableAsset == ci.receivableAsset, "COLLATERAL_MISMATCH");
             }
-            // todo check to make sure the receivable amount meets the requirements
-            ci.receivableAmount = uint88(_receivableAmount);
-            ci.receivableParam = _receivableParam;
-            receivableInfoMapping[_borrower] = ci;
-        }
 
-        // // Transfers receivable asset
-        if (_receivableAsset != address(0)) {
             if (_receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
                 IERC721(_receivableAsset).safeTransferFrom(
                     _borrower,
@@ -259,13 +256,18 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 );
             } else if (_receivableAsset.supportsInterface(type(IERC20).interfaceId)) {
                 IERC20(_receivableAsset).safeTransferFrom(
-                    msg.sender,
+                    _borrower,
                     address(this),
                     _receivableAmount
                 );
             } else {
                 revert("COLLATERAL_ASSET_NOT_SUPPORTED");
             }
+
+            // todo check to make sure the receivable amount meets the requirements
+            ci.receivableAmount = uint88(_receivableAmount);
+            ci.receivableParam = _receivableParam;
+            receivableInfoMapping[_borrower] = ci;
         }
 
         // Transfer protocole fee and funds the _borrower
@@ -290,13 +292,11 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         require(_asset == address(poolToken), "WRONG_ASSET");
         require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
 
-        uint256 periodsPassed;
-        uint96 payoffAmount;
-
         // Bring the account current. This is necessary since the account might have been dormant for
         // several cycles.
-        (periodsPassed, payoffAmount) = _updateDueInfo(_borrower);
-        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        (uint256 periodsPassed, uint96 payoffAmount, BS.CreditRecord memory cr) = _updateDueInfo(
+            _borrower
+        );
 
         // How many amount will be applied towards principal
         uint256 principalPayment;
@@ -312,8 +312,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             if (_amount <= cr.feesAndInterestDue) {
                 cr.feesAndInterestDue = uint96(cr.feesAndInterestDue - _amount);
             } else {
-                cr.feesAndInterestDue = 0;
                 principalPayment = _amount - cr.feesAndInterestDue;
+                cr.feesAndInterestDue = 0;
             }
         } else {
             if (_amount < payoffAmount) {
@@ -321,9 +321,9 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 principalPayment = _amount - cr.feesAndInterestDue;
                 cr.unbilledPrincipal = uint96(cr.unbilledPrincipal - (_amount - cr.totalDue));
             } else {
+                amountToCollect = payoffAmount;
                 principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
                 cr.unbilledPrincipal = 0;
-                amountToCollect = payoffAmount;
             }
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
@@ -346,6 +346,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         // If the user pays off before the end of the cycle, we will subtract
         // the `correction` amount in the transfer.
         if (amountToCollect == payoffAmount) {
+            // review this logic seems not right
+            // correction is for multiple drawdowns or payments, different from payoff interest
             amountToCollect = amountToCollect - uint256(uint96(cr.correction));
             cr.correction = 0;
         }
@@ -373,9 +375,13 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     function _updateDueInfo(address _borrower)
         internal
         virtual
-        returns (uint256 periodsPassed, uint96 payoffAmount)
+        returns (
+            uint256 periodsPassed,
+            uint96 payoffAmount,
+            BS.CreditRecord memory cr
+        )
     {
-        BS.CreditRecord memory cr = creditRecordMapping[_borrower];
+        cr = creditRecordMapping[_borrower];
 
         // Gets the up-to-date due information for the borrower. If the account has been
         // late or dormant for multiple cycles, getDueInfo() will bring it current and
@@ -388,20 +394,21 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             cr.unbilledPrincipal
         ) = IFeeManager(feeManagerAddress).getDueInfo(cr);
 
-        cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
-        cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
+        if (periodsPassed > 0) {
+            cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
+            cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
 
-        if (cr.totalDue == 0) {
-            cr.missedPeriods = 0;
-            cr.state = BS.CreditState.GoodStanding;
-        } else {
-            // note the design of missedPeriods is awkward. need to find a simpler solution
-            cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
-            if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
+            if (cr.totalDue == 0) {
+                // review when this fork will occur?
+                cr.missedPeriods = 0;
+                cr.state = BS.CreditState.GoodStanding;
+            } else {
+                // note the design of missedPeriods is awkward. need to find a simpler solution
+                cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
+                if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
+            }
+            creditRecordMapping[_borrower] = cr;
         }
-        creditRecordMapping[_borrower] = cr;
-
-        return (periodsPassed, payoffAmount);
     }
 
     /**
@@ -445,6 +452,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     /**
      * @notice Gets high-level information about the loan.
      */
+    // review remove it to use default getter creditRecordMapping(address)
     function getCreditInformation(address borrower)
         external
         view
@@ -472,6 +480,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         );
     }
 
+    // review it is duplicated to isApproved, remove which one?
     function getApprovalStatusForBorrower(address borrower) external view returns (bool) {
         return creditRecordMapping[borrower].state >= BS.CreditState.Approved;
     }
