@@ -4,7 +4,7 @@ pragma solidity >=0.8.4 <0.9.0;
 /**
  * @notice Interface for contracts that can record pre-approved credit request
  */
-interface IPreapprovedCredit {
+interface IReceivable {
     /**
      * @param _borrower the borrower address
      * @param _creditAmount the limit of the credit
@@ -22,5 +22,15 @@ interface IPreapprovedCredit {
         uint256 _receivableParam,
         uint256 _intervalInDays,
         uint256 _remainingPeriods
+    ) external;
+
+        /**
+     * @notice reports after an payment is received for the borrower from a source
+     * other than the borrower wallet
+     */
+    function onReceivedPayment(
+        address borrower,
+        address asset,
+        uint256 amount
     ) external;
 }

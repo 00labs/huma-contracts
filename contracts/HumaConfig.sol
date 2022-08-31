@@ -6,7 +6,7 @@ import "hardhat/console.sol";
 
 enum CreditType {
     Loan,
-    InvoiceFactoring,
+    ReceivableFactoringPool,
     XToOwn
 }
 

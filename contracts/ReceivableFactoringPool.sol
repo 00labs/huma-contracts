@@ -1,8 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4 <0.9.0;
 
-import "./interfaces/IPreaprrovedCredit.sol";
-import "./interfaces/IIndirectPayment.sol";
+import "./interfaces/IReceivable.sol";
 
 import "./BaseCreditPool.sol";
 
@@ -11,8 +10,8 @@ import "./BaseCreditPool.sol";
  * for immediate access to portion of the fund tied with the invoices, and receive the remainder
  * minus fees after the invoice is paid in full.
  */
-contract InvoiceFactoring is BaseCreditPool, IPreapprovedCredit, IIndirectPayment {
-    using BaseStructs for InvoiceFactoring;
+contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
+    using BaseStructs for ReceivableFactoringPool;
     using SafeERC20 for IERC20;
 
     constructor(
