@@ -24,9 +24,7 @@ interface IFeeManager {
      * @param _amount the borrowing amount
      * @return fees the amount of fees to be charged for this borrowing
      */
-    function calcFrontLoadingFee(uint256 _amount)
-        external
-        returns (uint256 fees);
+    function calcFrontLoadingFee(uint256 _amount) external view returns (uint256 fees);
 
     /**
      * @notice Computes the late fee including both the flat fee and percentage fee

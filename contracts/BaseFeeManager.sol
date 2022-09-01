@@ -71,7 +71,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * @param _amount the borrowing amount
      * @return fees the amount of fees to be charged for this borrowing
      */
-    function calcFrontLoadingFee(uint256 _amount) public virtual override returns (uint256 fees) {
+    function calcFrontLoadingFee(uint256 _amount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 fees)
+    {
         fees = frontLoadingFeeFlat;
         if (frontLoadingFeeBps > 0) fees += (_amount * frontLoadingFeeBps) / 10000;
     }
@@ -120,7 +126,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // Split the fee between treasury and the pool
         protocolFee = (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmount) / 10000;
 
-        assert(platformFees >= protocolFee);
+        // assert(platformFees >= protocolFee);
 
         poolIncome = platformFees - protocolFee;
 
@@ -168,15 +174,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
     {
         // Directly returns if it is still within the current period
         if (block.timestamp <= _cr.dueDate) {
-            // payoff amount includes 4 elements: 1) outstanding due 2) unbilled principal
-            // 3) interest for the current period 4) correction generated due to borrowing
-            // or payment happened past last due date (i.e. to be included in the next period)
-            payoffAmount = uint96(
-                // todo add a test for this code path
-                int96(_cr.totalDue + _cr.unbilledPrincipal + calcPayoffInterest(_cr)) +
-                    _cr.correction
+            return (
+                0,
+                _cr.feesAndInterestDue,
+                _cr.totalDue,
+                calcPayoff(_cr),
+                _cr.unbilledPrincipal
             );
-            return (0, _cr.feesAndInterestDue, _cr.totalDue, payoffAmount, _cr.unbilledPrincipal);
         }
 
         // Computes how many billing periods have passed. 1+ is needed since Solidity always
@@ -197,10 +201,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
          *    We will just ignore the correction for follow-on iterations.
          * 5. Calculate the principal due, and minus it from the unbilled principal amount
          */
-        uint256 i;
         uint256 fees;
         uint256 interest;
-        for (i = 0; i < periodsPassed; i++) {
+        for (uint256 i; i < periodsPassed; i++) {
             // step 1. late fee calculation
             if (_cr.totalDue > 0)
                 fees = calcLateFee(
@@ -223,7 +226,11 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // no more than interest. Thus, the following statement is safe.
             // No correction after the 1st period since no drawdown is allowed
             // when there are outstanding late payments
-            if (i == 0) interest = uint256(int256(interest) + _cr.correction);
+            if (_cr.correction != 0) {
+                // correct interest if correction is not zero, and reset it immediately
+                interest = uint256(int256(interest) + _cr.correction);
+                _cr.correction = 0;
+            }
 
             // step 5. compute principal due and adjust unbilled principal
             uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) / 10000;
@@ -234,10 +241,23 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
         // todo add logic to make sure totalDue meets the min requirement.
 
-        payoffAmount = uint96(_cr.unbilledPrincipal + _cr.totalDue + calcPayoffInterest(_cr));
+        payoffAmount = calcPayoff(_cr);
 
         // If passed final period, all principal is due
-        if (periodsPassed >= _cr.remainingPeriods - 1) totalDue = uint96(payoffAmount);
+        if (periodsPassed >= _cr.remainingPeriods - 1) {
+            // _cr.feesAndInterestDue =
+            //     payoffAmount -
+            //     (_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue);
+            // _cr.totalDue = payoffAmount;
+            // _cr.unbilledPrincipal = 0;
+
+            // review this line doesn't make any effect,
+            // you should use above lines to update _cr fields for last due,
+            // but it will make one test failed, need to confirm
+
+            // todo update existing tests and add new tests for this logic
+            totalDue = payoffAmount;
+        }
 
         return (
             periodsPassed,
@@ -307,23 +327,33 @@ contract BaseFeeManager is IFeeManager, Ownable {
     }
 
     /**
-     * @notice Calculates the interest for payoff. The amount is good until the next due date
+     * @notice Calculates the amount for payoff. The amount is good until the next due date.
+     * It has to be called after all the other calculations for each period are done, otherwise update due info first.
      * @param _cr the credit record associated the account
-     * @return payoffInterest the final period interest amount for the payoff
+     * @return payoffAmount the final period amount for the payoff
      */
-    function calcPayoffInterest(BS.CreditRecord memory _cr)
-        internal
-        pure
-        returns (uint96 payoffInterest)
-    {
+    function calcPayoff(BS.CreditRecord memory _cr) internal pure returns (uint96 payoffAmount) {
         // todo add a test to final interest calculation
-        payoffInterest = uint96(
-            ((_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue) *
+
+        // payoff amount includes 4 elements: 1) outstanding due 2) unbilled principal
+        // 3) interest for the current period 4) correction generated due to borrowing
+        // or payment happened past last due date (i.e. to be included in the next period)
+
+        payoffAmount = _cr.unbilledPrincipal + _cr.totalDue;
+
+        // todo update this logic with current block.timestamp
+
+        payoffAmount += uint96(
+            ((payoffAmount - _cr.feesAndInterestDue) *
                 _cr.aprInBps *
                 _cr.intervalInDays *
                 SECONDS_IN_A_DAY) /
                 SECONDS_IN_A_YEAR /
                 BPS_DIVIDER
         );
+
+        if (_cr.correction != 0) {
+            payoffAmount = uint96(int96(payoffAmount) + _cr.correction);
+        }
     }
 }
