@@ -244,10 +244,13 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         if (_receivableAsset != address(0)) {
             BS.ReceivableInfo memory ci = receivableInfoMapping[_borrower];
             if (ci.receivableAsset != address(0)) {
-                // review remove this check and _receivableAsset parameter, use ci.receivableAsset directly
+                // review remove _receivableAsset, _receivableParam and _receivableAmount parameters,
+                // use data in cr directly
                 require(_receivableAsset == ci.receivableAsset, "COLLATERAL_MISMATCH");
             }
 
+            // todo only do this at the first time,
+            // Need to add periodForFirstDrawn(), if not completed, the credit line is invalidated.
             if (_receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
                 IERC721(_receivableAsset).safeTransferFrom(
                     _borrower,
@@ -348,6 +351,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         if (amountToCollect == payoffAmount) {
             // review this logic seems not right
             // correction is for multiple drawdowns or payments, different from payoff interest
+
+            // todo fix issue if there is any, and at least find a cleaner solution
             amountToCollect = amountToCollect - uint256(uint96(cr.correction));
             cr.correction = 0;
         }
