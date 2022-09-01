@@ -6,31 +6,21 @@ import "./interfaces/IReceivable.sol";
 import "./BaseCreditPool.sol";
 
 /**
- * @notice Receivable Factoring is the process for the receivable owner to trade in their 
- * receivable for immediate access to portion of the fund tied with the receivable, and 
+ * @notice Receivable Factoring is the process for the receivable owner to trade in their
+ * receivable for immediate access to portion of the fund tied with the receivable, and
  * receive the remainder minus fees after the receivable is paid in full.
  */
 contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     using BaseStructs for ReceivableFactoringPool;
+
     using SafeERC20 for IERC20;
 
     constructor(
-        address _poolToken,
+        address _underlyingToken,
         address _humaConfig,
         address _feeManagerAddress,
-        string memory _poolName,
-        string memory _hdtName,
-        string memory _hdtSymbol
-    )
-        BaseCreditPool(
-            _poolToken,
-            _humaConfig,
-            _feeManagerAddress,
-            _poolName,
-            _hdtName,
-            _hdtSymbol
-        )
-    {}
+        string memory _poolName
+    ) BaseCreditPool(_underlyingToken, _humaConfig, _feeManagerAddress, _poolName) {}
 
     /**
      * @notice After the EA (EvalutionAgent) has approved a factoring, it calls this function
@@ -87,7 +77,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         onlyEvaluationAgents();
         BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
 
-        require(asset == address(poolToken), "HumaIF:WRONG_ASSET");
+        require(asset == address(underlyingToken), "HumaIF:WRONG_ASSET");
 
         // todo handle multiple payments.
         // todo decide what to do if the payment amount is insufficient.
@@ -119,6 +109,6 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
      * @param amount the amount of the dispersement
      */
     function disperseRemainingFunds(address receiver, uint256 amount) internal {
-        poolToken.safeTransfer(receiver, amount);
+        underlyingToken.safeTransfer(receiver, amount);
     }
 }

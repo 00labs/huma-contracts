@@ -6,6 +6,7 @@ const {solidity} = require("ethereum-waffle");
 use(solidity);
 
 let poolContract;
+let hdtContract;
 let humaConfigContract;
 let testToken;
 let feeManager;
@@ -67,11 +68,15 @@ async function deployAndSetupPool(principalRateInBps) {
         testToken.address,
         humaConfigContract.address,
         feeManager.address,
-        "Base Credit Pool",
-        "Base HDT",
-        "BHDT"
+        "Base Credit Pool"
     );
     await poolContract.deployed();
+
+    const HDT = await ethers.getContractFactory("HDT");
+    hdtContract = await HDT.deploy("Base HDT", "BHDT", poolContract.address);
+    await hdtContract.deployed();
+
+    await poolContract.setPoolToken(hdtContract.address);
 
     // Pool setup
     await poolContract.transferOwnership(poolOwner.address);

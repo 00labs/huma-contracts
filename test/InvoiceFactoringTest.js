@@ -24,6 +24,7 @@ const getInvoiceContractFromAddress = async function (address, signer) {
 // 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
 describe("Huma Invoice Financing", function () {
     let invoiceContract;
+    let hdtContract;
     let humaConfigContract;
     // let humaCreditFactoryContract;
     let testTokenContract;
@@ -62,11 +63,15 @@ describe("Huma Invoice Financing", function () {
             testTokenContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
-            "Invoice Factory Pool",
-            "HumaIF HDT",
-            "HHDT"
+            "Invoice Factory Pool"
         );
         await invoiceContract.deployed();
+
+        const HDT = await ethers.getContractFactory("HDT");
+        hdtContract = await HDT.deploy("HumaIF HDT", "HHDT", invoiceContract.address);
+        await hdtContract.deployed();
+
+        await invoiceContract.setPoolToken(hdtContract.address);
 
         await testTokenContract.approve(invoiceContract.address, 100);
 
@@ -76,9 +81,7 @@ describe("Huma Invoice Financing", function () {
 
         await invoiceContract.makeInitialDeposit(100);
 
-        const lenderInfo = await invoiceContract.connect(owner).lenderInfo(owner.address);
-        expect(lenderInfo.principalAmount).to.equal(100);
-        expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+        expect(await invoiceContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(100);
 
         await invoiceContract.addEvaluationAgent(evaluationAgent.address);
@@ -446,15 +449,9 @@ describe("Huma Invoice Financing", function () {
             expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(412);
 
             // test withdraw to make sure the income is allocated properly.
-            expect(await invoiceContract.balanceOf(lender.address)).to.equal(300);
-            expect(await invoiceContract.withdrawableFundsOf(lender.address)).to.be.within(
-                308,
-                310
-            ); // use within to handle rounding error
-            expect(await invoiceContract.withdrawableFundsOf(owner.address)).to.be.within(
-                102,
-                104
-            ); // use within to handle rounding error
+            expect(await hdtContract.balanceOf(lender.address)).to.equal(300);
+            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.be.within(308, 310); // use within to handle rounding error
+            expect(await hdtContract.withdrawableFundsOf(owner.address)).to.be.within(102, 104); // use within to handle rounding error
         });
 
         it("Default flow", async function () {
@@ -473,8 +470,8 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract.triggerDefault(borrower.address);
 
-            expect(await invoiceContract.withdrawableFundsOf(owner.address)).to.be.within(2, 4);
-            expect(await invoiceContract.withdrawableFundsOf(lender.address)).to.be.within(8, 10);
+            expect(await hdtContract.withdrawableFundsOf(owner.address)).to.be.within(2, 4);
+            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.be.within(8, 10);
         });
     });
 });
