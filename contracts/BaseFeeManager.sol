@@ -227,6 +227,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // No correction after the 1st period since no drawdown is allowed
             // when there are outstanding late payments
             if (_cr.correction != 0) {
+                // correct interest if correction is not zero, and reset it immediately
                 interest = uint256(int256(interest) + _cr.correction);
                 _cr.correction = 0;
             }
@@ -253,6 +254,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // review this line doesn't make any effect,
             // you should use above lines to update _cr fields for last due,
             // but it will make one test failed, need to confirm
+
+            // todo update existing tests and add new tests for this logic
             totalDue = payoffAmount;
         }
 
@@ -324,7 +327,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
     }
 
     /**
-     * @notice Calculates the amount for payoff. The amount is good until the next due date
+     * @notice Calculates the amount for payoff. The amount is good until the next due date.
+     * It has to be called after all the other calculations for each period are done, otherwise update due info first.
      * @param _cr the credit record associated the account
      * @return payoffAmount the final period amount for the payoff
      */
@@ -336,6 +340,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // or payment happened past last due date (i.e. to be included in the next period)
 
         payoffAmount = _cr.unbilledPrincipal + _cr.totalDue;
+
+        // todo update this logic with current block.timestamp
 
         payoffAmount += uint96(
             ((payoffAmount - _cr.feesAndInterestDue) *
