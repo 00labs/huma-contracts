@@ -6,9 +6,9 @@ import "./interfaces/IReceivable.sol";
 import "./BaseCreditPool.sol";
 
 /**
- * @notice Invoice Factoring is the process for the invoice owner to trade in their invoices
- * for immediate access to portion of the fund tied with the invoices, and receive the remainder
- * minus fees after the invoice is paid in full.
+ * @notice Receivable Factoring is the process for the receivable owner to trade in their 
+ * receivable for immediate access to portion of the fund tied with the receivable, and 
+ * receive the remainder minus fees after the receivable is paid in full.
  */
 contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     using BaseStructs for ReceivableFactoringPool;
@@ -107,6 +107,8 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         cr.creditLimit = 0;
         cr.unbilledPrincipal = 0;
         cr.remainingPeriods = 0;
+
+        creditRecordMapping[borrower] = cr;
 
         disperseRemainingFunds(borrower, refundAmount);
     }
