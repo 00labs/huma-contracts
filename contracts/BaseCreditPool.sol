@@ -445,10 +445,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         return losses;
     }
 
-    function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
-        creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
-    }
-
     function onERC721Received(
         address, /*operator*/
         address, /*from*/
