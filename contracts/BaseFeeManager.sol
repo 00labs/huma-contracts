@@ -236,7 +236,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) / 10000;
             _cr.feesAndInterestDue = uint96(fees + interest);
             _cr.totalDue = uint96(fees + interest + principalToBill);
-            _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);
+            _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);  
         }
 
         // todo add logic to make sure totalDue meets the min requirement.
@@ -244,19 +244,12 @@ contract BaseFeeManager is IFeeManager, Ownable {
         payoffAmount = calcPayoff(_cr);
 
         // If passed final period, all principal is due
-        if (periodsPassed >= _cr.remainingPeriods - 1) {
-            // _cr.feesAndInterestDue =
-            //     payoffAmount -
-            //     (_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue);
-            // _cr.totalDue = payoffAmount;
-            // _cr.unbilledPrincipal = 0;
-
-            // review this line doesn't make any effect,
-            // you should use above lines to update _cr fields for last due,
-            // but it will make one test failed, need to confirm
-
-            // todo update existing tests and add new tests for this logic
-            totalDue = payoffAmount;
+        if (periodsPassed >= _cr.remainingPeriods) {
+            _cr.feesAndInterestDue =
+                payoffAmount -
+                (_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue);
+            _cr.totalDue = payoffAmount;
+            _cr.unbilledPrincipal = 0;
         }
 
         return (
