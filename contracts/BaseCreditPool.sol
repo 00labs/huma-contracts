@@ -399,9 +399,16 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             cr.unbilledPrincipal
         ) = IFeeManager(feeManagerAddress).getDueInfo(cr);
 
+
         if (periodsPassed > 0) {
             cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
-            cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
+            if (cr.remainingPeriods > periodsPassed) {
+                cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
+            }
+            else {
+                cr.remainingPeriods = 0;
+                cr.creditLimit = 0;
+            }
 
             if (cr.totalDue == 0) {
                 // review when this fork will occur?

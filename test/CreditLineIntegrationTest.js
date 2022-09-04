@@ -87,7 +87,7 @@ async function deployAndSetupPool(principalRateInBps) {
     await poolContract.connect(lender).deposit(10000);
 }
 
-describe.only("Credit Line Integration Test", async function() {
+describe("Credit Line Integration Test", async function() {
     before(async function() {
         [owner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
 
@@ -300,7 +300,7 @@ describe.only("Credit Line Integration Test", async function() {
     it("Day 390: Final statement, all principal due", async function() {
         advanceClock(10);
         let r = await feeManager.getDueInfo(record);
-        checkResult(r, 1, 44, 4844, 4892, 0);
+        checkResult(r, 1, 92, 4892, 4892, 0);
     });
 
     it("Day 400: Additional drawdown blocked (credit line matured)", async function() {
@@ -316,6 +316,6 @@ describe.only("Credit Line Integration Test", async function() {
             .connect(borrower)
             .makePayment(borrower.address, testToken.address, 4892);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 0, 0, dueDate, 0, 0, 0, 0, 1, 1217, 30, 3);
+        checkRecord(record, 0, 0, dueDate, 0, 0, 0, 0, 0, 1217, 30, 3);
     });
 });
