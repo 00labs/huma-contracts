@@ -446,6 +446,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     }
 
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
+        onlyEvaluationAgents();
         creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
     }
 
