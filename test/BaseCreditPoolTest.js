@@ -46,6 +46,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 describe("Base Credit Pool", function () {
     let humaPoolFactoryContract;
     let poolContract;
+    let hdtContract;
     let humaConfigContract;
     let feeManagerContract;
     let humaCreditFactoryContract;
@@ -83,11 +84,15 @@ describe("Base Credit Pool", function () {
             testTokenContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
-            "Base Credit Pool",
-            "Base Credit HDT",
-            "CHDT"
+            "Base Credit Pool"
         );
         await poolContract.deployed();
+
+        const HDT = await ethers.getContractFactory("HDT");
+        hdtContract = await HDT.deploy("Base Credit HDT", "CHDT", poolContract.address);
+        await hdtContract.deployed();
+
+        await poolContract.setPoolToken(hdtContract.address);
 
         await testTokenContract.approve(poolContract.address, 100);
 
@@ -109,9 +114,7 @@ describe("Base Credit Pool", function () {
 
         await poolContract.makeInitialDeposit(100);
 
-        const lenderInfo = await poolContract.connect(owner).lenderInfo(owner.address);
-        expect(lenderInfo.principalAmount).to.equal(100);
-        expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+        expect(await poolContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
         await poolContract.addEvaluationAgent(evaluationAgent.address);
@@ -332,13 +335,22 @@ describe("Base Credit Pool", function () {
                 await poolContract
                     .connect(borrower)
                     .makePayment(borrower.address, testTokenContract.address, 4);
-                expect(await poolContract.withdrawableFundsOf(owner.address)).to.be.within(
+                console.log(
+                    "owner withdrawableFundsOf: " +
+                        (await hdtContract.withdrawableFundsOf(owner.address))
+                );
+                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.be.within(
                     102,
                     104
                 ); // target 3
-                expect(await poolContract.withdrawableFundsOf(lender.address)).to.be.within(
+
+                console.log(
+                    "lender withdrawableFundsOf: " +
+                        (await hdtContract.withdrawableFundsOf(lender.address))
+                );
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.be.within(
                     308,
-                    311
+                    312
                 ); // target 9
 
                 await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
@@ -348,11 +360,16 @@ describe("Base Credit Pool", function () {
                 await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
                 await poolContract.triggerDefault(borrower.address);
 
-                expect(await poolContract.withdrawableFundsOf(owner.address)).to.be.within(3, 5); // target 4
-                expect(await poolContract.withdrawableFundsOf(lender.address)).to.be.within(
-                    11,
-                    14
-                ); // target 12
+                console.log(
+                    "owner withdrawableFundsOf: " +
+                        (await hdtContract.withdrawableFundsOf(owner.address))
+                );
+                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.be.within(3, 5); // target 4
+                console.log(
+                    "lender withdrawableFundsOf: " +
+                        (await hdtContract.withdrawableFundsOf(lender.address))
+                );
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.be.within(11, 15); // target 12
             });
         });
     });

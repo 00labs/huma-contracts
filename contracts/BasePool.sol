@@ -2,27 +2,34 @@
 pragma solidity >=0.8.4 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./interfaces/IFeeManager.sol";
 import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
+import "./HDT/interfaces/IHDT.sol";
 
 import "./libraries/BaseStructs.sol";
-
 import "./HumaConfig.sol";
-import "./HDT/HDT.sol";
 
 import "hardhat/console.sol";
 
-abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
+abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     uint256 public constant SECONDS_IN_A_DAY = 86400;
     uint256 public constant SECONDS_IN_180_DAYS = 15552000;
 
     using SafeERC20 for IERC20;
 
     string public poolName;
+
+    // The ERC20 token this pool manages
+    IERC20 public immutable override underlyingToken;
+
+    // The HDT token for this pool
+    IHDT public poolToken;
+
+    // The amount of underlying token belongs to lenders
+    uint256 public override totalLiquidity;
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
@@ -32,10 +39,7 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     address public feeManagerAddress;
 
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
-    mapping(address => LenderInfo) public lenderInfo;
-
-    // The ERC20 token this pool manages
-    IERC20 public immutable poolToken;
+    mapping(address => uint256) public lastDepositTime;
 
     // The max liquidity allowed for the pool.
     uint256 internal liquidityCap;
@@ -66,19 +70,24 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     // the grace period at the pool level before a Default can be triggered
     uint256 public poolDefaultGracePeriodInSeconds;
 
-    struct LenderInfo {
-        // this field may not be needed. it should equal to hdt.balanceOf(user). todo check later & remove struct
-        uint96 principalAmount;
-        uint64 mostRecentCreditTimestamp;
-    }
-
     enum PoolStatus {
         Off,
         On
     }
 
-    event LiquidityDeposited(address by, uint256 principal);
-    event LiquidityWithdrawn(address by, uint256 principal, uint256 netAmount);
+    event LiquidityDeposited(
+        address indexed caller,
+        address indexed receiver,
+        uint256 assetAmount,
+        uint256 shareAmount
+    );
+    event LiquidityWithdrawn(
+        address indexed caller,
+        address indexed receiver,
+        uint256 assetAmount,
+        uint256 shareAmount
+    );
+
     event PoolDeployed(address _poolAddress);
     event EvaluationAgentAdded(address agent, address by);
     event PoolNameChanged(string newName, address by);
@@ -89,29 +98,43 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
 
     /**
-     * @param _poolToken the token supported by the pool. In v1, only stablecoin is supported.
+     * @dev This event emits when new funds are distributed
+     * @param by the address of the sender who distributed funds
+     * @param fundsDistributed the amount of funds received for distribution
+     */
+    event IncomeDistributed(address indexed by, uint256 fundsDistributed);
+
+    /**
+     * @dev This event emits when new losses are distributed
+     * @param by the address of the sender who distributed the loss
+     * @param lossesDistributed the amount of losses received for distribution
+     */
+    event LossesDistributed(address indexed by, uint256 lossesDistributed);
+
+    /**
+     * @param _underlyingToken the token supported by the pool. In v1, only stablecoin is supported.
      * @param _humaConfig the configurator for the protocol
      * @param _feeManager support key calculations for each pool
      * @param _poolName the name for the pool
-     * @param _hdtName the name of the HDT token
-     * @param _hdtSymbol the symbol for the HDT token
      */
     constructor(
-        address _poolToken,
+        address _underlyingToken,
         address _humaConfig,
         address _feeManager,
-        string memory _poolName,
-        string memory _hdtName,
-        string memory _hdtSymbol
-    ) HDT(_hdtName, _hdtSymbol, _poolToken) {
+        string memory _poolName
+    ) {
         poolName = _poolName;
-        poolToken = IERC20(_poolToken);
+        underlyingToken = IERC20(_underlyingToken);
         humaConfig = _humaConfig;
         feeManagerAddress = _feeManager;
 
         poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig).protocolDefaultGracePeriod();
 
         emit PoolDeployed(address(this));
+    }
+
+    function setPoolToken(address _poolToken) external onlyOwner {
+        poolToken = IHDT(_poolToken);
     }
 
     //********************************************/
@@ -138,19 +161,14 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
     }
 
     function _deposit(address lender, uint256 amount) internal {
-        LenderInfo memory li = lenderInfo[lender];
+        require(amount > 0, "AMOUNT_IS_ZERO");
 
-        li.principalAmount += uint96(amount);
-        li.mostRecentCreditTimestamp = uint64(block.timestamp);
+        underlyingToken.safeTransferFrom(lender, address(this), amount);
+        uint256 shares = poolToken.mintAmount(lender, amount);
+        lastDepositTime[lender] = block.timestamp;
+        totalLiquidity += amount;
 
-        lenderInfo[lender] = li;
-
-        poolToken.safeTransferFrom(lender, address(this), amount);
-
-        // Mint HDT for the LP to claim future income and losses
-        _mint(lender, amount);
-
-        emit LiquidityDeposited(lender, amount);
+        emit LiquidityDeposited(lender, lender, amount, shares);
     }
 
     /**
@@ -162,36 +180,71 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
      *      the number of HDTs to reduct from msg.sender's account.
      * @dev Error checking sequence: 1) is the pool on 2) is the amount right 3)
      */
-    function withdraw(uint256 amount) public virtual override {
+    function withdraw(uint256 amount) external virtual override {
         protocolAndPoolOn();
-        LenderInfo memory li = lenderInfo[msg.sender];
+        require(amount > 0, "AMOUNT_IS_ZERO");
+
+        address caller = msg.sender;
         require(
-            block.timestamp >=
-                uint256(li.mostRecentCreditTimestamp) + withdrawalLockoutPeriodInSeconds,
+            block.timestamp >= lastDepositTime[caller] + withdrawalLockoutPeriodInSeconds,
             "WITHDRAW_TOO_SOON"
         );
-        uint256 withdrawableAmount = withdrawableFundsOf(msg.sender);
+        uint256 withdrawableAmount = poolToken.withdrawableFundsOf(caller);
         require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
 
-        // Calcuate the corresponding principal amount to reduce
-        uint256 principalToReduce = (balanceOf(msg.sender) * amount) / withdrawableAmount;
+        uint256 shares = poolToken.burnAmount(caller, amount);
+        totalLiquidity -= amount;
+        underlyingToken.safeTransfer(caller, amount);
 
-        li.principalAmount = uint96(uint256(li.principalAmount) - principalToReduce);
-
-        lenderInfo[msg.sender] = li;
-
-        _burn(msg.sender, principalToReduce);
-
-        poolToken.transfer(msg.sender, amount);
-
-        emit LiquidityWithdrawn(msg.sender, amount, principalToReduce);
+        emit LiquidityWithdrawn(caller, caller, amount, shares);
     }
 
     /**
      * @notice Withdraw all balance from the pool.
      */
     function withdrawAll() external virtual override {
-        return withdraw(withdrawableFundsOf(msg.sender));
+        protocolAndPoolOn();
+
+        address caller = msg.sender;
+        require(
+            block.timestamp >= lastDepositTime[caller] + withdrawalLockoutPeriodInSeconds,
+            "WITHDRAW_TOO_SOON"
+        );
+
+        uint256 shares = IERC20(address(poolToken)).balanceOf(caller);
+        require(shares > 0, "SHARES_IS_ZERO");
+        uint256 amount = poolToken.burn(caller, shares);
+        totalLiquidity -= amount;
+        underlyingToken.safeTransfer(caller, amount);
+
+        emit LiquidityWithdrawn(caller, caller, amount, shares);
+    }
+
+    /**
+     * @notice Distributes income to token holders.
+     * @dev It reverts if the total supply of tokens is 0.
+     * It emits the `IncomeDistributed` event if the amount of received is greater than 0.
+     * About undistributed income:
+     *   In each distribution, there is a small amount of funds which does not get distributed,
+     *     which is `(msg.value * POINTS_MULTIPLIER) % totalSupply()`.
+     *   With a well-chosen `POINTS_MULTIPLIER`, the amount funds that are not getting distributed
+     *     in a distribution can be less than 1 (base unit).
+     *   We can actually keep track of the undistributed in a distribution
+     *     and try to distribute it in the next distribution ....... todo implement
+     */
+    function distributeIncome(uint256 value) internal virtual {
+        totalLiquidity += value;
+    }
+
+    /**
+     * @notice Distributes losses associated with the token
+     * @dev Technically, we can combine distributeIncome() and distributeLossees() by making
+     * the parameter to int256, however, we decided to use separate APIs to improve readability
+     * and reduce errors.
+     * @param value the amount of losses to be distributed
+     */
+    function distributeLosses(uint256 value) internal virtual {
+        totalLiquidity -= value;
     }
 
     /********************************************/
@@ -327,9 +380,9 @@ abstract contract BasePool is HDT, ILiquidityProvider, IPool, Ownable {
             uint8 decimals
         )
     {
-        ERC20 erc20Contract = ERC20(address(poolToken));
+        IERC20Metadata erc20Contract = IERC20Metadata(address(poolToken));
         return (
-            address(poolToken),
+            address(underlyingToken),
             poolAprInBps,
             minBorrowAmount,
             maxCreditLine,

@@ -17,6 +17,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 // liquidity 100 from the owner
 describe("Base Pool - LP and Admin functions", function () {
     let poolContract;
+    let hdtContract;
     let humaConfigContract;
     let testTokenContract;
     let feeManagerContract;
@@ -50,11 +51,15 @@ describe("Base Pool - LP and Admin functions", function () {
             testTokenContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
-            "Base Credit Pool",
-            "Base Credit HDT",
-            "CHDT"
+            "Base Credit Pool"
         );
         await poolContract.deployed();
+
+        const HDT = await ethers.getContractFactory("HDT");
+        hdtContract = await HDT.deploy("Base Credit HDT", "CHDT", poolContract.address);
+        await hdtContract.deployed();
+
+        await poolContract.setPoolToken(hdtContract.address);
 
         await testTokenContract.approve(poolContract.address, 100);
 
@@ -64,9 +69,7 @@ describe("Base Pool - LP and Admin functions", function () {
 
         await poolContract.makeInitialDeposit(100);
 
-        const lenderInfo = await poolContract.connect(owner).lenderInfo(owner.address);
-        expect(lenderInfo.principalAmount).to.equal(100);
-        expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+        expect(await poolContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
         await poolContract.addEvaluationAgent(evaluationAgent.address);
@@ -83,16 +86,11 @@ describe("Base Pool - LP and Admin functions", function () {
         // todo Verify only pool admins can deployNewPool
 
         it("Should have correct liquidity post beforeEach() run", async function () {
-            const lenderInfo = await poolContract.connect(owner).lenderInfo(owner.address);
-            expect(lenderInfo.principalAmount).to.equal(100);
-            expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-
+            expect(await poolContract.lastDepositTime(owner.address)).to.not.equal(0);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
-
-            expect(await poolContract.balanceOf(owner.address)).to.equal(100);
+            expect(await hdtContract.balanceOf(owner.address)).to.equal(100);
 
             const fees = await feeManagerContract.getFees();
-
             expect(fees._frontLoadingFeeFlat).to.equal(10);
             expect(fees._frontLoadingFeeBps).to.equal(100);
             expect(fees._lateFeeFlat).to.equal(20);
@@ -173,14 +171,13 @@ describe("Base Pool - LP and Admin functions", function () {
 
         it("Pool deposit works correctly", async function () {
             await poolContract.connect(lender).deposit(100);
-            const lenderInfo = await poolContract.connect(lender).lenderInfo(lender.address);
-            expect(lenderInfo.principalAmount).to.equal(100);
-            expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+
+            expect(await poolContract.lastDepositTime(lender.address)).to.not.equal(0);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(200);
 
-            expect(await poolContract.balanceOf(lender.address)).to.equal(100);
-            expect(await poolContract.balanceOf(owner.address)).to.equal(100);
-            expect(await poolContract.totalSupply()).to.equal(200);
+            expect(await hdtContract.balanceOf(lender.address)).to.equal(100);
+            expect(await hdtContract.balanceOf(owner.address)).to.equal(100);
+            expect(await hdtContract.totalSupply()).to.equal(200);
         });
     });
 
@@ -230,14 +227,11 @@ describe("Base Pool - LP and Admin functions", function () {
 
             await poolContract.connect(lender).withdraw(100);
 
-            const lenderInfo = await poolContract.connect(lender).lenderInfo(lender.address);
-            expect(lenderInfo.principalAmount).to.equal(0);
-
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
-            expect(await poolContract.balanceOf(lender.address)).to.equal(0);
-            expect(await poolContract.balanceOf(owner.address)).to.equal(100);
-            expect(await poolContract.totalSupply()).to.equal(100);
+            expect(await hdtContract.balanceOf(lender.address)).to.equal(0);
+            expect(await hdtContract.balanceOf(owner.address)).to.equal(100);
+            expect(await hdtContract.totalSupply()).to.equal(100);
         });
     });
 });
