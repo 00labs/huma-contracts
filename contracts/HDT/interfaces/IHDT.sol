@@ -14,9 +14,9 @@ interface IHDT {
      */
     function withdrawableFundsOf(address owner) external view returns (uint256);
 
-    function mint(address account, uint256 assets) external returns (uint256 shares);
+    function mintAmount(address account, uint256 amount) external returns (uint256 shares);
 
-    function burn(address account, uint256 assets) external returns (uint256 shares);
+    function burnAmount(address account, uint256 amount) external returns (uint256 shares);
 
-    function burnShares(address account, uint256 shares) external returns (uint256 assets);
+    function burn(address account, uint256 shares) external returns (uint256 amount);
 }

@@ -25,8 +25,10 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     // The ERC20 token this pool manages
     IERC20 public immutable override underlyingToken;
 
+    // The HDT token for this pool
     IHDT public poolToken;
 
+    // The amount of underlying token belongs to lenders
     uint256 public override totalLiquidity;
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
@@ -74,13 +76,13 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     }
 
     event LiquidityDeposited(
-        address indexed callder,
+        address indexed caller,
         address indexed receiver,
         uint256 assetAmount,
         uint256 shareAmount
     );
     event LiquidityWithdrawn(
-        address indexed callder,
+        address indexed caller,
         address indexed receiver,
         uint256 assetAmount,
         uint256 shareAmount
@@ -94,6 +96,20 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     event PoolDefaultGracePeriodChanged(uint256 _gracePeriodInDays, address by);
     event WithdrawalLockoutPeriodUpdated(uint256 _lockoutPeriodInDays, address by);
     event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
+
+    /**
+     * @dev This event emits when new funds are distributed
+     * @param by the address of the sender who distributed funds
+     * @param fundsDistributed the amount of funds received for distribution
+     */
+    event IncomeDistributed(address indexed by, uint256 fundsDistributed);
+
+    /**
+     * @dev This event emits when new losses are distributed
+     * @param by the address of the sender who distributed the loss
+     * @param lossesDistributed the amount of losses received for distribution
+     */
+    event LossesDistributed(address indexed by, uint256 lossesDistributed);
 
     /**
      * @param _underlyingToken the token supported by the pool. In v1, only stablecoin is supported.
@@ -147,9 +163,8 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     function _deposit(address lender, uint256 amount) internal {
         require(amount > 0, "AMOUNT_IS_ZERO");
 
-        // don't consider transfer fees now
         underlyingToken.safeTransferFrom(lender, address(this), amount);
-        uint256 shares = poolToken.mint(lender, amount);
+        uint256 shares = poolToken.mintAmount(lender, amount);
         lastDepositTime[lender] = block.timestamp;
         totalLiquidity += amount;
 
@@ -177,7 +192,7 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
         uint256 withdrawableAmount = poolToken.withdrawableFundsOf(caller);
         require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
 
-        uint256 shares = poolToken.burn(caller, amount);
+        uint256 shares = poolToken.burnAmount(caller, amount);
         totalLiquidity -= amount;
         underlyingToken.safeTransfer(caller, amount);
 
@@ -198,26 +213,12 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
 
         uint256 shares = IERC20(address(poolToken)).balanceOf(caller);
         require(shares > 0, "SHARES_IS_ZERO");
-        uint256 amount = poolToken.burnShares(caller, shares);
+        uint256 amount = poolToken.burn(caller, shares);
         totalLiquidity -= amount;
         underlyingToken.safeTransfer(caller, amount);
 
         emit LiquidityWithdrawn(caller, caller, amount, shares);
     }
-
-    /**
-     * @dev This event emits when new funds are distributed
-     * @param by the address of the sender who distributed funds
-     * @param fundsDistributed the amount of funds received for distribution
-     */
-    event IncomeDistributed(address indexed by, uint256 fundsDistributed);
-
-    /**
-     * @dev This event emits when new losses are distributed
-     * @param by the address of the sender who distributed the loss
-     * @param lossesDistributed the amount of losses received for distribution
-     */
-    event LossesDistributed(address indexed by, uint256 lossesDistributed);
 
     /**
      * @notice Distributes income to token holders.

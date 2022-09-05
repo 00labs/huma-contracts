@@ -34,35 +34,35 @@ contract HDT is IHDT, ERC20 {
         return pool.totalLiquidity();
     }
 
-    function mint(address account, uint256 assets)
+    function mintAmount(address account, uint256 amount)
         external
         override
         onlyPool
         returns (uint256 shares)
     {
-        shares = convertToShares(assets);
+        shares = convertToShares(amount);
         require(shares > 0, "HDT:SHARE_IS_ZERO");
         _mint(account, shares);
     }
 
-    function burn(address account, uint256 assets)
+    function burnAmount(address account, uint256 amount)
         external
         override
         onlyPool
         returns (uint256 shares)
     {
-        shares = convertToShares(assets);
+        shares = convertToShares(amount);
         require(shares > 0, "HDT:SHARE_IS_ZERO");
         _burn(account, shares);
     }
 
-    function burnShares(address account, uint256 shares)
+    function burn(address account, uint256 shares)
         external
         override
         onlyPool
-        returns (uint256 assets)
+        returns (uint256 amount)
     {
-        assets = convertToAssets(shares);
+        amount = convertToAssets(shares);
         _burn(account, shares);
     }
 
