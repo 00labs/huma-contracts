@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4 <0.9.0;
 import "../libraries/BaseStructs.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IPool {
     function setPoolName(string memory newName) external;
@@ -31,8 +32,7 @@ interface IPool {
 
     function setReceivableRequiredInBps(uint256 _receivableRateInBps) external;
 
-    function setMinMaxBorrowAmount(uint256 _minAmount, uint256 _maxAmount)
-        external;
+    function setMinMaxBorrowAmount(uint256 _minAmount, uint256 _maxAmount) external;
 
     function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external;
 
@@ -53,4 +53,8 @@ interface IPool {
             string memory symbol,
             uint8 decimal
         );
+
+    function totalLiquidity() external view returns (uint256);
+
+    function underlyingToken() external view returns (IERC20);
 }

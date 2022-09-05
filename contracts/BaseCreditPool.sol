@@ -29,13 +29,11 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     mapping(address => BS.ReceivableInfo) internal receivableInfoMapping;
 
     constructor(
-        address _poolToken,
+        address _underlyingToken,
         address _humaConfig,
         address _feeManagerAddress,
-        string memory _poolName,
-        string memory _hdtName,
-        string memory _hdtSymbol
-    ) BasePool(_poolToken, _humaConfig, _feeManagerAddress, _poolName, _hdtName, _hdtSymbol) {}
+        string memory _poolName
+    ) BasePool(_underlyingToken, _humaConfig, _feeManagerAddress, _poolName) {}
 
     /**
      * @notice accepts a credit request from msg.sender
@@ -275,8 +273,8 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         // Transfer protocole fee and funds the _borrower
         address treasuryAddress = HumaConfig(humaConfig).humaTreasury();
-        poolToken.safeTransfer(treasuryAddress, protocolFee);
-        poolToken.safeTransfer(_borrower, amtToBorrower);
+        underlyingToken.safeTransfer(treasuryAddress, protocolFee);
+        underlyingToken.safeTransfer(_borrower, amtToBorrower);
     }
 
     /**
@@ -292,7 +290,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     ) external virtual override {
         protocolAndPoolOn();
 
-        require(_asset == address(poolToken), "WRONG_ASSET");
+        require(_asset == address(underlyingToken), "WRONG_ASSET");
         require(_amount > 0, "CANNOT_BE_ZERO_AMOUNT");
 
         // Bring the account current. This is necessary since the account might have been dormant for
@@ -366,8 +364,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
-            IERC20 token = IERC20(poolToken);
-            token.transferFrom(msg.sender, address(this), amountToCollect);
+            underlyingToken.transferFrom(msg.sender, address(this), amountToCollect);
         }
     }
 
