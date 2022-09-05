@@ -1,12 +1,12 @@
 /* eslint-disable no-underscore-dangle */
-const { ethers } = require("hardhat");
-const { use, expect } = require("chai");
-const { solidity } = require("ethereum-waffle");
+const {ethers} = require("hardhat");
+const {use, expect} = require("chai");
+const {solidity} = require("ethereum-waffle");
 
 use(solidity);
 
-const getLoanContractFromAddress = async function(address, signer) {
-  return ethers.getContractAt("HumaLoan", address, signer);
+const getLoanContractFromAddress = async function (address, signer) {
+    return ethers.getContractAt("HumaLoan", address, signer);
 };
 
 // Let us limit the depth of describe to be 2.
@@ -43,302 +43,317 @@ const getLoanContractFromAddress = async function(address, signer) {
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
-describe("Base Credit Pool", function() {
-  let humaPoolFactoryContract;
-  let poolContract;
-  let humaConfigContract;
-  let feeManagerContract;
-  let humaCreditFactoryContract;
-  let testTokenContract;
-  let owner;
-  let lender;
-  let borrower;
-  let borrower2;
-  let treasury;
-  let evaluationAgent;
+describe("Base Credit Pool", function () {
+    let humaPoolFactoryContract;
+    let poolContract;
+    let humaConfigContract;
+    let feeManagerContract;
+    let humaCreditFactoryContract;
+    let testTokenContract;
+    let owner;
+    let lender;
+    let borrower;
+    let borrower2;
+    let treasury;
+    let evaluationAgent;
 
-  before(async function() {
-    [owner, lender, borrower, borrower2, treasury, evaluationAgent] = await ethers.getSigners();
+    before(async function () {
+        [owner, lender, borrower, borrower2, treasury, evaluationAgent] =
+            await ethers.getSigners();
 
-    const HumaConfig = await ethers.getContractFactory("HumaConfig");
-    humaConfigContract = await HumaConfig.deploy(treasury.address);
-    humaConfigContract.setHumaTreasury(treasury.address);
+        const HumaConfig = await ethers.getContractFactory("HumaConfig");
+        humaConfigContract = await HumaConfig.deploy(treasury.address);
+        humaConfigContract.setHumaTreasury(treasury.address);
 
-    const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
-    feeManagerContract = await feeManagerFactory.deploy();
+        const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
+        feeManagerContract = await feeManagerFactory.deploy();
 
-    await feeManagerContract.setFees(10, 100, 20, 100);
+        await feeManagerContract.setFees(10, 100, 20, 100);
 
-    const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
-    invoiceNFTContract = await InvoiceNFT.deploy();
-  });
-
-  beforeEach(async function() {
-    const TestToken = await ethers.getContractFactory("TestToken");
-    testTokenContract = await TestToken.deploy();
-
-    const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    poolContract = await BaseCreditPool.deploy(
-      testTokenContract.address,
-      humaConfigContract.address,
-      feeManagerContract.address,
-      "Base Credit Pool",
-      "Base Credit HDT",
-      "CHDT"
-    );
-    await poolContract.deployed();
-
-    await testTokenContract.approve(poolContract.address, 100);
-
-    await poolContract.enablePool();
-
-    // const tx = await poolLockerFactoryContract.deployNewLocker(
-    //     poolContract.address,
-    //     testTokenContract.address
-    // );
-    // const receipt = await tx.wait();
-    // let lockerAddress;
-    // for (const evt of receipt.events) {
-    //     if (evt.event === "PoolLockerDeployed") {
-    //         lockerAddress = evt.args[0];
-    //     }
-    // }
-
-    await testTokenContract.approve(poolContract.address, 100);
-
-    await poolContract.makeInitialDeposit(100);
-
-    const lenderInfo = await poolContract.connect(owner).lenderInfo(owner.address);
-    expect(lenderInfo.principalAmount).to.equal(100);
-    expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
-    expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
-
-    await poolContract.addEvaluationAgent(evaluationAgent.address);
-
-    await poolContract.setAPR(1217); //bps
-    await poolContract.setMinMaxBorrowAmount(10, 1000);
-    await poolContract.enablePool();
-
-    await testTokenContract.give1000To(lender.address);
-    await testTokenContract.connect(lender).approve(poolContract.address, 400);
-
-    let lenderBalance = await testTokenContract.balanceOf(lender.address);
-    if (lenderBalance < 1000) await testTokenContract.mint(lender.address, 1000 - lenderBalance);
-
-    let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
-    if (lenderBalance > 0)
-      await testTokenContract.connect(borrower).burn(borrower.address, borrowerBalance);
-  });
-
-  afterEach(async function() {});
-
-  describe("BaseCreditPool settings", function() {
-    it("Should not allow credit line to be changed when protocol is paused", async function() {
-      await humaConfigContract.connect(owner).pauseProtocol();
-      await expect(
-        poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 500)
-      ).to.be.revertedWith("PROTOCOL_PAUSED");
-      await humaConfigContract.connect(owner).unpauseProtocol();
-    });
-    it("Should not allow non-EA to change credit line", async function() {
-      await expect(
-        poolContract.connect(borrower).changeCreditLine(borrower.address, 500)
-      ).to.be.revertedWith("APPROVER_REQUIRED");
-    });
-    it("Should not allow credit line to be changed to above maximal credit line", async function() {
-      await expect(
-        poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 5000)
-      ).to.be.revertedWith("GREATER_THAN_LIMIT");
-    });
-    it("Should not allow credit line to be changed to be below min borrowing amount", async function() {
-      await expect(
-        poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 1)
-      ).to.be.revertedWith("SMALLER_THAN_LIMIT");
-    });
-    it("Should allow credit limit to be changed", async function() {
-      await poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 1000);
-      let result = await poolContract.creditRecordMapping(borrower.address);
-      expect(result.creditLimit).to.equal(1000);
-    });
-  });
-
-  // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
-  // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
-  describe("Borrowing request", function() {
-    // Makes sure there is liquidity in the pool for borrowing
-    beforeEach(async function() {
-      await testTokenContract.connect(lender).approve(poolContract.address, 300);
-      await poolContract.connect(lender).deposit(300);
+        const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
+        invoiceNFTContract = await InvoiceNFT.deploy();
     });
 
-    afterEach(async function() {
-      await humaConfigContract.connect(owner).unpauseProtocol();
-    });
+    beforeEach(async function () {
+        const TestToken = await ethers.getContractFactory("TestToken");
+        testTokenContract = await TestToken.deploy();
 
-    it("Should not allow loan requests while protocol is paused", async function() {
-      await humaConfigContract.connect(owner).pauseProtocol();
-      await expect(poolContract.connect(borrower).requestCredit(400, 30, 12)).to.be.revertedWith(
-        "PROTOCOL_PAUSED"
-      );
-    });
-
-    it("Cannot request loan while pool is off", async function() {
-      await poolContract.disablePool();
-      await expect(poolContract.connect(borrower).requestCredit(400, 30, 12)).to.be.revertedWith(
-        "POOL_NOT_ON"
-      );
-    });
-
-    it("Cannot request loan greater than limit", async function() {
-      await expect(poolContract.connect(borrower).requestCredit(9999, 30, 12)).to.be.revertedWith(
-        "GREATER_THAN_LIMIT"
-      );
-    });
-
-    it("Loan requested by borrower initiates correctly", async function() {
-      expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
-
-      await poolContract.connect(owner).setAPR(1217);
-
-      await testTokenContract.connect(borrower).approve(poolContract.address, 0);
-
-      await testTokenContract.connect(borrower).approve(poolContract.address, 999999);
-
-      await poolContract.connect(borrower).requestCredit(400, 30, 12);
-
-      const loanInformation = await poolContract.getCreditInformation(borrower.address);
-      expect(loanInformation.creditLimit).to.equal(400);
-      expect(loanInformation.intervalInDays).to.equal(30);
-      expect(loanInformation.aprInBps).to.equal(1217);
-    });
-
-    describe("Loan Funding", function() {
-      beforeEach(async function() {
-        await poolContract.connect(borrower).requestCredit(400, 30, 12);
-      });
-
-      afterEach(async function() {
-        await humaConfigContract.connect(owner).unpauseProtocol();
-      });
-
-      it("Should not allow loan funding while protocol is paused", async function() {
-        await humaConfigContract.connect(owner).pauseProtocol();
-        await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-          "PROTOCOL_PAUSED"
+        const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
+        poolContract = await BaseCreditPool.deploy(
+            testTokenContract.address,
+            humaConfigContract.address,
+            feeManagerContract.address,
+            "Base Credit Pool",
+            "Base Credit HDT",
+            "CHDT"
         );
-      });
+        await poolContract.deployed();
 
-      it("Prevent loan funding before approval", async function() {
-        await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-          "NOT_APPROVED_OR_IN_GOOD_STANDING"
-        );
-      });
+        await testTokenContract.approve(poolContract.address, 100);
 
-      it("Cannot borrow amount lower than the min limit", async function() {
-        await expect(poolContract.connect(borrower).drawdown(1)).to.be.revertedWith(
-          "SMALLER_THAN_LIMIT"
-        );
-      });
+        await poolContract.enablePool();
 
-      it("Borrow less than approved amount", async function() {
-        await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-        expect(await poolContract.isApproved(borrower.address)).to.equal(true);
+        // const tx = await poolLockerFactoryContract.deployNewLocker(
+        //     poolContract.address,
+        //     testTokenContract.address
+        // );
+        // const receipt = await tx.wait();
+        // let lockerAddress;
+        // for (const evt of receipt.events) {
+        //     if (evt.event === "PoolLockerDeployed") {
+        //         lockerAddress = evt.args[0];
+        //     }
+        // }
 
-        expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(true);
+        await testTokenContract.approve(poolContract.address, 100);
 
-        // Should return false when no loan exists
-        expect(await poolContract.getApprovalStatusForBorrower(evaluationAgent.address)).to.equal(
-          false
-        );
+        await poolContract.makeInitialDeposit(100);
 
-        await poolContract.connect(borrower).drawdown(200);
+        const lenderInfo = await poolContract.connect(owner).lenderInfo(owner.address);
+        expect(lenderInfo.principalAmount).to.equal(100);
+        expect(lenderInfo.mostRecentLoanTimestamp).to.not.equal(0);
+        expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
-        expect(await testTokenContract.balanceOf(borrower.address)).to.equal(188); // fees: 12. pool: 11, protocol: 1
+        await poolContract.addEvaluationAgent(evaluationAgent.address);
 
-        expect(await testTokenContract.balanceOf(treasury.address)).to.equal(1);
-        expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(211);
-      });
+        await poolContract.setAPR(1217); //bps
+        await poolContract.setMinMaxBorrowAmount(10, 1000);
+        await poolContract.enablePool();
 
-      it("Borrow full amount that has been approved", async function() {
-        await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-        expect(await poolContract.isApproved(borrower.address)).to.equal(true);
+        await testTokenContract.give1000To(lender.address);
+        await testTokenContract.connect(lender).approve(poolContract.address, 400);
 
-        expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(true);
-
-        await poolContract.connect(borrower).drawdown(400);
-
-        expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386); // fees: 14. pool: 12, protocol: 2
-
-        expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
-
-        expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(12);
-      });
-    });
-
-    // In "Payback".beforeEach(), make sure there is a loan funded.
-    describe("Payback", function() {
-      beforeEach(async function() {
         let lenderBalance = await testTokenContract.balanceOf(lender.address);
+        if (lenderBalance < 1000)
+            await testTokenContract.mint(lender.address, 1000 - lenderBalance);
 
-        await poolContract.connect(owner).setAPR(1217);
-        await poolContract.connect(borrower).requestCredit(400, 30, 12);
-
-        await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-        await poolContract.connect(borrower).drawdown(400);
-      });
-
-      afterEach(async function() {
-        await humaConfigContract.connect(owner).unpauseProtocol();
-      });
-
-      it("Should not allow payback while protocol is paused", async function() {
-        await humaConfigContract.connect(owner).pauseProtocol();
-        await expect(
-          poolContract
-            .connect(borrower)
-            .makePayment(borrower.address, testTokenContract.address, 5)
-        ).to.be.revertedWith("PROTOCOL_PAUSED");
-      });
-
-      // todo if the pool is stopped, shall we accept payback?
-
-      it("Process payback", async function() {
-        await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-        await ethers.provider.send("evm_mine", []);
-
-        await testTokenContract.connect(borrower).approve(poolContract.address, 5);
-
-        await poolContract
-          .connect(borrower)
-          .makePayment(borrower.address, testTokenContract.address, 5);
-
-        let creditInfo = await poolContract.getCreditInformation(borrower.address);
-
-        expect(creditInfo.balance).to.equal(399);
-        expect(creditInfo.remainingPeriods).to.equal(11);
-      });
-
-      // Default flow. Designed to include one payment successfully followed by a default.
-      // Having one successful payment to incur some income so that we can cover both income and losses.
-      it("Default flow", async function() {
-        await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
-        await testTokenContract.connect(borrower).approve(poolContract.address, 4);
-        await poolContract
-          .connect(borrower)
-          .makePayment(borrower.address, testTokenContract.address, 4);
-        expect(await poolContract.withdrawableFundsOf(owner.address)).to.be.within(102, 104); // target 3
-        expect(await poolContract.withdrawableFundsOf(lender.address)).to.be.within(308, 311); // target 9
-
-        await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-          "DEFAULT_TRIGGERED_TOO_EARLY"
-        );
-
-        await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
-        await poolContract.triggerDefault(borrower.address);
-
-        expect(await poolContract.withdrawableFundsOf(owner.address)).to.be.within(3, 5); // target 4
-        expect(await poolContract.withdrawableFundsOf(lender.address)).to.be.within(11, 14); // target 12
-      });
+        let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
+        if (lenderBalance > 0)
+            await testTokenContract.connect(borrower).burn(borrower.address, borrowerBalance);
     });
-  });
+
+    afterEach(async function () {});
+
+    describe("BaseCreditPool settings", function () {
+        it("Should not allow credit line to be changed when protocol is paused", async function () {
+            await humaConfigContract.connect(owner).pauseProtocol();
+            await expect(
+                poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 500)
+            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            await humaConfigContract.connect(owner).unpauseProtocol();
+        });
+        it("Should not allow non-EA to change credit line", async function () {
+            await expect(
+                poolContract.connect(borrower).changeCreditLine(borrower.address, 500)
+            ).to.be.revertedWith("APPROVER_REQUIRED");
+        });
+        it("Should not allow credit line to be changed to above maximal credit line", async function () {
+            await expect(
+                poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 5000)
+            ).to.be.revertedWith("GREATER_THAN_LIMIT");
+        });
+        it("Should not allow credit line to be changed to be below min borrowing amount", async function () {
+            await expect(
+                poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 1)
+            ).to.be.revertedWith("SMALLER_THAN_LIMIT");
+        });
+        it("Should allow credit limit to be changed", async function () {
+            await poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 1000);
+            let result = await poolContract.creditRecordMapping(borrower.address);
+            expect(result.creditLimit).to.equal(1000);
+        });
+    });
+
+    // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
+    // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
+    describe("Borrowing request", function () {
+        // Makes sure there is liquidity in the pool for borrowing
+        beforeEach(async function () {
+            await testTokenContract.connect(lender).approve(poolContract.address, 300);
+            await poolContract.connect(lender).deposit(300);
+        });
+
+        afterEach(async function () {
+            await humaConfigContract.connect(owner).unpauseProtocol();
+        });
+
+        it("Should not allow loan requests while protocol is paused", async function () {
+            await humaConfigContract.connect(owner).pauseProtocol();
+            await expect(
+                poolContract.connect(borrower).requestCredit(400, 30, 12)
+            ).to.be.revertedWith("PROTOCOL_PAUSED");
+        });
+
+        it("Cannot request loan while pool is off", async function () {
+            await poolContract.disablePool();
+            await expect(
+                poolContract.connect(borrower).requestCredit(400, 30, 12)
+            ).to.be.revertedWith("POOL_NOT_ON");
+        });
+
+        it("Cannot request loan greater than limit", async function () {
+            await expect(
+                poolContract.connect(borrower).requestCredit(9999, 30, 12)
+            ).to.be.revertedWith("GREATER_THAN_LIMIT");
+        });
+
+        it("Loan requested by borrower initiates correctly", async function () {
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
+
+            await poolContract.connect(owner).setAPR(1217);
+
+            await testTokenContract.connect(borrower).approve(poolContract.address, 0);
+
+            await testTokenContract.connect(borrower).approve(poolContract.address, 999999);
+
+            await poolContract.connect(borrower).requestCredit(400, 30, 12);
+
+            const loanInformation = await poolContract.getCreditInformation(borrower.address);
+            expect(loanInformation.creditLimit).to.equal(400);
+            expect(loanInformation.intervalInDays).to.equal(30);
+            expect(loanInformation.aprInBps).to.equal(1217);
+        });
+
+        describe("Loan Funding", function () {
+            beforeEach(async function () {
+                await poolContract.connect(borrower).requestCredit(400, 30, 12);
+            });
+
+            afterEach(async function () {
+                await humaConfigContract.connect(owner).unpauseProtocol();
+            });
+
+            it("Should not allow loan funding while protocol is paused", async function () {
+                await humaConfigContract.connect(owner).pauseProtocol();
+                await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
+                    "PROTOCOL_PAUSED"
+                );
+            });
+
+            it("Prevent loan funding before approval", async function () {
+                await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
+                    "NOT_APPROVED_OR_IN_GOOD_STANDING"
+                );
+            });
+
+            it("Cannot borrow amount lower than the min limit", async function () {
+                await expect(poolContract.connect(borrower).drawdown(1)).to.be.revertedWith(
+                    "SMALLER_THAN_LIMIT"
+                );
+            });
+
+            it("Borrow less than approved amount", async function () {
+                await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+                expect(await poolContract.isApproved(borrower.address)).to.equal(true);
+
+                expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
+                    true
+                );
+
+                // Should return false when no loan exists
+                expect(
+                    await poolContract.getApprovalStatusForBorrower(evaluationAgent.address)
+                ).to.equal(false);
+
+                await poolContract.connect(borrower).drawdown(200);
+
+                expect(await testTokenContract.balanceOf(borrower.address)).to.equal(188); // fees: 12. pool: 11, protocol: 1
+
+                expect(await testTokenContract.balanceOf(treasury.address)).to.equal(1);
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(211);
+            });
+
+            it("Borrow full amount that has been approved", async function () {
+                await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+                expect(await poolContract.isApproved(borrower.address)).to.equal(true);
+
+                expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
+                    true
+                );
+
+                await poolContract.connect(borrower).drawdown(400);
+
+                expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386); // fees: 14. pool: 12, protocol: 2
+
+                expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
+
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(12);
+            });
+        });
+
+        // In "Payback".beforeEach(), make sure there is a loan funded.
+        describe("Payback", function () {
+            beforeEach(async function () {
+                let lenderBalance = await testTokenContract.balanceOf(lender.address);
+
+                await poolContract.connect(owner).setAPR(1217);
+                await poolContract.connect(borrower).requestCredit(400, 30, 12);
+
+                await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+                await poolContract.connect(borrower).drawdown(400);
+            });
+
+            afterEach(async function () {
+                await humaConfigContract.connect(owner).unpauseProtocol();
+            });
+
+            it("Should not allow payback while protocol is paused", async function () {
+                await humaConfigContract.connect(owner).pauseProtocol();
+                await expect(
+                    poolContract
+                        .connect(borrower)
+                        .makePayment(borrower.address, testTokenContract.address, 5)
+                ).to.be.revertedWith("PROTOCOL_PAUSED");
+            });
+
+            // todo if the pool is stopped, shall we accept payback?
+
+            it("Process payback", async function () {
+                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+                await ethers.provider.send("evm_mine", []);
+
+                await testTokenContract.connect(borrower).approve(poolContract.address, 5);
+
+                await poolContract
+                    .connect(borrower)
+                    .makePayment(borrower.address, testTokenContract.address, 5);
+
+                let creditInfo = await poolContract.getCreditInformation(borrower.address);
+
+                expect(creditInfo.balance).to.equal(399);
+                expect(creditInfo.remainingPeriods).to.equal(11);
+            });
+
+            // Default flow. Designed to include one payment successfully followed by a default.
+            // Having one successful payment to incur some income so that we can cover both income and losses.
+            it("Default flow", async function () {
+                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
+                await testTokenContract.connect(borrower).approve(poolContract.address, 4);
+                await poolContract
+                    .connect(borrower)
+                    .makePayment(borrower.address, testTokenContract.address, 4);
+                expect(await poolContract.withdrawableFundsOf(owner.address)).to.be.within(
+                    102,
+                    104
+                ); // target 3
+                expect(await poolContract.withdrawableFundsOf(lender.address)).to.be.within(
+                    308,
+                    311
+                ); // target 9
+
+                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                );
+
+                await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
+                await poolContract.triggerDefault(borrower.address);
+
+                expect(await poolContract.withdrawableFundsOf(owner.address)).to.be.within(3, 5); // target 4
+                expect(await poolContract.withdrawableFundsOf(lender.address)).to.be.within(
+                    11,
+                    14
+                ); // target 12
+            });
+        });
+    });
 });
