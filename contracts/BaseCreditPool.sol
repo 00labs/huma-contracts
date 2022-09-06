@@ -300,7 +300,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         );
 
         // How many amount will be applied towards principal
-        uint256 principalPayment;
+        uint256 principalPayment = 0;
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
@@ -364,7 +364,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
-            underlyingToken.transferFrom(msg.sender, address(this), amountToCollect);
+            underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
         }
     }
 
@@ -399,6 +399,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         if (periodsPassed > 0) {
             cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
+            // Adjusts remainingPeriods, special handling when reached the maturity of the credit line 
             if (cr.remainingPeriods > periodsPassed) {
                 cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
             }
@@ -407,14 +408,15 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 cr.creditLimit = 0;
             }
 
-            if (cr.totalDue == 0) {
-                // review when this fork will occur?
-                cr.missedPeriods = 0;
-                cr.state = BS.CreditState.GoodStanding;
-            } else {
+            // Sets the right missedPeriods and state for the credit record 
+            if (cr.totalDue > 0) {
                 // note the design of missedPeriods is awkward. need to find a simpler solution
                 cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
                 if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
+            } else {
+                // When totalDue has been paid, the account is in good standing
+                cr.missedPeriods = 0;
+                cr.state = BS.CreditState.GoodStanding;
             }
             creditRecordMapping[_borrower] = cr;
         }
