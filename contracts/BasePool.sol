@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.4 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -353,7 +353,7 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
      * @return maxCreditAmount the max amount for the credit line
      */
     function getPoolSummary()
-        public
+        external
         view
         virtual
         override

@@ -1,6 +1,6 @@
 //Contract based on [https://docs.openzeppelin.com/contracts/3.x/erc721](https://docs.openzeppelin.com/contracts/3.x/erc721)
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -18,7 +18,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
     constructor() ERC721("InvoiceNFT", "RNNFT") {}
 
     function mintNFT(address recipient, string memory tokenURI)
-        public
+        external
         returns (uint256)
     {
         emit Mint(recipient, tokenURI);
@@ -32,7 +32,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
         return newItemId;
     }
 
-    function setTokenURI(uint256 tokenId, string memory uri) public {
+    function setTokenURI(uint256 tokenId, string memory uri) external {
         emit SetURI(tokenId, uri);
         _setTokenURI(tokenId, uri);
     }

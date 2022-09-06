@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.4 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
@@ -232,7 +232,7 @@ contract HumaConfig is Ownable {
         }
     }
 
-    function isAssetValid(address asset) public view returns (bool) {
+    function isAssetValid(address asset) external view returns (bool) {
         return validLiquidityAssets[asset];
     }
 
@@ -244,7 +244,7 @@ contract HumaConfig is Ownable {
         return poolAdmins[account];
     }
 
-    function isProtocolPaused() public view returns (bool) {
+    function isProtocolPaused() external view returns (bool) {
         return protocolPaused;
     }
 

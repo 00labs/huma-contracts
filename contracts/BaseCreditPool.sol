@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.4 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
@@ -128,7 +128,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
      * @param _newLine the new limit of the line in the unit of pool token
      * @dev only Evaluation Agent can call
      */
-    function changeCreditLine(address _borrower, uint256 _newLine) public {
+    function changeCreditLine(address _borrower, uint256 _newLine) external {
         protocolAndPoolOn();
         onlyEvaluationAgents();
         // Borrowing amount needs to be lower than max for the pool.
@@ -143,7 +143,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
      * @notice Invalidate the credit line
      * @dev If the credit limit is 0, we treat the line as deleted.
      */
-    function invalidateApprovedCredit(address _borrower) public virtual override {
+    function invalidateApprovedCredit(address _borrower) external virtual override {
         protocolAndPoolOn();
         onlyEvaluationAgents();
         BS.CreditRecord memory cr = creditRecordMapping[_borrower];
@@ -152,7 +152,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         creditRecordMapping[_borrower] = cr;
     }
 
-    function isApproved(address _borrower) public view virtual override returns (bool) {
+    function isApproved(address _borrower) external view virtual override returns (bool) {
         if ((creditRecordMapping[_borrower].state >= BS.CreditState.Approved)) return true;
         else return false;
     }
