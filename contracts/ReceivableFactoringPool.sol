@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.4 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "./interfaces/IReceivable.sol";
 
@@ -26,39 +26,39 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
      * @notice After the EA (EvalutionAgent) has approved a factoring, it calls this function
      * to record the approval on chain and mark as factoring as approved, which will enable
      * the borrower to drawdown (borrow) from the approved credit.
-     * @param _borrower the borrower address
-     * @param _creditAmount the limit of the credit
-     * @param _receivableAsset the receivable asset used for this credit
-     * @param _receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
-     * @param _receivableAmount amount of the receivable asset
-     * @param _intervalInDays time interval for each payback in units of days
-     * @param _remainingPeriods the number of pay periods for this credit
+     * @param borrower the borrower address
+     * @param creditAmount the limit of the credit
+     * @param receivableAsset the receivable asset used for this credit
+     * @param receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
+     * @param receivableAmount amount of the receivable asset
+     * @param intervalInDays time interval for each payback in units of days
+     * @param remainingPeriods the number of pay periods for this credit
      * @dev Only Evaluation Agents for this contract can call this function.
      */
     function recordPreapprovedCredit(
-        address _borrower,
-        uint256 _creditAmount,
-        address _receivableAsset,
-        uint256 _receivableParam,
-        uint256 _receivableAmount,
-        uint256 _intervalInDays,
-        uint256 _remainingPeriods
-    ) public virtual override {
+        address borrower,
+        uint256 creditAmount,
+        address receivableAsset,
+        uint256 receivableParam,
+        uint256 receivableAmount,
+        uint256 intervalInDays,
+        uint256 remainingPeriods
+    ) external virtual override {
         onlyEvaluationAgents();
 
         // Pool status and data validation happens within initiate().
         initiate(
-            _borrower,
-            _creditAmount,
-            _receivableAsset,
-            _receivableParam,
-            _receivableAmount,
+            borrower,
+            creditAmount,
+            receivableAsset,
+            receivableParam,
+            receivableAmount,
             poolAprInBps,
-            _intervalInDays,
-            _remainingPeriods
+            intervalInDays,
+            remainingPeriods
         );
 
-        approveCredit(_borrower);
+        approveCredit(borrower);
     }
 
     /**
@@ -71,7 +71,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         address borrower,
         address asset,
         uint256 amount
-    ) public virtual override {
+    ) external virtual override {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
         onlyEvaluationAgents();

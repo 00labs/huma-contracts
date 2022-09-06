@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.4 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -85,7 +85,7 @@ contract HDT is IHDT, ERC20 {
      * @param _owner The address of a token holder.
      * @return The amount funds that `_owner` can withdraw.
      */
-    function withdrawableFundsOf(address _owner) public view virtual override returns (uint256) {
+    function withdrawableFundsOf(address _owner) external view virtual override returns (uint256) {
         return convertToAssets(balanceOf(_owner));
     }
 

@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity >=0.8.4 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -269,7 +269,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 _frontLoadingFeeBps,
         uint256 _lateFeeFlat,
         uint256 _lateFeeBps
-    ) public virtual override onlyOwner {
+    ) external virtual override onlyOwner {
         frontLoadingFeeFlat = _frontLoadingFeeFlat;
         frontLoadingFeeBps = _frontLoadingFeeBps;
         lateFeeFlat = _lateFeeFlat;
@@ -300,7 +300,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * @param _lateFeeBps a fee in the percentage of the outstanding balance
      */
     function getFees()
-        public
+        external
         view
         virtual
         override
