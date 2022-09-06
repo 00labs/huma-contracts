@@ -56,6 +56,4 @@ interface IPool {
         );
 
     function totalLiquidity() external view returns (uint256);
-
-    function underlyingToken() external view returns (IERC20);
 }

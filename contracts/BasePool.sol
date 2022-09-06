@@ -23,7 +23,7 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     string public poolName;
 
     // The ERC20 token this pool manages
-    IERC20 public immutable override underlyingToken;
+    IERC20 public underlyingToken;
 
     // The HDT token for this pool
     IHDT public poolToken;
@@ -102,19 +102,20 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     event LossesDistributed(address indexed by, uint256 lossesDistributed);
 
     /**
-     * @param _underlyingToken the token supported by the pool. In v1, only stablecoin is supported.
+     * @param _poolToken the token supported by the pool.
      * @param _humaConfig the configurator for the protocol
      * @param _feeManager support key calculations for each pool
      * @param _poolName the name for the pool
      */
     constructor(
-        address _underlyingToken,
+        address _poolToken,
         address _humaConfig,
         address _feeManager,
         string memory _poolName
     ) {
         poolName = _poolName;
-        underlyingToken = IERC20(_underlyingToken);
+        poolToken = IHDT(_poolToken);
+        underlyingToken = IERC20(poolToken.assetToken());
         humaConfig = _humaConfig;
         feeManagerAddress = _feeManager;
 
@@ -125,6 +126,7 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
 
     function setPoolToken(address _poolToken) external onlyOwner {
         poolToken = IHDT(_poolToken);
+        underlyingToken = IERC20(poolToken.assetToken());
     }
 
     //********************************************/

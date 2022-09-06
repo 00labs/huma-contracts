@@ -79,20 +79,20 @@ describe("Base Credit Pool", function () {
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
 
+        const HDT = await ethers.getContractFactory("HDT");
+        hdtContract = await HDT.deploy("Base Credit HDT", "CHDT", testTokenContract.address);
+        await hdtContract.deployed();
+
         const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
         poolContract = await BaseCreditPool.deploy(
-            testTokenContract.address,
+            hdtContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
             "Base Credit Pool"
         );
         await poolContract.deployed();
 
-        const HDT = await ethers.getContractFactory("HDT");
-        hdtContract = await HDT.deploy("Base Credit HDT", "CHDT", poolContract.address);
-        await hdtContract.deployed();
-
-        await poolContract.setPoolToken(hdtContract.address);
+        await hdtContract.setPool(poolContract.address);
 
         await testTokenContract.approve(poolContract.address, 100);
 
