@@ -364,7 +364,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
-            underlyingToken.transferFrom(msg.sender, address(this), amountToCollect);
+            underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
         }
     }
 
@@ -399,6 +399,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
 
         if (periodsPassed > 0) {
             cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
+            // Adjusts remainingPeriods, special handling when reached the maturity of the credit line 
             if (cr.remainingPeriods > periodsPassed) {
                 cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
             }
@@ -407,8 +408,9 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
                 cr.creditLimit = 0;
             }
 
+            // Sets the right missedPeriods and state for the credit record 
             if (cr.totalDue == 0) {
-                // review when this fork will occur?
+                // When totalDue has been paid, the account is in good standing
                 cr.missedPeriods = 0;
                 cr.state = BS.CreditState.GoodStanding;
             } else {

@@ -57,13 +57,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // rounding to days
         uint256 timePassed = block.timestamp -
             (_cr.dueDate - _cr.intervalInDays * SECONDS_IN_A_DAY);
-        uint256 numOfDays = timePassed / SECONDS_IN_A_DAY;
-        uint256 remainder = timePassed % SECONDS_IN_A_DAY;
-        if (remainder > 43200) numOfDays++;
 
-        (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) / SECONDS_IN_A_YEAR / 10000;
-
-        return (amount * _cr.aprInBps * numOfDays * SECONDS_IN_A_DAY) / SECONDS_IN_A_YEAR / 10000;
+        return (amount * _cr.aprInBps * timePassed) / SECONDS_IN_A_YEAR / 10000;
     }
 
     /**
