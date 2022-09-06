@@ -75,18 +75,8 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
         On
     }
 
-    event LiquidityDeposited(
-        address indexed caller,
-        address indexed receiver,
-        uint256 assetAmount,
-        uint256 shareAmount
-    );
-    event LiquidityWithdrawn(
-        address indexed caller,
-        address indexed receiver,
-        uint256 assetAmount,
-        uint256 shareAmount
-    );
+    event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
+    event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
 
     event PoolDeployed(address _poolAddress);
     event EvaluationAgentAdded(address agent, address by);
@@ -168,7 +158,7 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
         lastDepositTime[lender] = block.timestamp;
         totalLiquidity += amount;
 
-        emit LiquidityDeposited(lender, lender, amount, shares);
+        emit LiquidityDeposited(lender, amount, shares);
     }
 
     /**
@@ -184,19 +174,18 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
         protocolAndPoolOn();
         require(amount > 0, "AMOUNT_IS_ZERO");
 
-        address caller = msg.sender;
         require(
-            block.timestamp >= lastDepositTime[caller] + withdrawalLockoutPeriodInSeconds,
+            block.timestamp >= lastDepositTime[msg.sender] + withdrawalLockoutPeriodInSeconds,
             "WITHDRAW_TOO_SOON"
         );
-        uint256 withdrawableAmount = poolToken.withdrawableFundsOf(caller);
+        uint256 withdrawableAmount = poolToken.withdrawableFundsOf(msg.sender);
         require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
 
-        uint256 shares = poolToken.burnAmount(caller, amount);
+        uint256 shares = poolToken.burnAmount(msg.sender, amount);
         totalLiquidity -= amount;
-        underlyingToken.safeTransfer(caller, amount);
+        underlyingToken.safeTransfer(msg.sender, amount);
 
-        emit LiquidityWithdrawn(caller, caller, amount, shares);
+        emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
 
     /**
@@ -205,19 +194,18 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     function withdrawAll() external virtual override {
         protocolAndPoolOn();
 
-        address caller = msg.sender;
         require(
-            block.timestamp >= lastDepositTime[caller] + withdrawalLockoutPeriodInSeconds,
+            block.timestamp >= lastDepositTime[msg.sender] + withdrawalLockoutPeriodInSeconds,
             "WITHDRAW_TOO_SOON"
         );
 
-        uint256 shares = IERC20(address(poolToken)).balanceOf(caller);
+        uint256 shares = IERC20(address(poolToken)).balanceOf(msg.sender);
         require(shares > 0, "SHARES_IS_ZERO");
-        uint256 amount = poolToken.burn(caller, shares);
+        uint256 amount = poolToken.burn(msg.sender, shares);
         totalLiquidity -= amount;
-        underlyingToken.safeTransfer(caller, amount);
+        underlyingToken.safeTransfer(msg.sender, amount);
 
-        emit LiquidityWithdrawn(caller, caller, amount, shares);
+        emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
 
     /**
