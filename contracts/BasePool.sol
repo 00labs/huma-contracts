@@ -86,6 +86,7 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
     event PoolDefaultGracePeriodChanged(uint256 _gracePeriodInDays, address by);
     event WithdrawalLockoutPeriodUpdated(uint256 _lockoutPeriodInDays, address by);
     event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
+    event APRUpdated(uint256 _aprInBps);
 
     /**
      * @dev This event emits when new funds are distributed
@@ -269,6 +270,7 @@ abstract contract BasePool is ILiquidityProvider, IPool, Ownable {
         onlyOwnerOrHumaMasterAdmin();
         require(_aprInBps <= 10000, "INVALID_APR");
         poolAprInBps = _aprInBps;
+        emit APRUpdated(_aprInBps);
     }
 
     /**
