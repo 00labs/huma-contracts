@@ -16,7 +16,7 @@ module.exports = async ({getNamedAccounts, deployments}) => {
     const {deploy} = deployments;
     const {deployer} = await getNamedAccounts();
     // const chainId = await getChainId();
-    const [_deployer, treasury] = await ethers.getSigners();
+    const [_deployer, treasury, lender, ea_approver] = await ethers.getSigners();
 
     const decimalToExpandedString = function(value, decimals) {
         return Number(value * 10 ** decimals).toLocaleString("fullwide", {
@@ -26,8 +26,7 @@ module.exports = async ({getNamedAccounts, deployments}) => {
 
     await deploy("TestToken", {
         from: deployer,
-        log: true,
-        waitConfirmations: 5
+        log: true
     });
     const TestToken = await ethers.getContract("TestToken", deployer);
     const poolTokenDecimals = await TestToken.decimals();
@@ -35,8 +34,7 @@ module.exports = async ({getNamedAccounts, deployments}) => {
     await deploy("HumaConfig", {
         from: deployer,
         log: true,
-        args: [treasury.address],
-        waitConfirmations: 5
+        args: [treasury.address]
     });
     const HumaConfig = await ethers.getContract("HumaConfig", deployer);
     await HumaConfig.setLiquidityAsset(TestToken.address, true);
@@ -46,43 +44,53 @@ module.exports = async ({getNamedAccounts, deployments}) => {
         from: deployer,
         log: true,
         args: [],
-        waitConfirmations: 5
+        waitConfirmations: 1,
     });
     const BaseFeeManager = await ethers.getContract("BaseFeeManager", deployer);
     await BaseFeeManager.setFees(
         decimalToExpandedString(10, poolTokenDecimals),
         100,
         decimalToExpandedString(20, poolTokenDecimals),
-        100,
-        decimalToExpandedString(30, poolTokenDecimals),
         100
     );
+
+    await deploy("HDT", {
+        from: deployer,
+        log: true,
+        args: ["Base HDT", "BHDT", TestToken.address],
+        waitConfirmations: 1,
+    });
+    const HDT = await ethers.getContract("HDT", deployer);
+
 
     await deploy("ReceivableFactoringPool", {
         from: deployer,
         log: true,
         args: [
-            TestToken.address,
+            HDT.address,
             HumaConfig.address,
             BaseFeeManager.address,
             "Huma Invoice Factory Pool",
-            "HumaIF HDT",
-            "HHDT"
         ],
-        waitConfirmations: 5
+        waitConfirmations: 1,
     });
 
     const ReceivableFactoringPool = await ethers.getContract("ReceivableFactoringPool", deployer);
 
+    await HDT.setPool(ReceivableFactoringPool.address);
+
     await ReceivableFactoringPool.enablePool();
-    await ReceivableFactoringPool.addEvaluationAgent(process.env.INITIAL_HUMA_CREDIT_APPROVER);
+    await ReceivableFactoringPool.addEvaluationAgent(ea_approver);
     const maxCreditLine = decimalToExpandedString(10000, poolTokenDecimals);
     await ReceivableFactoringPool.setMinMaxBorrowAmount(10, maxCreditLine);
+
+    await TestToken.connect(lender).approve(ReceivableFactoringPool.address, 10000);
+    await ReceivableFactoringPool.connect(lender).deposit(10000);
 
     await deploy("InvoiceNFT", {
         from: deployer,
         log: true,
-        waitConfirmations: 5
+        waitConfirmations: 1,
     });
 
     await TestToken.give100000To(deployer);
