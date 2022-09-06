@@ -58,20 +58,20 @@ describe("Huma Invoice Financing", function () {
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
 
+        const HDT = await ethers.getContractFactory("HDT");
+        hdtContract = await HDT.deploy("HumaIF HDT", "HHDT", testTokenContract.address);
+        await hdtContract.deployed();
+
         const ReceivableFactoringPool = await ethers.getContractFactory("ReceivableFactoringPool");
         invoiceContract = await ReceivableFactoringPool.deploy(
-            testTokenContract.address,
+            hdtContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
             "Invoice Factory Pool"
         );
         await invoiceContract.deployed();
 
-        const HDT = await ethers.getContractFactory("HDT");
-        hdtContract = await HDT.deploy("HumaIF HDT", "HHDT", invoiceContract.address);
-        await hdtContract.deployed();
-
-        await invoiceContract.setPoolToken(hdtContract.address);
+        await hdtContract.setPool(invoiceContract.address);
 
         await testTokenContract.approve(invoiceContract.address, 100);
 

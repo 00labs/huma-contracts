@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IHDT.sol";
 import "../interfaces/IPool.sol";
 
@@ -10,10 +10,9 @@ import "../interfaces/IPool.sol";
  * @title Huma Distribution Token
  * @notice HDT tracks the principal, earnings and losses associated with a token.
  */
-contract HDT is IHDT, ERC20 {
-    using SafeERC20 for IERC20;
-
-    IERC20 public assetToken;
+contract HDT is IHDT, ERC20, Ownable {
+    address public immutable override assetToken;
+    uint8 internal immutable _decimals;
 
     IPool public pool;
 
@@ -24,10 +23,18 @@ contract HDT is IHDT, ERC20 {
     constructor(
         string memory name,
         string memory symbol,
-        address poolAddress
+        address underlyingToken
     ) ERC20(name, symbol) {
+        assetToken = underlyingToken;
+        _decimals = IERC20Metadata(underlyingToken).decimals();
+    }
+
+    function setPool(address poolAddress) external onlyOwner {
         pool = IPool(poolAddress);
-        assetToken = pool.underlyingToken();
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return _decimals;
     }
 
     function totalAssets() public view virtual returns (uint256) {

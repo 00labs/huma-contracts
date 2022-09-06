@@ -62,21 +62,22 @@ async function deployContracts() {
 
 async function deployAndSetupPool(principalRateInBps) {
     await feeManager.connect(poolOwner).setMinPrincipalRateInBps(principalRateInBps);
+
+    const HDT = await ethers.getContractFactory("HDT");
+    hdtContract = await HDT.deploy("Base HDT", "BHDT", testToken.address);
+    await hdtContract.deployed();
+
     // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
     poolContract = await BaseCreditPool.deploy(
-        testToken.address,
+        hdtContract.address,
         humaConfigContract.address,
         feeManager.address,
         "Base Credit Pool"
     );
     await poolContract.deployed();
 
-    const HDT = await ethers.getContractFactory("HDT");
-    hdtContract = await HDT.deploy("Base HDT", "BHDT", poolContract.address);
-    await hdtContract.deployed();
-
-    await poolContract.setPoolToken(hdtContract.address);
+    await hdtContract.setPool(poolContract.address);
 
     // Pool setup
     await poolContract.transferOwnership(poolOwner.address);
