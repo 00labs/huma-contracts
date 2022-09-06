@@ -196,9 +196,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
          *    We will just ignore the correction for follow-on iterations.
          * 5. Calculate the principal due, and minus it from the unbilled principal amount
          */
-        uint256 fees;
-        uint256 interest;
-        for (uint256 i; i < periodsPassed; i++) {
+        uint256 fees = 0;
+        uint256 interest = 0;
+        for (uint256 i = 0; i < periodsPassed; i++) {
             // step 1. late fee calculation
             if (_cr.totalDue > 0)
                 fees = calcLateFee(

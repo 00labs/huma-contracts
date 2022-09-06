@@ -300,7 +300,7 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         );
 
         // How many amount will be applied towards principal
-        uint256 principalPayment;
+        uint256 principalPayment = 0;
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
@@ -409,14 +409,14 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
             }
 
             // Sets the right missedPeriods and state for the credit record 
-            if (cr.totalDue == 0) {
-                // When totalDue has been paid, the account is in good standing
-                cr.missedPeriods = 0;
-                cr.state = BS.CreditState.GoodStanding;
-            } else {
+            if (cr.totalDue > 0) {
                 // note the design of missedPeriods is awkward. need to find a simpler solution
                 cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
                 if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
+            } else {
+                // When totalDue has been paid, the account is in good standing
+                cr.missedPeriods = 0;
+                cr.state = BS.CreditState.GoodStanding;
             }
             creditRecordMapping[_borrower] = cr;
         }

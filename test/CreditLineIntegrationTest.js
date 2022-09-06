@@ -92,7 +92,7 @@ async function deployAndSetupPool(principalRateInBps) {
     await poolContract.connect(lender).deposit(10000);
 }
 
-describe.only("Credit Line Integration Test", async function() {
+describe("Credit Line Integration Test", async function() {
     before(async function() {
         [owner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
 
