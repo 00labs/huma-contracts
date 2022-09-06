@@ -25,6 +25,7 @@ contract HDT is IHDT, ERC20, Ownable {
         string memory symbol,
         address underlyingToken
     ) ERC20(name, symbol) {
+        require(underlyingToken != address(0), "TOKEN_ADDRESS_ZERO");
         assetToken = underlyingToken;
         _decimals = IERC20Metadata(underlyingToken).decimals();
     }

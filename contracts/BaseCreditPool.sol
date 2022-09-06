@@ -135,7 +135,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
         require(maxCreditLine >= _newLine, "GREATER_THAN_LIMIT");
         require(_newLine >= minBorrowAmount, "SMALLER_THAN_LIMIT");
 
-        require(creditRecordMapping[_borrower].creditLimit == 0, "CREDIT_LINE_NOT_EXIST");
         creditRecordMapping[_borrower].creditLimit = uint96(_newLine);
     }
 
@@ -502,6 +501,6 @@ contract BaseCreditPool is ICredit, BasePool, IERC721Receiver {
     }
 
     function onlyEvaluationAgents() internal view {
-        require(evaluationAgents[msg.sender] == true, "APPROVER_REQUIRED");
+        require(evaluationAgents[msg.sender], "APPROVER_REQUIRED");
     }
 }

@@ -74,6 +74,7 @@ contract HumaConfig is Ownable {
      * @dev Emits an ProtocolInitialized event.
      */
     constructor(address treasury) {
+        require(treasury != address(0), "TREASURY_ADDRESS_ZERO");
         humaTreasury = treasury;
 
         // Add protocol owner as a pauser.

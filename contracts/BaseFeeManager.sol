@@ -36,6 +36,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
     ///The min % of the outstanding principal to be paid in the statement for each each period
     uint256 public minPrincipalRateInBps;
 
+    event FeeChanged(uint256 frontLoandingFeeFlat, uint256 frontLoadingFeeBps, uint256 lateFeeFlat, uint256 lateFeeBps);
+
+    event MinPrincipalRateUpdated(uint256 minPrincipalRateInBps);
+
     /**
      * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
      * @param _cr the credit record associated with the account associated with the drawdown/payment
@@ -274,6 +278,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         frontLoadingFeeBps = _frontLoadingFeeBps;
         lateFeeFlat = _lateFeeFlat;
         lateFeeBps = _lateFeeBps;
+        emit FeeChanged(_frontLoadingFeeFlat, _frontLoadingFeeBps, _lateFeeFlat, _lateFeeBps);
     }
 
     /**
@@ -290,6 +295,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     {
         require(_minPrincipalRateInBps < 5000, "RATE_TOO_HIGH");
         minPrincipalRateInBps = _minPrincipalRateInBps;
+        emit MinPrincipalRateUpdated(_minPrincipalRateInBps);
     }
 
     /**
