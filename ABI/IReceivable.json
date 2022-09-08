@@ -1,0 +1,68 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "onReceivedPayment",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_creditAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_receivableAsset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_receivableAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_receivableParam",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_intervalInDays",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_remainingPeriods",
+        "type": "uint256"
+      }
+    ],
+    "name": "recordPreapprovedCredit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
