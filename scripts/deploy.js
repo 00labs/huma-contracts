@@ -1,5 +1,3 @@
-const {ethers} = require("hardhat");
-
 async function deployContracts() {
     // Deploy HumaConfig
     [owner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
