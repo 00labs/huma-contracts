@@ -13,6 +13,8 @@ require("@nomiclabs/hardhat-etherscan");
 require("hardhat-prettier");
 require("solidity-coverage");
 
+require('hardhat-abi-exporter');
+
 //
 // Select the network you want to deploy to here:
 //
@@ -291,7 +293,7 @@ module.exports = {
         strict: true
     },
     abiExporter: {
-        path: "../react-app/src/contracts/ABI",
+        path: "./abi",
         runOnCompile: true,
         clear: true,
         flat: true,
