@@ -5,6 +5,7 @@
 cache
 artifacts
 deployments
+abi
 
 # debug
 npm-debug.log*
