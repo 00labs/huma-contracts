@@ -84,7 +84,7 @@ async function deployAndSetupPool(principalRateInBps) {
     );
     await poolProxy.deployed();
 
-    poolContract = BaseCreditPool.attach(poolProxy.address).connect(owner);
+    poolContract = BaseCreditPool.attach(poolProxy.address);
     await poolContract.initialize(
         hdtContract.address,
         humaConfigContract.address,

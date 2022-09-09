@@ -12,11 +12,6 @@ import "./BaseCreditPoolStorage.sol";
 import "hardhat/console.sol";
 
 contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Receiver {
-    // Divider to get monthly interest rate from APR BPS. 10000 * 12
-    uint256 public constant BPS_DIVIDER = 120000;
-    uint256 public constant HUNDRED_PERCENT_IN_BPS = 10000;
-    uint256 public constant SECONDS_IN_A_YEAR = 31536000;
-
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
     using BS for BS.CreditRecord;

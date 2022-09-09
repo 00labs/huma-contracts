@@ -1,21 +1,24 @@
 const {ethers} = require("hardhat");
+const {expect} = require("chai");
 
-describe("BaseCreditPoolUp Test", function () {
+describe("Upgradability Test", function () {
     let poolContract;
     let hdtContract;
     let humaConfigContract;
     let feeManagerContract;
     let testTokenContract;
+    let proxyOwner;
     let owner;
-    let poolOwner;
     let lender;
     let borrower;
     let borrower2;
     let treasury;
     let evaluationAgent;
+    let poolImpl;
+    let poolProxy;
 
     before(async function () {
-        [owner, poolOwner, lender, borrower, borrower2, treasury, evaluationAgent] =
+        [owner, proxyOwner, lender, borrower, borrower2, treasury, evaluationAgent] =
             await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
@@ -40,20 +43,20 @@ describe("BaseCreditPoolUp Test", function () {
         await hdtContract.deployed();
 
         const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-        let poolImpl = await BaseCreditPool.deploy();
+        poolImpl = await BaseCreditPool.deploy();
         await poolImpl.deployed();
 
         const TransparentUpgradeableProxy = await ethers.getContractFactory(
             "TransparentUpgradeableProxy"
         );
-        let poolProxy = await TransparentUpgradeableProxy.deploy(
+        poolProxy = await TransparentUpgradeableProxy.deploy(
             poolImpl.address,
-            owner.address,
+            proxyOwner.address,
             []
         );
         await poolProxy.deployed();
 
-        poolContract = BaseCreditPool.attach(poolProxy.address).connect(poolOwner);
+        poolContract = BaseCreditPool.attach(poolProxy.address);
         await poolContract.initialize(
             hdtContract.address,
             humaConfigContract.address,
@@ -65,26 +68,60 @@ describe("BaseCreditPoolUp Test", function () {
 
         await testTokenContract.approve(poolContract.address, 100);
 
-        await poolContract.enablePool();
-
-        // const tx = await poolLockerFactoryContract.deployNewLocker(
-        //     poolContract.address,
-        //     testTokenContract.address
-        // );
-        // const receipt = await tx.wait();
-        // let lockerAddress;
-        // for (const evt of receipt.events) {
-        //     if (evt.event === "PoolLockerDeployed") {
-        //         lockerAddress = evt.args[0];
-        //     }
-        // }
-
+        await poolContract.setMinMaxBorrowAmount(10, 1000);
         await poolContract.addEvaluationAgent(evaluationAgent.address);
+        await poolContract.enablePool();
     });
 
-    it("Test Gas", async function () {
-        await poolContract.disablePool();
+    describe("V1", async function () {
+        it("Should not initialize impl", async function () {
+            await expect(
+                poolImpl.initialize(
+                    hdtContract.address,
+                    humaConfigContract.address,
+                    feeManagerContract.address,
+                    "Base Credit Pool"
+                )
+            ).to.be.revertedWith("Initializable: contract is already initialized");
+        });
+    });
 
-        console.log("done");
+    describe("V2", async function () {
+        let newPoolImpl, MockBaseCreditPoolV2;
+        beforeEach(async function () {
+            MockBaseCreditPoolV2 = await ethers.getContractFactory("MockBaseCreditPoolV2");
+            newPoolImpl = await MockBaseCreditPoolV2.deploy();
+            await newPoolImpl.deployed();
+        });
+
+        it("Should not upgrade without pool owner", async function () {
+            await expect(
+                poolProxy.connect(owner).upgradeTo(newPoolImpl.address)
+            ).to.be.revertedWith(
+                "function selector was not recognized and there's no fallback function"
+            );
+        });
+
+        it("Should call existing function successfully", async function () {
+            const r1 = await poolContract.poolDefaultGracePeriodInSeconds();
+            await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
+            const r2 = await poolContract.poolDefaultGracePeriodInSeconds();
+            expect(r1).equals(r2);
+        });
+
+        it("Should call deleted function failed", async function () {
+            await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
+            await expect(poolContract.approveCredit(owner.address)).to.be.revertedWith(
+                "function selector was not recognized and there's no fallback function"
+            );
+        });
+
+        it("Should call changed function and new function successfully", async function () {
+            await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
+            await poolContract.connect(evaluationAgent).changeCreditLine(owner.address, 100);
+            poolContract = MockBaseCreditPoolV2.attach(poolContract.address);
+            const cl = await poolContract.getCreditLine(owner.address);
+            expect(cl).equals(200);
+        });
     });
 });

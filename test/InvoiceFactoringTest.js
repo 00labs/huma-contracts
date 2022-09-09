@@ -77,7 +77,7 @@ describe("Huma Invoice Financing", function () {
         );
         await poolProxy.deployed();
 
-        invoiceContract = ReceivableFactoringPool.attach(poolProxy.address).connect(owner);
+        invoiceContract = ReceivableFactoringPool.attach(poolProxy.address);
         await invoiceContract.initialize(
             hdtContract.address,
             humaConfigContract.address,
