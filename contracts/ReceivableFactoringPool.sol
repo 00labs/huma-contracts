@@ -11,16 +11,7 @@ import "./BaseCreditPool.sol";
  * receive the remainder minus fees after the receivable is paid in full.
  */
 contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
-    using BaseStructs for ReceivableFactoringPool;
-
     using SafeERC20 for IERC20;
-
-    constructor(
-        address _underlyingToken,
-        address _humaConfig,
-        address _feeManagerAddress,
-        string memory _poolName
-    ) BaseCreditPool(_underlyingToken, _humaConfig, _feeManagerAddress, _poolName) {}
 
     /**
      * @notice After the EA (EvalutionAgent) has approved a factoring, it calls this function
@@ -53,7 +44,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
             receivableAsset,
             receivableParam,
             receivableAmount,
-            poolAprInBps,
+            _poolAprInBps,
             intervalInDays,
             remainingPeriods
         );
@@ -75,9 +66,9 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
         onlyEvaluationAgents();
-        BaseStructs.CreditRecord memory cr = creditRecordMapping[borrower];
+        BaseStructs.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        require(asset == address(underlyingToken), "HumaIF:WRONG_ASSET");
+        require(asset == address(_underlyingToken), "HumaIF:WRONG_ASSET");
 
         // todo handle multiple payments.
         // todo decide what to do if the payment amount is insufficient.
@@ -86,7 +77,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         // todo For security, verify that we have indeeded received the payment.
         // If asset is not received, EA might be compromised. Emit event.
 
-        uint256 lateFee = IFeeManager(feeManagerAddress).calcLateFee(
+        uint256 lateFee = IFeeManager(_feeManagerAddress).calcLateFee(
             cr.dueDate,
             cr.totalDue,
             cr.unbilledPrincipal
@@ -98,7 +89,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         cr.unbilledPrincipal = 0;
         cr.remainingPeriods = 0;
 
-        creditRecordMapping[borrower] = cr;
+        _creditRecordMapping[borrower] = cr;
 
         disperseRemainingFunds(borrower, refundAmount);
     }
@@ -109,6 +100,6 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
      * @param amount the amount of the dispersement
      */
     function disperseRemainingFunds(address receiver, uint256 amount) internal {
-        underlyingToken.safeTransfer(receiver, amount);
+        _underlyingToken.safeTransfer(receiver, amount);
     }
 }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../HDT/interfaces/IHDT.sol";
+import "./HDT/interfaces/IHDT.sol";
 
 contract BasePoolStorage {
     uint256 internal constant SECONDS_IN_A_DAY = 86400;

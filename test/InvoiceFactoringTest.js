@@ -30,6 +30,7 @@ describe("Huma Invoice Financing", function () {
     let testTokenContract;
     let invoiceNFTContract;
     let feeManagerContract;
+    let proxyOwner;
     let owner;
     let lender;
     let borrower;
@@ -39,7 +40,8 @@ describe("Huma Invoice Financing", function () {
     let invoiceNFTTokenId;
 
     before(async function () {
-        [owner, lender, borrower, treasury, evaluationAgent, payer] = await ethers.getSigners();
+        [owner, proxyOwner, lender, borrower, treasury, evaluationAgent, payer] =
+            await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         humaConfigContract = await HumaConfig.deploy(treasury.address);
@@ -63,13 +65,25 @@ describe("Huma Invoice Financing", function () {
         await hdtContract.deployed();
 
         const ReceivableFactoringPool = await ethers.getContractFactory("ReceivableFactoringPool");
-        invoiceContract = await ReceivableFactoringPool.deploy(
+        const poolImpl = await ReceivableFactoringPool.deploy();
+        await poolImpl.deployed();
+        const TransparentUpgradeableProxy = await ethers.getContractFactory(
+            "TransparentUpgradeableProxy"
+        );
+        const poolProxy = await TransparentUpgradeableProxy.deploy(
+            poolImpl.address,
+            proxyOwner.address,
+            []
+        );
+        await poolProxy.deployed();
+
+        invoiceContract = ReceivableFactoringPool.attach(poolProxy.address).connect(owner);
+        await invoiceContract.initialize(
             hdtContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
-            "Invoice Factory Pool"
+            "Base Credit Pool"
         );
-        await invoiceContract.deployed();
 
         await hdtContract.setPool(invoiceContract.address);
 

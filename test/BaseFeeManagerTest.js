@@ -10,6 +10,7 @@ let hdtContract;
 let humaConfigContract;
 let testToken;
 let feeManager;
+let proxyOwner;
 let owner;
 let lender;
 let borrower;
@@ -69,13 +70,25 @@ async function deployAndSetupPool(principalRateInBps) {
 
     // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    poolContract = await BaseCreditPool.deploy(
+    const poolImpl = await BaseCreditPool.deploy();
+    await poolImpl.deployed();
+    const TransparentUpgradeableProxy = await ethers.getContractFactory(
+        "TransparentUpgradeableProxy"
+    );
+    const poolProxy = await TransparentUpgradeableProxy.deploy(
+        poolImpl.address,
+        proxyOwner.address,
+        []
+    );
+    await poolProxy.deployed();
+
+    poolContract = BaseCreditPool.attach(poolProxy.address).connect(owner);
+    await poolContract.initialize(
         hdtContract.address,
         humaConfigContract.address,
         feeManager.address,
         "Base Credit Pool"
     );
-    await poolContract.deployed();
 
     await hdtContract.setPool(poolContract.address);
 
@@ -94,7 +107,7 @@ async function deployAndSetupPool(principalRateInBps) {
 
 describe("Base Fee Manager", function () {
     before(async function () {
-        [owner, lender, borrower, treasury, evaluationAgent, poolOwner] =
+        [owner, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
             await ethers.getSigners();
 
         await deployContracts();

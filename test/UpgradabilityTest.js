@@ -7,6 +7,7 @@ describe("BaseCreditPoolUp Test", function () {
     let feeManagerContract;
     let testTokenContract;
     let owner;
+    let poolOwner;
     let lender;
     let borrower;
     let borrower2;
@@ -14,7 +15,7 @@ describe("BaseCreditPoolUp Test", function () {
     let evaluationAgent;
 
     before(async function () {
-        [owner, lender, borrower, borrower2, treasury, evaluationAgent] =
+        [owner, poolOwner, lender, borrower, borrower2, treasury, evaluationAgent] =
             await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
@@ -39,13 +40,26 @@ describe("BaseCreditPoolUp Test", function () {
         await hdtContract.deployed();
 
         const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-        poolContract = await BaseCreditPool.deploy(
+        let poolImpl = await BaseCreditPool.deploy();
+        await poolImpl.deployed();
+
+        const TransparentUpgradeableProxy = await ethers.getContractFactory(
+            "TransparentUpgradeableProxy"
+        );
+        let poolProxy = await TransparentUpgradeableProxy.deploy(
+            poolImpl.address,
+            owner.address,
+            []
+        );
+        await poolProxy.deployed();
+
+        poolContract = BaseCreditPool.attach(poolProxy.address).connect(poolOwner);
+        await poolContract.initialize(
             hdtContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
             "Base Credit Pool"
         );
-        await poolContract.deployed();
 
         await hdtContract.setPool(poolContract.address);
 
@@ -69,30 +83,7 @@ describe("BaseCreditPoolUp Test", function () {
     });
 
     it("Test Gas", async function () {
-        const BaseCreditPoolUp = await ethers.getContractFactory("BaseCreditPoolUp");
-        let poolImpl = await BaseCreditPoolUp.deploy();
-        await poolImpl.deployed();
-
-        const TestTransparentUpgradeableProxy = await ethers.getContractFactory(
-            "TestTransparentUpgradeableProxy"
-        );
-        let poolProxy = await TestTransparentUpgradeableProxy.deploy(
-            poolImpl.address,
-            owner.address,
-            []
-        );
-        await poolProxy.deployed();
-
-        poolProxy = BaseCreditPoolUp.attach(poolProxy.address).connect(evaluationAgent);
-
-        await poolProxy.initialize(
-            hdtContract.address,
-            humaConfigContract.address,
-            feeManagerContract.address,
-            "Base Credit Pool"
-        );
-
-        await poolProxy.disablePool();
+        await poolContract.disablePool();
 
         console.log("done");
     });

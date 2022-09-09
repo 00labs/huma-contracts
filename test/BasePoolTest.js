@@ -21,6 +21,7 @@ describe("Base Pool - LP and Admin functions", function () {
     let humaConfigContract;
     let testTokenContract;
     let feeManagerContract;
+    let proxyOwner;
     let owner;
     let lender;
     let borrower;
@@ -29,7 +30,7 @@ describe("Base Pool - LP and Admin functions", function () {
     let evaluationAgent;
 
     before(async function () {
-        [owner, lender, borrower, borrower2, treasury, evaluationAgent] =
+        [owner, proxyOwner, lender, borrower, borrower2, treasury, evaluationAgent] =
             await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
@@ -51,13 +52,25 @@ describe("Base Pool - LP and Admin functions", function () {
         await hdtContract.deployed();
 
         const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-        poolContract = await BaseCreditPool.deploy(
+        const poolImpl = await BaseCreditPool.deploy();
+        await poolImpl.deployed();
+        const TransparentUpgradeableProxy = await ethers.getContractFactory(
+            "TransparentUpgradeableProxy"
+        );
+        const poolProxy = await TransparentUpgradeableProxy.deploy(
+            poolImpl.address,
+            proxyOwner.address,
+            []
+        );
+        await poolProxy.deployed();
+
+        poolContract = BaseCreditPool.attach(poolProxy.address).connect(owner);
+        await poolContract.initialize(
             hdtContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
             "Base Credit Pool"
         );
-        await poolContract.deployed();
 
         await hdtContract.setPool(poolContract.address);
 

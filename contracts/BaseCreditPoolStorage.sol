@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {BaseStructs as BS} from "../libraries/BaseStructs.sol";
+import {BaseStructs as BS} from "./libraries/BaseStructs.sol";
 
 contract BaseCreditPoolStorage {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
