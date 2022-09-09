@@ -1,6 +1,6 @@
 async function deployContracts() {
     // Deploy HumaConfig
-    [owner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
+    [owner, proxyOwner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     let humaConfigContract = await HumaConfig.deploy(treasury.address);
     await humaConfigContract.setHumaTreasury(treasury.address);
@@ -32,13 +32,28 @@ async function deployContracts() {
 
     // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    let poolContract = await BaseCreditPool.deploy(
-        hdtContract.address,
-        humaConfigContract.address,
-        feeManager.address,
-        "Base Credit Pool"
+    const poolImpl = await BaseCreditPool.deploy();
+    await poolImpl.deployed();
+    const TransparentUpgradeableProxy = await ethers.getContractFactory(
+        "TransparentUpgradeableProxy"
     );
-    await poolContract.deployed();
+    const poolProxy = await TransparentUpgradeableProxy.deploy(
+        poolImpl.address,
+        proxyOwner.address,
+        []
+    );
+    await poolProxy.deployed();
+
+    let poolContract = BaseCreditPool.attach(poolProxy.address);
+    await poolContract
+        .connect(owner)
+        .initialize(
+            hdtContract.address,
+            humaConfigContract.address,
+            feeManager.address,
+            "Base Credit Pool"
+        );
+
     console.log("BaseCreditPool deployed to:", poolContract.address);
     await hdtContract.setPool(poolContract.address);
 
@@ -56,6 +71,6 @@ async function deployContracts() {
 deployContracts()
     .then(() => process.exit(0))
     .catch((error) => {
-        console.error(error)
-        process.exit(1)
-    })
+        console.error(error);
+        process.exit(1);
+    });
