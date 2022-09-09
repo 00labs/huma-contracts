@@ -2,20 +2,23 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
+const {deployContracts, deployAndSetupPool} = require("./BaseTest");
 
 use(solidity);
 
 let poolContract;
 let hdtContract;
 let humaConfigContract;
-let testToken;
-let feeManager;
+let testTokenContract;
+let feeManagerContract;
+let defaultDeployer;
 let proxyOwner;
-let owner;
 let lender;
 let borrower;
+let borrower2;
 let treasury;
 let evaluationAgent;
+let poolOwner;
 let record;
 let initialTimestamp;
 
@@ -45,83 +48,27 @@ let advanceClock = async function (days) {
     await ethers.provider.send("evm_mine", []);
 };
 
-async function deployContracts() {
-    // Deploy HumaConfig
-    const HumaConfig = await ethers.getContractFactory("HumaConfig");
-    humaConfigContract = await HumaConfig.deploy(treasury.address);
-    await humaConfigContract.setHumaTreasury(treasury.address);
-
-    // Deploy Fee Manager
-    const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
-    feeManager = await feeManagerFactory.deploy();
-
-    // Deploy TestToken, give initial tokens to lender
-    const TestToken = await ethers.getContractFactory("TestToken");
-    testToken = await TestToken.deploy();
-    await testToken.give1000To(lender.address);
-    await testToken.give1000To(owner.address);
-}
-
-async function deployAndSetupPool(principalRateInBps) {
-    await feeManager.connect(owner).setFees(10, 100, 20, 500);
-    await feeManager.connect(owner).setMinPrincipalRateInBps(principalRateInBps);
-
-    const TransparentUpgradeableProxy = await ethers.getContractFactory(
-        "TransparentUpgradeableProxy"
-    );
-
-    const HDT = await ethers.getContractFactory("HDT");
-    const hdtImpl = await HDT.deploy();
-    await hdtImpl.deployed();
-    const hdtProxy = await TransparentUpgradeableProxy.deploy(
-        hdtImpl.address,
-        proxyOwner.address,
-        []
-    );
-    await hdtProxy.deployed();
-    hdtContract = HDT.attach(hdtProxy.address);
-    await hdtContract.initialize("Base HDT", "BHDT", testToken.address);
-
-    // Deploy BaseCreditPool
-    const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    const poolImpl = await BaseCreditPool.deploy();
-    await poolImpl.deployed();
-    const poolProxy = await TransparentUpgradeableProxy.deploy(
-        poolImpl.address,
-        proxyOwner.address,
-        []
-    );
-    await poolProxy.deployed();
-
-    poolContract = BaseCreditPool.attach(poolProxy.address);
-    await poolContract.initialize(
-        hdtContract.address,
-        humaConfigContract.address,
-        feeManager.address,
-        "Base Credit Pool"
-    );
-
-    await hdtContract.setPool(poolContract.address);
-
-    // Pool setup
-    await testToken.connect(owner).approve(poolContract.address, 100);
-    await poolContract.connect(owner).makeInitialDeposit(100);
-    await poolContract.enablePool();
-    await poolContract.connect(owner).setAPR(1217);
-    await poolContract.setMaxCreditLine(10000);
-    await poolContract.setEvaluationAgent(evaluationAgent.address);
-    await testToken.connect(lender).approve(poolContract.address, 10000);
-    await poolContract.connect(lender).deposit(10000);
-}
-
 describe("Credit Line Integration Test", async function () {
     before(async function () {
-        [owner, proxyOwner, lender, borrower, treasury, evaluationAgent] =
+        [defaultDeployer, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
             await ethers.getSigners();
 
-        await deployContracts();
+        [humaConfigContract, feeManagerContract, testTokenContract] = await deployContracts(
+            poolOwner,
+            treasury,
+            lender
+        );
 
-        await deployAndSetupPool(500);
+        [hdtContract, poolContract] = await deployAndSetupPool(
+            poolOwner,
+            proxyOwner,
+            evaluationAgent,
+            lender,
+            humaConfigContract,
+            feeManagerContract,
+            testTokenContract,
+            500
+        );
     });
 
     it("Day 0: Initial drawdown", async function () {
@@ -138,30 +85,28 @@ describe("Credit Line Integration Test", async function () {
         let blockBefore = await ethers.provider.getBlock(blockNumBefore);
         initialTimestamp = blockBefore.timestamp;
 
-        await testToken.connect(owner).approve(poolContract.address, 2000);
         await poolContract.connect(borrower).drawdown(2000);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 2000, initialTimestamp + 2592000, 0, 0, 0, 0, 12, 1217, 30, 3);
 
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 0, 0, 0, 2020, 2000);
     });
 
     it("Day 15: Second drawdown (to test offset)", async function () {
         advanceClock(15);
 
-        await testToken.connect(owner).approve(poolContract.address, 2000);
         await poolContract.connect(borrower).drawdown(2000);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 4000, initialTimestamp + 2592000, -10, 0, 0, 0, 12, 1217, 30, 3);
 
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 0, 0, 0, 4030, 4000);
     });
 
     it("Day 30: 1st statement", async function () {
         advanceClock(15);
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 1, 30, 230, 4070, 3800);
     });
 
@@ -169,8 +114,10 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(15);
         let dueDate = initialTimestamp + 2592000 * 2;
 
-        await testToken.connect(borrower).approve(poolContract.address, 230);
-        await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 230);
+        await testTokenContract.connect(borrower).approve(poolContract.address, 230);
+        await poolContract
+            .connect(borrower)
+            .makePayment(borrower.address, testTokenContract.address, 230);
         record = await poolContract.creditRecordMapping(borrower.address);
         // correction is close to 1, but due to rounding to zero, it is 0.
         checkRecord(record, 5000, 3800, dueDate, 1, 0, 0, 0, 11, 1217, 30, 3);
@@ -180,7 +127,7 @@ describe("Credit Line Integration Test", async function () {
         // Advance 15 days to the next cycle
         advanceClock(15);
 
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 1, 39, 229, 3877, 3610);
     });
 
@@ -190,8 +137,10 @@ describe("Credit Line Integration Test", async function () {
 
         let dueDate = initialTimestamp + 2592000 * 3;
 
-        await testToken.connect(borrower).approve(poolContract.address, 100);
-        await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 100);
+        await testTokenContract.connect(borrower).approve(poolContract.address, 100);
+        await poolContract
+            .connect(borrower)
+            .makePayment(borrower.address, testTokenContract.address, 100);
         record = await poolContract.creditRecordMapping(borrower.address);
         // correction is close to 1, but due to rounding to zero, it is 0.
         checkRecord(record, 5000, 3610, dueDate, 0, 129, 0, 0, 10, 1217, 30, 3);
@@ -201,7 +150,7 @@ describe("Credit Line Integration Test", async function () {
         // Advance 15 days to the next cycle
         advanceClock(15);
 
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 1, 243, 429, 4019, 3553);
     });
 
@@ -209,8 +158,10 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(15);
         let dueDate = initialTimestamp + 2592000 * 4;
 
-        await testToken.connect(borrower).approve(poolContract.address, 500);
-        await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 500);
+        await testTokenContract.connect(borrower).approve(poolContract.address, 500);
+        await poolContract
+            .connect(borrower)
+            .makePayment(borrower.address, testTokenContract.address, 500);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 3482, dueDate, 1, 0, 0, 0, 9, 1217, 30, 3);
     });
@@ -220,8 +171,10 @@ describe("Credit Line Integration Test", async function () {
 
         let dueDate = initialTimestamp + 2592000 * 4;
 
-        await testToken.connect(borrower).approve(poolContract.address, 400);
-        await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 400);
+        await testTokenContract.connect(borrower).approve(poolContract.address, 400);
+        await poolContract
+            .connect(borrower)
+            .makePayment(borrower.address, testTokenContract.address, 400);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 3082, dueDate, 3, 0, 0, 0, 9, 1217, 30, 3);
     });
@@ -229,25 +182,25 @@ describe("Credit Line Integration Test", async function () {
     it("Day 120: 4th statement", async function () {
         advanceClock(10);
 
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 1, 33, 187, 3145, 2928);
     });
 
     it("Day 150: first late fee due to no payment", async function () {
         advanceClock(30);
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 2, 206, 361, 3352, 2960);
     });
 
     it("Day 180: second late fee due to no payment", async function () {
         advanceClock(30);
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 3, 219, 385, 3573, 3155);
     });
 
     it("Day 210: third late fee due to no payment", async function () {
         advanceClock(30);
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 4, 232, 409, 3807, 3363);
     });
 
@@ -255,12 +208,12 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(15);
         let dueDate = initialTimestamp + 2592000 * 8;
 
-        await testToken.give1000To(borrower.address);
+        await testTokenContract.give1000To(borrower.address);
 
-        await testToken.connect(borrower).approve(poolContract.address, 3807);
+        await testTokenContract.connect(borrower).approve(poolContract.address, 3807);
         await poolContract
             .connect(borrower)
-            .makePayment(borrower.address, testToken.address, 3807);
+            .makePayment(borrower.address, testTokenContract.address, 3807);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 0, dueDate, 0, 0, 0, 0, 5, 1217, 30, 3);
     });
@@ -269,7 +222,6 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(105);
         let dueDate = initialTimestamp + 2592000 * 12;
 
-        await testToken.connect(owner).approve(poolContract.address, 4000);
         await poolContract.connect(borrower).drawdown(4000);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 4000, dueDate, 0, 0, 0, 0, 1, 1217, 30, 3);
@@ -286,22 +238,23 @@ describe("Credit Line Integration Test", async function () {
 
     it("Day 360: normal statement", async function () {
         advanceClock(15);
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 1, 40, 240, 4080, 3800);
     });
 
     it("Day 370: Partial pay, below required interest", async function () {
         advanceClock(10);
         let dueDate = initialTimestamp + 2592000 * 13;
-        await testToken.connect(borrower).approve(poolContract.address, 20);
-        await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 20);
+        await testTokenContract.connect(borrower).approve(poolContract.address, 20);
+        await poolContract
+            .connect(borrower)
+            .makePayment(borrower.address, testTokenContract.address, 20);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 3800, dueDate, 0, 220, 20, 0, 1, 1217, 30, 3);
     });
 
     it("Day 372: Drawdown blocked due to over limit", async function () {
         advanceClock(2);
-        await testToken.connect(owner).approve(poolContract.address, 2000);
         await expect(poolContract.connect(borrower).drawdown(2000)).to.be.revertedWith(
             "EXCEEDED_CREDIT_LMIIT"
         );
@@ -310,7 +263,6 @@ describe("Credit Line Integration Test", async function () {
     it("Day 375: Additional drawdown within limit allowed", async function () {
         advanceClock(3);
         let dueDate = initialTimestamp + 2592000 * 13;
-        await testToken.connect(owner).approve(poolContract.address, 1000);
         await poolContract.connect(borrower).drawdown(1000);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 4800, dueDate, -5, 220, 20, 0, 1, 1217, 30, 3);
@@ -319,15 +271,17 @@ describe("Credit Line Integration Test", async function () {
     it("Day 380: Pay with amountDue", async function () {
         advanceClock(5);
         let dueDate = initialTimestamp + 2592000 * 13;
-        await testToken.connect(borrower).approve(poolContract.address, 220);
-        await poolContract.connect(borrower).makePayment(borrower.address, testToken.address, 220);
+        await testTokenContract.connect(borrower).approve(poolContract.address, 220);
+        await poolContract
+            .connect(borrower)
+            .makePayment(borrower.address, testTokenContract.address, 220);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 5000, 4800, dueDate, -4, 0, 0, 0, 1, 1217, 30, 3);
     });
 
     it("Day 390: Final statement, all principal due", async function () {
         advanceClock(10);
-        let r = await feeManager.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record);
         checkResult(r, 1, 92, 4892, 4892, 0);
     });
 
@@ -339,10 +293,10 @@ describe("Credit Line Integration Test", async function () {
     it("Day 415: Payoff", async function () {
         let dueDate = initialTimestamp + 2592000 * 14;
         advanceClock(15);
-        await testToken.connect(borrower).approve(poolContract.address, 4892);
+        await testTokenContract.connect(borrower).approve(poolContract.address, 4892);
         await poolContract
             .connect(borrower)
-            .makePayment(borrower.address, testToken.address, 4892);
+            .makePayment(borrower.address, testTokenContract.address, 4892);
         record = await poolContract.creditRecordMapping(borrower.address);
         checkRecord(record, 0, 0, dueDate, 0, 0, 0, 0, 0, 1217, 30, 3);
     });

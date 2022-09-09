@@ -2,24 +2,24 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
+const {deployContracts, deployAndSetupPool} = require("./BaseTest");
 
 use(solidity);
 
 let poolContract;
 let hdtContract;
 let humaConfigContract;
-let testToken;
-let feeManager;
+let testTokenContract;
+let feeManagerContract;
+let defaultDeployer;
 let proxyOwner;
-let owner;
 let lender;
 let borrower;
+let borrower2;
 let treasury;
 let evaluationAgent;
 let poolOwner;
 let record;
-let lastLateDate;
-let initialTimestamp;
 
 let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
     if (v1 != "SKIP") expect(r.creditLimit).to.equal(v1);
@@ -42,86 +42,27 @@ let checkResult = function (r, v1, v2, v3, v4) {
     expect(r.payoffAmount).to.equal(v4);
 };
 
-async function deployContracts() {
-    // Deploy HumaConfig
-    const HumaConfig = await ethers.getContractFactory("HumaConfig");
-    humaConfigContract = await HumaConfig.deploy(treasury.address);
-    humaConfigContract.setHumaTreasury(treasury.address);
-
-    // Deploy Fee Manager
-    const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
-    feeManager = await feeManagerFactory.deploy();
-    await feeManager.transferOwnership(poolOwner.address);
-    await feeManager.connect(poolOwner).setFees(10, 100, 20, 500);
-
-    // Deploy TestToken, give initial tokens to lender
-    const TestToken = await ethers.getContractFactory("TestToken");
-    testToken = await TestToken.deploy();
-    await testToken.give1000To(lender.address);
-    await testToken.give1000To(poolOwner.address);
-}
-
-async function deployAndSetupPool(principalRateInBps) {
-    await feeManager.connect(poolOwner).setMinPrincipalRateInBps(principalRateInBps);
-
-    const TransparentUpgradeableProxy = await ethers.getContractFactory(
-        "TransparentUpgradeableProxy"
-    );
-
-    const HDT = await ethers.getContractFactory("HDT");
-    const hdtImpl = await HDT.deploy();
-    await hdtImpl.deployed();
-    const hdtProxy = await TransparentUpgradeableProxy.deploy(
-        hdtImpl.address,
-        proxyOwner.address,
-        []
-    );
-    await hdtProxy.deployed();
-    hdtContract = HDT.attach(hdtProxy.address);
-    await hdtContract.initialize("Base HDT", "BHDT", testToken.address);
-
-    // Deploy BaseCreditPool
-    const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    const poolImpl = await BaseCreditPool.deploy();
-    await poolImpl.deployed();
-    const poolProxy = await TransparentUpgradeableProxy.deploy(
-        poolImpl.address,
-        proxyOwner.address,
-        []
-    );
-    await poolProxy.deployed();
-
-    poolContract = BaseCreditPool.attach(poolProxy.address);
-    await poolContract.initialize(
-        hdtContract.address,
-        humaConfigContract.address,
-        feeManager.address,
-        "Base Credit Pool"
-    );
-
-    await hdtContract.setPool(poolContract.address);
-
-    // Pool setup
-    await poolContract.transferOwnership(poolOwner.address);
-
-    await testToken.connect(poolOwner).approve(poolContract.address, 100);
-    await poolContract.connect(poolOwner).makeInitialDeposit(100);
-    await poolContract.enablePool();
-    await poolContract.connect(poolOwner).setAPR(1217);
-    await poolContract.setMaxCreditLine(10000);
-    await poolContract.setEvaluationAgent(evaluationAgent.address);
-    await testToken.connect(lender).approve(poolContract.address, 10000);
-    await poolContract.connect(lender).deposit(10000);
-}
-
 describe("Base Fee Manager", function () {
     before(async function () {
-        [owner, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
+        [defaultDeployer, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
             await ethers.getSigners();
 
-        await deployContracts();
+        [humaConfigContract, feeManagerContract, testTokenContract] = await deployContracts(
+            poolOwner,
+            treasury,
+            lender
+        );
 
-        await deployAndSetupPool(0);
+        [hdtContract, poolContract] = await deployAndSetupPool(
+            poolOwner,
+            proxyOwner,
+            evaluationAgent,
+            lender,
+            humaConfigContract,
+            feeManagerContract,
+            testTokenContract,
+            0
+        );
     });
 
     describe("Admin functions", function () {
@@ -129,13 +70,13 @@ describe("Base Fee Manager", function () {
         describe("setFees()", function () {
             it("Should disallow non-owner to set the fees", async function () {
                 await expect(
-                    feeManager.connect(treasury).setFees(10, 100, 20, 10000)
+                    feeManagerContract.connect(treasury).setFees(10, 100, 20, 10000)
                 ).to.be.revertedWith("caller is not the owner"); // open zeppelin default error message
             });
 
             it("Should set the fees correctly", async function () {
-                await feeManager.connect(poolOwner).setFees(15, 150, 25, 250);
-                var [f1, f2, f3, f4] = await feeManager.getFees();
+                await feeManagerContract.connect(poolOwner).setFees(15, 150, 25, 250);
+                var [f1, f2, f3, f4] = await feeManagerContract.getFees();
                 expect(f1).to.equal(15);
                 expect(f2).to.equal(150);
                 expect(f3).to.equal(25);
@@ -143,8 +84,8 @@ describe("Base Fee Manager", function () {
             });
 
             it("Should allow owner to change the fees", async function () {
-                await feeManager.connect(poolOwner).setFees(10, 100, 20, 500);
-                var [f1, f2, f3, f4] = await feeManager.getFees();
+                await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500);
+                var [f1, f2, f3, f4] = await feeManagerContract.getFees();
                 expect(f1).to.equal(10);
                 expect(f2).to.equal(100);
                 expect(f3).to.equal(20);
@@ -155,34 +96,44 @@ describe("Base Fee Manager", function () {
         describe("setMinPrincipalRateInBps()", async function () {
             it("Should disallow non-poolOwner to set min principal rate", async function () {
                 await expect(
-                    feeManager.connect(treasury).setMinPrincipalRateInBps(6000)
+                    feeManagerContract.connect(treasury).setMinPrincipalRateInBps(6000)
                 ).to.be.revertedWith("caller is not the owner");
             });
 
             it("Should reject if the rate is too high", async function () {
                 await expect(
-                    feeManager.connect(poolOwner).setMinPrincipalRateInBps(6000)
+                    feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(6000)
                 ).to.be.revertedWith("RATE_TOO_HIGH");
             });
 
             it("Should be able to set min principal payment rate", async function () {
-                await feeManager.connect(poolOwner).setMinPrincipalRateInBps(500);
-                expect(await feeManager.connect(poolOwner).minPrincipalRateInBps()).to.equal(500);
+                await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
+                expect(
+                    await feeManagerContract.connect(poolOwner).minPrincipalRateInBps()
+                ).to.equal(500);
             });
         });
     });
 
     describe("getDueInfo(), IntOnly", async function () {
         before(async function () {
-            await deployAndSetupPool(0);
-            // Create a borrowing record
+            [hdtContract, poolContract] = await deployAndSetupPool(
+                poolOwner,
+                proxyOwner,
+                evaluationAgent,
+                lender,
+                humaConfigContract,
+                feeManagerContract,
+                testTokenContract,
+                0
+            ); // Create a borrowing record
             await poolContract.connect(borrower).requestCredit(400, 30, 12);
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-            await testToken.connect(lender).approve(poolContract.address, 300);
+            await testTokenContract.connect(lender).approve(poolContract.address, 300);
             await poolContract.connect(borrower).drawdown(400);
 
             record = await poolContract.creditRecordMapping(borrower.address);
-            let r = await feeManager.getDueInfo(record);
+            let r = await feeManagerContract.getDueInfo(record);
             checkResult(r, 0, 0, 0, 404);
 
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
@@ -191,13 +142,13 @@ describe("Base Fee Manager", function () {
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("IntOnly", async function () {
-                    await feeManager.connect(poolOwner).setMinPrincipalRateInBps(0);
-                    let r = await feeManager.getDueInfo(record);
+                    await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
+                    let r = await feeManagerContract.getDueInfo(record);
                     checkResult(r, 1, 4, 4, 408);
                 });
                 it("WithMinPrincipal", async function () {
-                    await feeManager.connect(poolOwner).setMinPrincipalRateInBps(500);
-                    let r = await feeManager.getDueInfo(record);
+                    await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
+                    let r = await feeManagerContract.getDueInfo(record);
                     checkResult(r, 1, 4, 24, 408);
                 });
             });
@@ -208,13 +159,13 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("IntOnly", async function () {
-                        await feeManager.connect(poolOwner).setMinPrincipalRateInBps(0);
-                        let r = await feeManager.getDueInfo(record);
+                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 2, 44, 44, 452); // late fee = 20 flat + 20 bps
                     });
                     it("WithMinPrincipal", async function () {
-                        await feeManager.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManager.getDueInfo(record);
+                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 2, 44, 64, 452); // principal =
                     });
                 });
@@ -224,13 +175,13 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("IntOnly", async function () {
-                        await feeManager.connect(poolOwner).setMinPrincipalRateInBps(0);
-                        let r = await feeManager.getDueInfo(record);
+                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 3, 46, 46, 498);
                     });
                     it("WithMinPrincipal", async function () {
-                        await feeManager.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManager.getDueInfo(record);
+                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 3, 46, 68, 498);
                     });
                 });
@@ -240,13 +191,13 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("IntOnly", async function () {
-                        await feeManager.connect(poolOwner).setMinPrincipalRateInBps(0);
-                        let r = await feeManager.getDueInfo(record);
+                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 4, 48, 48, 546);
                     });
                     it("WithMinPrincipal", async function () {
-                        await feeManager.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManager.getDueInfo(record);
+                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 4, 48, 72, 546);
                     });
                 });
@@ -256,15 +207,24 @@ describe("Base Fee Manager", function () {
 
     describe("getDueInfo(), MinPrincipal", async function () {
         before(async function () {
-            await deployAndSetupPool(500); // Principal payment 5% (500 bps) per cycle
+            [hdtContract, poolContract] = await deployAndSetupPool(
+                poolOwner,
+                proxyOwner,
+                evaluationAgent,
+                lender,
+                humaConfigContract,
+                feeManagerContract,
+                testTokenContract,
+                500
+            ); // Principal payment 5% (500 bps) per cycle
             // Create a borrowing record
             await poolContract.connect(borrower).requestCredit(5000, 30, 12);
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-            await testToken.connect(poolOwner).approve(poolContract.address, 4000);
+            await testTokenContract.connect(poolOwner).approve(poolContract.address, 4000);
             await poolContract.connect(borrower).drawdown(4000);
 
             record = await poolContract.creditRecordMapping(borrower.address);
-            let r = await feeManager.getDueInfo(record);
+            let r = await feeManagerContract.getDueInfo(record);
             checkResult(r, 0, 0, 0, 4040);
 
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30 + 10]);
@@ -273,7 +233,7 @@ describe("Base Fee Manager", function () {
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("WithMinPrincipal", async function () {
-                    let r = await feeManager.getDueInfo(record);
+                    let r = await feeManagerContract.getDueInfo(record);
                     checkResult(r, 1, 40, 240, 4080);
                 });
             });
@@ -284,7 +244,7 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("WithMinPrincipal", async function () {
-                        let r = await feeManager.getDueInfo(record);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 2, 262, 464, 4342); // principal =
                     });
                 });
@@ -294,8 +254,8 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("WithMinPrincipal", async function () {
-                        await feeManager.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManager.getDueInfo(record);
+                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 3, 278, 493, 4623);
                     });
                 });
@@ -305,8 +265,8 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("WithMinPrincipal", async function () {
-                        await feeManager.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManager.getDueInfo(record);
+                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
+                        let r = await feeManagerContract.getDueInfo(record);
                         checkResult(r, 4, 294, 523, 4919);
                     });
                 });
