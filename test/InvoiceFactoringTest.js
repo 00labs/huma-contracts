@@ -30,6 +30,7 @@ describe("Huma Invoice Financing", function () {
     let testTokenContract;
     let invoiceNFTContract;
     let feeManagerContract;
+    let proxyOwner;
     let owner;
     let lender;
     let borrower;
@@ -39,7 +40,8 @@ describe("Huma Invoice Financing", function () {
     let invoiceNFTTokenId;
 
     before(async function () {
-        [owner, lender, borrower, treasury, evaluationAgent, payer] = await ethers.getSigners();
+        [owner, proxyOwner, lender, borrower, treasury, evaluationAgent, payer] =
+            await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         humaConfigContract = await HumaConfig.deploy(treasury.address);
@@ -58,18 +60,39 @@ describe("Huma Invoice Financing", function () {
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
 
+        const TransparentUpgradeableProxy = await ethers.getContractFactory(
+            "TransparentUpgradeableProxy"
+        );
+
         const HDT = await ethers.getContractFactory("HDT");
-        hdtContract = await HDT.deploy("HumaIF HDT", "HHDT", testTokenContract.address);
-        await hdtContract.deployed();
+        const hdtImpl = await HDT.deploy();
+        await hdtImpl.deployed();
+        const hdtProxy = await TransparentUpgradeableProxy.deploy(
+            hdtImpl.address,
+            proxyOwner.address,
+            []
+        );
+        await hdtProxy.deployed();
+        hdtContract = HDT.attach(hdtProxy.address);
+        await hdtContract.initialize("HumaIF HDT", "HHDT", testTokenContract.address);
 
         const ReceivableFactoringPool = await ethers.getContractFactory("ReceivableFactoringPool");
-        invoiceContract = await ReceivableFactoringPool.deploy(
+        const poolImpl = await ReceivableFactoringPool.deploy();
+        await poolImpl.deployed();
+        const poolProxy = await TransparentUpgradeableProxy.deploy(
+            poolImpl.address,
+            proxyOwner.address,
+            []
+        );
+        await poolProxy.deployed();
+
+        invoiceContract = ReceivableFactoringPool.attach(poolProxy.address);
+        await invoiceContract.initialize(
             hdtContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
-            "Invoice Factory Pool"
+            "Base Credit Pool"
         );
-        await invoiceContract.deployed();
 
         await hdtContract.setPool(invoiceContract.address);
 

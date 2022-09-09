@@ -10,6 +10,7 @@ let hdtContract;
 let humaConfigContract;
 let testToken;
 let feeManager;
+let proxyOwner;
 let owner;
 let lender;
 let borrower;
@@ -65,19 +66,40 @@ async function deployAndSetupPool(principalRateInBps) {
     await feeManager.connect(owner).setFees(10, 100, 20, 500);
     await feeManager.connect(owner).setMinPrincipalRateInBps(principalRateInBps);
 
+    const TransparentUpgradeableProxy = await ethers.getContractFactory(
+        "TransparentUpgradeableProxy"
+    );
+
     const HDT = await ethers.getContractFactory("HDT");
-    hdtContract = await HDT.deploy("Base HDT", "BHDT", testToken.address);
-    await hdtContract.deployed();
+    const hdtImpl = await HDT.deploy();
+    await hdtImpl.deployed();
+    const hdtProxy = await TransparentUpgradeableProxy.deploy(
+        hdtImpl.address,
+        proxyOwner.address,
+        []
+    );
+    await hdtProxy.deployed();
+    hdtContract = HDT.attach(hdtProxy.address);
+    await hdtContract.initialize("Base HDT", "BHDT", testToken.address);
 
     // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    poolContract = await BaseCreditPool.deploy(
+    const poolImpl = await BaseCreditPool.deploy();
+    await poolImpl.deployed();
+    const poolProxy = await TransparentUpgradeableProxy.deploy(
+        poolImpl.address,
+        proxyOwner.address,
+        []
+    );
+    await poolProxy.deployed();
+
+    poolContract = BaseCreditPool.attach(poolProxy.address);
+    await poolContract.initialize(
         hdtContract.address,
         humaConfigContract.address,
         feeManager.address,
         "Base Credit Pool"
     );
-    await poolContract.deployed();
 
     await hdtContract.setPool(poolContract.address);
 
@@ -94,7 +116,8 @@ async function deployAndSetupPool(principalRateInBps) {
 
 describe("Credit Line Integration Test", async function () {
     before(async function () {
-        [owner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
+        [owner, proxyOwner, lender, borrower, treasury, evaluationAgent] =
+            await ethers.getSigners();
 
         await deployContracts();
 

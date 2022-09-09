@@ -1,6 +1,6 @@
 async function deployContracts() {
     // Deploy HumaConfig
-    [owner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
+    [owner, proxyOwner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     let humaConfigContract = await HumaConfig.deploy(treasury.address);
     await humaConfigContract.setHumaTreasury(treasury.address);
@@ -25,20 +25,44 @@ async function deployContracts() {
     await testToken.give1000To(owner.address);
     console.log("1000 test token dropped to:", owner.address);
 
+    const TransparentUpgradeableProxy = await ethers.getContractFactory(
+        "TransparentUpgradeableProxy"
+    );
+
     const HDT = await ethers.getContractFactory("HDT");
-    let hdtContract = await HDT.deploy("Base HDT", "BHDT", testToken.address);
-    await hdtContract.deployed();
+    const hdtImpl = await HDT.deploy();
+    await hdtImpl.deployed();
+    const hdtProxy = await TransparentUpgradeableProxy.deploy(
+        hdtImpl.address,
+        proxyOwner.address,
+        []
+    );
+    await hdtProxy.deployed();
+    hdtContract = HDT.attach(hdtProxy.address);
+    await hdtContract.initialize("Base HDT", "BHDT", testToken.address);
     console.log("hdt contract deployed to:", hdtContract.address);
 
     // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    let poolContract = await BaseCreditPool.deploy(
-        hdtContract.address,
-        humaConfigContract.address,
-        feeManager.address,
-        "Base Credit Pool"
+    const poolImpl = await BaseCreditPool.deploy();
+    await poolImpl.deployed();
+    const poolProxy = await TransparentUpgradeableProxy.deploy(
+        poolImpl.address,
+        proxyOwner.address,
+        []
     );
-    await poolContract.deployed();
+    await poolProxy.deployed();
+
+    let poolContract = BaseCreditPool.attach(poolProxy.address);
+    await poolContract
+        .connect(owner)
+        .initialize(
+            hdtContract.address,
+            humaConfigContract.address,
+            feeManager.address,
+            "Base Credit Pool"
+        );
+
     console.log("BaseCreditPool deployed to:", poolContract.address);
     await hdtContract.setPool(poolContract.address);
 
@@ -56,6 +80,6 @@ async function deployContracts() {
 deployContracts()
     .then(() => process.exit(0))
     .catch((error) => {
-        console.error(error)
-        process.exit(1)
-    })
+        console.error(error);
+        process.exit(1);
+    });

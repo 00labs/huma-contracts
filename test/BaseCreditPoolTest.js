@@ -51,6 +51,7 @@ describe("Base Credit Pool", function () {
     let feeManagerContract;
     let humaCreditFactoryContract;
     let testTokenContract;
+    let proxyOwner;
     let owner;
     let lender;
     let borrower;
@@ -59,7 +60,7 @@ describe("Base Credit Pool", function () {
     let evaluationAgent;
 
     before(async function () {
-        [owner, lender, borrower, borrower2, treasury, evaluationAgent] =
+        [owner, proxyOwner, lender, borrower, borrower2, treasury, evaluationAgent] =
             await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
@@ -79,18 +80,39 @@ describe("Base Credit Pool", function () {
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
 
+        const TransparentUpgradeableProxy = await ethers.getContractFactory(
+            "TransparentUpgradeableProxy"
+        );
+
         const HDT = await ethers.getContractFactory("HDT");
-        hdtContract = await HDT.deploy("Base Credit HDT", "CHDT", testTokenContract.address);
-        await hdtContract.deployed();
+        const hdtImpl = await HDT.deploy();
+        await hdtImpl.deployed();
+        const hdtProxy = await TransparentUpgradeableProxy.deploy(
+            hdtImpl.address,
+            proxyOwner.address,
+            []
+        );
+        await hdtProxy.deployed();
+        hdtContract = HDT.attach(hdtProxy.address);
+        await hdtContract.initialize("Base Credit HDT", "CHDT", testTokenContract.address);
 
         const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-        poolContract = await BaseCreditPool.deploy(
+        const poolImpl = await BaseCreditPool.deploy();
+        await poolImpl.deployed();
+        const poolProxy = await TransparentUpgradeableProxy.deploy(
+            poolImpl.address,
+            proxyOwner.address,
+            []
+        );
+        await poolProxy.deployed();
+
+        poolContract = BaseCreditPool.attach(poolProxy.address);
+        await poolContract.initialize(
             hdtContract.address,
             humaConfigContract.address,
             feeManagerContract.address,
             "Base Credit Pool"
         );
-        await poolContract.deployed();
 
         await hdtContract.setPool(poolContract.address);
 

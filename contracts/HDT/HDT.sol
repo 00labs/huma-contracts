@@ -1,45 +1,50 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IERC20Metadata, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20MetadataUpgradeable, ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import "./interfaces/IHDT.sol";
-import "../interfaces/IPool.sol";
+
+import "./HDTStorage.sol";
 
 /**
  * @title Huma Distribution Token
  * @notice HDT tracks the principal, earnings and losses associated with a token.
  */
-contract HDT is IHDT, ERC20, Ownable {
-    address public immutable override assetToken;
-    uint8 internal immutable _decimals;
-
-    IPool public pool;
+contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @param name the name of the token
      * @param symbol the symbol of the token
      */
-    constructor(
+    function initialize(
         string memory name,
         string memory symbol,
         address underlyingToken
-    ) ERC20(name, symbol) {
+    ) external initializer {
         require(underlyingToken != address(0), "TOKEN_ADDRESS_ZERO");
-        assetToken = underlyingToken;
-        _decimals = IERC20Metadata(underlyingToken).decimals();
+        _assetToken = underlyingToken;
+
+        __ERC20_init(name, symbol);
+        _decimals = IERC20MetadataUpgradeable(underlyingToken).decimals();
+
+        __Ownable_init();
     }
 
     function setPool(address poolAddress) external onlyOwner {
-        pool = IPool(poolAddress);
+        _pool = IPool(poolAddress);
     }
 
-    function decimals() public view virtual override returns (uint8) {
+    function decimals() public view override returns (uint8) {
         return _decimals;
     }
 
-    function totalAssets() public view virtual returns (uint256) {
-        return pool.totalLiquidity();
+    function totalAssets() public view returns (uint256) {
+        return _pool.totalLiquidity();
     }
 
     function mintAmount(address account, uint256 amount)
@@ -90,15 +95,25 @@ contract HDT is IHDT, ERC20, Ownable {
 
     /**
      * @notice Views the amount of funds that an address can withdraw.
-     * @param _owner The address of a token holder.
+     * @param account The address of a token holder.
      * @return The amount funds that `_owner` can withdraw.
      */
-    function withdrawableFundsOf(address _owner) external view virtual override returns (uint256) {
-        return convertToAssets(balanceOf(_owner));
+    function withdrawableFundsOf(address account)
+        external
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        return convertToAssets(balanceOf(account));
+    }
+
+    function assetToken() external view override returns (address) {
+        return _assetToken;
     }
 
     modifier onlyPool() {
-        require(msg.sender == address(pool), "HDT:INVALID_CALLER");
+        require(msg.sender == address(_pool), "HDT:INVALID_CALLER");
         _;
     }
 }
