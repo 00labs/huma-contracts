@@ -64,17 +64,26 @@ async function deployContracts() {
 async function deployAndSetupPool(principalRateInBps) {
     await feeManager.connect(poolOwner).setMinPrincipalRateInBps(principalRateInBps);
 
+    const TransparentUpgradeableProxy = await ethers.getContractFactory(
+        "TransparentUpgradeableProxy"
+    );
+
     const HDT = await ethers.getContractFactory("HDT");
-    hdtContract = await HDT.deploy("Base HDT", "BHDT", testToken.address);
-    await hdtContract.deployed();
+    const hdtImpl = await HDT.deploy();
+    await hdtImpl.deployed();
+    const hdtProxy = await TransparentUpgradeableProxy.deploy(
+        hdtImpl.address,
+        proxyOwner.address,
+        []
+    );
+    await hdtProxy.deployed();
+    hdtContract = HDT.attach(hdtProxy.address);
+    await hdtContract.initialize("Base HDT", "BHDT", testToken.address);
 
     // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
     const poolImpl = await BaseCreditPool.deploy();
     await poolImpl.deployed();
-    const TransparentUpgradeableProxy = await ethers.getContractFactory(
-        "TransparentUpgradeableProxy"
-    );
     const poolProxy = await TransparentUpgradeableProxy.deploy(
         poolImpl.address,
         proxyOwner.address,

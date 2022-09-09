@@ -80,16 +80,25 @@ describe("Base Credit Pool", function () {
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
 
+        const TransparentUpgradeableProxy = await ethers.getContractFactory(
+            "TransparentUpgradeableProxy"
+        );
+
         const HDT = await ethers.getContractFactory("HDT");
-        hdtContract = await HDT.deploy("Base Credit HDT", "CHDT", testTokenContract.address);
-        await hdtContract.deployed();
+        const hdtImpl = await HDT.deploy();
+        await hdtImpl.deployed();
+        const hdtProxy = await TransparentUpgradeableProxy.deploy(
+            hdtImpl.address,
+            proxyOwner.address,
+            []
+        );
+        await hdtProxy.deployed();
+        hdtContract = HDT.attach(hdtProxy.address);
+        await hdtContract.initialize("Base Credit HDT", "CHDT", testTokenContract.address);
 
         const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
         const poolImpl = await BaseCreditPool.deploy();
         await poolImpl.deployed();
-        const TransparentUpgradeableProxy = await ethers.getContractFactory(
-            "TransparentUpgradeableProxy"
-        );
         const poolProxy = await TransparentUpgradeableProxy.deploy(
             poolImpl.address,
             proxyOwner.address,

@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -15,13 +14,7 @@ import "./HumaConfig.sol";
 
 import "hardhat/console.sol";
 
-abstract contract BasePool is
-    BasePoolStorage,
-    Initializable,
-    OwnableUpgradeable,
-    ILiquidityProvider,
-    IPool
-{
+abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IPool {
     using SafeERC20 for IERC20;
 
     event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
