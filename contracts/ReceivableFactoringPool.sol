@@ -35,7 +35,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         uint256 intervalInDays,
         uint256 remainingPeriods
     ) external virtual override {
-        onlyEvaluationAgents();
+        onlyEvaluationAgent();
 
         // Pool status and data validation happens within initiate().
         initiate(
@@ -65,7 +65,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     ) external virtual override {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
-        onlyEvaluationAgents();
+        onlyEvaluationAgent();
         BaseStructs.CreditRecord memory cr = _creditRecordMapping[borrower];
 
         require(asset == address(_underlyingToken), "HumaIF:WRONG_ASSET");

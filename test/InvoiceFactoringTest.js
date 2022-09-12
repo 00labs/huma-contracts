@@ -107,7 +107,7 @@ describe("Huma Invoice Financing", function () {
         expect(await invoiceContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(100);
 
-        await invoiceContract.addEvaluationAgent(evaluationAgent.address);
+        await invoiceContract.setEvaluationAgent(evaluationAgent.address);
 
         await invoiceContract.connect(owner).setAPR(0); //bps
         await invoiceContract.setMaxCreditLine(1000);
@@ -331,9 +331,9 @@ describe("Huma Invoice Financing", function () {
             );
 
             expect(await invoiceNFTContract.balanceOf);
-            expect(await testTokenContract.balanceOf(treasury.address)).to.equal(1);
-
-            expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(211);
+            let accruedIncome = await invoiceContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(1);
+            expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(212);
         });
 
         it("Should be able to borrow the full approved amount", async function () {
@@ -356,9 +356,10 @@ describe("Huma Invoice Financing", function () {
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386); // principal: 400, flat fee: 20, bps fee: 4
 
-            expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
+            let accruedIncome = await invoiceContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(2);
 
-            expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(12);
+            expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(14);
         });
     });
 
@@ -452,8 +453,9 @@ describe("Huma Invoice Financing", function () {
                 .onReceivedPayment(borrower.address, testTokenContract.address, 500);
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
-            expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
-            expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(412);
+            let accruedIncome = await invoiceContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(2);
+            expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(414);
 
             // test withdraw to make sure the income is allocated properly.
             expect(await hdtContract.balanceOf(lender.address)).to.equal(300);

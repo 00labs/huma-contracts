@@ -7,7 +7,7 @@ import "../BaseCreditPoolStorage.sol";
 contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
     function changeCreditLine(address borrower, uint256 newLine) external {
         protocolAndPoolOn();
-        onlyEvaluationAgents();
+        onlyEvaluationAgent();
         // Borrowing amount needs to be lower than max for the pool.
         require(_poolConfig._maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
 
@@ -22,7 +22,7 @@ contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
         return _creditRecordMapping[account];
     }
 
-    function onlyEvaluationAgents() internal view {
-        require(_evaluationAgents[msg.sender], "APPROVER_REQUIRED");
+    function onlyEvaluationAgent() internal view {
+        require(_evaluationAgent == msg.sender, "APPROVER_REQUIRED");
     }
 }

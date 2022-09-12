@@ -109,7 +109,7 @@ async function deployAndSetupPool(principalRateInBps) {
     await poolContract.enablePool();
     await poolContract.connect(owner).setAPR(1217);
     await poolContract.setMaxCreditLine(10000);
-    await poolContract.addEvaluationAgent(evaluationAgent.address);
+    await poolContract.setEvaluationAgent(evaluationAgent.address);
     await testToken.connect(lender).approve(poolContract.address, 10000);
     await poolContract.connect(lender).deposit(10000);
 }

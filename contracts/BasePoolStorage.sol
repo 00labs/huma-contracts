@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./HDT/interfaces/IHDT.sol";
 
 contract BasePoolStorage {
+    // Divider to convert BPS to percentage
+    uint256 public constant BPS_DIVIDER = 10000;
     uint256 internal constant SECONDS_IN_A_DAY = 86400;
     uint256 internal constant SECONDS_IN_180_DAYS = 15552000;
 
@@ -33,10 +35,17 @@ contract BasePoolStorage {
     PoolStatus internal _status;
 
     // Evaluation Agents (EA) are the risk underwriting agents that associated with the pool.
-    // Expect one pool to have one EA, but the protocol support moultiple.
-    mapping(address => bool) internal _evaluationAgents;
+    address internal _evaluationAgent;
 
     PoolConfig internal _poolConfig;
+
+    AccruedIncome internal _accuredIncome;
+
+    struct AccruedIncome {
+        uint256 _protocolIncome;
+        uint256 _poolOwnerIncome;
+        uint256 _eaIncome;
+    }
 
     /**
      * @notice Stores required liquidity rate and commission rate for Pool Owner and EA

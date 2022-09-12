@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IPool {
     function setPoolName(string memory newName) external;
 
-    function addEvaluationAgent(address agent) external;
+    function setEvaluationAgent(address agent) external;
 
     function disablePool() external;
 

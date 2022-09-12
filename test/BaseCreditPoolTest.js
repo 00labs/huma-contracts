@@ -139,7 +139,7 @@ describe("Base Credit Pool", function () {
         expect(await poolContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
-        await poolContract.addEvaluationAgent(evaluationAgent.address);
+        await poolContract.setEvaluationAgent(evaluationAgent.address);
 
         await poolContract.setAPR(1217); //bps
         await poolContract.setMaxCreditLine(1000);
@@ -273,8 +273,9 @@ describe("Base Credit Pool", function () {
 
                 expect(await testTokenContract.balanceOf(borrower.address)).to.equal(188); // fees: 12. pool: 11, protocol: 1
 
-                expect(await testTokenContract.balanceOf(treasury.address)).to.equal(1);
-                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(211);
+                let accruedIncome = await poolContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(1);
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(212);
             });
 
             it("Borrow full amount that has been approved", async function () {
@@ -289,9 +290,10 @@ describe("Base Credit Pool", function () {
 
                 expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386); // fees: 14. pool: 12, protocol: 2
 
-                expect(await testTokenContract.balanceOf(treasury.address)).to.equal(2);
+                let accruedIncome = await poolContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(2);
 
-                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(12);
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(14);
             });
         });
 
