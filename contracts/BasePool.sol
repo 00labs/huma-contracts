@@ -78,7 +78,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         _humaConfig = humaConfig;
         _feeManagerAddress = feeManager;
 
-        _poolConfig._withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS;
+        _poolConfig._withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS; // todo need to make this configurable
         _poolConfig._poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
         _status = PoolStatus.Off;
@@ -148,6 +148,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         );
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
         require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
+
+        // Todo If msg.sender is pool owner or EA, make sure they have enough reserve in the pool
 
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
         _totalLiquidity -= amount;
@@ -274,6 +276,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
+        // Todo make sure pool owner and EA have contributed the required liquidity to the pool.
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
     }
