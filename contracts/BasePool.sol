@@ -44,6 +44,18 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     event LossesDistributed(address indexed by, uint256 lossesDistributed);
 
+    event PoolOwnerCommisionAndLiquidityChanged(
+        uint256 commissionRate,
+        uint256 liquidityRate,
+        address indexed by
+    );
+
+    event EACommisionAndLiquidityChanged(
+        uint256 commissionRate,
+        uint256 liquidityRate,
+        address indexed by
+    );
+
     constructor() {
         _disableInitializers();
     }
@@ -294,6 +306,28 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         onlyOwnerOrHumaMasterAdmin();
         _poolConfig._liquidityCap = liquidityCap;
         emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
+    }
+
+    function setPoolOwnerCommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+        external
+        virtual
+        override
+    {
+        onlyOwnerOrHumaMasterAdmin();
+        _poolConfig._commissionRateInBpsForPoolOwner = commissionRate;
+        _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
+        emit PoolOwnerCommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
+    }
+
+    function setEACommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+        external
+        virtual
+        override
+    {
+        onlyOwnerOrHumaMasterAdmin();
+        _poolConfig._commissionRateInBpsForEA = commissionRate;
+        _poolConfig._liquidityRateInBpsByEA = liquidityRate;
+        emit EACommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
     }
 
     /**
