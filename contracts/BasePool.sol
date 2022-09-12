@@ -382,6 +382,21 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         return _poolConfig._withdrawalLockoutPeriodInSeconds;
     }
 
+    function commissionAndLiquidityRateForEA() external view returns (uint256, uint256) {
+        return (_poolConfig._commissionRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
+    }
+
+    function commissionAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
+        return (
+            _poolConfig._commissionRateInBpsForPoolOwner,
+            _poolConfig._liquidityRateInBpsByPoolOwner
+        );
+    }
+
+    function payPeriodInDays() external view returns (uint256) {
+        return _poolConfig._payPeriodInDays;
+    }
+
     // Allow for sensitive pool functions only to be called by
     // the pool owner and the huma master admin
     function onlyOwnerOrHumaMasterAdmin() internal view {
