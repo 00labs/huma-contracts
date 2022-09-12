@@ -46,27 +46,27 @@ contract BasePoolStorage {
      */
     struct PoolConfig {
         // The max liquidity allowed for the pool.
-        uint256 _liquidityCap;
+        uint96 _liquidityCap;
         // How long a lender has to wait after the last deposit before they can withdraw
-        uint256 _withdrawalLockoutPeriodInSeconds;
+        uint64 _withdrawalLockoutPeriodInSeconds;
         // the min amount that the borrower can borrow in one transaction
-        uint256 _minBorrowAmount;
+        uint96 _minBorrowAmount;
         // the maximum credit line for an address in terms of the amount of poolTokens
-        uint256 _maxCreditLine;
-        uint256 _payPeriodInDays;
+        uint96 _maxCreditLine;
+        uint16 _payPeriodInDays;
         // the grace period at the pool level before a Default can be triggered
-        uint256 _poolDefaultGracePeriodInSeconds;
+        uint64 _poolDefaultGracePeriodInSeconds;
         // Percentage of receivable required for credits in this pool in terms of bais points
         // For over receivableization, use more than 100%, for no receivable, use 0.
-        uint256 _receivableRequiredInBps;
+        uint16 _receivableRequiredInBps;
         // Percentage of pool income allocated to EA
-        uint256 _commissionRateInBpsForEA;
+        uint16 _commissionRateInBpsForEA;
         // Percentage of pool income allocated to Pool Owner
-        uint256 _commissionRateInBpsForPoolOwner;
+        uint16 _commissionRateInBpsForPoolOwner;
         // Percentage of the _liquidityCap to be contributed by EA
-        uint256 _liquidityRateInBpsByEA;
+        uint16 _liquidityRateInBpsByEA;
         // Percentage of the _liquidityCap to be contributed by Pool Owner
-        uint256 _liquidityRateInBpsByPoolOwner;
+        uint16 _liquidityRateInBpsByPoolOwner;
     }
 
     enum PoolStatus {

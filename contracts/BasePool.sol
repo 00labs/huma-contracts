@@ -66,7 +66,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         _humaConfig = humaConfig;
         _feeManagerAddress = feeManager;
 
-        _poolConfig._withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS;
+        _poolConfig._withdrawalLockoutPeriodInSeconds = uint64(SECONDS_IN_180_DAYS);
         _poolConfig._poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
             .protocolDefaultGracePeriod();
         _status = PoolStatus.Off;
@@ -234,7 +234,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     function setReceivableRequiredInBps(uint256 receivableInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(receivableInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
-        _poolConfig._receivableRequiredInBps = receivableInBps;
+        _poolConfig._receivableRequiredInBps = uint16(receivableInBps);
     }
 
     /**
@@ -250,8 +250,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         onlyOwnerOrHumaMasterAdmin();
         require(minBorrowAmount > 0, "MINAMT_IS_ZERO");
         require(maxCreditLine >= minBorrowAmount, "MAX_LESS_THAN_MIN");
-        _poolConfig._minBorrowAmount = minBorrowAmount;
-        _poolConfig._maxCreditLine = maxCreditLine;
+        _poolConfig._minBorrowAmount = uint96(minBorrowAmount);
+        _poolConfig._maxCreditLine = uint96(maxCreditLine);
     }
 
     /**
@@ -279,7 +279,9 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function setPoolDefaultGracePeriod(uint256 gracePeriodInDays) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._poolDefaultGracePeriodInSeconds = gracePeriodInDays * SECONDS_IN_A_DAY;
+        _poolConfig._poolDefaultGracePeriodInSeconds = uint64(
+            gracePeriodInDays * SECONDS_IN_A_DAY
+        );
         emit PoolDefaultGracePeriodChanged(gracePeriodInDays, msg.sender);
     }
 
@@ -289,7 +291,9 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function setWithdrawalLockoutPeriod(uint256 lockoutPeriodInDays) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._withdrawalLockoutPeriodInSeconds = lockoutPeriodInDays * SECONDS_IN_A_DAY;
+        _poolConfig._withdrawalLockoutPeriodInSeconds = uint64(
+            lockoutPeriodInDays * SECONDS_IN_A_DAY
+        );
         emit WithdrawalLockoutPeriodUpdated(lockoutPeriodInDays, msg.sender);
     }
 
@@ -299,7 +303,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function setPoolLiquidityCap(uint256 liquidityCap) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._liquidityCap = liquidityCap;
+        _poolConfig._liquidityCap = uint96(liquidityCap);
         emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
     }
 
