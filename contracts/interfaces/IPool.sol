@@ -33,13 +33,18 @@ interface IPool {
 
     function setReceivableRequiredInBps(uint256 _receivableRateInBps) external;
 
-    function setMinMaxBorrowAmount(uint256 _minAmount, uint256 _maxAmount) external;
+    function setMaxCreditLine(uint256 _maxAmount) external;
 
     function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external;
 
     function setPoolLiquidityCap(uint256 _liquidityCap) external;
 
     function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays) external;
+
+    function setPoolOwnerCommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+        external;
+
+    function setEACommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate) external;
 
     function getPoolSummary()
         external

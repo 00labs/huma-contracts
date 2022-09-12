@@ -29,22 +29,6 @@ contract BasePoolStorage {
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => uint256) internal _lastDepositTime;
 
-    // The max liquidity allowed for the pool.
-    uint256 internal _liquidityCap;
-
-    // the min amount that the borrower can borrow in one transaction
-    uint256 internal _minBorrowAmount;
-
-    // the maximum credit line for an address in terms of the amount of poolTokens
-    uint256 internal _maxCreditLine;
-
-    // the default APR for the pool in terms of basis points.
-    uint256 internal _poolAprInBps;
-
-    // Percentage of receivable required for credits in this pool in terms of bais points
-    // For over receivableization, use more than 100%, for no receivable, use 0.
-    uint256 internal _receivableRequiredInBps;
-
     // whether the pool is ON or OFF
     PoolStatus internal _status;
 
@@ -52,11 +36,38 @@ contract BasePoolStorage {
     // Expect one pool to have one EA, but the protocol support moultiple.
     mapping(address => bool) internal _evaluationAgents;
 
-    // How long a lender has to wait after the last deposit before they can withdraw
-    uint256 internal _withdrawalLockoutPeriodInSeconds;
+    PoolConfig internal _poolConfig;
 
-    // the grace period at the pool level before a Default can be triggered
-    uint256 internal _poolDefaultGracePeriodInSeconds;
+    /**
+     * @notice Stores required liquidity rate and commission rate for Pool Owner and EA
+     */
+    struct PoolConfig {
+        // The first 6 fields are IP-related, optimized for one storage slot.
+        // The max liquidity allowed for the pool.
+        uint256 _liquidityCap;
+        // How long a lender has to wait after the last deposit before they can withdraw
+        uint256 _withdrawalLockoutPeriodInSeconds;
+        // Percentage of pool income allocated to EA
+        uint256 _commissionRateInBpsForEA;
+        // Percentage of pool income allocated to Pool Owner
+        uint256 _commissionRateInBpsForPoolOwner;
+        // Percentage of the _liquidityCap to be contributed by EA
+        uint256 _liquidityRateInBpsByEA;
+        // Percentage of the _liquidityCap to be contributed by Pool Owner
+        uint256 _liquidityRateInBpsByPoolOwner;
+        // Below fields are borrowing related. Optimized for one storage slot.
+        // the maximum credit line for an address in terms of the amount of poolTokens
+        uint256 _maxCreditLine;
+        // the grace period at the pool level before a Default can be triggered
+        uint256 _poolDefaultGracePeriodInSeconds;
+        // pay period for the pool, measured in number of days
+        uint256 _payPeriodInDays;
+        // Percentage of receivable required for credits in this pool in terms of bais points
+        // For over receivableization, use more than 100%, for no receivable, use 0.
+        uint256 _receivableRequiredInBps;
+        // the default APR for the pool in terms of basis points.
+        uint256 _poolAprInBps;
+    }
 
     enum PoolStatus {
         Off,

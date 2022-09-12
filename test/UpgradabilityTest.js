@@ -76,7 +76,7 @@ describe("Upgradability Test", function () {
 
         await testTokenContract.approve(poolContract.address, 100);
 
-        await poolContract.setMinMaxBorrowAmount(10, 1000);
+        await poolContract.setMaxCreditLine(1000);
         await poolContract.addEvaluationAgent(evaluationAgent.address);
         await poolContract.enablePool();
     });

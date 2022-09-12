@@ -108,7 +108,7 @@ async function deployAndSetupPool(principalRateInBps) {
     await poolContract.connect(poolOwner).makeInitialDeposit(100);
     await poolContract.enablePool();
     await poolContract.connect(poolOwner).setAPR(1217);
-    await poolContract.setMinMaxBorrowAmount(10, 10000);
+    await poolContract.setMaxCreditLine(10000);
     await poolContract.addEvaluationAgent(evaluationAgent.address);
     await testToken.connect(lender).approve(poolContract.address, 10000);
     await poolContract.connect(lender).deposit(10000);

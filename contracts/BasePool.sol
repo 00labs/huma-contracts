@@ -44,6 +44,18 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     event LossesDistributed(address indexed by, uint256 lossesDistributed);
 
+    event PoolOwnerCommisionAndLiquidityChanged(
+        uint256 commissionRate,
+        uint256 liquidityRate,
+        address indexed by
+    );
+
+    event EACommisionAndLiquidityChanged(
+        uint256 commissionRate,
+        uint256 liquidityRate,
+        address indexed by
+    );
+
     constructor() {
         _disableInitializers();
     }
@@ -66,8 +78,9 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         _humaConfig = humaConfig;
         _feeManagerAddress = feeManager;
 
-        _withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS;
-        _poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig).protocolDefaultGracePeriod();
+        _poolConfig._withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS;
+        _poolConfig._poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
+            .protocolDefaultGracePeriod();
         _status = PoolStatus.Off;
 
         __Ownable_init();
@@ -129,7 +142,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         require(amount > 0, "AMOUNT_IS_ZERO");
 
         require(
-            block.timestamp >= _lastDepositTime[msg.sender] + _withdrawalLockoutPeriodInSeconds,
+            block.timestamp >=
+                _lastDepositTime[msg.sender] + _poolConfig._withdrawalLockoutPeriodInSeconds,
             "WITHDRAW_TOO_SOON"
         );
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
@@ -149,7 +163,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         protocolAndPoolOn();
 
         require(
-            block.timestamp >= _lastDepositTime[msg.sender] + _withdrawalLockoutPeriodInSeconds,
+            block.timestamp >=
+                _lastDepositTime[msg.sender] + _poolConfig._withdrawalLockoutPeriodInSeconds,
             "WITHDRAW_TOO_SOON"
         );
 
@@ -220,7 +235,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     function setAPR(uint256 aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(aprInBps <= 10000, "INVALID_APR");
-        _poolAprInBps = aprInBps;
+        _poolConfig._poolAprInBps = aprInBps;
         emit APRUpdated(aprInBps);
     }
 
@@ -231,24 +246,17 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     function setReceivableRequiredInBps(uint256 receivableInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(receivableInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
-        _receivableRequiredInBps = receivableInBps;
+        _poolConfig._receivableRequiredInBps = receivableInBps;
     }
 
     /**
      * @notice Sets the min and max of each loan/credit allowed by the pool.
-     * @param minBorrowAmount the min amount allowed to borrow in a transaction
      * @param maxCreditLine the max amount of a credit line
      */
-    function setMinMaxBorrowAmount(uint256 minBorrowAmount, uint256 maxCreditLine)
-        external
-        virtual
-        override
-    {
+    function setMaxCreditLine(uint256 maxCreditLine) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        require(minBorrowAmount > 0, "MINAMT_IS_ZERO");
-        require(maxCreditLine >= minBorrowAmount, "MAX_LESS_THAN_MIN");
-        _minBorrowAmount = minBorrowAmount;
-        _maxCreditLine = maxCreditLine;
+        require(maxCreditLine > 0, "MAX_IS_ZERO");
+        _poolConfig._maxCreditLine = maxCreditLine;
     }
 
     /**
@@ -276,7 +284,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function setPoolDefaultGracePeriod(uint256 gracePeriodInDays) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _poolDefaultGracePeriodInSeconds = gracePeriodInDays * SECONDS_IN_A_DAY;
+        _poolConfig._poolDefaultGracePeriodInSeconds = gracePeriodInDays * SECONDS_IN_A_DAY;
         emit PoolDefaultGracePeriodChanged(gracePeriodInDays, msg.sender);
     }
 
@@ -286,7 +294,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function setWithdrawalLockoutPeriod(uint256 lockoutPeriodInDays) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _withdrawalLockoutPeriodInSeconds = lockoutPeriodInDays * SECONDS_IN_A_DAY;
+        _poolConfig._withdrawalLockoutPeriodInSeconds = lockoutPeriodInDays * SECONDS_IN_A_DAY;
         emit WithdrawalLockoutPeriodUpdated(lockoutPeriodInDays, msg.sender);
     }
 
@@ -296,8 +304,30 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function setPoolLiquidityCap(uint256 liquidityCap) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _liquidityCap = liquidityCap;
+        _poolConfig._liquidityCap = liquidityCap;
         emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
+    }
+
+    function setPoolOwnerCommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+        external
+        virtual
+        override
+    {
+        onlyOwnerOrHumaMasterAdmin();
+        _poolConfig._commissionRateInBpsForPoolOwner = commissionRate;
+        _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
+        emit PoolOwnerCommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
+    }
+
+    function setEACommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+        external
+        virtual
+        override
+    {
+        onlyOwnerOrHumaMasterAdmin();
+        _poolConfig._commissionRateInBpsForEA = commissionRate;
+        _poolConfig._liquidityRateInBpsByEA = liquidityRate;
+        emit EACommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
     }
 
     /**
@@ -326,10 +356,10 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         IERC20Metadata erc20Contract = IERC20Metadata(address(_poolToken));
         return (
             address(_underlyingToken),
-            _poolAprInBps,
-            _minBorrowAmount,
-            _maxCreditLine,
-            _liquidityCap,
+            _poolConfig._poolAprInBps,
+            0,
+            _poolConfig._maxCreditLine,
+            _poolConfig._liquidityCap,
             erc20Contract.name(),
             erc20Contract.symbol(),
             erc20Contract.decimals()
@@ -345,11 +375,26 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     }
 
     function poolDefaultGracePeriodInSeconds() external view returns (uint256) {
-        return _poolDefaultGracePeriodInSeconds;
+        return _poolConfig._poolDefaultGracePeriodInSeconds;
     }
 
     function withdrawalLockoutPeriodInSeconds() external view returns (uint256) {
-        return _withdrawalLockoutPeriodInSeconds;
+        return _poolConfig._withdrawalLockoutPeriodInSeconds;
+    }
+
+    function commissionAndLiquidityRateForEA() external view returns (uint256, uint256) {
+        return (_poolConfig._commissionRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
+    }
+
+    function commissionAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
+        return (
+            _poolConfig._commissionRateInBpsForPoolOwner,
+            _poolConfig._liquidityRateInBpsByPoolOwner
+        );
+    }
+
+    function payPeriodInDays() external view returns (uint256) {
+        return _poolConfig._payPeriodInDays;
     }
 
     // Allow for sensitive pool functions only to be called by
