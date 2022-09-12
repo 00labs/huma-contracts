@@ -95,7 +95,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      */
     function approveCredit(address borrower) public virtual override {
         protocolAndPoolOn();
-        onlyEvaluationAgents();
+        onlyEvaluationAgent();
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         require(cr.creditLimit <= _poolConfig._maxCreditLine, "GREATER_THAN_LIMIT");
@@ -111,7 +111,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      */
     function changeCreditLine(address borrower, uint256 newLine) external {
         protocolAndPoolOn();
-        onlyEvaluationAgents();
+        onlyEvaluationAgent();
         // Borrowing amount needs to be lower than max for the pool.
         require(_poolConfig._maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
 
@@ -124,7 +124,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      */
     function invalidateApprovedCredit(address borrower) external virtual override {
         protocolAndPoolOn();
-        onlyEvaluationAgents();
+        onlyEvaluationAgent();
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         cr.state = BS.CreditState.Deleted;
         cr.creditLimit = 0;
@@ -165,7 +165,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
 
         ///msg.sender needs to be the borrower themselvers or the EA.
-        if (msg.sender != borrower) onlyEvaluationAgents();
+        if (msg.sender != borrower) onlyEvaluationAgent();
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
@@ -211,6 +211,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             _feeManagerAddress
         ).distBorrowingAmount(borrowAmount, _humaConfig);
 
+        _accuredIncome._protocolIncome += protocolFee;
+
         if (poolIncome > 0) distributeIncome(poolIncome);
 
         // Record the receivable info.
@@ -246,9 +248,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             _receivableInfoMapping[borrower] = ci;
         }
 
-        // Transfer protocole fee and funds the _borrower
-        address treasuryAddress = HumaConfig(_humaConfig).humaTreasury();
-        _underlyingToken.safeTransfer(treasuryAddress, protocolFee);
+        // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
     }
 
@@ -426,7 +426,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     }
 
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
-        onlyEvaluationAgents();
+        onlyEvaluationAgent();
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
     }
 
@@ -479,7 +479,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return _creditRecordMapping[borrower].state >= BS.CreditState.Approved;
     }
 
-    function onlyEvaluationAgents() internal view {
-        require(_evaluationAgents[msg.sender], "APPROVER_REQUIRED");
+    function onlyEvaluationAgent() internal view {
+        require(msg.sender == _evaluationAgent, "APPROVER_REQUIRED");
     }
 }

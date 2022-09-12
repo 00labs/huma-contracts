@@ -21,7 +21,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
     event PoolInitialized(address _poolAddress);
 
-    event EvaluationAgentAdded(address agent, address by);
+    event EvaluationAgentChanged(address agent, address by);
     event PoolNameChanged(string newName, address by);
     event PoolDisabled(address by);
     event PoolEnabled(address by);
@@ -192,7 +192,12 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      *     and try to distribute it in the next distribution ....... todo implement
      */
     function distributeIncome(uint256 value) internal virtual {
-        _totalLiquidity += value;
+        uint256 pIncome = (value * _poolConfig._commissionRateInBpsForPoolOwner) / BPS_DIVIDER;
+        uint256 eaIncome = (value * _poolConfig._commissionRateInBpsForEA) / BPS_DIVIDER;
+        _accuredIncome._poolOwnerIncome += pIncome;
+        _accuredIncome._eaIncome += eaIncome;
+
+        _totalLiquidity += (value - pIncome - eaIncome);
     }
 
     /**
@@ -204,6 +209,25 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function distributeLosses(uint256 value) internal virtual {
         _totalLiquidity -= value;
+    }
+
+    function withdrawProtocolFee(uint256 amount) external virtual {
+        require(msg.sender == HumaConfig(_humaConfig).owner(), "NOT_PROTOCOL_OWNER");
+        require(amount <= _accuredIncome._protocolIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        address treasuryAddress = HumaConfig(_humaConfig).humaTreasury();
+        _underlyingToken.safeTransfer(treasuryAddress, amount);
+    }
+
+    function withdrawPoolOwnerFee(uint256 amount) external virtual {
+        require(msg.sender == this.owner(), "NOT_POOL_OWNER");
+        require(amount <= _accuredIncome._poolOwnerIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        _underlyingToken.safeTransfer(this.owner(), amount);
+    }
+
+    function withdrawEAFee(uint256 amount) external virtual {
+        require(msg.sender == _evaluationAgent, "NOT_POOL_OWNER");
+        require(amount <= _accuredIncome._eaIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        _underlyingToken.safeTransfer(_evaluationAgent, amount);
     }
 
     /********************************************/
@@ -223,11 +247,11 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @notice Adds an evaluation agent to the list who can approve loans.
      * @param agent the evaluation agent to be added
      */
-    function addEvaluationAgent(address agent) external virtual override {
+    function setEvaluationAgent(address agent) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         denyZeroAddress(agent);
-        _evaluationAgents[agent] = true;
-        emit EvaluationAgentAdded(agent, msg.sender);
+        _evaluationAgent = agent;
+        emit EvaluationAgentChanged(agent, msg.sender);
     }
 
     /**
@@ -393,6 +417,22 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         return (
             _poolConfig._commissionRateInBpsForPoolOwner,
             _poolConfig._liquidityRateInBpsByPoolOwner
+        );
+    }
+
+    function accruedIncome()
+        external
+        view
+        returns (
+            uint256 protocolIncome,
+            uint256 poolOwnerIncome,
+            uint256 eaIncome
+        )
+    {
+        return (
+            _accuredIncome._protocolIncome,
+            _accuredIncome._poolOwnerIncome,
+            _accuredIncome._eaIncome
         );
     }
 

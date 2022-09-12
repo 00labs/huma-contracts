@@ -94,7 +94,7 @@ describe("Base Pool - LP and Admin functions", function () {
         expect(await poolContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(100);
 
-        await poolContract.addEvaluationAgent(evaluationAgent.address);
+        await poolContract.setEvaluationAgent(evaluationAgent.address);
 
         await poolContract.setAPR(1200); //bps
         await poolContract.setMaxCreditLine(1000);
