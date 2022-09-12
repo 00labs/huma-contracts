@@ -33,7 +33,7 @@ contract HumaConfig is Ownable {
     uint32 public protocolDefaultGracePeriod;
 
     /// Protocol fee of the loan origination (in bps). Other fees are defined at pool level.
-    uint16 public treasuryFee;
+    uint16 public protocolFee;
 
     /// humaTreasury is the protocol treasury
     address public humaTreasury;
@@ -83,7 +83,7 @@ contract HumaConfig is Ownable {
 
         protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
-        treasuryFee = DEFAULT_TREASURY_FEE;
+        protocolFee = DEFAULT_TREASURY_FEE;
 
         emit ProtocolInitialized(msg.sender);
         emit HumaTreasuryChanged(treasury);
@@ -113,14 +113,8 @@ contract HumaConfig is Ownable {
      * @dev Rejects any grace period shorter than 1 day to guard against fat finger or attack.
      * @dev Emits ProtocolDefaultGracePeriodChanged(uint256 newGracePeriod) event
      */
-    function setProtocolDefaultGracePeriod(uint256 gracePeriod)
-        external
-        onlyOwner
-    {
-        require(
-            gracePeriod >= MIN_DEFAULT_GRACE_PERIOD,
-            "GRACE_PERIOD_TOO_SHORT"
-        );
+    function setProtocolDefaultGracePeriod(uint256 gracePeriod) external onlyOwner {
+        require(gracePeriod >= MIN_DEFAULT_GRACE_PERIOD, "GRACE_PERIOD_TOO_SHORT");
         protocolDefaultGracePeriod = uint32(gracePeriod);
         emit ProtocolDefaultGracePeriodChanged(gracePeriod);
     }
@@ -133,8 +127,8 @@ contract HumaConfig is Ownable {
      */
     function setTreasuryFee(uint256 fee) external onlyOwner {
         require(fee <= TREASURY_FEE_UPPER_BOUND, "TREASURY_FEE_TOO_HIGH");
-        uint256 oldFee = treasuryFee;
-        treasuryFee = uint16(fee);
+        uint256 oldFee = protocolFee;
+        protocolFee = uint16(fee);
         emit TreasuryFeeChanged(oldFee, fee);
     }
 

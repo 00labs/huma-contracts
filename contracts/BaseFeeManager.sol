@@ -36,7 +36,12 @@ contract BaseFeeManager is IFeeManager, Ownable {
     ///The min % of the outstanding principal to be paid in the statement for each each period
     uint256 public minPrincipalRateInBps;
 
-    event FeeChanged(uint256 frontLoandingFeeFlat, uint256 frontLoadingFeeBps, uint256 lateFeeFlat, uint256 lateFeeBps);
+    event FeeChanged(
+        uint256 frontLoandingFeeFlat,
+        uint256 frontLoadingFeeBps,
+        uint256 lateFeeFlat,
+        uint256 lateFeeBps
+    );
 
     event MinPrincipalRateUpdated(uint256 minPrincipalRateInBps);
 
@@ -123,7 +128,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 platformFees = calcFrontLoadingFee(borrowAmount);
 
         // Split the fee between treasury and the pool
-        protocolFee = (uint256(HumaConfig(humaConfig).treasuryFee()) * borrowAmount) / 10000;
+        protocolFee = (uint256(HumaConfig(humaConfig).protocolFee()) * borrowAmount) / 10000;
 
         // assert(platformFees >= protocolFee);
 
@@ -235,7 +240,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) / 10000;
             _cr.feesAndInterestDue = uint96(fees + interest);
             _cr.totalDue = uint96(fees + interest + principalToBill);
-            _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);  
+            _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);
         }
 
         // todo add logic to make sure totalDue meets the min requirement.
