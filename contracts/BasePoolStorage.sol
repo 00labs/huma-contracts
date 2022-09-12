@@ -38,6 +38,14 @@ contract BasePoolStorage {
 
     PoolConfig internal _poolConfig;
 
+    AccruedIncome internal _accuredIncome;
+
+    struct AccruedIncome{
+        uint256 protocolIncome;
+        uint256 poolOwnerIncome;
+        uint256 eaIncome;
+    }
+
     /**
      * @notice Stores required liquidity rate and commission rate for Pool Owner and EA
      */
