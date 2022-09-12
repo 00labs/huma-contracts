@@ -67,7 +67,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         require(_creditRecordMapping[borrower].creditLimit == 0, "CREDIT_LINE_ALREADY_EXIST");
 
         // Borrowing amount needs to be lower than max for the pool.
-        require(_maxCreditLine >= creditLimit, "GREATER_THAN_LIMIT");
+        require(_poolConfig._maxCreditLine >= creditLimit, "GREATER_THAN_LIMIT");
 
         // Populates basic credit info fields
         BS.CreditRecord memory cr;
@@ -98,7 +98,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         onlyEvaluationAgents();
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-        require(cr.creditLimit <= _maxCreditLine, "GREATER_THAN_LIMIT");
+        require(cr.creditLimit <= _poolConfig._maxCreditLine, "GREATER_THAN_LIMIT");
 
         _creditRecordMapping[borrower].state = BS.CreditState.Approved;
     }
@@ -113,8 +113,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
         onlyEvaluationAgents();
         // Borrowing amount needs to be lower than max for the pool.
-        require(_maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
-        require(newLine >= _minBorrowAmount, "SMALLER_THAN_LIMIT");
+        require(_poolConfig._maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
+        require(newLine >= _poolConfig._minBorrowAmount, "SMALLER_THAN_LIMIT");
 
         _creditRecordMapping[borrower].creditLimit = uint96(newLine);
     }
@@ -170,7 +170,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Borrowing amount needs to be higher than min for the pool.
         // 8/23 need to move some tests from requestCredit() to drawdown()
-        require(borrowAmount >= _minBorrowAmount, "SMALLER_THAN_LIMIT");
+        require(borrowAmount >= _poolConfig._minBorrowAmount, "SMALLER_THAN_LIMIT");
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
@@ -412,7 +412,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // check to make sure the default grace period has passed.
         require(
             block.timestamp >
-                _creditRecordMapping[borrower].dueDate + _poolDefaultGracePeriodInSeconds,
+                _creditRecordMapping[borrower].dueDate +
+                    _poolConfig._poolDefaultGracePeriodInSeconds,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
 
