@@ -334,6 +334,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Distribute income
         // todo need to apply logic for protocol fee
+        // todo it does not seem right. the if clause booked the accrued fees and interest as income,
+        // but we have not received them. the else clause booked all the cash received back including
+        // principals. It seems we are mixing accre-based accounting and cash-based accounting.
         if (cr.feesAndInterestDue > amountToCollect) distributeIncome(cr.feesAndInterestDue);
         else distributeIncome(amountToCollect);
 
