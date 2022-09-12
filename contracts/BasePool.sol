@@ -223,7 +223,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     function setAPR(uint256 aprInBps) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         require(aprInBps <= 10000, "INVALID_APR");
-        _poolAprInBps = aprInBps;
+        _poolConfig._poolAprInBps = uint16(aprInBps);
         emit APRUpdated(aprInBps);
     }
 
@@ -326,7 +326,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         IERC20Metadata erc20Contract = IERC20Metadata(address(_poolToken));
         return (
             address(_underlyingToken),
-            _poolAprInBps,
+            _poolConfig._poolAprInBps,
             0,
             _poolConfig._maxCreditLine,
             _poolConfig._liquidityCap,

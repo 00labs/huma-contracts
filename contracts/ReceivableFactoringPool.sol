@@ -44,7 +44,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
             receivableAsset,
             receivableParam,
             receivableAmount,
-            _poolAprInBps,
+            _poolConfig._poolAprInBps,
             intervalInDays,
             remainingPeriods
         );

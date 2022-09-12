@@ -29,9 +29,6 @@ contract BasePoolStorage {
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => uint256) internal _lastDepositTime;
 
-    // the default APR for the pool in terms of basis points.
-    uint256 internal _poolAprInBps;
-
     // whether the pool is ON or OFF
     PoolStatus internal _status;
 
@@ -45,18 +42,11 @@ contract BasePoolStorage {
      * @notice Stores required liquidity rate and commission rate for Pool Owner and EA
      */
     struct PoolConfig {
+        // The first 6 fields are IP-related, optimized for one storage slot.
         // The max liquidity allowed for the pool.
         uint96 _liquidityCap;
         // How long a lender has to wait after the last deposit before they can withdraw
         uint64 _withdrawalLockoutPeriodInSeconds;
-        // the maximum credit line for an address in terms of the amount of poolTokens
-        uint96 _maxCreditLine;
-        uint16 _payPeriodInDays;
-        // the grace period at the pool level before a Default can be triggered
-        uint64 _poolDefaultGracePeriodInSeconds;
-        // Percentage of receivable required for credits in this pool in terms of bais points
-        // For over receivableization, use more than 100%, for no receivable, use 0.
-        uint16 _receivableRequiredInBps;
         // Percentage of pool income allocated to EA
         uint16 _commissionRateInBpsForEA;
         // Percentage of pool income allocated to Pool Owner
@@ -65,6 +55,18 @@ contract BasePoolStorage {
         uint16 _liquidityRateInBpsByEA;
         // Percentage of the _liquidityCap to be contributed by Pool Owner
         uint16 _liquidityRateInBpsByPoolOwner;
+        // the default APR for the pool in terms of basis points.
+        uint16 _poolAprInBps;
+        // Below fields are borrowing related. Optimized for one storage slot.
+        // the maximum credit line for an address in terms of the amount of poolTokens
+        uint96 _maxCreditLine;
+        // the grace period at the pool level before a Default can be triggered
+        uint64 _poolDefaultGracePeriodInSeconds;
+        // pay period for the pool, measured in number of days
+        uint16 _payPeriodInDays;
+        // Percentage of receivable required for credits in this pool in terms of bais points
+        // For over receivableization, use more than 100%, for no receivable, use 0.
+        uint16 _receivableRequiredInBps;
     }
 
     enum PoolStatus {

@@ -38,7 +38,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             address(0),
             0,
             0,
-            _poolAprInBps,
+            _poolConfig._poolAprInBps,
             intervalInDays,
             numOfPayments
         );
