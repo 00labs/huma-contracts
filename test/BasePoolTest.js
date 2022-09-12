@@ -97,7 +97,7 @@ describe("Base Pool - LP and Admin functions", function () {
         await poolContract.addEvaluationAgent(evaluationAgent.address);
 
         await poolContract.setAPR(1200); //bps
-        await poolContract.setMinMaxBorrowAmount(10, 1000);
+        await poolContract.setMaxCreditLine(1000);
         await poolContract.enablePool();
 
         await testTokenContract.give1000To(lender.address);
@@ -135,10 +135,9 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Should be able to set min and max credit size", async function () {
-            await poolContract.setMinMaxBorrowAmount(10, 1000);
-            var [token, interest, min, max] = await poolContract.getPoolSummary();
+            await poolContract.setMaxCreditLine(1000);
+            var [, , , max] = await poolContract.getPoolSummary();
 
-            expect(min).to.equal(10);
             expect(max).to.equal(1000);
         });
 

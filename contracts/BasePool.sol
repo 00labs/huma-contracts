@@ -239,18 +239,11 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
     /**
      * @notice Sets the min and max of each loan/credit allowed by the pool.
-     * @param minBorrowAmount the min amount allowed to borrow in a transaction
      * @param maxCreditLine the max amount of a credit line
      */
-    function setMinMaxBorrowAmount(uint256 minBorrowAmount, uint256 maxCreditLine)
-        external
-        virtual
-        override
-    {
+    function setMaxCreditLine(uint256 maxCreditLine) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        require(minBorrowAmount > 0, "MINAMT_IS_ZERO");
-        require(maxCreditLine >= minBorrowAmount, "MAX_LESS_THAN_MIN");
-        _poolConfig._minBorrowAmount = uint96(minBorrowAmount);
+        require(maxCreditLine > 0, "MAX_IS_ZERO");
         _poolConfig._maxCreditLine = uint96(maxCreditLine);
     }
 
@@ -334,7 +327,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         return (
             address(_underlyingToken),
             _poolAprInBps,
-            _poolConfig._minBorrowAmount,
+            0,
             _poolConfig._maxCreditLine,
             _poolConfig._liquidityCap,
             erc20Contract.name(),

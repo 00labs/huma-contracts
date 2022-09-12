@@ -33,7 +33,7 @@ interface IPool {
 
     function setReceivableRequiredInBps(uint256 _receivableRateInBps) external;
 
-    function setMinMaxBorrowAmount(uint256 _minAmount, uint256 _maxAmount) external;
+    function setMaxCreditLine(uint256 _maxAmount) external;
 
     function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external;
 

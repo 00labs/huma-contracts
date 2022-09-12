@@ -114,7 +114,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         onlyEvaluationAgents();
         // Borrowing amount needs to be lower than max for the pool.
         require(_poolConfig._maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
-        require(newLine >= _poolConfig._minBorrowAmount, "SMALLER_THAN_LIMIT");
 
         _creditRecordMapping[borrower].creditLimit = uint96(newLine);
     }
@@ -167,10 +166,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         ///msg.sender needs to be the borrower themselvers or the EA.
         if (msg.sender != borrower) onlyEvaluationAgents();
-
-        // Borrowing amount needs to be higher than min for the pool.
-        // 8/23 need to move some tests from requestCredit() to drawdown()
-        require(borrowAmount >= _poolConfig._minBorrowAmount, "SMALLER_THAN_LIMIT");
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 

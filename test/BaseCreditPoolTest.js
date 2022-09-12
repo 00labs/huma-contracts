@@ -142,7 +142,7 @@ describe("Base Credit Pool", function () {
         await poolContract.addEvaluationAgent(evaluationAgent.address);
 
         await poolContract.setAPR(1217); //bps
-        await poolContract.setMinMaxBorrowAmount(10, 1000);
+        await poolContract.setMaxCreditLine(1000);
         await poolContract.enablePool();
 
         await testTokenContract.give1000To(lender.address);
@@ -176,11 +176,6 @@ describe("Base Credit Pool", function () {
             await expect(
                 poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 5000)
             ).to.be.revertedWith("GREATER_THAN_LIMIT");
-        });
-        it("Should not allow credit line to be changed to be below min borrowing amount", async function () {
-            await expect(
-                poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 1)
-            ).to.be.revertedWith("SMALLER_THAN_LIMIT");
         });
         it("Should allow credit limit to be changed", async function () {
             await poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 1000);
@@ -258,12 +253,6 @@ describe("Base Credit Pool", function () {
             it("Prevent loan funding before approval", async function () {
                 await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
                     "NOT_APPROVED_OR_IN_GOOD_STANDING"
-                );
-            });
-
-            it("Cannot borrow amount lower than the min limit", async function () {
-                await expect(poolContract.connect(borrower).drawdown(1)).to.be.revertedWith(
-                    "SMALLER_THAN_LIMIT"
                 );
             });
 

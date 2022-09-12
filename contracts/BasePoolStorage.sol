@@ -49,8 +49,6 @@ contract BasePoolStorage {
         uint96 _liquidityCap;
         // How long a lender has to wait after the last deposit before they can withdraw
         uint64 _withdrawalLockoutPeriodInSeconds;
-        // the min amount that the borrower can borrow in one transaction
-        uint96 _minBorrowAmount;
         // the maximum credit line for an address in terms of the amount of poolTokens
         uint96 _maxCreditLine;
         uint16 _payPeriodInDays;
