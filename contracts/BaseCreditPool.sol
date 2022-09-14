@@ -187,7 +187,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.dueDate = uint64(block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY);
         } else if (block.timestamp > cr.dueDate) {
             uint256 periodsPassed;
-            (periodsPassed, , cr) = _updateDueInfo(borrower);
+            (periodsPassed, , cr) = updateDueInfo(borrower);
 
             require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
 
@@ -270,7 +270,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Bring the account current. This is necessary since the account might have been dormant for
         // several cycles.
-        (uint256 periodsPassed, uint96 payoffAmount, BS.CreditRecord memory cr) = _updateDueInfo(
+        (uint256 periodsPassed, uint96 payoffAmount, BS.CreditRecord memory cr) = updateDueInfo(
             borrower
         );
 
@@ -334,6 +334,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Distribute income
         // todo need to apply logic for protocol fee
+        // todo it does not seem right. the if clause booked the accrued fees and interest as income,
+        // but we have not received them. the else clause booked all the cash received back including
+        // principals. It seems we are mixing accre-based accounting and cash-based accounting.
         if (cr.feesAndInterestDue > amountToCollect) distributeIncome(cr.feesAndInterestDue);
         else distributeIncome(amountToCollect);
 
@@ -349,8 +352,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @dev getDueInfo() gets the due information of the most current cycle. This function
      * updates the record in creditRecordMapping for `_borrower`
      */
-    function _updateDueInfo(address borrower)
-        internal
+    function updateDueInfo(address borrower)
+        public
         virtual
         returns (
             uint256 periodsPassed,
@@ -477,6 +480,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     // review it is duplicated to isApproved, remove which one?
     function getApprovalStatusForBorrower(address borrower) external view returns (bool) {
         return _creditRecordMapping[borrower].state >= BS.CreditState.Approved;
+    }
+
+    function isLate(address borrower) external view returns (bool) {
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        return block.timestamp > cr.dueDate ? true : false;
     }
 
     function onlyEvaluationAgent() internal view {
