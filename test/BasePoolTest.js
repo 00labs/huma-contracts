@@ -120,6 +120,13 @@ describe("Base Pool - LP and Admin functions", function () {
 
             expect(await poolContract.poolDefaultGracePeriodInSeconds()).to.equal(30 * 24 * 3600);
         });
+
+        it("Shall be able to set the pay period for the pool", async function () {
+            await poolContract.connect(poolOwner).setPoolPayPeriod(20);
+            expect(await poolContract.payPeriodInDays()).to.equal(20);
+            await poolContract.connect(poolOwner).setPoolPayPeriod(30);
+            expect(await poolContract.payPeriodInDays()).to.equal(30);
+        });
     });
 
     describe("Deposit", function () {
