@@ -19,7 +19,7 @@ contract BasePoolStorage {
     IHDT internal _poolToken;
 
     // The amount of underlying token belongs to lenders
-    uint256 internal _totalLiquidity;
+    uint256 internal _totalPoolValue;
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.

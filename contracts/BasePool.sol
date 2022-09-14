@@ -124,7 +124,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         _underlyingToken.safeTransferFrom(lender, address(this), amount);
         uint256 shares = _poolToken.mintAmount(lender, amount);
         _lastDepositTime[lender] = block.timestamp;
-        _totalLiquidity += amount;
+        _totalPoolValue += amount;
 
         emit LiquidityDeposited(lender, amount, shares);
     }
@@ -153,7 +153,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         // Todo If msg.sender is pool owner or EA, make sure they have enough reserve in the pool
 
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
-        _totalLiquidity -= amount;
+        _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
@@ -174,7 +174,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         uint256 shares = IERC20(address(_poolToken)).balanceOf(msg.sender);
         require(shares > 0, "SHARES_IS_ZERO");
         uint256 amount = _poolToken.burn(msg.sender, shares);
-        _totalLiquidity -= amount;
+        _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
@@ -198,7 +198,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         _accuredIncome._poolOwnerIncome += pIncome;
         _accuredIncome._eaIncome += eaIncome;
 
-        _totalLiquidity += (value - pIncome - eaIncome);
+        _totalPoolValue += (value - pIncome - eaIncome);
     }
 
     /**
@@ -209,7 +209,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @param value the amount of losses to be distributed
      */
     function distributeLosses(uint256 value) internal virtual {
-        _totalLiquidity -= value;
+        _totalPoolValue -= value;
     }
 
     function withdrawProtocolFee(uint256 amount) external virtual {
@@ -401,7 +401,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     }
 
     function totalLiquidity() external view override returns (uint256) {
-        return _totalLiquidity;
+        return _totalPoolValue;
     }
 
     function lastDepositTime(address account) external view returns (uint256) {
