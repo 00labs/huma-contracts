@@ -128,6 +128,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 platformFees = calcFrontLoadingFee(borrowAmount);
 
         // Split the fee between the protocol and the pool
+        // todo with the new definition, protocolFee() needs to be applied to platformFees instead of borrowAmount
+        // the fix will break lots of tests.
         protocolFee = (uint256(HumaConfig(humaConfig).protocolFee()) * borrowAmount) / 10000;
 
         poolIncome = platformFees - protocolFee;
