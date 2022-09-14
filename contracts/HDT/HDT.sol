@@ -112,6 +112,10 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         return _assetToken;
     }
 
+    function pool() external view returns (address) {
+        return address(_pool);
+    }
+
     modifier onlyPool() {
         require(msg.sender == address(_pool), "HDT:INVALID_CALLER");
         _;
