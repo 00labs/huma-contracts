@@ -29,6 +29,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     event WithdrawalLockoutPeriodUpdated(uint256 _lockoutPeriodInDays, address by);
     event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
     event APRUpdated(uint256 _aprInBps);
+    event PoolPayPeriodChanged(uint256 periodInDays, address by);
 
     /**
      * @dev This event emits when new funds are distributed
@@ -313,6 +314,12 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         onlyOwnerOrHumaMasterAdmin();
         _poolConfig._poolDefaultGracePeriodInSeconds = gracePeriodInDays * SECONDS_IN_A_DAY;
         emit PoolDefaultGracePeriodChanged(gracePeriodInDays, msg.sender);
+    }
+
+    function setPoolPayPeriod(uint256 periodInDays) external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        _poolConfig._payPeriodInDays = periodInDays;
+        emit PoolPayPeriodChanged(periodInDays, msg.sender);
     }
 
     /**

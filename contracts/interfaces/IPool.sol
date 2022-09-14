@@ -37,6 +37,8 @@ interface IPool {
 
     function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external;
 
+    function setPoolPayPeriod(uint256 periodInDays) external;
+
     function setPoolLiquidityCap(uint256 _liquidityCap) external;
 
     function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays) external;
