@@ -207,13 +207,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         _creditRecordMapping[borrower] = cr;
 
-        (uint256 amtToBorrower, uint256 protocolFee, uint256 poolIncome) = IFeeManager(
-            _feeManagerAddress
-        ).distBorrowingAmount(borrowAmount, _humaConfig);
+        (uint256 amtToBorrower, uint256 platformFees) = IFeeManager(_feeManagerAddress)
+            .distBorrowingAmount(borrowAmount);
 
-        _accuredIncome._protocolIncome += protocolFee;
+        console.log("PlatformFees=", platformFees);
 
-        if (poolIncome > 0) distributeIncome(poolIncome);
+        if (platformFees > 0) distributeIncome(platformFees);
 
         // Record the receivable info.
         if (receivableAsset != address(0)) {
@@ -274,6 +273,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             borrower
         );
 
+        // Distribute income
+        // todo cr.feesAndInterestDue only reflects this last F&I. If there are multiple cycles passed,
+        // we need to capture all of the F&I. Need to change updateDueInfo() logic and move this distributeIncome() there.
+        distributeIncome(cr.feesAndInterestDue);
+
         // How many amount will be applied towards principal
         uint256 principalPayment = 0;
 
@@ -331,14 +335,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
 
         _creditRecordMapping[borrower] = cr;
-
-        // Distribute income
-        // todo need to apply logic for protocol fee
-        // todo it does not seem right. the if clause booked the accrued fees and interest as income,
-        // but we have not received them. the else clause booked all the cash received back including
-        // principals. It seems we are mixing accre-based accounting and cash-based accounting.
-        if (cr.feesAndInterestDue > amountToCollect) distributeIncome(cr.feesAndInterestDue);
-        else distributeIncome(amountToCollect);
 
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker

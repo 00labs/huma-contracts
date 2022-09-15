@@ -108,35 +108,22 @@ contract BaseFeeManager is IFeeManager, Ownable {
     /**
      * @notice Apply front loading fee, distribute the total amount to borrower, pool, & protocol
      * @param borrowAmount the amount of the borrowing
-     * @param humaConfig address of the configurator
      * @return amtToBorrower the amount that the borrower can take
-     * @return protocolFee the portion of the fee charged that goes to the protocol
-     * @return poolIncome the portion of the fee charged that goes to the pool as income
+     * @return platformFees the platform charges
      * @dev the protocol always takes a percentage of the total fee generated
      */
-    function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
+    function distBorrowingAmount(uint256 borrowAmount)
         external
         virtual
         override
-        returns (
-            uint256 amtToBorrower,
-            uint256 protocolFee,
-            uint256 poolIncome
-        )
+        returns (uint256 amtToBorrower, uint256 platformFees)
     {
         // Calculate platform fee, which includes protocol fee and pool fee
-        uint256 platformFees = calcFrontLoadingFee(borrowAmount);
-
-        // Split the fee between the protocol and the pool
-        // todo with the new definition, protocolFee() needs to be applied to platformFees instead of borrowAmount
-        // the fix will break lots of tests.
-        protocolFee = (uint256(HumaConfig(humaConfig).protocolFee()) * borrowAmount) / 10000;
-
-        poolIncome = platformFees - protocolFee;
+        platformFees = calcFrontLoadingFee(borrowAmount);
 
         amtToBorrower = borrowAmount - platformFees;
 
-        return (amtToBorrower, protocolFee, poolIncome);
+        return (amtToBorrower, platformFees);
     }
 
     /**

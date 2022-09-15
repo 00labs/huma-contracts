@@ -193,9 +193,18 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      *     and try to distribute it in the next distribution ....... todo implement
      */
     function distributeIncome(uint256 value) internal virtual {
-        uint256 pIncome = (value * _poolConfig._commissionRateInBpsForPoolOwner) / BPS_DIVIDER;
-        uint256 eaIncome = (value * _poolConfig._commissionRateInBpsForEA) / BPS_DIVIDER;
+        uint256 protocolFee = (uint256(HumaConfig(_humaConfig).protocolFee()) * value) / 10000;
+        console.log("protocolFee=", protocolFee);
+        _accuredIncome._protocolIncome += protocolFee;
+
+        uint256 valueForPool = value - protocolFee;
+
+        uint256 pIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) / BPS_DIVIDER;
+        console.log("pIncome=", pIncome);
         _accuredIncome._poolOwnerIncome += pIncome;
+
+        uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) / BPS_DIVIDER;
+        console.log("eaIncome=", eaIncome);
         _accuredIncome._eaIncome += eaIncome;
 
         _totalPoolValue += (value - pIncome - eaIncome);
@@ -348,7 +357,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._commissionRateInBpsForPoolOwner = commissionRate;
+        _poolConfig._rewardRateInBpsForPoolOwner = commissionRate;
         _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
         emit PoolOwnerCommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
     }
@@ -359,7 +368,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._commissionRateInBpsForEA = commissionRate;
+        _poolConfig._rewardRateInBpsForEA = commissionRate;
         _poolConfig._liquidityRateInBpsByEA = liquidityRate;
         emit EACommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
     }
@@ -417,12 +426,12 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     }
 
     function commissionAndLiquidityRateForEA() external view returns (uint256, uint256) {
-        return (_poolConfig._commissionRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
+        return (_poolConfig._rewardRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
     }
 
     function commissionAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
         return (
-            _poolConfig._commissionRateInBpsForPoolOwner,
+            _poolConfig._rewardRateInBpsForPoolOwner,
             _poolConfig._liquidityRateInBpsByPoolOwner
         );
     }

@@ -57,9 +57,9 @@ contract BasePoolStorage {
         // How long a lender has to wait after the last deposit before they can withdraw
         uint256 _withdrawalLockoutPeriodInSeconds;
         // Percentage of pool income allocated to EA
-        uint256 _commissionRateInBpsForEA;
+        uint256 _rewardRateInBpsForEA;
         // Percentage of pool income allocated to Pool Owner
-        uint256 _commissionRateInBpsForPoolOwner;
+        uint256 _rewardRateInBpsForPoolOwner;
         // Percentage of the _liquidityCap to be contributed by EA
         uint256 _liquidityRateInBpsByEA;
         // Percentage of the _liquidityCap to be contributed by Pool Owner
