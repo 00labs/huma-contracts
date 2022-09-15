@@ -46,13 +46,13 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     event LossesDistributed(address indexed by, uint256 lossesDistributed);
 
     event PoolOwnerCommisionAndLiquidityChanged(
-        uint256 commissionRate,
+        uint256 rewardsRate,
         uint256 liquidityRate,
         address indexed by
     );
 
     event EACommisionAndLiquidityChanged(
-        uint256 commissionRate,
+        uint256 rewardsRate,
         uint256 liquidityRate,
         address indexed by
     );
@@ -365,26 +365,26 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
     }
 
-    function setPoolOwnerCommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+    function setPoolOwnerRewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate)
         external
         virtual
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._rewardRateInBpsForPoolOwner = commissionRate;
+        _poolConfig._rewardRateInBpsForPoolOwner = rewardsRate;
         _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
-        emit PoolOwnerCommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
+        emit PoolOwnerCommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
-    function setEACommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+    function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate)
         external
         virtual
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._rewardRateInBpsForEA = commissionRate;
+        _poolConfig._rewardRateInBpsForEA = rewardsRate;
         _poolConfig._liquidityRateInBpsByEA = liquidityRate;
-        emit EACommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
+        emit EACommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
     /**
@@ -439,11 +439,11 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         return _poolConfig._withdrawalLockoutPeriodInSeconds;
     }
 
-    function commissionAndLiquidityRateForEA() external view returns (uint256, uint256) {
+    function rewardsAndLiquidityRateForEA() external view returns (uint256, uint256) {
         return (_poolConfig._rewardRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
     }
 
-    function commissionAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
+    function rewardsAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
         return (
             _poolConfig._rewardRateInBpsForPoolOwner,
             _poolConfig._liquidityRateInBpsByPoolOwner

@@ -48,7 +48,7 @@ contract BasePoolStorage {
     }
 
     /**
-     * @notice Stores required liquidity rate and commission rate for Pool Owner and EA
+     * @notice Stores required liquidity rate and rewards rate for Pool Owner and EA
      */
     struct PoolConfig {
         // The first 6 fields are IP-related, optimized for one storage slot.

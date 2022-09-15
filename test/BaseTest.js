@@ -1,4 +1,4 @@
-async function deployContracts(poolOwner, treasury, lender, fees = [10, 100, 20, 500]) {
+async function deployContracts(poolOwner, treasury, lender, fees = [10, 100, 20, 100]) {
     // Deploy HumaConfig
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     humaConfigContract = await HumaConfig.deploy(treasury.address);
@@ -78,9 +78,9 @@ async function deployAndSetupPool(
     await poolContract.transferOwnership(poolOwner.address);
 
     await poolContract.connect(poolOwner).setPoolLiquidityCap(1_000_000_000);
-    await poolContract.connect(poolOwner).setPoolOwnerCommissionAndLiquidity(1875, 10);
+    await poolContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(1875, 10);
     await poolContract.connect(poolOwner).setEvaluationAgent(evaluationAgent.address);
-    await poolContract.connect(poolOwner).setEACommissionAndLiquidity(625, 10);
+    await poolContract.connect(poolOwner).setEARewardsAndLiquidity(625, 10);
 
     await testTokenContract.connect(poolOwner).approve(poolContract.address, 2_000_000);
     await poolContract.connect(poolOwner).makeInitialDeposit(2_000_000);
