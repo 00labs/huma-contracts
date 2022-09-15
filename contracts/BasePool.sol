@@ -114,7 +114,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @param amount the number of `poolToken` to be deposited
      */
     function makeInitialDeposit(uint256 amount) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
+        onlyOwnerOrEA();
         return _deposit(msg.sender, amount);
     }
 
@@ -311,7 +311,20 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        // Todo make sure pool owner and EA have contributed the required liquidity to the pool.
+
+        require(
+            IERC20(address(_poolToken)).balanceOf(owner()) >=
+                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByPoolOwner) /
+                    BPS_DIVIDER,
+            "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
+        );
+        require(
+            IERC20(address(_poolToken)).balanceOf(_evaluationAgent) >=
+                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByEA) / BPS_DIVIDER,
+            "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
+        );
+
+        // Todo make sure pool owner has contributed the required liquidity to the pool.
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
     }
@@ -462,6 +475,13 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     function onlyOwnerOrHumaMasterAdmin() internal view {
         require(
             (msg.sender == owner() || msg.sender == HumaConfig(_humaConfig).owner()),
+            "PERMISSION_DENIED_NOT_ADMIN"
+        );
+    }
+
+    function onlyOwnerOrEA() internal view {
+        require(
+            (msg.sender == owner() || msg.sender == _evaluationAgent),
             "PERMISSION_DENIED_NOT_ADMIN"
         );
     }

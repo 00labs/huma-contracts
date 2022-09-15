@@ -105,7 +105,7 @@ describe.only("Base Credit Pool", function () {
         });
         it("Should not allow credit line to be changed to above maximal credit line", async function () {
             await expect(
-                poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 5000000)
+                poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 50000000)
             ).to.be.revertedWith("GREATER_THAN_LIMIT");
         });
         it("Should allow credit limit to be changed", async function () {
@@ -144,7 +144,7 @@ describe.only("Base Credit Pool", function () {
 
         it("Cannot request loan greater than limit", async function () {
             await expect(
-                poolContract.connect(borrower).requestCredit(9999000, 30, 12)
+                poolContract.connect(borrower).requestCredit(10_000_001, 30, 12)
             ).to.be.revertedWith("GREATER_THAN_LIMIT");
         });
 
