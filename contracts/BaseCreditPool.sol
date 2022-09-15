@@ -273,11 +273,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             borrower
         );
 
-        // Distribute income
-        // todo cr.feesAndInterestDue only reflects this last F&I. If there are multiple cycles passed,
-        // we need to capture all of the F&I. Need to change updateDueInfo() logic and move this distributeIncome() there.
-        distributeIncome(cr.feesAndInterestDue);
-
         // How many amount will be applied towards principal
         uint256 principalPayment = 0;
 
@@ -362,13 +357,19 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Gets the up-to-date due information for the borrower. If the account has been
         // late or dormant for multiple cycles, getDueInfo() will bring it current and
         // return the most up-to-date due information.
+        uint256 newCharges;
         (
             periodsPassed,
             cr.feesAndInterestDue,
             cr.totalDue,
             payoffAmount,
-            cr.unbilledPrincipal
+            cr.unbilledPrincipal,
+            newCharges
         ) = IFeeManager(_feeManagerAddress).getDueInfo(cr);
+
+        // Distribute income
+        distributeIncome(newCharges);
+        console.log("newCharges=", newCharges);
 
         if (periodsPassed > 0) {
             cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);

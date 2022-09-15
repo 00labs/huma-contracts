@@ -75,7 +75,8 @@ interface IFeeManager {
             uint96 feesAndInterestDue,
             uint96 totalDue,
             uint96 payoffAmount,
-            uint96 unbilledPrincipal
+            uint96 unbilledPrincipal,
+            uint256 totalCharges
         );
 
     /**

@@ -160,7 +160,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint96 feesAndInterestDue,
             uint96 totalDue,
             uint96 payoffAmount,
-            uint96 unbilledPrincipal
+            uint96 unbilledPrincipal,
+            uint256 totalCharges
         )
     {
         // Directly returns if it is still within the current period
@@ -170,7 +171,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 _cr.feesAndInterestDue,
                 _cr.totalDue,
                 calcPayoff(_cr),
-                _cr.unbilledPrincipal
+                _cr.unbilledPrincipal,
+                0
             );
         }
 
@@ -226,6 +228,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // step 5. compute principal due and adjust unbilled principal
             uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) / 10000;
             _cr.feesAndInterestDue = uint96(fees + interest);
+            totalCharges += (fees + interest);
             _cr.totalDue = uint96(fees + interest + principalToBill);
             _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);
         }
@@ -236,6 +239,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
         // If passed final period, all principal is due
         if (periodsPassed >= _cr.remainingPeriods) {
+            // todo need to add F&I to totalCharges
             _cr.feesAndInterestDue =
                 payoffAmount -
                 (_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue);
@@ -248,7 +252,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             _cr.feesAndInterestDue,
             _cr.totalDue,
             payoffAmount,
-            _cr.unbilledPrincipal
+            _cr.unbilledPrincipal,
+            totalCharges
         );
     }
 
