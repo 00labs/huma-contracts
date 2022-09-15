@@ -199,15 +199,16 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
         uint256 valueForPool = value - protocolFee;
 
-        uint256 pIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) / BPS_DIVIDER;
-        console.log("pIncome=", pIncome);
-        _accuredIncome._poolOwnerIncome += pIncome;
+        uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
+            BPS_DIVIDER;
+        console.log("ownerIncome=", ownerIncome);
+        _accuredIncome._poolOwnerIncome += ownerIncome;
 
         uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) / BPS_DIVIDER;
         console.log("eaIncome=", eaIncome);
         _accuredIncome._eaIncome += eaIncome;
 
-        _totalPoolValue += (value - pIncome - eaIncome);
+        _totalPoolValue += (value - ownerIncome - eaIncome);
     }
 
     /**
