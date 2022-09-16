@@ -51,14 +51,27 @@ describe("Base Credit Pool", function () {
     let feeManagerContract;
     let testTokenContract;
     let proxyOwner;
+    let defaultDeployer;
     let lender;
     let borrower;
+    let borrower2;
+    let borrower3;
     let treasury;
     let evaluationAgent;
+    let poolOwner;
 
     before(async function () {
-        [defaultDeployer, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
-            await ethers.getSigners();
+        [
+            defaultDeployer,
+            proxyOwner,
+            lender,
+            borrower,
+            borrower2,
+            borrower3,
+            treasury,
+            evaluationAgent,
+            poolOwner,
+        ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract] = await deployContracts(
             poolOwner,
@@ -94,6 +107,14 @@ describe("Base Credit Pool", function () {
     afterEach(async function () {});
 
     describe("BaseCreditPool settings", function () {
+        beforeEach(async function () {
+            await poolContract.connect(borrower).requestCredit(400, 30, 12);
+        });
+
+        afterEach(async function () {
+            await poolContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
+        });
+
         it("Should not allow credit line to be changed when protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(
@@ -120,11 +141,79 @@ describe("Base Credit Pool", function () {
         });
     });
 
+    describe.only("Defaulting resolver", function () {
+        let resolverContract;
+
+        beforeEach(async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower2).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower3).requestCredit(1_000_000, 30, 12);
+
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(evaluationAgent).approveCredit(borrower2.address);
+            await poolContract.connect(evaluationAgent).approveCredit(borrower3.address);
+
+            await poolContract.connect(borrower).drawdown(1_000_000);
+            await poolContract.connect(borrower2).drawdown(1_000_000);
+            await poolContract.connect(borrower3).drawdown(1_000_000);
+
+            const BaseCreditPoolDefaultingResolver = await ethers.getContractFactory(
+                "BaseCreditPoolDefaultingResolver"
+            );
+            resolverContract = await BaseCreditPoolDefaultingResolver.deploy();
+            await resolverContract.push(poolContract.address);
+        });
+
+        afterEach(async function () {
+            await poolContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
+            await poolContract
+                .connect(evaluationAgent)
+                .invalidateApprovedCredit(borrower2.address);
+            await poolContract
+                .connect(evaluationAgent)
+                .invalidateApprovedCredit(borrower3.address);
+        });
+
+        it("creditLines is correctly ordered", async function () {
+            let creditLines = await poolContract.creditLines();
+            expect(creditLines.length).to.equal(3);
+            expect(creditLines[0]).to.equal(borrower.address);
+            expect(creditLines[1]).to.equal(borrower2.address);
+            expect(creditLines[2]).to.equal(borrower3.address);
+
+            // Invalidate borrower's credit
+            await poolContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
+            creditLines = await poolContract.creditLines();
+            expect(creditLines.length).to.equal(2);
+            expect(creditLines[0]).to.equal(borrower3.address);
+            expect(creditLines[1]).to.equal(borrower2.address);
+
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(1_000_000);
+            creditLines = await poolContract.creditLines();
+            expect(creditLines.length).to.equal(3);
+            expect(creditLines[0]).to.equal(borrower3.address);
+            expect(creditLines[1]).to.equal(borrower2.address);
+            expect(creditLines[2]).to.equal(borrower.address);
+        });
+
+        it("resolver false case", async function () {
+            // TODO add this logic. Right now due date is not being set properly
+            let res = await resolverContract.checker();
+            console.log(res);
+        });
+
+        it("resolver true case", async function () {});
+    });
+
     // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
     // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
     describe("Borrowing request", function () {
+        ``;
         afterEach(async function () {
             await humaConfigContract.connect(poolOwner).unpauseProtocol();
+            await poolContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
         });
 
         it("Should not allow loan requests while protocol is paused", async function () {
@@ -139,6 +228,7 @@ describe("Base Credit Pool", function () {
             await expect(
                 poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
             ).to.be.revertedWith("POOL_NOT_ON");
+            await poolContract.connect(poolOwner).enablePool();
         });
 
         it("Cannot request loan greater than limit", async function () {
