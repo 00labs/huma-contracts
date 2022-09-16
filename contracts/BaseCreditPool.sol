@@ -129,6 +129,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         cr.state = BS.CreditState.Deleted;
         cr.creditLimit = 0;
         _creditRecordMapping[borrower] = cr;
+        removeCreditLine(borrower);
     }
 
     function isApproved(address borrower) external view virtual override returns (bool) {
@@ -250,6 +251,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
+
+        // Adds wallet to list of all wallets with credit lines
+        addCreditLine(borrower);
     }
 
     /**
@@ -489,5 +493,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function onlyEvaluationAgent() internal view {
         require(msg.sender == _evaluationAgent, "APPROVER_REQUIRED");
+    }
+
+    function creditLines() external view returns (address[] memory) {
+        return _creditLines;
     }
 }
