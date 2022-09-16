@@ -194,21 +194,18 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function distributeIncome(uint256 value) internal virtual {
         uint256 protocolFee = (uint256(HumaConfig(_humaConfig).protocolFee()) * value) / 10000;
-        console.log("protocolFee=", protocolFee);
         _accuredIncome._protocolIncome += protocolFee;
 
         uint256 valueForPool = value - protocolFee;
 
         uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
             BPS_DIVIDER;
-        console.log("ownerIncome=", ownerIncome);
         _accuredIncome._poolOwnerIncome += ownerIncome;
 
         uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) / BPS_DIVIDER;
-        console.log("eaIncome=", eaIncome);
         _accuredIncome._eaIncome += eaIncome;
 
-        _totalPoolValue += (value - ownerIncome - eaIncome);
+        _totalPoolValue += (valueForPool - ownerIncome - eaIncome);
     }
 
     /**
@@ -423,7 +420,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         );
     }
 
-    function totalLiquidity() external view override returns (uint256) {
+    function totalPoolValue() external view override returns (uint256) {
         return _totalPoolValue;
     }
 

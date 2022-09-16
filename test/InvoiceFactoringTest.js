@@ -2,6 +2,7 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
+const {deployContracts, deployAndSetupPool} = require("./BaseTest");
 
 use(solidity);
 
@@ -22,7 +23,7 @@ const getInvoiceContractFromAddress = async function (address, signer) {
 // 3. Borrower borrows 400. 14 fee charged (2 to treasury, 12 to the pool). Borrower get 386
 // 4. Payback 500. The 100 extra will be transferred to the borrower, led to a balance of 486.
 // 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
-describe("Huma Invoice Financing", function () {
+describe.skip("Huma Invoice Financing", function () {
     let invoiceContract;
     let hdtContract;
     let humaConfigContract;
@@ -122,6 +123,11 @@ describe("Huma Invoice Financing", function () {
         let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
         if (lenderBalance > 0)
             await testTokenContract.connect(borrower).burn(borrower.address, borrowerBalance);
+
+        await humaConfigContract.setTreasuryFee(2000);
+
+        await invoiceContract.connect(owner).setPoolOwnerRewardsAndLiquidity(625, 0);
+        await invoiceContract.connect(owner).setEARewardsAndLiquidity(1875, 0);
     });
 
     describe("Post Approved Invoice Factoring", function () {
@@ -223,20 +229,12 @@ describe("Huma Invoice Financing", function () {
             const creditInfo = await invoiceContract.getCreditInformation(borrower.address);
 
             expect(creditInfo.creditLimit).to.equal(400);
-            expect(creditInfo.balance).to.equal(0);
+            expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
         });
     });
 
     describe("Invalidate Approved Invoice Factoring", function () {
-        // it("Should disallow non-EA to invalidate an approved invoice factoring record", async function () {
-        //     await expect(
-        //         invoiceContract
-        //             .connect(payer)
-        //             .invalidateApprovedCredit(borrower.address)
-        //     ).to.be.revertedWith("APPROVER_REQUIRED");
-        // });
-
         it("Should allow evaluation agent to invalidate an approved invoice factoring record", async function () {
             await invoiceContract.connect(owner).setAPR(0);
 
@@ -251,6 +249,10 @@ describe("Huma Invoice Financing", function () {
                     30,
                     1
                 );
+
+            await expect(
+                invoiceContract.connect(payer).invalidateApprovedCredit(borrower.address)
+            ).to.be.revertedWith("APPROVER_REQUIRED");
 
             await invoiceContract
                 .connect(evaluationAgent)
@@ -332,7 +334,7 @@ describe("Huma Invoice Financing", function () {
 
             expect(await invoiceNFTContract.balanceOf);
             let accruedIncome = await invoiceContract.accruedIncome();
-            expect(accruedIncome.protocolIncome).to.equal(1);
+            expect(accruedIncome.protocolIncome).to.equal(2);
             expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(212);
         });
 
@@ -354,10 +356,13 @@ describe("Huma Invoice Financing", function () {
                 invoiceContract.address
             );
 
-            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386); // principal: 400, flat fee: 20, bps fee: 4
+            // principal: 400, fees 14 {flat: 10, bps fee: 4}
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386);
 
             let accruedIncome = await invoiceContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(2);
+            expect(accruedIncome.poolOwnerIncome).to.equal(0);
+            expect(accruedIncome.eaIncome).to.equal(2);
 
             expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(14);
         });
@@ -431,17 +436,6 @@ describe("Huma Invoice Financing", function () {
 
         it("Process payback", async function () {
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
-
-            // await testTokenContract
-            //     .connect(payer)
-            //     .transfer(
-            //         HumaPoolLocker(invoiceContract.getPoolLiquidity()),
-            //         210
-            //     );
-
-            // await testTokenContract
-            //     .connect(borrower)
-            //     .approve(invoiceContract.address, 210);
 
             // simulates payments from payer.
             await testTokenContract.connect(payer).transfer(invoiceContract.address, 500);

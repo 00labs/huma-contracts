@@ -44,7 +44,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     }
 
     function totalAssets() public view returns (uint256) {
-        return _pool.totalLiquidity();
+        return _pool.totalPoolValue();
     }
 
     function mintAmount(address account, uint256 amount)

@@ -69,6 +69,9 @@ describe("Credit Line Integration Test", async function () {
             testTokenContract,
             500
         );
+
+        await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500);
+        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
     });
 
     it("Day 0: Initial drawdown", async function () {

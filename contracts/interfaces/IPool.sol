@@ -61,5 +61,5 @@ interface IPool {
             uint8 decimal
         );
 
-    function totalLiquidity() external view returns (uint256);
+    function totalPoolValue() external view returns (uint256);
 }
