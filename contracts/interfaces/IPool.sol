@@ -53,7 +53,7 @@ interface IPool {
         returns (
             address poolToken,
             uint256 apr,
-            uint256 minCreditAmount,
+            uint256 payPeriod,
             uint256 maxCreditAmount,
             uint256 liquiditycap,
             string memory name,
