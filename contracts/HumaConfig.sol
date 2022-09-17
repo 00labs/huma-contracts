@@ -20,9 +20,9 @@ contract HumaConfig is Ownable {
     uint32 private constant PROTOCOL_DEFAULT_GRACE_PERIOD = 5 days;
 
     /// The default treasury fee in bps.
-    uint16 private constant DEFAULT_TREASURY_FEE = 50; // 0.5%
+    uint16 private constant DEFAULT_TREASURY_FEE = 1000; // 10%
 
-    /// The default treasury fee in bps.
+    /// The treasury fee upper bound in bps.
     uint16 private constant TREASURY_FEE_UPPER_BOUND = 5000; // 0.5%
 
     /// Expect to pack the next five fields in one storage slot.

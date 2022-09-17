@@ -46,13 +46,13 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     event LossesDistributed(address indexed by, uint256 lossesDistributed);
 
     event PoolOwnerCommisionAndLiquidityChanged(
-        uint256 commissionRate,
+        uint256 rewardsRate,
         uint256 liquidityRate,
         address indexed by
     );
 
     event EACommisionAndLiquidityChanged(
-        uint256 commissionRate,
+        uint256 rewardsRate,
         uint256 liquidityRate,
         address indexed by
     );
@@ -114,7 +114,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @param amount the number of `poolToken` to be deposited
      */
     function makeInitialDeposit(uint256 amount) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
+        onlyOwnerOrEA();
         return _deposit(msg.sender, amount);
     }
 
@@ -124,7 +124,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         _underlyingToken.safeTransferFrom(lender, address(this), amount);
         uint256 shares = _poolToken.mintAmount(lender, amount);
         _lastDepositTime[lender] = block.timestamp;
-        _totalLiquidity += amount;
+        _totalPoolValue += amount;
 
         emit LiquidityDeposited(lender, amount, shares);
     }
@@ -153,7 +153,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         // Todo If msg.sender is pool owner or EA, make sure they have enough reserve in the pool
 
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
-        _totalLiquidity -= amount;
+        _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
@@ -174,7 +174,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         uint256 shares = IERC20(address(_poolToken)).balanceOf(msg.sender);
         require(shares > 0, "SHARES_IS_ZERO");
         uint256 amount = _poolToken.burn(msg.sender, shares);
-        _totalLiquidity -= amount;
+        _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
@@ -193,12 +193,19 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      *     and try to distribute it in the next distribution ....... todo implement
      */
     function distributeIncome(uint256 value) internal virtual {
-        uint256 pIncome = (value * _poolConfig._commissionRateInBpsForPoolOwner) / BPS_DIVIDER;
-        uint256 eaIncome = (value * _poolConfig._commissionRateInBpsForEA) / BPS_DIVIDER;
-        _accuredIncome._poolOwnerIncome += pIncome;
+        uint256 protocolFee = (uint256(HumaConfig(_humaConfig).protocolFee()) * value) / 10000;
+        _accuredIncome._protocolIncome += protocolFee;
+
+        uint256 valueForPool = value - protocolFee;
+
+        uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
+            BPS_DIVIDER;
+        _accuredIncome._poolOwnerIncome += ownerIncome;
+
+        uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) / BPS_DIVIDER;
         _accuredIncome._eaIncome += eaIncome;
 
-        _totalLiquidity += (value - pIncome - eaIncome);
+        _totalPoolValue += (valueForPool - ownerIncome - eaIncome);
     }
 
     /**
@@ -209,7 +216,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @param value the amount of losses to be distributed
      */
     function distributeLosses(uint256 value) internal virtual {
-        _totalLiquidity -= value;
+        _totalPoolValue -= value;
     }
 
     function withdrawProtocolFee(uint256 amount) external virtual {
@@ -301,7 +308,20 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        // Todo make sure pool owner and EA have contributed the required liquidity to the pool.
+
+        require(
+            IERC20(address(_poolToken)).balanceOf(owner()) >=
+                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByPoolOwner) /
+                    BPS_DIVIDER,
+            "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
+        );
+        require(
+            IERC20(address(_poolToken)).balanceOf(_evaluationAgent) >=
+                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByEA) / BPS_DIVIDER,
+            "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
+        );
+
+        // Todo make sure pool owner has contributed the required liquidity to the pool.
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
     }
@@ -342,26 +362,26 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
     }
 
-    function setPoolOwnerCommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+    function setPoolOwnerRewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate)
         external
         virtual
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._commissionRateInBpsForPoolOwner = commissionRate;
+        _poolConfig._rewardRateInBpsForPoolOwner = rewardsRate;
         _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
-        emit PoolOwnerCommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
+        emit PoolOwnerCommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
-    function setEACommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
+    function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate)
         external
         virtual
         override
     {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._commissionRateInBpsForEA = commissionRate;
+        _poolConfig._rewardRateInBpsForEA = rewardsRate;
         _poolConfig._liquidityRateInBpsByEA = liquidityRate;
-        emit EACommisionAndLiquidityChanged(commissionRate, liquidityRate, msg.sender);
+        emit EACommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
     /**
@@ -400,8 +420,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         );
     }
 
-    function totalLiquidity() external view override returns (uint256) {
-        return _totalLiquidity;
+    function totalPoolValue() external view override returns (uint256) {
+        return _totalPoolValue;
     }
 
     function lastDepositTime(address account) external view returns (uint256) {
@@ -416,13 +436,13 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         return _poolConfig._withdrawalLockoutPeriodInSeconds;
     }
 
-    function commissionAndLiquidityRateForEA() external view returns (uint256, uint256) {
-        return (_poolConfig._commissionRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
+    function rewardsAndLiquidityRateForEA() external view returns (uint256, uint256) {
+        return (_poolConfig._rewardRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
     }
 
-    function commissionAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
+    function rewardsAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
         return (
-            _poolConfig._commissionRateInBpsForPoolOwner,
+            _poolConfig._rewardRateInBpsForPoolOwner,
             _poolConfig._liquidityRateInBpsByPoolOwner
         );
     }
@@ -452,6 +472,13 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     function onlyOwnerOrHumaMasterAdmin() internal view {
         require(
             (msg.sender == owner() || msg.sender == HumaConfig(_humaConfig).owner()),
+            "PERMISSION_DENIED_NOT_ADMIN"
+        );
+    }
+
+    function onlyOwnerOrEA() internal view {
+        require(
+            (msg.sender == owner() || msg.sender == _evaluationAgent),
             "PERMISSION_DENIED_NOT_ADMIN"
         );
     }

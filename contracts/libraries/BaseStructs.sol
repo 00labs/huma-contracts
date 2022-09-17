@@ -11,7 +11,6 @@ library BaseStructs {
      * @dev each struct can have no more than 13 elements.
      */
     struct CreditRecord {
-        uint96 creditLimit; // the limit of the credit line
         uint96 unbilledPrincipal; // the amount of principal not included in the bill
         uint64 dueDate; // the due date of the next payment
         // correction is the adjustment of interest over or under-counted becasue of drawdown
@@ -21,9 +20,10 @@ library BaseStructs {
         uint96 feesAndInterestDue; // interest and fees due for the next payment
         uint16 missedPeriods; // # of consecutive missed payments, for default processing
         uint16 remainingPeriods; // # of payment periods until the maturity of the credit line
+        CreditState state; // status of the credit line
+        uint96 creditLimit; // the limit of the credit line
         uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
         uint16 intervalInDays; // # of days in one billing period
-        CreditState state; // status of the credit line
     }
 
     /**

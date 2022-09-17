@@ -43,10 +43,9 @@ interface IPool {
 
     function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays) external;
 
-    function setPoolOwnerCommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate)
-        external;
+    function setPoolOwnerRewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external;
 
-    function setEACommissionAndLiquidity(uint256 commissionRate, uint256 liquidityRate) external;
+    function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external;
 
     function getPoolSummary()
         external
@@ -62,5 +61,5 @@ interface IPool {
             uint8 decimal
         );
 
-    function totalLiquidity() external view returns (uint256);
+    function totalPoolValue() external view returns (uint256);
 }

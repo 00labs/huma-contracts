@@ -16,6 +16,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     using ERC165Checker for address;
     using BS for BS.CreditRecord;
 
+    event DefaultTriggered(address indexed borrower, uint256 losses, address by);
+
     /**
      * @notice accepts a credit request from msg.sender
      * @param creditLimit the credit line (number of pool token)
@@ -207,13 +209,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         _creditRecordMapping[borrower] = cr;
 
-        (uint256 amtToBorrower, uint256 protocolFee, uint256 poolIncome) = IFeeManager(
-            _feeManagerAddress
-        ).distBorrowingAmount(borrowAmount, _humaConfig);
+        (uint256 amtToBorrower, uint256 platformFees) = IFeeManager(_feeManagerAddress)
+            .distBorrowingAmount(borrowAmount);
 
-        _accuredIncome._protocolIncome += protocolFee;
-
-        if (poolIncome > 0) distributeIncome(poolIncome);
+        if (platformFees > 0) distributeIncome(platformFees);
 
         // Record the receivable info.
         if (receivableAsset != address(0)) {
@@ -274,7 +273,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             borrower
         );
 
-        // How many amount will be applied towards principal
+        // How much will be applied towards principal
         uint256 principalPayment = 0;
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
@@ -332,14 +331,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         _creditRecordMapping[borrower] = cr;
 
-        // Distribute income
-        // todo need to apply logic for protocol fee
-        // todo it does not seem right. the if clause booked the accrued fees and interest as income,
-        // but we have not received them. the else clause booked all the cash received back including
-        // principals. It seems we are mixing accre-based accounting and cash-based accounting.
-        if (cr.feesAndInterestDue > amountToCollect) distributeIncome(cr.feesAndInterestDue);
-        else distributeIncome(amountToCollect);
-
         if (amountToCollect > 0) {
             // Transfer assets from the _borrower to pool locker
             _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
@@ -362,17 +353,23 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         )
     {
         cr = _creditRecordMapping[borrower];
+        bool alreadyLate = cr.totalDue > 0 ? true : false;
 
         // Gets the up-to-date due information for the borrower. If the account has been
         // late or dormant for multiple cycles, getDueInfo() will bring it current and
         // return the most up-to-date due information.
+        uint256 newCharges;
         (
             periodsPassed,
             cr.feesAndInterestDue,
             cr.totalDue,
             payoffAmount,
-            cr.unbilledPrincipal
+            cr.unbilledPrincipal,
+            newCharges
         ) = IFeeManager(_feeManagerAddress).getDueInfo(cr);
+
+        // Distribute income
+        distributeIncome(newCharges);
 
         if (periodsPassed > 0) {
             cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
@@ -385,15 +382,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             }
 
             // Sets the right missedPeriods and state for the credit record
-            if (cr.totalDue > 0) {
-                // note the design of missedPeriods is awkward. need to find a simpler solution
-                cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed - 1);
-                if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
-            } else {
-                // When totalDue has been paid, the account is in good standing
-                cr.missedPeriods = 0;
-                cr.state = BS.CreditState.GoodStanding;
-            }
+            if (alreadyLate) cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed);
+            else cr.missedPeriods = 0;
+
+            if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
+            else cr.state = BS.CreditState.GoodStanding;
+
             _creditRecordMapping[borrower] = cr;
         }
     }
@@ -405,25 +399,23 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      */
     function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
         protocolAndPoolOn();
-        // todo add security check
 
         // check to make sure the default grace period has passed.
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+
+        if (block.timestamp >= cr.dueDate) updateDueInfo(borrower);
+        cr = _creditRecordMapping[borrower];
+
         require(
-            block.timestamp >
-                _creditRecordMapping[borrower].dueDate +
-                    _poolConfig._poolDefaultGracePeriodInSeconds,
+            cr.missedPeriods * cr.intervalInDays * SECONDS_IN_A_DAY >=
+                _poolConfig._poolDefaultGracePeriodInSeconds,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
 
-        // FeatureRequest: add pool cover logic
-
-        // FeatureRequest: add staking logic
-
-        // Trigger loss process
-        // todo double check if we need to include fees into losses
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         losses = cr.unbilledPrincipal + cr.totalDue;
         distributeLosses(losses);
+
+        emit DefaultTriggered(borrower, losses, msg.sender);
 
         return losses;
     }
@@ -450,26 +442,32 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         external
         view
         returns (
-            uint96 creditLimit,
-            uint96 totalDue,
-            uint64 intervalInDays,
-            uint16 aprInBps,
+            uint96 unbilledPrincipal,
             uint64 dueDate,
-            uint96 balance,
+            int96 correction,
+            uint96 totalDue,
+            uint96 feesAndInterestDue,
+            uint16 missedPeriods,
             uint16 remainingPeriods,
-            BS.CreditState state
+            BS.CreditState state,
+            uint96 creditLimit,
+            uint16 aprInBps,
+            uint16 intervalInDays
         )
     {
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         return (
-            cr.creditLimit,
-            cr.totalDue,
-            cr.intervalInDays,
-            cr.aprInBps,
-            cr.dueDate,
             cr.unbilledPrincipal,
+            cr.dueDate,
+            cr.correction,
+            cr.totalDue,
+            cr.feesAndInterestDue,
+            cr.missedPeriods,
             cr.remainingPeriods,
-            cr.state
+            cr.state,
+            cr.creditLimit,
+            cr.aprInBps,
+            cr.intervalInDays
         );
     }
 

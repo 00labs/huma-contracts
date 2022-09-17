@@ -108,35 +108,22 @@ contract BaseFeeManager is IFeeManager, Ownable {
     /**
      * @notice Apply front loading fee, distribute the total amount to borrower, pool, & protocol
      * @param borrowAmount the amount of the borrowing
-     * @param humaConfig address of the configurator
      * @return amtToBorrower the amount that the borrower can take
-     * @return protocolFee the portion of the fee charged that goes to the protocol
-     * @return poolIncome the portion of the fee charged that goes to the pool as income
+     * @return platformFees the platform charges
      * @dev the protocol always takes a percentage of the total fee generated
      */
-    function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
+    function distBorrowingAmount(uint256 borrowAmount)
         external
         virtual
         override
-        returns (
-            uint256 amtToBorrower,
-            uint256 protocolFee,
-            uint256 poolIncome
-        )
+        returns (uint256 amtToBorrower, uint256 platformFees)
     {
         // Calculate platform fee, which includes protocol fee and pool fee
-        uint256 platformFees = calcFrontLoadingFee(borrowAmount);
-
-        // Split the fee between the protocol and the pool
-        // todo with the new definition, protocolFee() needs to be applied to platformFees instead of borrowAmount
-        // the fix will break lots of tests.
-        protocolFee = (uint256(HumaConfig(humaConfig).protocolFee()) * borrowAmount) / 10000;
-
-        poolIncome = platformFees - protocolFee;
+        platformFees = calcFrontLoadingFee(borrowAmount);
 
         amtToBorrower = borrowAmount - platformFees;
 
-        return (amtToBorrower, protocolFee, poolIncome);
+        return (amtToBorrower, platformFees);
     }
 
     /**
@@ -173,7 +160,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint96 feesAndInterestDue,
             uint96 totalDue,
             uint96 payoffAmount,
-            uint96 unbilledPrincipal
+            uint96 unbilledPrincipal,
+            uint256 totalCharges
         )
     {
         // Directly returns if it is still within the current period
@@ -183,7 +171,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 _cr.feesAndInterestDue,
                 _cr.totalDue,
                 calcPayoff(_cr),
-                _cr.unbilledPrincipal
+                _cr.unbilledPrincipal,
+                0
             );
         }
 
@@ -239,6 +228,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // step 5. compute principal due and adjust unbilled principal
             uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) / 10000;
             _cr.feesAndInterestDue = uint96(fees + interest);
+            totalCharges += (fees + interest);
             _cr.totalDue = uint96(fees + interest + principalToBill);
             _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);
         }
@@ -249,6 +239,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
         // If passed final period, all principal is due
         if (periodsPassed >= _cr.remainingPeriods) {
+            // todo need to add F&I to totalCharges
             _cr.feesAndInterestDue =
                 payoffAmount -
                 (_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue);
@@ -261,7 +252,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             _cr.feesAndInterestDue,
             _cr.totalDue,
             payoffAmount,
-            _cr.unbilledPrincipal
+            _cr.unbilledPrincipal,
+            totalCharges
         );
     }
 

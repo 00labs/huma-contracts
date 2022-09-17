@@ -19,7 +19,7 @@ contract BasePoolStorage {
     IHDT internal _poolToken;
 
     // The amount of underlying token belongs to lenders
-    uint256 internal _totalLiquidity;
+    uint256 internal _totalPoolValue;
 
     // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
@@ -48,7 +48,7 @@ contract BasePoolStorage {
     }
 
     /**
-     * @notice Stores required liquidity rate and commission rate for Pool Owner and EA
+     * @notice Stores required liquidity rate and rewards rate for Pool Owner and EA
      */
     struct PoolConfig {
         // The first 6 fields are IP-related, optimized for one storage slot.
@@ -57,9 +57,9 @@ contract BasePoolStorage {
         // How long a lender has to wait after the last deposit before they can withdraw
         uint256 _withdrawalLockoutPeriodInSeconds;
         // Percentage of pool income allocated to EA
-        uint256 _commissionRateInBpsForEA;
+        uint256 _rewardRateInBpsForEA;
         // Percentage of pool income allocated to Pool Owner
-        uint256 _commissionRateInBpsForPoolOwner;
+        uint256 _rewardRateInBpsForPoolOwner;
         // Percentage of the _liquidityCap to be contributed by EA
         uint256 _liquidityRateInBpsByEA;
         // Percentage of the _liquidityCap to be contributed by Pool Owner

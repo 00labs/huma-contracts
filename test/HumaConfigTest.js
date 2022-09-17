@@ -27,7 +27,7 @@ describe("Huma Config", function () {
         });
 
         it("Should have the right treasury fee", async function () {
-            expect(await configContract.protocolFee()).to.equal(50);
+            expect(await configContract.protocolFee()).to.equal(1000);
         });
 
         it("Should have the right protocol default grace period", async function () {
@@ -328,7 +328,7 @@ describe("Huma Config", function () {
         it("Should be able to change treasury fee", async function () {
             await expect(configContract.connect(origOwner).setTreasuryFee(2000))
                 .to.emit(configContract, "TreasuryFeeChanged")
-                .withArgs(50, 2000);
+                .withArgs(1000, 2000);
             expect(await configContract.protocolFee()).to.equal(2000);
         });
     });

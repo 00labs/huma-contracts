@@ -44,19 +44,13 @@ interface IFeeManager {
     /**
      * @notice Apply front loading fee, distribute the total amount to borrower, pool, & protocol
      * @param borrowAmount the amount of the borrowing
-     * @param humaConfig address of the configurator
      * @return amtToBorrower the amount that the borrower can take
-     * @return protocolFee the portion of the fee charged that goes to the protocol
-     * @return poolIncome the portion of the fee charged that goes to the pool as income
+     * @return platformFees the platform fees charged
      * @dev the protocol always takes a percentage of the total fee generated
      */
-    function distBorrowingAmount(uint256 borrowAmount, address humaConfig)
+    function distBorrowingAmount(uint256 borrowAmount)
         external
-        returns (
-            uint256 amtToBorrower,
-            uint256 protocolFee,
-            uint256 poolIncome
-        );
+        returns (uint256 amtToBorrower, uint256 platformFees);
 
     /**
      * @notice Gets the current total due, fees and interest due, and payoff amount.
@@ -81,7 +75,8 @@ interface IFeeManager {
             uint96 feesAndInterestDue,
             uint96 totalDue,
             uint96 payoffAmount,
-            uint96 unbilledPrincipal
+            uint96 unbilledPrincipal,
+            uint256 totalCharges
         );
 
     /**

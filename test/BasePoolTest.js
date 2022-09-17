@@ -68,22 +68,22 @@ describe("Base Pool - LP and Admin functions", function () {
 
         it("Should have correct liquidity post beforeEach() run", async function () {
             expect(await poolContract.lastDepositTime(poolOwner.address)).to.not.equal(0);
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(10100);
-            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(100);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(5_000_000);
+            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
 
             const fees = await feeManagerContract.getFees();
-            expect(fees._frontLoadingFeeFlat).to.equal(10);
+            expect(fees._frontLoadingFeeFlat).to.equal(1000);
             expect(fees._frontLoadingFeeBps).to.equal(100);
-            expect(fees._lateFeeFlat).to.equal(20);
-            expect(fees._lateFeeBps).to.equal(500);
+            expect(fees._lateFeeFlat).to.equal(2000);
+            expect(fees._lateFeeBps).to.equal(100);
         });
 
         //setPoolLiquidityCap
         it("Should be able to change pool liquidity cap", async function () {
-            await poolContract.connect(poolOwner).setPoolLiquidityCap(1000000);
+            await poolContract.connect(poolOwner).setPoolLiquidityCap(10_000_000);
             var [, , , , cap] = await poolContract.getPoolSummary();
 
-            expect(cap).to.equal(1000000);
+            expect(cap).to.equal(10_000_000);
         });
 
         it("Should have the right liquidity token and interest", async function () {
@@ -94,10 +94,10 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Should be able to set min and max credit size", async function () {
-            await poolContract.connect(poolOwner).setMaxCreditLine(1000);
+            await poolContract.connect(poolOwner).setMaxCreditLine(1_000_000);
             var [, , , max] = await poolContract.getPoolSummary();
 
-            expect(max).to.equal(1000);
+            expect(max).to.equal(1_000_000);
         });
 
         // todo decide protocol fee calculation, and add this check to either setTreasuryFee() or setFees()
@@ -136,14 +136,14 @@ describe("Base Pool - LP and Admin functions", function () {
 
         it("Cannot deposit while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
-            await expect(poolContract.connect(lender).deposit(100)).to.be.revertedWith(
+            await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
                 "PROTOCOL_PAUSED"
             );
         });
 
         it("Cannot deposit while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
-            await expect(poolContract.connect(lender).deposit(100)).to.be.revertedWith(
+            await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
                 "POOL_NOT_ON"
             );
         });
@@ -152,37 +152,28 @@ describe("Base Pool - LP and Admin functions", function () {
             // todo implement it
         });
 
-        it("Cannot deposit if the deposit amount is larger than the lender's balance", async function () {
-            // todo implement it
-        });
-
         it("Pool deposit works correctly", async function () {
-            await testTokenContract.connect(lender).approve(poolContract.address, 100);
-            await poolContract.connect(lender).deposit(100);
+            await testTokenContract.connect(lender).approve(poolContract.address, 1_000_000);
+            await poolContract.connect(lender).deposit(1_000_000);
 
             expect(await poolContract.lastDepositTime(lender.address)).to.not.equal(0);
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(10200);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(6_000_000);
 
-            expect(await hdtContract.balanceOf(lender.address)).to.equal(10100);
-            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(100);
-            expect(await hdtContract.totalSupply()).to.equal(10200);
+            expect(await hdtContract.balanceOf(lender.address)).to.equal(3_000_000);
+            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
+            expect(await hdtContract.totalSupply()).to.equal(6_000_000);
         });
     });
 
     // In beforeEach() of Withdraw, we make sure there is 100 liquidity provided.
     describe("Withdraw", function () {
-        beforeEach(async function () {
-            await testTokenContract.connect(lender).approve(poolContract.address, 100);
-            await poolContract.connect(lender).deposit(100);
-        });
-
         afterEach(async function () {
             await humaConfigContract.connect(poolOwner).unpauseProtocol();
         });
 
         it("Should not withdraw while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
-            await expect(poolContract.connect(lender).withdraw(100)).to.be.revertedWith(
+            await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
                 "PROTOCOL_PAUSED"
             );
         });
@@ -196,7 +187,7 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Should reject when withdraw too early", async function () {
-            await expect(poolContract.connect(lender).withdraw(100)).to.be.revertedWith(
+            await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
                 "WITHDRAW_TOO_SOON"
             );
         });
@@ -204,7 +195,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Should reject if the withdraw amount is higher than deposit", async function () {
             const loanWithdrawalLockout = await poolContract.withdrawalLockoutPeriodInSeconds();
             await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
-            await expect(poolContract.connect(lender).withdraw(10500)).to.be.revertedWith(
+            await expect(poolContract.connect(lender).withdraw(3_000_000)).to.be.revertedWith(
                 "WITHDRAW_AMT_TOO_GREAT"
             );
         });
@@ -214,13 +205,13 @@ describe("Base Pool - LP and Admin functions", function () {
             const loanWithdrawalLockout = await poolContract.withdrawalLockoutPeriodInSeconds();
             await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
 
-            await poolContract.connect(lender).withdraw(100);
+            await poolContract.connect(lender).withdraw(1_000_000);
 
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(10100);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_000_000);
 
-            expect(await hdtContract.balanceOf(lender.address)).to.equal(10000);
-            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(100);
-            expect(await hdtContract.totalSupply()).to.equal(10100);
+            expect(await hdtContract.balanceOf(lender.address)).to.equal(1_000_000);
+            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
+            expect(await hdtContract.totalSupply()).to.equal(4_000_000);
         });
     });
 });

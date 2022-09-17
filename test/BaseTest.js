@@ -1,8 +1,9 @@
-async function deployContracts(poolOwner, treasury, lender, fees = [10, 100, 20, 500]) {
+async function deployContracts(poolOwner, treasury, lender, fees = [1000, 100, 2000, 100]) {
     // Deploy HumaConfig
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     humaConfigContract = await HumaConfig.deploy(treasury.address);
-    humaConfigContract.setHumaTreasury(treasury.address);
+    await humaConfigContract.setHumaTreasury(treasury.address);
+    await humaConfigContract.setTreasuryFee(2000);
     await humaConfigContract.addPauser(poolOwner.address);
     await humaConfigContract.transferOwnership(poolOwner.address);
 
@@ -15,8 +16,6 @@ async function deployContracts(poolOwner, treasury, lender, fees = [10, 100, 20,
     // Deploy TestToken, give initial tokens to lender
     const TestToken = await ethers.getContractFactory("TestToken");
     testTokenContract = await TestToken.deploy();
-    await testTokenContract.give1000To(lender.address);
-    await testTokenContract.give1000To(poolOwner.address);
 
     return [humaConfigContract, feeManagerContract, testTokenContract];
 }
@@ -31,6 +30,10 @@ async function deployAndSetupPool(
     testTokenContract,
     principalRateInBps
 ) {
+    await testTokenContract.give1000To(lender.address);
+    await testTokenContract.give1000To(poolOwner.address);
+    await testTokenContract.give1000To(evaluationAgent.address);
+
     await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(principalRateInBps);
 
     const TransparentUpgradeableProxy = await ethers.getContractFactory(
@@ -74,14 +77,25 @@ async function deployAndSetupPool(
     // Pool setup
     await poolContract.transferOwnership(poolOwner.address);
 
-    await testTokenContract.connect(poolOwner).approve(poolContract.address, 100);
-    await poolContract.connect(poolOwner).enablePool();
-    await poolContract.connect(poolOwner).makeInitialDeposit(100);
-    await poolContract.connect(poolOwner).setAPR(1217);
-    await poolContract.connect(poolOwner).setMaxCreditLine(10000);
+    // Config rewards and requirements for poolOwner and EA, make initial deposit, and enable pool
+    await poolContract.connect(poolOwner).setPoolLiquidityCap(1_000_000_000);
+    await poolContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 10);
     await poolContract.connect(poolOwner).setEvaluationAgent(evaluationAgent.address);
-    await testTokenContract.connect(lender).approve(poolContract.address, 10000);
-    await poolContract.connect(lender).deposit(10000);
+    await poolContract.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
+
+    await testTokenContract.connect(poolOwner).approve(poolContract.address, 1_000_000);
+    await poolContract.connect(poolOwner).makeInitialDeposit(1_000_000);
+
+    await testTokenContract.connect(evaluationAgent).approve(poolContract.address, 2_000_000);
+    await poolContract.connect(evaluationAgent).makeInitialDeposit(2_000_000);
+
+    await poolContract.connect(poolOwner).enablePool();
+
+    await poolContract.connect(poolOwner).setAPR(1217);
+    await poolContract.connect(poolOwner).setMaxCreditLine(10_000_000);
+
+    await testTokenContract.connect(lender).approve(poolContract.address, 2_000_000);
+    await poolContract.connect(lender).deposit(2_000_000);
 
     return [hdtContract, poolContract];
 }
