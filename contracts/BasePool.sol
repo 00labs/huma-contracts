@@ -388,7 +388,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * Returns a summary information of the pool.
      * @return token the address of the pool token
      * @return apr the default APR of the pool
-     * @return minCreditAmount the min amount that one can borrow in a transaction
+     * @return payPeriod the standard pay period for the pool
      * @return maxCreditAmount the max amount for the credit line
      */
     function getPoolSummary()
@@ -399,7 +399,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         returns (
             address token,
             uint256 apr,
-            uint256 minCreditAmount,
+            uint256 payPeriod,
             uint256 maxCreditAmount,
             uint256 liquiditycap,
             string memory name,
@@ -411,7 +411,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         return (
             address(_underlyingToken),
             _poolConfig._poolAprInBps,
-            0,
+            _poolConfig._payPeriodInDays,
             _poolConfig._maxCreditLine,
             _poolConfig._liquidityCap,
             erc20Contract.name(),
