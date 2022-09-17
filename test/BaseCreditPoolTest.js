@@ -123,12 +123,6 @@ describe("Base Credit Pool", function () {
     // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
     // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
     describe("Borrowing request", function () {
-        // // Makes sure there is liquidity in the pool for borrowing
-        // beforeEach(async function () {
-        //     await testTokenContract.connect(lender).approve(poolContract.address, 1000000);
-        //     await poolContract.connect(lender).deposit(1000000);
-        // });
-
         afterEach(async function () {
             await humaConfigContract.connect(poolOwner).unpauseProtocol();
         });
@@ -169,220 +163,220 @@ describe("Base Credit Pool", function () {
             expect(loanInformation.intervalInDays).to.equal(30);
             expect(loanInformation.aprInBps).to.equal(1217);
         });
+    });
 
-        describe("Loan Funding", function () {
-            beforeEach(async function () {
-                await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
-            });
-
-            afterEach(async function () {
-                await humaConfigContract.connect(poolOwner).unpauseProtocol();
-            });
-
-            it("Should not allow loan funding while protocol is paused", async function () {
-                await humaConfigContract.connect(poolOwner).pauseProtocol();
-                await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-                    "PROTOCOL_PAUSED"
-                );
-            });
-
-            it("Prevent loan funding before approval", async function () {
-                await expect(
-                    poolContract.connect(borrower).drawdown(1_000_000)
-                ).to.be.revertedWith("NOT_APPROVED_OR_IN_GOOD_STANDING");
-            });
-
-            it("Borrow less than approved amount", async function () {
-                await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-                expect(await poolContract.isApproved(borrower.address)).to.equal(true);
-
-                expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
-                    true
-                );
-
-                // Should return false when no loan exists
-                expect(
-                    await poolContract.getApprovalStatusForBorrower(evaluationAgent.address)
-                ).to.equal(false);
-
-                await poolContract.connect(borrower).drawdown(100_000);
-
-                // fees: 2000. protocol: 400, pool owner: 300, EA: 100, pool: 1200
-                expect(await testTokenContract.balanceOf(borrower.address)).to.equal(98_000);
-
-                let accruedIncome = await poolContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(400);
-                expect(accruedIncome.poolOwnerIncome).to.equal(100);
-                expect(accruedIncome.eaIncome).to.equal(300);
-                expect(await poolContract.totalPoolValue()).to.equal(5_001_200);
-                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    4_902_000
-                );
-            });
-
-            it("Borrow full amount that has been approved", async function () {
-                expect(await testTokenContract.balanceOf(borrower.address)).to.equal(98_000);
-                await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-                expect(await poolContract.isApproved(borrower.address)).to.equal(true);
-
-                expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
-                    true
-                );
-
-                await poolContract.connect(borrower).drawdown(1_000_000);
-
-                // fees: 11_000. protocol: 2200, pool owner: 1650, EA: 550, pool: 6600
-                // borrower balance: 98000 + 989000 = 1_087_000
-                expect(await testTokenContract.balanceOf(borrower.address)).to.equal(1_087_000);
-
-                let accruedIncome = await poolContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(2200);
-                expect(accruedIncome.poolOwnerIncome).to.equal(550);
-                expect(accruedIncome.eaIncome).to.equal(1650);
-                expect(await poolContract.totalPoolValue()).to.equal(5_006_600);
-                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    4_011_000
-                );
-            });
+    describe("Loan Funding", function () {
+        beforeEach(async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
         });
 
-        // In "Payback".beforeEach(), make sure there is a loan funded.
-        describe("Payback", function () {
-            beforeEach(async function () {
-                let lenderBalance = await testTokenContract.balanceOf(lender.address);
+        afterEach(async function () {
+            await humaConfigContract.connect(poolOwner).unpauseProtocol();
+        });
 
-                await poolContract.connect(poolOwner).setAPR(1217);
-                await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+        it("Should not allow loan funding while protocol is paused", async function () {
+            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
+                "PROTOCOL_PAUSED"
+            );
+        });
 
-                await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-                await poolContract.connect(borrower).drawdown(1_000_000);
-            });
+        it("Prevent loan funding before approval", async function () {
+            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
+                "NOT_APPROVED_OR_IN_GOOD_STANDING"
+            );
+        });
 
-            afterEach(async function () {
-                await humaConfigContract.connect(poolOwner).unpauseProtocol();
-            });
+        it("Borrow less than approved amount", async function () {
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
-            it("Should not allow payback while protocol is paused", async function () {
-                await humaConfigContract.connect(poolOwner).pauseProtocol();
-                await expect(
-                    poolContract
-                        .connect(borrower)
-                        .makePayment(borrower.address, testTokenContract.address, 5)
-                ).to.be.revertedWith("PROTOCOL_PAUSED");
-            });
+            expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
+                true
+            );
 
-            // todo if the pool is stopped, shall we accept payback?
+            // Should return false when no loan exists
+            expect(
+                await poolContract.getApprovalStatusForBorrower(evaluationAgent.address)
+            ).to.equal(false);
 
-            it("Process payback", async function () {
-                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
+            await poolContract.connect(borrower).drawdown(100_000);
 
-                // AmountDue (10000) + 1000 extra principal payment
-                await testTokenContract.connect(borrower).approve(poolContract.address, 11000);
+            // fees: 2000. protocol: 400, pool owner: 300, EA: 100, pool: 1200
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(98_000);
 
-                await poolContract
+            let accruedIncome = await poolContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(400);
+            expect(accruedIncome.poolOwnerIncome).to.equal(100);
+            expect(accruedIncome.eaIncome).to.equal(300);
+            expect(await poolContract.totalPoolValue()).to.equal(5_001_200);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_902_000);
+        });
+
+        it("Borrow full amount that has been approved", async function () {
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(98_000);
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
+
+            expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
+                true
+            );
+
+            await poolContract.connect(borrower).drawdown(1_000_000);
+
+            // fees: 11_000. protocol: 2200, pool owner: 1650, EA: 550, pool: 6600
+            // borrower balance: 98000 + 989000 = 1_087_000
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(1_087_000);
+
+            let accruedIncome = await poolContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(2200);
+            expect(accruedIncome.poolOwnerIncome).to.equal(550);
+            expect(accruedIncome.eaIncome).to.equal(1650);
+            expect(await poolContract.totalPoolValue()).to.equal(5_006_600);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_011_000);
+        });
+    });
+
+    // In "Payback".beforeEach(), make sure there is a loan funded.
+    describe("Payback", function () {
+        beforeEach(async function () {
+            let lenderBalance = await testTokenContract.balanceOf(lender.address);
+
+            await poolContract.connect(poolOwner).setAPR(1217);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(1_000_000);
+        });
+
+        afterEach(async function () {
+            await humaConfigContract.connect(poolOwner).unpauseProtocol();
+        });
+
+        it("Should not allow payback while protocol is paused", async function () {
+            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await expect(
+                poolContract
                     .connect(borrower)
-                    .makePayment(borrower.address, testTokenContract.address, 11000);
+                    .makePayment(borrower.address, testTokenContract.address, 5)
+            ).to.be.revertedWith("PROTOCOL_PAUSED");
+        });
 
-                let creditInfo = await poolContract.getCreditInformation(borrower.address);
+        // todo if the pool is stopped, shall we accept payback?
 
-                expect(creditInfo.unbilledPrincipal).to.equal(999_002);
-                expect(creditInfo.remainingPeriods).to.equal(11);
+        it("Process payback", async function () {
+            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+            await ethers.provider.send("evm_mine", []);
 
-                // Interest income 10_002. Protocol: 2000, PoolOwner: 1500, EA: 500, pool: 6002
-                let accruedIncome = await poolContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(4200);
-                expect(accruedIncome.poolOwnerIncome).to.equal(1050);
-                expect(accruedIncome.eaIncome).to.equal(3150);
-                expect(await poolContract.totalPoolValue()).to.equal(5_012_602);
-                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    4_022_000
-                );
+            // AmountDue (10000) + 1000 extra principal payment
+            await testTokenContract.connect(borrower).approve(poolContract.address, 11000);
 
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(
-                    1_002_520
-                );
-                expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-                    2_005_040
-                );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_005_040);
-            });
+            await poolContract
+                .connect(borrower)
+                .makePayment(borrower.address, testTokenContract.address, 11000);
 
-            // Default flow. After each pay period, simulates to LatePayMonitorService to call updateDueInfo().
+            let creditInfo = await poolContract.getCreditInformation(borrower.address);
 
-            it("Default flow", async function () {
-                await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+            expect(creditInfo.unbilledPrincipal).to.equal(999_002);
+            expect(creditInfo.remainingPeriods).to.equal(11);
 
-                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
+            // Interest income 10_002. Protocol: 2000, PoolOwner: 1500, EA: 500, pool: 6002
+            let accruedIncome = await poolContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(4200);
+            expect(accruedIncome.poolOwnerIncome).to.equal(1050);
+            expect(accruedIncome.eaIncome).to.equal(3150);
+            expect(await poolContract.totalPoolValue()).to.equal(5_012_602);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_022_000);
 
-                await poolContract.updateDueInfo(borrower.address);
-                let creditInfo = await poolContract.getCreditInformation(borrower.address);
-                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "DEFAULT_TRIGGERED_TOO_EARLY"
-                );
+            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(1_002_520);
+            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+                2_005_040
+            );
+            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_005_040);
+        });
+    });
 
-                expect(creditInfo.unbilledPrincipal).to.equal(1_000_000);
-                expect(creditInfo.feesAndInterestDue).to.equal(10002);
-                expect(creditInfo.totalDue).to.equal(10002);
-                expect(creditInfo.remainingPeriods).to.equal(11);
-                expect(creditInfo.missedPeriods).to.equal(0);
+    // Default flow. After each pay period, simulates to LatePayMonitorService to call updateDueInfo().
+    // In "Payback".beforeEach(), make sure there is a loan funded.
+    describe("Default", function () {
+        beforeEach(async function () {
+            let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
-                await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
+            await poolContract.connect(poolOwner).setAPR(1217);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
-                await poolContract.updateDueInfo(borrower.address);
-                creditInfo = await poolContract.getCreditInformation(borrower.address);
-                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "DEFAULT_TRIGGERED_TOO_EARLY"
-                );
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(1_000_000);
+        });
 
-                expect(creditInfo.unbilledPrincipal).to.equal(1_010_002);
-                expect(creditInfo.feesAndInterestDue).to.equal(22202);
-                expect(creditInfo.totalDue).to.equal(22202);
-                expect(creditInfo.remainingPeriods).to.equal(10);
-                expect(creditInfo.missedPeriods).to.equal(1);
+        it("Default flow", async function () {
+            await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
 
-                await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
+            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+            await ethers.provider.send("evm_mine", []);
 
-                // Intertionally bypass calling updateDueInfo(), and expects triggerDefault() to call it
-                // await poolContract.updateDueInfo(borrower.address);
-                // creditInfo = await poolContract.getCreditInformation(borrower.address);
+            await poolContract.updateDueInfo(borrower.address);
+            let creditInfo = await poolContract.getCreditInformation(borrower.address);
+            await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                "DEFAULT_TRIGGERED_TOO_EARLY"
+            );
 
-                // Triggers default and makes sure the event is emitted
-                await expect(
-                    poolContract.connect(evaluationAgent).triggerDefault(borrower.address)
-                )
-                    .to.emit(poolContract, "DefaultTriggered")
-                    .withArgs(borrower.address, 1_054_850, evaluationAgent.address);
+            expect(creditInfo.unbilledPrincipal).to.equal(1_000_000);
+            expect(creditInfo.feesAndInterestDue).to.equal(10002);
+            expect(creditInfo.totalDue).to.equal(10002);
+            expect(creditInfo.remainingPeriods).to.equal(11);
+            expect(creditInfo.missedPeriods).to.equal(0);
 
-                creditInfo = await poolContract.getCreditInformation(borrower.address);
-                expect(creditInfo.unbilledPrincipal).to.equal(1_032_204);
-                expect(creditInfo.feesAndInterestDue).to.equal(22646);
-                expect(creditInfo.totalDue).to.equal(22646);
-                expect(creditInfo.remainingPeriods).to.equal(9);
-                expect(creditInfo.missedPeriods).to.equal(2);
+            await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
+            await ethers.provider.send("evm_mine", []);
 
-                // Checks pool value and all LP's withdrawable funds
-                expect(await hdtContract.totalSupply()).to.equal(5_000_000);
-                expect(await poolContract.totalPoolValue()).to.equal(3_984_663);
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(796_932);
-                expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-                    1_593_865
-                );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_593_865);
+            await poolContract.updateDueInfo(borrower.address);
+            creditInfo = await poolContract.getCreditInformation(borrower.address);
+            await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                "DEFAULT_TRIGGERED_TOO_EARLY"
+            );
 
-                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    4_011_000
-                );
+            expect(creditInfo.unbilledPrincipal).to.equal(1_010_002);
+            expect(creditInfo.feesAndInterestDue).to.equal(22202);
+            expect(creditInfo.totalDue).to.equal(22202);
+            expect(creditInfo.remainingPeriods).to.equal(10);
+            expect(creditInfo.missedPeriods).to.equal(1);
 
-                // Checks all the accrued income of protocol, poolOwner, and EA.
-                let accruedIncome = await poolContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(13169);
-                expect(accruedIncome.poolOwnerIncome).to.equal(3292);
-                expect(accruedIncome.eaIncome).to.equal(9876);
-            });
+            await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
+            await ethers.provider.send("evm_mine", []);
+
+            // Intertionally bypass calling updateDueInfo(), and expects triggerDefault() to call it
+            // await poolContract.updateDueInfo(borrower.address);
+            // creditInfo = await poolContract.getCreditInformation(borrower.address);
+
+            // Triggers default and makes sure the event is emitted
+            await expect(poolContract.connect(evaluationAgent).triggerDefault(borrower.address))
+                .to.emit(poolContract, "DefaultTriggered")
+                .withArgs(borrower.address, 1_054_850, evaluationAgent.address);
+
+            creditInfo = await poolContract.getCreditInformation(borrower.address);
+            expect(creditInfo.unbilledPrincipal).to.equal(1_032_204);
+            expect(creditInfo.feesAndInterestDue).to.equal(22646);
+            expect(creditInfo.totalDue).to.equal(22646);
+            expect(creditInfo.remainingPeriods).to.equal(9);
+            expect(creditInfo.missedPeriods).to.equal(2);
+
+            // Checks pool value and all LP's withdrawable funds
+            expect(await hdtContract.totalSupply()).to.equal(5_000_000);
+            expect(await poolContract.totalPoolValue()).to.equal(3_984_663);
+            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(796_932);
+            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+                1_593_865
+            );
+            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_593_865);
+
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_011_000);
+
+            // Checks all the accrued income of protocol, poolOwner, and EA.
+            let accruedIncome = await poolContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(13169);
+            expect(accruedIncome.poolOwnerIncome).to.equal(3292);
+            expect(accruedIncome.eaIncome).to.equal(9876);
         });
     });
 });
