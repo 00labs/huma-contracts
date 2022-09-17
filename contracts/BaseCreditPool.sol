@@ -34,7 +34,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Open access to the borrower
         // Parameter and condition validation happens in initiate()
-        initiate(
+        initiateCredit(
             msg.sender,
             creditLimit,
             address(0),
@@ -53,7 +53,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @param receivableAsset the address of the receivable asset.
      * @param receivableAmount the amount of the receivable asset
      */
-    function initiate(
+    function initiateCredit(
         address borrower,
         uint256 creditLimit,
         address receivableAsset,
