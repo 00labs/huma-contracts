@@ -38,7 +38,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         onlyEvaluationAgent();
 
         // Pool status and data validation happens within initiate().
-        initiate(
+        initiateCredit(
             borrower,
             creditAmount,
             receivableAsset,
