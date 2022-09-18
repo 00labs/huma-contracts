@@ -178,10 +178,14 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
         // Computes how many billing periods have passed. 1+ is needed since Solidity always
         // round to zero. When it is exactly at a billing cycle, it is desirable to 1+ as well
-        periodsPassed =
-            1 +
-            (block.timestamp - _cr.dueDate) /
-            (_cr.intervalInDays * SECONDS_IN_A_DAY);
+        if (_cr.dueDate > 0) {
+            periodsPassed =
+                1 +
+                (block.timestamp - _cr.dueDate) /
+                (_cr.intervalInDays * SECONDS_IN_A_DAY);
+        } else {
+            periodsPassed = 1;
+        }
 
         /**
          * Loops through the cycles as we would generate statements for each cycle.
@@ -204,6 +208,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
                     _cr.totalDue,
                     _cr.unbilledPrincipal + _cr.totalDue
                 );
+
+            console.log("Inside loop, fees=", fees);
 
             // step 2. adding dues to principal
             _cr.unbilledPrincipal += _cr.totalDue;
@@ -231,11 +237,16 @@ contract BaseFeeManager is IFeeManager, Ownable {
             totalCharges += (fees + interest);
             _cr.totalDue = uint96(fees + interest + principalToBill);
             _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);
+
+            console.log("_cr.totalDue=", _cr.totalDue);
+            console.log("_cr.unbilledPrincipal=", _cr.unbilledPrincipal);
+            console.log("totalCharges=", totalCharges);
         }
 
-        // todo add logic to make sure totalDue meets the min requirement.
-
         payoffAmount = calcPayoff(_cr);
+
+        console.log("periodsPassed=", periodsPassed);
+        console.log("_cr.remainingPeriods=", _cr.remainingPeriods);
 
         // If passed final period, all principal is due
         if (periodsPassed >= _cr.remainingPeriods) {

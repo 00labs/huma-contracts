@@ -23,7 +23,7 @@ const getInvoiceContractFromAddress = async function (address, signer) {
 // 3. Borrower borrows 400. 14 fee charged (2 to treasury, 12 to the pool). Borrower get 386
 // 4. Payback 500. The 100 extra will be transferred to the borrower, led to a balance of 486.
 // 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
-describe.skip("Huma Invoice Financing", function () {
+describe("Huma Invoice Financing", function () {
     let invoiceContract;
     let hdtContract;
     let humaConfigContract;
@@ -336,6 +336,13 @@ describe.skip("Huma Invoice Financing", function () {
             let accruedIncome = await invoiceContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(2);
             expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(212);
+
+            const loanInformation = await invoiceContract.getCreditInformation(borrower.address);
+            expect(loanInformation.totalDue).to.equal(200);
+            expect(loanInformation.intervalInDays).to.equal(30);
+            expect(loanInformation.aprInBps).to.equal(0);
+            expect(loanInformation.feesAndInterestDue).to.equal(0);
+            expect(loanInformation.creditLimit).to.equal(400);
         });
 
         it("Should be able to borrow the full approved amount", async function () {
@@ -365,6 +372,13 @@ describe.skip("Huma Invoice Financing", function () {
             expect(accruedIncome.eaIncome).to.equal(2);
 
             expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(14);
+
+            const loanInformation = await invoiceContract.getCreditInformation(borrower.address);
+            expect(loanInformation.totalDue).to.equal(400);
+            expect(loanInformation.intervalInDays).to.equal(30);
+            expect(loanInformation.aprInBps).to.equal(0);
+            expect(loanInformation.feesAndInterestDue).to.equal(0);
+            expect(loanInformation.creditLimit).to.equal(400);
         });
     });
 
@@ -435,46 +449,105 @@ describe.skip("Huma Invoice Financing", function () {
         });
 
         it("Process payback", async function () {
+            console.log(await testTokenContract.balanceOf(borrower.address));
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
 
             // simulates payments from payer.
             await testTokenContract.connect(payer).transfer(invoiceContract.address, 500);
-
-            await testTokenContract.connect(borrower).approve(invoiceContract.address, 100);
+            console.log(await testTokenContract.balanceOf(borrower.address));
 
             await invoiceContract
                 .connect(evaluationAgent)
                 .onReceivedPayment(borrower.address, testTokenContract.address, 500);
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
+
             let accruedIncome = await invoiceContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(2);
             expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(414);
 
             // test withdraw to make sure the income is allocated properly.
             expect(await hdtContract.balanceOf(lender.address)).to.equal(300);
-            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.be.within(308, 310); // use within to handle rounding error
-            expect(await hdtContract.withdrawableFundsOf(owner.address)).to.be.within(102, 104); // use within to handle rounding error
+            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(307);
+            expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(102);
         });
 
-        it("Default flow", async function () {
-            await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                "DEFAULT_TRIGGERED_TOO_EARLY"
-            );
+        describe("Default flow", async function () {
+            it("Writeoff less than pool value", async function () {
+                await invoiceContract.connect(lender).deposit(100);
 
-            const creditInfo = await invoiceContract.getCreditInformation(borrower.address);
-            let gracePeriod = await invoiceContract.poolDefaultGracePeriodInSeconds();
-            let dueDate = creditInfo.dueDate;
-            let current = Date.now();
+                await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                );
 
-            let timeNeeded = dueDate + gracePeriod - current;
+                await ethers.provider.send("evm_increaseTime", [60 * 24 * 3600]);
+                await ethers.provider.send("evm_mine", []);
 
-            await ethers.provider.send("evm_increaseTime", [timeNeeded]);
+                await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                );
 
-            await invoiceContract.triggerDefault(borrower.address);
+                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+                await ethers.provider.send("evm_mine", []);
 
-            expect(await hdtContract.withdrawableFundsOf(owner.address)).to.be.within(2, 4);
-            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.be.within(8, 10);
+                // 3 cycles of late fee for 72. Distribution among {protocol, EA, poolOwner, pool}
+                // is {14, 10, 3, 45}. Pluge the origination fee {2, 2, 0, 10}. The balance is
+                // {16, 12, 3, 55}.
+                // The pool value was 555 before the loss. With a loss of 472, pool vlue became
+                // 83, {poolOwnerAsLP, lender} split is {16, 66}.
+                await expect(
+                    invoiceContract.connect(evaluationAgent).triggerDefault(borrower.address)
+                )
+                    .to.emit(invoiceContract, "DefaultTriggered")
+                    .withArgs(borrower.address, 472, evaluationAgent.address);
+
+                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(16);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(66);
+
+                let accruedIncome = await invoiceContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(16);
+                expect(accruedIncome.eaIncome).to.equal(12);
+                expect(accruedIncome.poolOwnerIncome).to.equal(3);
+
+                expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(114);
+            });
+            it("Writeoff more than pool value", async function () {
+                await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                );
+
+                await ethers.provider.send("evm_increaseTime", [60 * 24 * 3600]);
+                await ethers.provider.send("evm_mine", []);
+                await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                );
+
+                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+                await ethers.provider.send("evm_mine", []);
+
+                // 3 cycles of late fee for 72. Distribution among {protocol, EA, poolOwner, pool}
+                // is {14, 10, 3, 45}. Pluge the origination fee {2, 2, 0, 10}. The balance is
+                // {16, 12, 3, 55}.
+                // The pool value was 455 before the loss. With a loss of 472, pool vlue became
+                // 0, {poolOwnerAsLP, lender} split is {0, 0}.
+                // Please note the cash balance of 14 is not able to cover the accrued income of 31. This is
+                // an extremely rare case.
+                await expect(
+                    invoiceContract.connect(evaluationAgent).triggerDefault(borrower.address)
+                )
+                    .to.emit(invoiceContract, "DefaultTriggered")
+                    .withArgs(borrower.address, 472, evaluationAgent.address);
+
+                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(0);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(0);
+
+                let accruedIncome = await invoiceContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(16);
+                expect(accruedIncome.eaIncome).to.equal(12);
+                expect(accruedIncome.poolOwnerIncome).to.equal(3);
+
+                expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(14);
+            });
         });
     });
 });

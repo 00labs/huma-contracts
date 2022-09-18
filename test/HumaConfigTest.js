@@ -31,7 +31,7 @@ describe("Huma Config", function () {
         });
 
         it("Should have the right protocol default grace period", async function () {
-            expect(await configContract.protocolDefaultGracePeriod()).to.equal(5 * 3600 * 24);
+            expect(await configContract.protocolDefaultGracePeriod()).to.equal(60 * 3600 * 24);
         });
 
         it("Should have set owner as a pauser", async function () {

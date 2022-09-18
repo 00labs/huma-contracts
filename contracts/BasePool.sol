@@ -81,7 +81,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
         _poolConfig._withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS; // todo need to make this configurable
         _poolConfig._poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
-            .protocolDefaultGracePeriod();
+            .protocolDefaultGracePeriodInSeconds();
         _status = PoolStatus.Off;
 
         __Ownable_init();
@@ -216,7 +216,11 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @param value the amount of losses to be distributed
      */
     function distributeLosses(uint256 value) internal virtual {
-        _totalPoolValue -= value;
+        console.log("_totalPoolValue=", _totalPoolValue);
+        console.log("value=", value);
+        // todo in extreme cases
+        if (_totalPoolValue > value) _totalPoolValue -= value;
+        else _totalPoolValue = 0;
     }
 
     function withdrawProtocolFee(uint256 amount) external virtual {

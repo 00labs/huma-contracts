@@ -48,7 +48,7 @@ let advanceClock = async function (days) {
     await ethers.provider.send("evm_mine", []);
 };
 
-describe("Credit Line Integration Test", async function () {
+describe.only("Credit Line Integration Test", async function () {
     before(async function () {
         [defaultDeployer, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
             await ethers.getSigners();
@@ -74,7 +74,7 @@ describe("Credit Line Integration Test", async function () {
         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
     });
 
-    it("Day 0: Initial drawdown", async function () {
+    it.only("Day 0: Initial drawdown", async function () {
         // Establish credit line
         await poolContract.connect(borrower).requestCredit(5000, 30, 12);
         record = await poolContract.creditRecordMapping(borrower.address);
@@ -88,23 +88,24 @@ describe("Credit Line Integration Test", async function () {
         let blockBefore = await ethers.provider.getBlock(blockNumBefore);
         initialTimestamp = blockBefore.timestamp;
 
+        let dueDate = initialTimestamp + 2592000;
+
         await poolContract.connect(borrower).drawdown(2000);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 2000, initialTimestamp + 2592000, 0, 0, 0, 0, 12, 1217, 30, 3);
-
-        let r = await feeManagerContract.getDueInfo(record);
-        checkResult(r, 0, 0, 0, 2020, 2000);
+        checkRecord(record, 5000, 1900, dueDate, 0, 120, 20, 0, 11, 1217, 30, 3);
     });
 
-    it("Day 15: Second drawdown (to test offset)", async function () {
+    it.only("Day 15: Second drawdown (to test offset)", async function () {
         advanceClock(15);
+
+        let dueDate = initialTimestamp + 2592000;
 
         await poolContract.connect(borrower).drawdown(2000);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 4000, initialTimestamp + 2592000, -10, 0, 0, 0, 12, 1217, 30, 3);
+        checkRecord(record, 5000, 3900, dueDate, -10, 120, 20, 0, 11, 1217, 30, 3);
 
         let r = await feeManagerContract.getDueInfo(record);
-        checkResult(r, 0, 0, 0, 4030, 4000);
+        checkResult(r, 0, 20, 120, 4030, 3900, 0);
     });
 
     it("Day 30: 1st statement", async function () {

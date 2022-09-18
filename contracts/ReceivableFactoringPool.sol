@@ -38,15 +38,16 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         // todo For security, verify that we have indeeded received the payment.
         // If asset is not received, EA might be compromised. Emit event.
 
+        console.log("block.timestamp=", block.timestamp);
+        console.log("cr.dueDate=", cr.dueDate);
         uint256 lateFee = IFeeManager(_feeManagerAddress).calcLateFee(
             cr.dueDate,
             cr.totalDue,
             cr.unbilledPrincipal
         );
-        uint256 refundAmount = amount - cr.unbilledPrincipal - lateFee;
+        uint256 refundAmount = amount - cr.totalDue - lateFee;
 
         // Sends the remainder to the borrower
-        cr.creditLimit = 0;
         cr.unbilledPrincipal = 0;
         cr.remainingPeriods = 0;
 

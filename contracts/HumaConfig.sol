@@ -17,7 +17,7 @@ contract HumaConfig is Ownable {
     uint32 private constant MIN_DEFAULT_GRACE_PERIOD = 1 days;
 
     /// The initial value for default grace period.
-    uint32 private constant PROTOCOL_DEFAULT_GRACE_PERIOD = 5 days;
+    uint32 private constant PROTOCOL_DEFAULT_GRACE_PERIOD = 60 days;
 
     /// The default treasury fee in bps.
     uint16 private constant DEFAULT_TREASURY_FEE = 1000; // 10%
@@ -30,7 +30,7 @@ contract HumaConfig is Ownable {
     bool public protocolPaused;
 
     /// Seconds passed the due date before trigging a default.
-    uint32 public protocolDefaultGracePeriod;
+    uint32 public protocolDefaultGracePeriodInSeconds;
 
     /// Protocol fee of the loan origination (in bps). Other fees are defined at pool level.
     uint16 public protocolFee;
@@ -81,7 +81,7 @@ contract HumaConfig is Ownable {
         pausers[msg.sender] = true;
         poolAdmins[msg.sender] = true;
 
-        protocolDefaultGracePeriod = PROTOCOL_DEFAULT_GRACE_PERIOD;
+        protocolDefaultGracePeriodInSeconds = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
         protocolFee = DEFAULT_TREASURY_FEE;
 
@@ -115,7 +115,7 @@ contract HumaConfig is Ownable {
      */
     function setProtocolDefaultGracePeriod(uint256 gracePeriod) external onlyOwner {
         require(gracePeriod >= MIN_DEFAULT_GRACE_PERIOD, "GRACE_PERIOD_TOO_SHORT");
-        protocolDefaultGracePeriod = uint32(gracePeriod);
+        protocolDefaultGracePeriodInSeconds = uint32(gracePeriod);
         emit ProtocolDefaultGracePeriodChanged(gracePeriod);
     }
 

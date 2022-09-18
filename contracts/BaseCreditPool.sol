@@ -215,27 +215,25 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             "NOT_APPROVED_OR_IN_GOOD_STANDING"
         );
 
-        // todo 8/23 add a test for this check
-        // review cr.unbilledPrincipal is not all principal,
-        // all principal is cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
-        require(borrowAmount <= cr.creditLimit - cr.unbilledPrincipal, "EXCEEDED_CREDIT_LMIIT");
-
-        // For the first drawdown, set the first due date exactly one billing cycle away
-        // For existing credit line, the account might have been dormant for months.
         // Bring the account current by moving forward cycles to allow the due date of
         // the current cycle to be ahead of block.timestamp.
-        if (cr.dueDate == 0) {
-            cr.dueDate = uint64(block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY);
-        } else if (block.timestamp > cr.dueDate) {
-            uint256 periodsPassed;
-            (periodsPassed, , cr) = updateDueInfo(borrower);
-
+        if (cr.dueDate > 0) {
+            if (block.timestamp > cr.dueDate) (, , cr) = updateDueInfo(borrower);
             require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
-
-            // review check if state is delayed? and credit limit again?
         }
 
-        cr.unbilledPrincipal = uint96(uint256(cr.unbilledPrincipal) + borrowAmount);
+        // todo 8/23 add a test for this check
+        require(borrowAmount <= cr.creditLimit - cr.unbilledPrincipal, "EXCEEDED_CREDIT_LMIIT");
+
+        if (cr.dueDate > 0) {
+            // For non-first bill, the extra interest is calculated using correction and add to the next bill.
+            cr.unbilledPrincipal = uint96(uint256(cr.unbilledPrincipal) + borrowAmount);
+        } else {
+            // For the first drawdown, generates the first bill
+            cr.unbilledPrincipal = uint96(borrowAmount);
+            _creditRecordMapping[borrower] = cr;
+            (, , cr) = updateDueInfo(borrower);
+        }
 
         // With drawdown, balance increases, interest charge will be higher than it should be,
         // thus record a negative correction to compensate it at the end of the period
@@ -411,13 +409,17 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         distributeIncome(newCharges);
 
         if (periodsPassed > 0) {
-            cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
+            if (cr.dueDate > 0)
+                cr.dueDate = uint64(
+                    cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY
+                );
+            else cr.dueDate = uint64(block.timestamp + cr.intervalInDays * SECONDS_IN_A_DAY);
+
             // Adjusts remainingPeriods, special handling when reached the maturity of the credit line
             if (cr.remainingPeriods > periodsPassed) {
                 cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
             } else {
                 cr.remainingPeriods = 0;
-                cr.creditLimit = 0;
             }
 
             // Sets the right missedPeriods and state for the credit record
@@ -442,17 +444,31 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // check to make sure the default grace period has passed.
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        if (block.timestamp >= cr.dueDate) updateDueInfo(borrower);
-        cr = _creditRecordMapping[borrower];
+        console.log("tip of triggerDefault:");
+        BS.printCreditInfo(cr);
+        console.log("block.timestamp=", block.timestamp);
 
+        if (block.timestamp >= cr.dueDate) {
+            (, , cr) = updateDueInfo(borrower);
+        }
+
+        // Check if grace period has exceeded. Please note it takes a full pay period
+        // before the account is considered to be late. The time passed should be one pay period
+        // plus the grace period.
         require(
             cr.missedPeriods * cr.intervalInDays * SECONDS_IN_A_DAY >=
-                _poolConfig._poolDefaultGracePeriodInSeconds,
+                _poolConfig._poolDefaultGracePeriodInSeconds +
+                    cr.intervalInDays *
+                    SECONDS_IN_A_DAY,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
+        console.log("1");
 
         losses = cr.unbilledPrincipal + cr.totalDue;
+        console.log("losses=", losses);
         distributeLosses(losses);
+
+        console.log("At the end of triggerDefault");
 
         emit DefaultTriggered(borrower, losses, msg.sender);
 
