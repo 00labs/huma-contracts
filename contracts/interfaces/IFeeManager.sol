@@ -64,8 +64,6 @@ interface IFeeManager {
      * this amount is not necessarily the stotal fees and interest charged. It only returns the amount
      * that is due currently.
      * @return totalDue amount due in this period, it includes fees, interest, and min principal
-     * @return payoffAmount amount for payoff. It includes totalDue, unbilled principal, and
-     * interest for the final period.
      */
     function getDueInfo(BaseStructs.CreditRecord memory _cr)
         external
@@ -74,7 +72,6 @@ interface IFeeManager {
             uint256 periodsPassed,
             uint96 feesAndInterestDue,
             uint96 totalDue,
-            uint96 payoffAmount,
             uint96 unbilledPrincipal,
             uint256 totalCharges
         );

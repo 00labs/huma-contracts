@@ -449,12 +449,10 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Process payback", async function () {
-            console.log(await testTokenContract.balanceOf(borrower.address));
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
 
             // simulates payments from payer.
             await testTokenContract.connect(payer).transfer(invoiceContract.address, 500);
-            console.log(await testTokenContract.balanceOf(borrower.address));
 
             await invoiceContract
                 .connect(evaluationAgent)

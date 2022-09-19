@@ -216,8 +216,6 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @param value the amount of losses to be distributed
      */
     function distributeLosses(uint256 value) internal virtual {
-        console.log("_totalPoolValue=", _totalPoolValue);
-        console.log("value=", value);
         // todo in extreme cases
         if (_totalPoolValue > value) _totalPoolValue -= value;
         else _totalPoolValue = 0;

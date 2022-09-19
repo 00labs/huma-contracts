@@ -64,10 +64,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
         returns (uint256 correction)
     {
         // rounding to days
-        uint256 timePassed = block.timestamp -
-            (_cr.dueDate - _cr.intervalInDays * SECONDS_IN_A_DAY);
+        uint256 remainingTime = _cr.dueDate - block.timestamp;
 
-        return (amount * _cr.aprInBps * timePassed) / SECONDS_IN_A_YEAR / 10000;
+        return (amount * _cr.aprInBps * remainingTime) / SECONDS_IN_A_YEAR / 10000;
     }
 
     /**
@@ -147,8 +146,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * this amount is not necessarily the stotal fees and interest charged. It only returns the amount
      * that is due currently.
      * @return totalDue amount due in this period, it includes fees, interest, and min principal
-     * @return payoffAmount amount for payoff. It includes totalDue, unbilled principal, and
-     * interest for the final period.
      */
     function getDueInfo(BaseStructs.CreditRecord memory _cr)
         public
@@ -159,21 +156,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 periodsPassed,
             uint96 feesAndInterestDue,
             uint96 totalDue,
-            uint96 payoffAmount,
             uint96 unbilledPrincipal,
             uint256 totalCharges
         )
     {
         // Directly returns if it is still within the current period
         if (block.timestamp <= _cr.dueDate) {
-            return (
-                0,
-                _cr.feesAndInterestDue,
-                _cr.totalDue,
-                calcPayoff(_cr),
-                _cr.unbilledPrincipal,
-                0
-            );
+            return (0, _cr.feesAndInterestDue, _cr.totalDue, _cr.unbilledPrincipal, 0);
         }
 
         // Computes how many billing periods have passed. 1+ is needed since Solidity always
@@ -209,8 +198,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
                     _cr.unbilledPrincipal + _cr.totalDue
                 );
 
-            console.log("Inside loop, fees=", fees);
-
             // step 2. adding dues to principal
             _cr.unbilledPrincipal += _cr.totalDue;
 
@@ -237,24 +224,11 @@ contract BaseFeeManager is IFeeManager, Ownable {
             totalCharges += (fees + interest);
             _cr.totalDue = uint96(fees + interest + principalToBill);
             _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);
-
-            console.log("_cr.totalDue=", _cr.totalDue);
-            console.log("_cr.unbilledPrincipal=", _cr.unbilledPrincipal);
-            console.log("totalCharges=", totalCharges);
         }
-
-        payoffAmount = calcPayoff(_cr);
-
-        console.log("periodsPassed=", periodsPassed);
-        console.log("_cr.remainingPeriods=", _cr.remainingPeriods);
 
         // If passed final period, all principal is due
         if (periodsPassed >= _cr.remainingPeriods) {
-            // todo need to add F&I to totalCharges
-            _cr.feesAndInterestDue =
-                payoffAmount -
-                (_cr.unbilledPrincipal + _cr.totalDue - _cr.feesAndInterestDue);
-            _cr.totalDue = payoffAmount;
+            _cr.totalDue += _cr.unbilledPrincipal;
             _cr.unbilledPrincipal = 0;
         }
 
@@ -262,7 +236,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
             periodsPassed,
             _cr.feesAndInterestDue,
             _cr.totalDue,
-            payoffAmount,
             _cr.unbilledPrincipal,
             totalCharges
         );
@@ -326,36 +299,5 @@ contract BaseFeeManager is IFeeManager, Ownable {
         )
     {
         return (frontLoadingFeeFlat, frontLoadingFeeBps, lateFeeFlat, lateFeeBps);
-    }
-
-    /**
-     * @notice Calculates the amount for payoff. The amount is good until the next due date.
-     * It has to be called after all the other calculations for each period are done, otherwise update due info first.
-     * @param _cr the credit record associated the account
-     * @return payoffAmount the final period amount for the payoff
-     */
-    function calcPayoff(BS.CreditRecord memory _cr) internal pure returns (uint96 payoffAmount) {
-        // todo add a test to final interest calculation
-
-        // payoff amount includes 4 elements: 1) outstanding due 2) unbilled principal
-        // 3) interest for the current period 4) correction generated due to borrowing
-        // or payment happened past last due date (i.e. to be included in the next period)
-
-        payoffAmount = _cr.unbilledPrincipal + _cr.totalDue;
-
-        // todo update this logic with current block.timestamp
-
-        payoffAmount += uint96(
-            ((payoffAmount - _cr.feesAndInterestDue) *
-                _cr.aprInBps *
-                _cr.intervalInDays *
-                SECONDS_IN_A_DAY) /
-                SECONDS_IN_A_YEAR /
-                BPS_DIVIDER
-        );
-
-        if (_cr.correction != 0) {
-            payoffAmount = uint96(int96(payoffAmount) + _cr.correction);
-        }
     }
 }
