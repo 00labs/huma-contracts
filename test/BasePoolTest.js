@@ -110,7 +110,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Shall have the protocol-level default-grace-period", async function () {
             let poolDefaultGracePeriodInSconds =
                 await poolContract.poolDefaultGracePeriodInSeconds();
-            expect(await humaConfigContract.protocolDefaultGracePeriod()).to.equal(
+            expect(await humaConfigContract.protocolDefaultGracePeriodInSeconds()).to.equal(
                 poolDefaultGracePeriodInSconds
             );
         });

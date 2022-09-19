@@ -17,6 +17,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     using BS for BS.CreditRecord;
 
     event DefaultTriggered(address indexed borrower, uint256 losses, address by);
+    event PaymentMade(address indexed borrower, uint256 amount, address by);
 
     /**
      * @notice accepts a credit request from msg.sender
@@ -215,33 +216,33 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             "NOT_APPROVED_OR_IN_GOOD_STANDING"
         );
 
-        // todo 8/23 add a test for this check
-        // review cr.unbilledPrincipal is not all principal,
-        // all principal is cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
-        require(borrowAmount <= cr.creditLimit - cr.unbilledPrincipal, "EXCEEDED_CREDIT_LMIIT");
-
-        // For the first drawdown, set the first due date exactly one billing cycle away
-        // For existing credit line, the account might have been dormant for months.
         // Bring the account current by moving forward cycles to allow the due date of
         // the current cycle to be ahead of block.timestamp.
-        if (cr.dueDate == 0) {
-            cr.dueDate = uint64(block.timestamp + uint256(cr.intervalInDays) * SECONDS_IN_A_DAY);
-        } else if (block.timestamp > cr.dueDate) {
-            uint256 periodsPassed;
-            (periodsPassed, , cr) = updateDueInfo(borrower);
-
+        if (cr.dueDate > 0) {
+            if (block.timestamp > cr.dueDate) cr = updateDueInfo(borrower, true);
             require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
-
-            // review check if state is delayed? and credit limit again?
         }
 
-        cr.unbilledPrincipal = uint96(uint256(cr.unbilledPrincipal) + borrowAmount);
-
-        // With drawdown, balance increases, interest charge will be higher than it should be,
-        // thus record a negative correction to compensate it at the end of the period
-        cr.correction -= int96(
-            uint96(IFeeManager(_feeManagerAddress).calcCorrection(cr, borrowAmount))
+        // todo 8/23 add a test for this check
+        require(
+            borrowAmount <=
+                (cr.creditLimit - cr.unbilledPrincipal - (cr.totalDue - cr.feesAndInterestDue)),
+            "EXCEEDED_CREDIT_LMIIT"
         );
+
+        if (cr.dueDate > 0) {
+            // For non-first bill, we will accrue interest for the rest of the pay period
+            // and add to the bill of the next cycle.
+            cr.correction += int96(
+                uint96(IFeeManager(_feeManagerAddress).calcCorrection(cr, borrowAmount))
+            );
+            cr.unbilledPrincipal = uint96(uint256(cr.unbilledPrincipal) + borrowAmount);
+        } else {
+            // For the first drawdown, generates the first bill
+            cr.unbilledPrincipal = uint96(borrowAmount);
+            _creditRecordMapping[borrower] = cr;
+            cr = updateDueInfo(borrower, true);
+        }
 
         // Set account status in good standing
         cr.state = BS.CreditState.GoodStanding;
@@ -308,9 +309,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Bring the account current. This is necessary since the account might have been dormant for
         // several cycles.
-        (uint256 periodsPassed, uint96 payoffAmount, BS.CreditRecord memory cr) = updateDueInfo(
-            borrower
-        );
+        BS.CreditRecord memory cr = updateDueInfo(borrower, true);
+        uint96 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
 
         // How much will be applied towards principal
         uint256 principalPayment = 0;
@@ -345,26 +345,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.state = BS.CreditState.GoodStanding;
         }
 
-        // Correction is used when moving to a new payment cycle, ready for reset.
-        // However, correction has not been used if it is still the same cycle, cannot reset
-        if (periodsPassed > 0) cr.correction = 0;
-
         // If there is principal payment, calcuate new correction
         if (principalPayment > 0) {
-            cr.correction += int96(
+            cr.correction -= int96(
                 uint96(IFeeManager(_feeManagerAddress).calcCorrection(cr, principalPayment))
             );
         }
 
-        // `payoffAmount` includes interest for the final billing period.
-        // If the user pays off before the end of the cycle, we will subtract
-        // the `correction` amount in the transfer.
         if (amountToCollect == payoffAmount) {
-            // review this logic seems not right
-            // correction is for multiple drawdowns or payments, different from payoff interest
-
-            // todo fix issue if there is any, and at least find a cleaner solution
-            amountToCollect = amountToCollect - uint256(uint96(cr.correction));
+            amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
             cr.correction = 0;
         }
 
@@ -374,6 +363,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // Transfer assets from the _borrower to pool locker
             _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
         }
+
+        emit PaymentMade(borrower, amountToCollect, msg.sender);
     }
 
     /**
@@ -382,14 +373,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @dev getDueInfo() gets the due information of the most current cycle. This function
      * updates the record in creditRecordMapping for `_borrower`
      */
-    function updateDueInfo(address borrower)
+    function updateDueInfo(address borrower, bool distributeChargesForLastCycle)
         public
         virtual
-        returns (
-            uint256 periodsPassed,
-            uint96 payoffAmount,
-            BS.CreditRecord memory cr
-        )
+        returns (BS.CreditRecord memory cr)
     {
         cr = _creditRecordMapping[borrower];
         bool alreadyLate = cr.totalDue > 0 ? true : false;
@@ -397,27 +384,32 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Gets the up-to-date due information for the borrower. If the account has been
         // late or dormant for multiple cycles, getDueInfo() will bring it current and
         // return the most up-to-date due information.
+        uint256 periodsPassed;
         uint256 newCharges;
         (
             periodsPassed,
             cr.feesAndInterestDue,
             cr.totalDue,
-            payoffAmount,
             cr.unbilledPrincipal,
             newCharges
         ) = IFeeManager(_feeManagerAddress).getDueInfo(cr);
 
         // Distribute income
-        distributeIncome(newCharges);
+        if (distributeChargesForLastCycle) distributeIncome(newCharges);
+        else distributeIncome(newCharges - cr.feesAndInterestDue);
 
         if (periodsPassed > 0) {
-            cr.dueDate = uint64(cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY);
+            if (cr.dueDate > 0)
+                cr.dueDate = uint64(
+                    cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY
+                );
+            else cr.dueDate = uint64(block.timestamp + cr.intervalInDays * SECONDS_IN_A_DAY);
+
             // Adjusts remainingPeriods, special handling when reached the maturity of the credit line
             if (cr.remainingPeriods > periodsPassed) {
                 cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
             } else {
                 cr.remainingPeriods = 0;
-                cr.creditLimit = 0;
             }
 
             // Sets the right missedPeriods and state for the credit record
@@ -426,6 +418,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
             if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
             else cr.state = BS.CreditState.GoodStanding;
+
+            // Correction is used when moving to a new payment cycle, ready for reset.
+            // However, correction has not been used if it is still the same cycle, cannot reset
+            if (periodsPassed > 0) cr.correction = 0;
 
             _creditRecordMapping[borrower] = cr;
         }
@@ -442,16 +438,21 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // check to make sure the default grace period has passed.
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        if (block.timestamp >= cr.dueDate) updateDueInfo(borrower);
-        cr = _creditRecordMapping[borrower];
+        if (block.timestamp > cr.dueDate) {
+            cr = updateDueInfo(borrower, false);
+        }
 
+        // Check if grace period has exceeded. Please note it takes a full pay period
+        // before the account is considered to be late. The time passed should be one pay period
+        // plus the grace period.
         require(
             cr.missedPeriods * cr.intervalInDays * SECONDS_IN_A_DAY >=
-                _poolConfig._poolDefaultGracePeriodInSeconds,
+                _poolConfig._poolDefaultGracePeriodInSeconds +
+                    cr.intervalInDays *
+                    SECONDS_IN_A_DAY,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
-
-        losses = cr.unbilledPrincipal + cr.totalDue;
+        losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
         distributeLosses(losses);
 
         emit DefaultTriggered(borrower, losses, msg.sender);
@@ -461,6 +462,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
         onlyEvaluationAgent();
+        // Brings the account current. todo research why this is needed to extend remainingPeriods.
+        updateDueInfo(borrower, false);
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
     }
 
@@ -512,11 +515,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function creditRecordMapping(address account) external view returns (BS.CreditRecord memory) {
         return _creditRecordMapping[account];
-    }
-
-    // review it is duplicated to isApproved, remove which one?
-    function getApprovalStatusForBorrower(address borrower) external view returns (bool) {
-        return _creditRecordMapping[borrower].state >= BS.CreditState.Approved;
     }
 
     function isLate(address borrower) external view returns (bool) {

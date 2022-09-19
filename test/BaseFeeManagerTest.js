@@ -24,10 +24,10 @@ let record;
 let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
     if (v1 != "SKIP") expect(r.creditLimit).to.equal(v1);
     if (v2 != "SKIP") expect(r.unbilledPrincipal).to.equal(v2);
-    if (v3 != "SKIP") expect(r.dueDate).to.equal(v3);
-    if (v4 != "SKIP") expect(r.correction).to.equal(v4);
+    if (v3 != "SKIP") expect(r.dueDate).to.be.within(v3 - 60, v3 + 60);
+    if (v4 != "SKIP") expect(r.correction).to.equal(v4); //be.within(v4 - 1, v4 + 1);
     if (v5 != "SKIP") expect(r.totalDue).to.equal(v5);
-    if (v6 != "SKIP") expect(r.missedPeriods).to.equal(v6);
+    if (v6 != "SKIP") expect(r.feesAndInterestDue).to.equal(v6);
     if (v7 != "SKIP") expect(r.missedPeriods).to.equal(v7);
     if (v8 != "SKIP") expect(r.remainingPeriods).to.equal(v8);
     if (v9 != "SKIP") expect(r.aprInBps).to.equal(v9);
@@ -35,11 +35,12 @@ let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
     if (v11 != "SKIP") expect(r.state).to.equal(v11);
 };
 
-let checkResult = function (r, v1, v2, v3, v4) {
+let checkResult = function (r, v1, v2, v3, v4, v5) {
     expect(r.periodsPassed).to.equal(v1);
     expect(r.feesAndInterestDue).to.equal(v2);
     expect(r.totalDue).to.equal(v3);
-    expect(r.payoffAmount).to.equal(v4);
+    expect(r.unbilledPrincipal).to.equal(v4);
+    expect(r.totalCharges).to.equal(v5);
 };
 
 describe("Base Fee Manager", function () {
@@ -134,22 +135,17 @@ describe("Base Fee Manager", function () {
 
             record = await poolContract.creditRecordMapping(borrower.address);
             let r = await feeManagerContract.getDueInfo(record);
-            checkResult(r, 0, 0, 0, 404);
+            checkResult(r, 0, 4, 4, 400, 0);
 
-            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
-            await ethers.provider.send("evm_mine", []);
+            await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
+            // await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            // await ethers.provider.send("evm_mine", []);
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("IntOnly", async function () {
-                    await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
                     let r = await feeManagerContract.getDueInfo(record);
-                    checkResult(r, 1, 4, 4, 408);
-                });
-                it("WithMinPrincipal", async function () {
-                    await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
-                    let r = await feeManagerContract.getDueInfo(record);
-                    checkResult(r, 1, 4, 24, 408);
+                    checkResult(r, 0, 4, 4, 400, 0);
                 });
             });
             describe("Late fee scenarios", async function () {
@@ -159,14 +155,8 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("IntOnly", async function () {
-                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
                         let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 2, 44, 44, 452); // late fee = 20 flat + 20 bps
-                    });
-                    it("WithMinPrincipal", async function () {
-                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 2, 44, 64, 452); // principal =
+                        checkResult(r, 1, 44, 44, 404, 44); // late fee = 20 flat + 20 bps
                     });
                 });
                 describe("Late for 2 periods", async function () {
@@ -175,14 +165,8 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("IntOnly", async function () {
-                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
                         let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 3, 46, 46, 498);
-                    });
-                    it("WithMinPrincipal", async function () {
-                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 3, 46, 68, 498);
+                        checkResult(r, 2, 46, 46, 448, 90);
                     });
                 });
                 describe("Late for 3 periods", async function () {
@@ -193,12 +177,7 @@ describe("Base Fee Manager", function () {
                     it("IntOnly", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
                         let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 4, 48, 48, 546);
-                    });
-                    it("WithMinPrincipal", async function () {
-                        await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 4, 48, 72, 546);
+                        checkResult(r, 3, 48, 48, 494, 138);
                     });
                 });
             });
@@ -217,6 +196,11 @@ describe("Base Fee Manager", function () {
                 testTokenContract,
                 500
             ); // Principal payment 5% (500 bps) per cycle
+
+            await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100);
+            await poolContract.connect(poolOwner).setAPR(1217);
+            await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
+
             // Create a borrowing record
             await poolContract.connect(borrower).requestCredit(5000, 30, 12);
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
@@ -225,16 +209,18 @@ describe("Base Fee Manager", function () {
 
             record = await poolContract.creditRecordMapping(borrower.address);
             let r = await feeManagerContract.getDueInfo(record);
-            checkResult(r, 0, 0, 0, 4040);
+            // Please note drawdown() has distributed the 40 income, thus, the 40 income
+            // from the first statement does not appear when call getDueInfo().
+            checkResult(r, 0, 40, 240, 3800, 0);
 
-            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30 + 10]);
-            await ethers.provider.send("evm_mine", []);
+            // await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30 + 10]);
+            // await ethers.provider.send("evm_mine", []);
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("WithMinPrincipal", async function () {
                     let r = await feeManagerContract.getDueInfo(record);
-                    checkResult(r, 1, 40, 240, 4080);
+                    checkResult(r, 0, 40, 240, 3800, 0);
                 });
             });
             describe("Late fee scenarios", async function () {
@@ -245,7 +231,7 @@ describe("Base Fee Manager", function () {
                     });
                     it("WithMinPrincipal", async function () {
                         let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 2, 262, 464, 4342); // principal =
+                        checkResult(r, 1, 100, 302, 3838, 100);
                     });
                 });
                 describe("Late for 2 periods", async function () {
@@ -256,7 +242,7 @@ describe("Base Fee Manager", function () {
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
                         let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 3, 278, 493, 4623);
+                        checkResult(r, 2, 102, 309, 3933, 202);
                     });
                 });
                 describe("Late for 3 periods", async function () {
@@ -267,7 +253,7 @@ describe("Base Fee Manager", function () {
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
                         let r = await feeManagerContract.getDueInfo(record);
-                        checkResult(r, 4, 294, 523, 4919);
+                        checkResult(r, 3, 104, 316, 4030, 306);
                     });
                 });
             });

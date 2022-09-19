@@ -43,10 +43,9 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
             cr.totalDue,
             cr.unbilledPrincipal
         );
-        uint256 refundAmount = amount - cr.unbilledPrincipal - lateFee;
+        uint256 refundAmount = amount - cr.totalDue - lateFee;
 
         // Sends the remainder to the borrower
-        cr.creditLimit = 0;
         cr.unbilledPrincipal = 0;
         cr.remainingPeriods = 0;
 
