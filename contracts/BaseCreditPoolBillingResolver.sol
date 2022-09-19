@@ -8,7 +8,7 @@ interface IResolver {
     function checker() external view returns (bool canExec, bytes memory execPayload);
 }
 
-contract BaseCreditPoolDefaultingResolver is IResolver, Ownable {
+contract BaseCreditPoolBillingResolver is IResolver, Ownable {
     // A listing of all BaseCreditPools this resolver should maintain
     address[] internal pools;
 
@@ -21,7 +21,12 @@ contract BaseCreditPoolDefaultingResolver is IResolver, Ownable {
     }
 
     function remove(uint256 index) external onlyOwner {
-        delete pools[index];
+        if (index < pools.length - 1) {
+            // Move the last element into the place to delete
+            pools[index] = pools[pools.length - 1];
+        }
+        // Remove the last element
+        pools.pop();
     }
 
     function checker() external view override returns (bool canExec, bytes memory execPayload) {

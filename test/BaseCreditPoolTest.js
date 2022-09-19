@@ -141,7 +141,7 @@ describe("Base Credit Pool", function () {
         });
     });
 
-    describe.only("Defaulting resolver", function () {
+    describe("Defaulting resolver", function () {
         let resolverContract;
 
         beforeEach(async function () {
@@ -157,10 +157,10 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(borrower2).drawdown(1_000_000);
             await poolContract.connect(borrower3).drawdown(1_000_000);
 
-            const BaseCreditPoolDefaultingResolver = await ethers.getContractFactory(
-                "BaseCreditPoolDefaultingResolver"
+            const BaseCreditPoolBillingResolver = await ethers.getContractFactory(
+                "BaseCreditPoolBillingResolver"
             );
-            resolverContract = await BaseCreditPoolDefaultingResolver.deploy();
+            resolverContract = await BaseCreditPoolBillingResolver.deploy();
             await resolverContract.push(poolContract.address);
         });
 
@@ -199,12 +199,52 @@ describe("Base Credit Pool", function () {
         });
 
         it("resolver false case", async function () {
-            // TODO add this logic. Right now due date is not being set properly
             let res = await resolverContract.checker();
-            console.log(res);
+            expect(res[0]).to.equal(false);
         });
 
-        it("resolver true case", async function () {});
+        it("resolver true case", async function () {
+            await ethers.provider.send("evm_increaseTime", [60 * 24 * 3600]);
+            await ethers.provider.send("evm_mine", []);
+
+            let res = await resolverContract.checker();
+            expect(res[0]).to.equal(true);
+            expect(
+                ethers.utils.defaultAbiCoder.decode(
+                    ["address"],
+                    ethers.utils.hexDataSlice(res[1], 4)
+                )[0]
+            ).to.equal(borrower.address);
+            await poolContract.updateDueInfo(borrower.address);
+
+            await poolContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(1_000_000);
+
+            res = await resolverContract.checker();
+            expect(res[0]).to.equal(true);
+            expect(
+                ethers.utils.defaultAbiCoder.decode(
+                    ["address"],
+                    ethers.utils.hexDataSlice(res[1], 4)
+                )[0]
+            ).to.equal(borrower3.address);
+            await poolContract.updateDueInfo(borrower3.address);
+
+            res = await resolverContract.checker();
+            expect(res[0]).to.equal(true);
+            expect(
+                ethers.utils.defaultAbiCoder.decode(
+                    ["address"],
+                    ethers.utils.hexDataSlice(res[1], 4)
+                )[0]
+            ).to.equal(borrower2.address);
+            await poolContract.updateDueInfo(borrower2.address);
+
+            res = await resolverContract.checker();
+            expect(res[0]).to.equal(false);
+        });
     });
 
     // Borrowing tests are grouped into two suites: Borrowing Request and Funding.

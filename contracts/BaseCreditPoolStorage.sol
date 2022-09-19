@@ -39,7 +39,6 @@ contract BaseCreditPoolStorage {
     // In-place replacement of an element without needing to shift all elements.
     // Note that this assumes _creditLines is kept unordered
     function removeCreditLine(address toRemove) internal returns (bool) {
-        console.log(toRemove);
         uint32 index = _creditLinesIndex[toRemove];
 
         if (index == 0 || index > _creditLines.length) return false;
