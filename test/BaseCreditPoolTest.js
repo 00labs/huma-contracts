@@ -183,14 +183,10 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
-            expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
-                true
-            );
+            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
             // Should return false when no loan exists
-            expect(
-                await poolContract.getApprovalStatusForBorrower(evaluationAgent.address)
-            ).to.equal(false);
+            expect(await poolContract.isApproved(evaluationAgent.address)).to.equal(false);
 
             await poolContract.connect(borrower).drawdown(100_000);
 
@@ -212,9 +208,7 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
-            expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
-                true
-            );
+            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
             await poolContract.connect(borrower).drawdown(1_000_000);
 

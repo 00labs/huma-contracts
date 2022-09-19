@@ -517,11 +517,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return _creditRecordMapping[account];
     }
 
-    // review it is duplicated to isApproved, remove which one?
-    function getApprovalStatusForBorrower(address borrower) external view returns (bool) {
-        return _creditRecordMapping[borrower].state >= BS.CreditState.Approved;
-    }
-
     function isLate(address borrower) external view returns (bool) {
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         return block.timestamp > cr.dueDate ? true : false;
