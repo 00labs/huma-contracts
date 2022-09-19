@@ -81,14 +81,6 @@ describe("Base Credit Pool", function () {
 
         await poolContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
         await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
-
-        // let lenderBalance = await testTokenContract.balanceOf(lender.address);
-        // if (lenderBalance < 1000)
-        //     await testTokenContract.mint(lender.address, 1000 - lenderBalance);
-
-        // let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
-        // if (lenderBalance > 0)
-        //     await testTokenContract.connect(borrower).burn(borrower.address, borrowerBalance);
     });
 
     afterEach(async function () {});
@@ -299,7 +291,7 @@ describe("Base Credit Pool", function () {
 
     // Default flow. After each pay period, simulates to LatePayMonitorService to call updateDueInfo().
     // In "Payback".beforeEach(), make sure there is a loan funded.
-    describe.skip("Default", function () {
+    describe("Default", function () {
         beforeEach(async function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
@@ -317,7 +309,7 @@ describe("Base Credit Pool", function () {
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
             await ethers.provider.send("evm_mine", []);
 
-            await poolContract.updateDueInfo(borrower.address);
+            await poolContract.updateDueInfo(borrower.address, true);
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
             await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                 "DEFAULT_TRIGGERED_TOO_EARLY"
@@ -331,10 +323,10 @@ describe("Base Credit Pool", function () {
             expect(await poolContract.totalPoolValue()).to.equal(5_025_924);
 
             //Period 2: Two periods lates
-            await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
+            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
             await ethers.provider.send("evm_mine", []);
 
-            await poolContract.updateDueInfo(borrower.address);
+            await poolContract.updateDueInfo(borrower.address, true);
             creditInfo = await poolContract.getCreditInformation(borrower.address);
             await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                 "DEFAULT_TRIGGERED_TOO_EARLY"
@@ -348,7 +340,7 @@ describe("Base Credit Pool", function () {
             expect(await poolContract.totalPoolValue()).to.equal(5_039_513);
 
             // Period 3: 3 periods late. ready for default.
-            await ethers.provider.send("evm_increaseTime", [36 * 24 * 3600]);
+            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
             await ethers.provider.send("evm_mine", []);
 
             // Intertionally bypass calling updateDueInfo(), and expects triggerDefault() to call it
@@ -361,11 +353,11 @@ describe("Base Credit Pool", function () {
                 .withArgs(borrower.address, 1_054_850, evaluationAgent.address);
 
             creditInfo = await poolContract.getCreditInformation(borrower.address);
-            // expect(creditInfo.unbilledPrincipal).to.equal(1_054_850);
-            // expect(creditInfo.feesAndInterestDue).to.equal(23099);
-            // expect(creditInfo.totalDue).to.equal(23099);
-            // expect(creditInfo.remainingPeriods).to.equal(8);
-            // expect(creditInfo.missedPeriods).to.equal(3);
+            expect(creditInfo.unbilledPrincipal).to.equal(1_054_850);
+            expect(creditInfo.feesAndInterestDue).to.equal(23099);
+            expect(creditInfo.totalDue).to.equal(23099);
+            expect(creditInfo.remainingPeriods).to.equal(8);
+            expect(creditInfo.missedPeriods).to.equal(3);
 
             // Checks pool value and all LP's withdrawable funds
             expect(await hdtContract.totalSupply()).to.equal(5_000_000);

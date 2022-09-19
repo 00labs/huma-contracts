@@ -219,7 +219,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Bring the account current by moving forward cycles to allow the due date of
         // the current cycle to be ahead of block.timestamp.
         if (cr.dueDate > 0) {
-            if (block.timestamp > cr.dueDate) (, cr) = updateDueInfo(borrower);
+            if (block.timestamp > cr.dueDate) cr = updateDueInfo(borrower, true);
             require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
         }
 
@@ -241,7 +241,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // For the first drawdown, generates the first bill
             cr.unbilledPrincipal = uint96(borrowAmount);
             _creditRecordMapping[borrower] = cr;
-            (, cr) = updateDueInfo(borrower);
+            cr = updateDueInfo(borrower, true);
         }
 
         // Set account status in good standing
@@ -309,7 +309,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Bring the account current. This is necessary since the account might have been dormant for
         // several cycles.
-        (, BS.CreditRecord memory cr) = updateDueInfo(borrower);
+        BS.CreditRecord memory cr = updateDueInfo(borrower, true);
         uint96 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
 
         // How much will be applied towards principal
@@ -373,10 +373,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @dev getDueInfo() gets the due information of the most current cycle. This function
      * updates the record in creditRecordMapping for `_borrower`
      */
-    function updateDueInfo(address borrower)
+    function updateDueInfo(address borrower, bool distributeChargesForLastCycle)
         public
         virtual
-        returns (uint256 periodsPassed, BS.CreditRecord memory cr)
+        returns (BS.CreditRecord memory cr)
     {
         cr = _creditRecordMapping[borrower];
         bool alreadyLate = cr.totalDue > 0 ? true : false;
@@ -384,6 +384,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Gets the up-to-date due information for the borrower. If the account has been
         // late or dormant for multiple cycles, getDueInfo() will bring it current and
         // return the most up-to-date due information.
+        uint256 periodsPassed;
         uint256 newCharges;
         (
             periodsPassed,
@@ -394,7 +395,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         ) = IFeeManager(_feeManagerAddress).getDueInfo(cr);
 
         // Distribute income
-        distributeIncome(newCharges);
+        if (distributeChargesForLastCycle) distributeIncome(newCharges);
+        else distributeIncome(newCharges - cr.feesAndInterestDue);
 
         if (periodsPassed > 0) {
             if (cr.dueDate > 0)
@@ -436,8 +438,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // check to make sure the default grace period has passed.
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        if (block.timestamp > cr.dueDate + SECONDS_IN_A_DAY) {
-            (, cr) = updateDueInfo(borrower);
+        if (block.timestamp > cr.dueDate) {
+            cr = updateDueInfo(borrower, false);
         }
 
         // Check if grace period has exceeded. Please note it takes a full pay period
@@ -450,7 +452,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                     SECONDS_IN_A_DAY,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
-        losses = cr.unbilledPrincipal + cr.totalDue;
+        losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
         distributeLosses(losses);
 
         emit DefaultTriggered(borrower, losses, msg.sender);
@@ -460,8 +462,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
         onlyEvaluationAgent();
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-        (, cr) = updateDueInfo(borrower);
+        // Brings the account current. todo research why this is needed to extend remainingPeriods.
+        updateDueInfo(borrower, false);
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
     }
 

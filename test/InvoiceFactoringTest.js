@@ -385,6 +385,9 @@ describe("Huma Invoice Financing", function () {
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", async function () {
         beforeEach(async function () {
+            await feeManagerContract.setFees(10, 100, 20, 100);
+            await invoiceContract.setAPR(0);
+
             // Mint InvoiceNFT to the borrower
             const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
             const receipt = await tx.wait();
@@ -449,6 +452,7 @@ describe("Huma Invoice Financing", function () {
         });
 
         it("Process payback", async function () {
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386);
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
 
             // simulates payments from payer.
@@ -472,40 +476,75 @@ describe("Huma Invoice Financing", function () {
 
         describe("Default flow", async function () {
             it("Writeoff less than pool value", async function () {
+                await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                );
+                // post withdraw
+                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(102);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(307);
+
+                let accruedIncome = await invoiceContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(2);
+                expect(accruedIncome.eaIncome).to.equal(2);
+                expect(accruedIncome.poolOwnerIncome).to.equal(0);
+
                 await invoiceContract.connect(lender).deposit(100);
 
-                await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "DEFAULT_TRIGGERED_TOO_EARLY"
-                );
-
-                await ethers.provider.send("evm_increaseTime", [60 * 24 * 3600]);
+                // pay period 1
+                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
                 await ethers.provider.send("evm_mine", []);
+                await invoiceContract.updateDueInfo(borrower.address, true);
 
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
                     "DEFAULT_TRIGGERED_TOO_EARLY"
                 );
+                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(105);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(420);
 
+                accruedIncome = await invoiceContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(6);
+                expect(accruedIncome.eaIncome).to.equal(5);
+                expect(accruedIncome.poolOwnerIncome).to.equal(1);
+
+                // pay period 2
+                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+                await ethers.provider.send("evm_mine", []);
+                await invoiceContract.updateDueInfo(borrower.address, true);
+
+                await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                );
+                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(109);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(432);
+
+                accruedIncome = await invoiceContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(10);
+                expect(accruedIncome.eaIncome).to.equal(8);
+                expect(accruedIncome.poolOwnerIncome).to.equal(2);
+
+                // Pay period 3
                 await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
                 await ethers.provider.send("evm_mine", []);
 
-                // 3 cycles of late fee for 72. Distribution among {protocol, EA, poolOwner, pool}
-                // is {14, 10, 3, 45}. Pluge the origination fee {2, 2, 0, 10}. The balance is
-                // {16, 12, 3, 55}.
-                // The pool value was 555 before the loss. With a loss of 472, pool vlue became
-                // 83, {poolOwnerAsLP, lender} split is {16, 66}.
+                // Total 3 cycles late, do not charge fees for the final cycle, we got
+                // 2 cycles of late fee for 48. Distribution among {protocol, EA, poolOwner, pool}
+                // is {9, 7, 2, 30}. Pluge the origination fee {2, 2, 0, 10}. The balance is
+                // {11, 9, 2, 40}.
+                // The pool value was 531 before the loss. With a loss of 448, pool vlue became
+                // 83, {poolOwnerAsLP, lender} split is {18, 73}.
                 await expect(
                     invoiceContract.connect(evaluationAgent).triggerDefault(borrower.address)
                 )
                     .to.emit(invoiceContract, "DefaultTriggered")
-                    .withArgs(borrower.address, 472, evaluationAgent.address);
+                    .withArgs(borrower.address, 448, evaluationAgent.address);
 
-                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(16);
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(66);
+                expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(18);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(75);
 
-                let accruedIncome = await invoiceContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(16);
-                expect(accruedIncome.eaIncome).to.equal(12);
-                expect(accruedIncome.poolOwnerIncome).to.equal(3);
+                accruedIncome = await invoiceContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(10);
+                expect(accruedIncome.eaIncome).to.equal(8);
+                expect(accruedIncome.poolOwnerIncome).to.equal(2);
 
                 expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(114);
             });
@@ -523,13 +562,13 @@ describe("Huma Invoice Financing", function () {
                 await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
                 await ethers.provider.send("evm_mine", []);
 
-                // 3 cycles of late fee for 72. Distribution among {protocol, EA, poolOwner, pool}
-                // is {14, 10, 3, 45}. Pluge the origination fee {2, 2, 0, 10}. The balance is
-                // {16, 12, 3, 55}.
-                // The pool value was 455 before the loss. With a loss of 472, pool vlue became
-                // 0, {poolOwnerAsLP, lender} split is {0, 0}.
-                // Please note the cash balance of 14 is not able to cover the accrued income of 31. This is
-                // an extremely rare case.
+                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+                await ethers.provider.send("evm_mine", []);
+
+                // It was delayed for 4 cycles, we do not charge fees for the final cycle.
+                // This gets us 84 total late fees. Please note since updateDueInfo() was not called
+                // cycle by cycle, all the 84 will be distrbiuted once, vs. distribute 28 for 3
+                // times, this leads to different rounding result.
                 await expect(
                     invoiceContract.connect(evaluationAgent).triggerDefault(borrower.address)
                 )
