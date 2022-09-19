@@ -235,6 +235,21 @@ describe("Base Credit Pool", function () {
             expect(await poolContract.totalPoolValue()).to.equal(5_006_600);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_011_000);
         });
+
+        it("Rejects borrows after inactivity period has been exceeded", async function () {
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
+
+            expect(await poolContract.getApprovalStatusForBorrower(borrower.address)).to.equal(
+                true
+            );
+
+            await ethers.provider.send("evm_increaseTime", [4_000_000]);
+
+            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
+                "USER_REEVALUATION_REQUIRED"
+            );
+        });
     });
 
     // In "Payback".beforeEach(), make sure there is a loan funded.

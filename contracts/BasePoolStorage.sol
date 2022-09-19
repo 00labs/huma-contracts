@@ -31,6 +31,9 @@ contract BasePoolStorage {
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => uint256) internal _lastDepositTime;
 
+    // Tracks the last meaningful user interaction with the pool (credit line approval, drawdown, payback, etc)
+    mapping(address => uint64) internal _lastInteractionTime;
+
     // whether the pool is ON or OFF
     PoolStatus internal _status;
 

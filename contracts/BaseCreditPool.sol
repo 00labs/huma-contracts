@@ -89,6 +89,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             ci.receivableAmount = uint88(receivableAmount);
             _receivableInfoMapping[borrower] = ci;
         }
+
+        bumpLastInteractionTime(borrower);
     }
 
     /**
@@ -157,6 +159,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         require(_poolConfig._maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
 
         _creditRecordMapping[borrower].creditLimit = uint96(newLine);
+
+        bumpLastInteractionTime(borrower);
     }
 
     /**
@@ -204,8 +208,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 receivableAmount
     ) public virtual override {
         protocolAndPoolOn();
+        checkUserReevaluationRequired(borrower);
 
-        ///msg.sender needs to be the borrower themselvers or the EA.
+        /// msg.sender needs to be the borrower themselvers or the EA.
         if (msg.sender != borrower) onlyEvaluationAgent();
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
@@ -288,6 +293,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
+
+        bumpLastInteractionTime(borrower);
     }
 
     /**
@@ -374,6 +381,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // Transfer assets from the _borrower to pool locker
             _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
         }
+
+        bumpLastInteractionTime(borrower);
     }
 
     /**
@@ -464,6 +473,21 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
     }
 
+    /********************************************/
+    //                Settings                  //
+    /********************************************/
+
+    /**
+     * @notice Sets the length of time after a user's last interaction which will
+     *         require a new credit line evaluation
+     * @param inactivePeriodInSeconds the window of time after a user's last interaction
+     */
+    function setInactivePeriod(uint256 inactivePeriodInSeconds) external virtual {
+        onlyOwnerOrHumaMasterAdmin();
+        require(inactivePeriodInSeconds > 0, "INACTIVE_PERIOD_IS_ZERO");
+        _creditPoolConfig._inactivePeriodInSeconds = inactivePeriodInSeconds;
+    }
+
     function onERC721Received(
         address, /*operator*/
         address, /*from*/
@@ -526,5 +550,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function onlyEvaluationAgent() internal view {
         require(msg.sender == _evaluationAgent, "APPROVER_REQUIRED");
+    }
+
+    function checkUserReevaluationRequired(address addr) internal view {
+        require(
+            block.timestamp <
+                _lastInteractionTime[addr] + _creditPoolConfig._inactivePeriodInSeconds,
+            "USER_REEVALUATION_REQUIRED"
+        );
     }
 }

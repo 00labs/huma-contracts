@@ -14,6 +14,14 @@ contract BaseCreditPoolStorage {
     /// mapping from wallet address to the receivable supplied by this wallet
     mapping(address => BS.ReceivableInfo) internal _receivableInfoMapping;
 
+    CreditPoolConfig internal _creditPoolConfig;
+
+    struct CreditPoolConfig {
+        // Can be used to lock pool functionality for users that haven't interacted with the pool
+        // within a given period of time and need reevaluating
+        uint256 _inactivePeriodInSeconds;
+    }
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.

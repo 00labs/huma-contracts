@@ -53,6 +53,8 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         _creditRecordMapping[borrower] = cr;
 
         disperseRemainingFunds(borrower, refundAmount);
+
+        bumpLastInteractionTime(borrower);
     }
 
     /**

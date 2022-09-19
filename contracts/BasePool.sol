@@ -238,6 +238,10 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         _underlyingToken.safeTransfer(_evaluationAgent, amount);
     }
 
+    function bumpLastInteractionTime(address addr) internal {
+        _lastInteractionTime[addr] = uint64(block.timestamp);
+    }
+
     /********************************************/
     //                Settings                  //
     /********************************************/

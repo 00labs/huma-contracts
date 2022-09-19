@@ -82,6 +82,7 @@ async function deployAndSetupPool(
     await poolContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 10);
     await poolContract.connect(poolOwner).setEvaluationAgent(evaluationAgent.address);
     await poolContract.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
+    await poolContract.connect(poolOwner).setInactivePeriod(3_000_000);
 
     await testTokenContract.connect(poolOwner).approve(poolContract.address, 1_000_000);
     await poolContract.connect(poolOwner).makeInitialDeposit(1_000_000);
