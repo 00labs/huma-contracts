@@ -9,6 +9,10 @@ interface IPool {
 
     function setEvaluationAgent(uint256 eaId, address agent) external;
 
+    function addApprovedLender(address lender) external;
+
+    function removeApprovedLender(address lender) external;
+
     function disablePool() external;
 
     function enablePool() external;
