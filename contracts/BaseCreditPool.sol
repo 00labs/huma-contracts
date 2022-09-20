@@ -173,15 +173,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @notice Invalidate the credit line
      * @dev If the credit limit is 0, we treat the line as deleted.
      */
-    function invalidateApprovedCredit(address borrower) public virtual override {
+    function invalidateApprovedCredit(address borrower) external virtual override {
         protocolAndPoolOn();
-        onlyEvaluationAgentOrSelf(borrower);
+        onlyEvaluationAgent();
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-        if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
-            cr.state = BS.CreditState.Deleted;
-            cr.creditLimit = 0;
-            _creditRecordMapping[borrower] = cr;
-        }
+        cr.state = BS.CreditState.Deleted;
+        cr.creditLimit = 0;
+        _creditRecordMapping[borrower] = cr;
     }
 
     function isApproved(address borrower) external view virtual override returns (bool) {
@@ -229,12 +227,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // After the credit approval, if the pool has expiration for credit approval,
         // the borrower must complete the first drawdown before the expiration date.
-        if (
-            cr.state == BS.CreditState.Approved && cr.dueDate > 0 && block.timestamp > cr.dueDate
-        ) {
-            invalidateApprovedCredit(borrower);
+        if (cr.state == BS.CreditState.Approved && cr.dueDate > 0 && block.timestamp > cr.dueDate)
             revert creditExpired();
-        }
 
         // Bring the account current by moving forward cycles to allow the due date of
         // the current cycle to be ahead of block.timestamp.
@@ -543,9 +537,5 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function onlyEvaluationAgent() internal view {
         require(msg.sender == _evaluationAgent, "APPROVER_REQUIRED");
-    }
-
-    function onlyEvaluationAgentOrSelf(address borrower) internal view {
-        require(msg.sender == _evaluationAgent || msg.sender == borrower, "APPROVER_REQUIRED");
     }
 }
