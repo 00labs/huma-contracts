@@ -442,6 +442,10 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         );
     }
 
+    function getFeeManager() external view returns (address) {
+        return _feeManagerAddress;
+    }
+
     function creditApprovalExpiration() external view returns (uint256) {
         return _poolConfig._creditApprovalExpirationInSeconds;
     }
