@@ -110,6 +110,16 @@ describe("Base Credit Pool", function () {
             let result = await poolContract.creditRecordMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
         });
+        it("Should not allow non-pool-owner-or-huma-admin to change credit expiration before first drawdown", async function () {
+            await expect(
+                poolContract.connect(lender).setCreditApprovalExpiration(5)
+            ).to.be.revertedWith("PERMISSION_DENIED_NOT_ADMIN");
+        });
+        it("Should allow pool owner to change credit expiration before first drawdown", async function () {
+            await expect(poolContract.connect(poolOwner).setCreditApprovalExpiration(5))
+                .to.emit(poolContract, "CreditApprovalExpirationChanged")
+                .withArgs(432000, poolOwner.address);
+        });
     });
 
     // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
@@ -223,6 +233,50 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.eaIncome).to.equal(3150);
             expect(await poolContract.totalPoolValue()).to.equal(5_012_602);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_011_000);
+        });
+    });
+
+    describe("Credit expiration without a timely first drawdown", function () {
+        it("Cannot borrow after credit expiration window", async function () {
+            await poolContract.connect(poolOwner).setCreditApprovalExpiration(5);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+
+            await ethers.provider.send("evm_increaseTime", [6 * 24 * 3600]);
+            await ethers.provider.send("evm_mine", []);
+
+            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.revertedWith(
+                "creditExpired()"
+            );
+        });
+
+        it("Can borrow if no credit expiration has been setup for the pool", async function () {
+            await poolContract.connect(poolOwner).setCreditApprovalExpiration(0);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+
+            await ethers.provider.send("evm_increaseTime", [6 * 24 * 3600]);
+            await ethers.provider.send("evm_mine", []);
+
+            await expect(poolContract.connect(borrower).drawdown(1_000_000));
+            let creditInfo = await poolContract.getCreditInformation(borrower.address);
+            expect(creditInfo.remainingPeriods).to.equal(11);
+        });
+
+        it("Expiration window does not apply after initial drawdown", async function () {
+            await poolContract.connect(poolOwner).setCreditApprovalExpiration(5);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await expect(poolContract.connect(borrower).drawdown(500_000));
+            let creditInfo = await poolContract.getCreditInformation(borrower.address);
+            expect(creditInfo.unbilledPrincipal).to.equal(500_000);
+
+            await ethers.provider.send("evm_increaseTime", [6 * 24 * 3600]);
+            await ethers.provider.send("evm_mine", []);
+
+            await poolContract.connect(borrower).drawdown(500_000);
+            creditInfo = await poolContract.getCreditInformation(borrower.address);
+            expect(creditInfo.unbilledPrincipal).to.equal(1_000_000);
         });
     });
 

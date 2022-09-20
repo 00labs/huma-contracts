@@ -15,6 +15,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
     using BS for BS.CreditRecord;
+    error creditExpired();
 
     event DefaultTriggered(address indexed borrower, uint256 losses, address by);
     event PaymentMade(address indexed borrower, uint256 amount, address by);
@@ -141,8 +142,16 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         require(cr.creditLimit <= _poolConfig._maxCreditLine, "GREATER_THAN_LIMIT");
+        cr.state = BS.CreditState.Approved;
 
-        _creditRecordMapping[borrower].state = BS.CreditState.Approved;
+        // Note: Special logic. dueDate is normally used to track the next bill due.
+        // Before the first drawdown, it is also used to set the deadline for the first
+        // drawdown to happen, otherwise, the credit line expires.
+        // Decided to use this field in this way to save one field for the struct
+        uint256 validPeriod = _poolConfig._creditApprovalExpirationInSeconds;
+        if (validPeriod > 0) cr.dueDate = uint64(block.timestamp + validPeriod);
+
+        _creditRecordMapping[borrower] = cr;
     }
 
     /**
@@ -215,6 +224,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.state == BS.CreditState.Approved || cr.state == BS.CreditState.GoodStanding,
             "NOT_APPROVED_OR_IN_GOOD_STANDING"
         );
+
+        // After the credit approval, if the pool has expiration for credit approval,
+        // the borrower must complete the first drawdown before the expiration date.
+        if (cr.state == BS.CreditState.Approved && cr.dueDate > 0 && block.timestamp > cr.dueDate)
+            revert creditExpired();
 
         // Bring the account current by moving forward cycles to allow the due date of
         // the current cycle to be ahead of block.timestamp.
