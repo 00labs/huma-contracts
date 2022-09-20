@@ -76,6 +76,8 @@ contract BasePoolStorage {
         uint256 _receivableRequiredInBps;
         // the default APR for the pool in terms of basis points.
         uint256 _poolAprInBps;
+        // the duration of a credit line without an initial drawdown
+        uint256 _creditApprovalExpirationInSeconds;
     }
 
     enum PoolStatus {

@@ -30,6 +30,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
     event APRUpdated(uint256 _aprInBps);
     event PoolPayPeriodChanged(uint256 periodInDays, address by);
+    event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
 
     /**
      * @dev This event emits when new funds are distributed
@@ -372,6 +373,12 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         emit EACommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
+    function setCreditApprovalExpiration(uint256 durationInDays) external virtual {
+        onlyOwnerOrHumaMasterAdmin();
+        _poolConfig._creditApprovalExpirationInSeconds = durationInDays * SECONDS_IN_A_DAY;
+        emit CreditApprovalExpirationChanged(durationInDays * SECONDS_IN_A_DAY, msg.sender);
+    }
+
     /**
      * Returns a summary information of the pool.
      * @return token the address of the pool token
@@ -433,6 +440,10 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
             _poolConfig._rewardRateInBpsForPoolOwner,
             _poolConfig._liquidityRateInBpsByPoolOwner
         );
+    }
+
+    function creditApprovalExpiration() external view returns (uint256) {
+        return _poolConfig._creditApprovalExpirationInSeconds;
     }
 
     function accruedIncome()
