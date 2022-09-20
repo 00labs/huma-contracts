@@ -41,6 +41,8 @@ contract BasePoolStorage {
 
     AccruedIncome internal _accuredIncome;
 
+    uint256 internal _evaluationAgentId;
+
     struct AccruedIncome {
         uint256 _protocolIncome;
         uint256 _poolOwnerIncome;

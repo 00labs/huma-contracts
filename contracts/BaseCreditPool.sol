@@ -537,5 +537,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function onlyEvaluationAgent() internal view {
         require(msg.sender == _evaluationAgent, "APPROVER_REQUIRED");
+        // require(msg.sender == HumaConfig(_humaConfig).eaServiceAccount(), "APPROVER_REQUIRED");
     }
 }
