@@ -141,7 +141,7 @@ describe("Base Credit Pool", function () {
         });
     });
 
-    describe("Defaulting resolver", function () {
+    describe("Billing resolver", function () {
         let resolverContract;
 
         beforeEach(async function () {
@@ -245,71 +245,6 @@ describe("Base Credit Pool", function () {
             res = await resolverContract.checker();
             expect(res[0]).to.equal(false);
         });
-    });
-
-    describe("Defaulting resolver", function () {
-        let resolverContract;
-
-        beforeEach(async function () {
-            await poolContract.connect(borrower).requestCredit(400, 30, 12);
-            await poolContract.connect(borrower2).requestCredit(400, 30, 12);
-            await poolContract.connect(borrower3).requestCredit(400, 30, 12);
-
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower2.address);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower3.address);
-
-            await poolContract.connect(borrower).drawdown(10);
-            await poolContract.connect(borrower2).drawdown(10);
-            await poolContract.connect(borrower3).drawdown(10);
-
-            const BaseCreditPoolDefaultingResolver = await ethers.getContractFactory(
-                "BaseCreditPoolDefaultingResolver"
-            );
-            resolverContract = await BaseCreditPoolDefaultingResolver.deploy();
-            await resolverContract.push(poolContract.address);
-        });
-
-        afterEach(async function () {
-            await poolContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
-            await poolContract
-                .connect(evaluationAgent)
-                .invalidateApprovedCredit(borrower2.address);
-            await poolContract
-                .connect(evaluationAgent)
-                .invalidateApprovedCredit(borrower3.address);
-        });
-
-        it("creditLines is correctly ordered", async function () {
-            let creditLines = await poolContract.creditLines();
-            expect(creditLines.length).to.equal(3);
-            expect(creditLines[0]).to.equal(borrower.address);
-            expect(creditLines[1]).to.equal(borrower2.address);
-            expect(creditLines[2]).to.equal(borrower3.address);
-
-            // Invalidate borrower's credit
-            await poolContract.connect(evaluationAgent).invalidateApprovedCredit(borrower.address);
-            creditLines = await poolContract.creditLines();
-            expect(creditLines.length).to.equal(2);
-            expect(creditLines[0]).to.equal(borrower3.address);
-            expect(creditLines[1]).to.equal(borrower2.address);
-
-            await poolContract.connect(borrower).requestCredit(400, 30, 12);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-            await poolContract.connect(borrower).drawdown(10);
-            creditLines = await poolContract.creditLines();
-            expect(creditLines.length).to.equal(3);
-            expect(creditLines[0]).to.equal(borrower3.address);
-            expect(creditLines[1]).to.equal(borrower2.address);
-            expect(creditLines[2]).to.equal(borrower.address);
-        });
-
-        it("resolver false case", async function () {
-            // TODO add this logic. Right now due date is not being set properly
-            // let res = await resolverContract.checker();
-        });
-
-        it("resolver true case", async function () {});
     });
 
     // Borrowing tests are grouped into two suites: Borrowing Request and Funding.

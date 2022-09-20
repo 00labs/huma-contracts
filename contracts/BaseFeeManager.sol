@@ -121,8 +121,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // Calculate platform fee, which includes protocol fee and pool fee
         platformFees = calcFrontLoadingFee(borrowAmount);
 
-        console.log(borrowAmount);
-        console.log(platformFees);
         amtToBorrower = borrowAmount - platformFees;
 
         return (amtToBorrower, platformFees);
