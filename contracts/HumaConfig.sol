@@ -38,6 +38,11 @@ contract HumaConfig is Ownable {
     /// humaTreasury is the protocol treasury
     address public humaTreasury;
 
+    /// address of EvaluationAgentNFT contract
+    address public eaNFTContractAddress;
+
+    error zeroAddress();
+
     /// pausers can pause the pool.
     mapping(address => bool) private pausers;
 
@@ -209,6 +214,11 @@ contract HumaConfig is Ownable {
         poolAdmins[_poolAdmin] = false;
 
         emit PoolAdminRemoved(_poolAdmin, owner());
+    }
+
+    function addEANFTContractAddress(address contractAddress) external onlyOwner {
+        require(contractAddress != address(0), "EA_NFT_CONTRACT_ADDRESS_ZERO");
+        eaNFTContractAddress = contractAddress;
     }
 
     /**

@@ -80,7 +80,7 @@ async function deployAndSetupPool(
     // Config rewards and requirements for poolOwner and EA, make initial deposit, and enable pool
     await poolContract.connect(poolOwner).setPoolLiquidityCap(1_000_000_000);
     await poolContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 10);
-    await poolContract.connect(poolOwner).setEvaluationAgent(evaluationAgent.address);
+    await poolContract.connect(poolOwner).setEvaluationAgent(12345, evaluationAgent.address);
     await poolContract.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
 
     await testTokenContract.connect(poolOwner).approve(poolContract.address, 1_000_000);

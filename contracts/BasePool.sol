@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "./BasePoolStorage.sol";
 
@@ -11,17 +12,20 @@ import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
 
 import "./HumaConfig.sol";
+import "./EvaluationAgentNFT.sol";
 
 import "hardhat/console.sol";
 
 abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IPool {
     using SafeERC20 for IERC20;
 
+    error notEvaluationAgentOwnerProvided();
+
     event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
     event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
     event PoolInitialized(address _poolAddress);
 
-    event EvaluationAgentChanged(address agent, address by);
+    event EvaluationAgentChanged(address oldEA, address newEA, address by);
     event PoolNameChanged(string newName, address by);
     event PoolDisabled(address by);
     event PoolEnabled(address by);
@@ -31,6 +35,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     event APRUpdated(uint256 _aprInBps);
     event PoolPayPeriodChanged(uint256 periodInDays, address by);
     event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
+    event EvaluationAgentRewardsWithdrawn(uint256 amount, address receiver, address by);
 
     /**
      * @dev This event emits when new funds are distributed
@@ -244,11 +249,28 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @notice Adds an evaluation agent to the list who can approve loans.
      * @param agent the evaluation agent to be added
      */
-    function setEvaluationAgent(address agent) external virtual override {
+    function setEvaluationAgent(uint256 eaId, address agent) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         denyZeroAddress(agent);
+
+        // todo change script to make sure eaNFTContract is deployed, and the eaId is minted.
+        // if (IERC721(HumaConfig(_humaConfig).eaNFTContractAddress()).ownerOf(eaId) != agent)
+        //     revert notEvaluationAgentOwnerProvided();
+
+        // Transfer the accrued EA income to the old EA's wallet.
+        // Decided not to check if there is enough balance in the pool. If there is
+        // not enough balance, the transaction will fail. PoolOwner has to find enough
+        // liquidity to pay the EA before replacing it.
+        address oldEA = _evaluationAgent;
+        if (oldEA != address(0)) {
+            uint256 rewardsToPayout = _accuredIncome._eaIncome;
+            _accuredIncome._eaIncome = 0;
+            _underlyingToken.safeTransfer(oldEA, rewardsToPayout);
+            emit EvaluationAgentRewardsWithdrawn(rewardsToPayout, oldEA, msg.sender);
+        }
         _evaluationAgent = agent;
-        emit EvaluationAgentChanged(agent, msg.sender);
+        _evaluationAgentId = eaId;
+        emit EvaluationAgentChanged(oldEA, agent, msg.sender);
     }
 
     /**
@@ -399,7 +421,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
             uint256 liquiditycap,
             string memory name,
             string memory symbol,
-            uint8 decimals
+            uint8 decimals,
+            uint256 evaluationAgentId
         )
     {
         IERC20Metadata erc20Contract = IERC20Metadata(address(_poolToken));
@@ -411,7 +434,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
             _poolConfig._liquidityCap,
             erc20Contract.name(),
             erc20Contract.symbol(),
-            erc20Contract.decimals()
+            erc20Contract.decimals(),
+            _evaluationAgentId
         );
     }
 
