@@ -518,8 +518,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     }
 
     function isLate(address borrower) external view returns (bool) {
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-        return block.timestamp > cr.dueDate ? true : false;
+        return block.timestamp > _creditRecordMapping[borrower].dueDate ? true : false;
     }
 
     function onlyEvaluationAgent() internal view {
