@@ -138,7 +138,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      *      the number of HDTs to reduct from msg.sender's account.
      * @dev Error checking sequence: 1) is the pool on 2) is the amount right 3)
      */
-    function withdraw(uint256 amount) external virtual override {
+    function withdraw(uint256 amount) public virtual override {
         protocolAndPoolOn();
         require(amount > 0, "AMOUNT_IS_ZERO");
 
@@ -163,21 +163,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @notice Withdraw all balance from the pool.
      */
     function withdrawAll() external virtual override {
-        protocolAndPoolOn();
-
-        require(
-            block.timestamp >=
-                _lastDepositTime[msg.sender] + _poolConfig._withdrawalLockoutPeriodInSeconds,
-            "WITHDRAW_TOO_SOON"
-        );
-
-        uint256 shares = IERC20(address(_poolToken)).balanceOf(msg.sender);
-        require(shares > 0, "SHARES_IS_ZERO");
-        uint256 amount = _poolToken.burn(msg.sender, shares);
-        _totalPoolValue -= amount;
-        _underlyingToken.safeTransfer(msg.sender, amount);
-
-        emit LiquidityWithdrawn(msg.sender, amount, shares);
+        withdraw(_poolToken.withdrawableFundsOf(msg.sender));
     }
 
     /**
