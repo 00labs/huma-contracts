@@ -17,7 +17,6 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         address indexed sender,
         address indexed borrower,
         address asset,
-        uint256 assetId,
         uint256 amount,
         uint256 paymentId
     );
@@ -31,7 +30,6 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     function onReceivedPayment(
         address borrower,
         address asset,
-        uint256 assetId,
         uint256 amount,
         uint256 paymentId
     ) external virtual override {
@@ -64,7 +62,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
 
         disperseRemainingFunds(borrower, refundAmount);
 
-        emit ReceivedPayment(msg.sender, borrower, asset, assetId, amount, paymentId);
+        emit ReceivedPayment(msg.sender, borrower, asset, amount, paymentId);
     }
 
     /**
