@@ -163,6 +163,19 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
             expect(await hdtContract.totalSupply()).to.equal(6_000_000);
         });
+
+        it("Unapproved lenders cannot deposit", async function () {
+            await expect(poolContract.connect(borrower).deposit(1_000_000)).to.be.revertedWith(
+                "PERMISSION_DENIED_NOT_LENDER"
+            );
+        });
+
+        it("Removed lenders cannot deposit", async function () {
+            await poolContract.connect(poolOwner).removeApprovedLender(lender.address);
+            await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
+                "PERMISSION_DENIED_NOT_LENDER"
+            );
+        });
     });
 
     // In beforeEach() of Withdraw, we make sure there is 100 liquidity provided.
