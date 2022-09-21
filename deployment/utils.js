@@ -1,8 +1,8 @@
 const fs = require("fs");
 const DEPLOYED_PATH = "./deployment/";
 
-const MAX_FEE_PER_GAS = 100000000000;
-const MAX_PRIORITY_FEE_PER_GAS = 1000000000;
+const MAX_FEE_PER_GAS = 100_000000000;
+const MAX_PRIORITY_FEE_PER_GAS = 10_000000000;
 
 const getContractAddressFile = async function (fileType = "deployed") {
     let network = (await hre.ethers.provider.getNetwork()).name;
