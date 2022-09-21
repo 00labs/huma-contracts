@@ -18,4 +18,4 @@ jobs:
       - name: run tests
         run: yarn test
       - name: deploy test
-        run: yarn deploy --network localhost
+        run: yarn deploy --network hardhat
