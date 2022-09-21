@@ -55,16 +55,23 @@ describe("Base Credit Pool", function () {
     let borrower;
     let treasury;
     let evaluationAgent;
+    let protocolOwner;
+    let eaNFTContract;
 
     before(async function () {
-        [defaultDeployer, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
-            await ethers.getSigners();
-
-        [humaConfigContract, feeManagerContract, testTokenContract] = await deployContracts(
-            poolOwner,
+        [
+            defaultDeployer,
+            proxyOwner,
+            lender,
+            borrower,
             treasury,
-            lender
-        );
+            evaluationAgent,
+            poolOwner,
+            protocolOwner,
+        ] = await ethers.getSigners();
+
+        [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
+            await deployContracts(poolOwner, treasury, lender, protocolOwner);
     });
 
     beforeEach(async function () {
@@ -76,7 +83,8 @@ describe("Base Credit Pool", function () {
             humaConfigContract,
             feeManagerContract,
             testTokenContract,
-            0
+            0,
+            eaNFTContract
         );
 
         await poolContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
@@ -91,7 +99,7 @@ describe("Base Credit Pool", function () {
             await expect(
                 poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 1000000)
             ).to.be.revertedWith("PROTOCOL_PAUSED");
-            await humaConfigContract.connect(poolOwner).unpauseProtocol();
+            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
         it("Should not allow non-EA to change credit line", async function () {
             await expect(
@@ -126,7 +134,7 @@ describe("Base Credit Pool", function () {
     // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
     describe("Borrowing request", function () {
         afterEach(async function () {
-            await humaConfigContract.connect(poolOwner).unpauseProtocol();
+            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
 
         it("Should not allow loan requests while protocol is paused", async function () {
@@ -173,7 +181,7 @@ describe("Base Credit Pool", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.connect(poolOwner).unpauseProtocol();
+            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
@@ -293,7 +301,7 @@ describe("Base Credit Pool", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.connect(poolOwner).unpauseProtocol();
+            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
 
         it("Should not allow payback while protocol is paused", async function () {
