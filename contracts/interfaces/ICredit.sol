@@ -17,7 +17,7 @@ interface ICredit {
      * @param _intervalInDays time interval for each payback in units of days
      * @param _remainingPeriods the number of pay periods for this credit
      */
-    function recordPreapprovedCredit(
+    function recordApprovedCredit(
         address _borrower,
         uint256 _creditAmount,
         address _receivableAsset,

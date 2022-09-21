@@ -437,7 +437,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
             string memory name,
             string memory symbol,
             uint8 decimals,
-            uint256 evaluationAgentId
+            uint256 evaluationAgentId,
+            address eaNFTAddress
         )
     {
         IERC20Metadata erc20Contract = IERC20Metadata(address(_poolToken));
@@ -450,7 +451,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
             erc20Contract.name(),
             erc20Contract.symbol(),
             erc20Contract.decimals(),
-            _evaluationAgentId
+            _evaluationAgentId,
+            HumaConfig(_humaConfig).eaNFTContractAddress()
         );
     }
 
@@ -483,6 +485,10 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
     function getFeeManager() external view returns (address) {
         return _feeManagerAddress;
+    }
+
+    function getEvaluationAgent() external view returns (address) {
+        return _evaluationAgent;
     }
 
     function creditApprovalExpiration() external view returns (uint256) {

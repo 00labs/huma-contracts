@@ -106,7 +106,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @param remainingPeriods the number of pay periods for this credit
      * @dev Only Evaluation Agents for this contract can call this function.
      */
-    function recordPreapprovedCredit(
+    function recordApprovedCredit(
         address borrower,
         uint256 creditAmount,
         address receivableAsset,
@@ -176,6 +176,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     function invalidateApprovedCredit(address borrower) external virtual override {
         protocolAndPoolOn();
         onlyEvaluationAgent();
+        //critical todo need to make sure there is no outstanding balance
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         cr.state = BS.CreditState.Deleted;
         cr.creditLimit = 0;

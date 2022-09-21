@@ -1,11 +1,28 @@
-async function deployContracts(poolOwner, treasury, lender, fees = [1000, 100, 2000, 100]) {
+const {ethers} = require("hardhat");
+const {use, expect} = require("chai");
+const {solidity} = require("ethereum-waffle");
+
+async function deployContracts(
+    poolOwner,
+    treasury,
+    lender,
+    protocolOwner,
+    fees = [1000, 100, 2000, 100]
+) {
+    // Deploy EvaluationAgentNFT
+    const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
+    eaNFTContract = await EvaluationAgentNFT.deploy();
+
     // Deploy HumaConfig
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     humaConfigContract = await HumaConfig.deploy(treasury.address);
     await humaConfigContract.setHumaTreasury(treasury.address);
     await humaConfigContract.setTreasuryFee(2000);
     await humaConfigContract.addPauser(poolOwner.address);
-    await humaConfigContract.transferOwnership(poolOwner.address);
+    await humaConfigContract.setEANFTContractAddress(eaNFTContract.address);
+
+    await humaConfigContract.transferOwnership(protocolOwner.address);
+    await humaConfigContract.connect(protocolOwner).unpauseProtocol();
 
     // Deploy Fee Manager
     const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
@@ -17,7 +34,7 @@ async function deployContracts(poolOwner, treasury, lender, fees = [1000, 100, 2
     const TestToken = await ethers.getContractFactory("TestToken");
     testTokenContract = await TestToken.deploy();
 
-    return [humaConfigContract, feeManagerContract, testTokenContract];
+    return [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract];
 }
 
 async function deployAndSetupPool(
@@ -28,7 +45,8 @@ async function deployAndSetupPool(
     humaConfigContract,
     feeManagerContract,
     testTokenContract,
-    principalRateInBps
+    principalRateInBps,
+    eaNFTContract
 ) {
     await testTokenContract.give1000To(lender.address);
     await testTokenContract.give1000To(poolOwner.address);
@@ -80,7 +98,20 @@ async function deployAndSetupPool(
     // Config rewards and requirements for poolOwner and EA, make initial deposit, and enable pool
     await poolContract.connect(poolOwner).setPoolLiquidityCap(1_000_000_000);
     await poolContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 10);
-    await poolContract.connect(poolOwner).setEvaluationAgent(12345, evaluationAgent.address);
+
+    let eaNFTTokenId;
+    // Mint EANFT to the borrower
+    const tx = await eaNFTContract.mint(evaluationAgent.address, "");
+    const receipt = await tx.wait();
+    for (const evt of receipt.events) {
+        if (evt.event === "EANFTGenerated") {
+            eaNFTTokenId = evt.args[0];
+        }
+    }
+    await poolContract
+        .connect(poolOwner)
+        .setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
+
     await poolContract.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
 
     await poolContract.connect(poolOwner).addApprovedLender(poolOwner.address);
@@ -93,7 +124,10 @@ async function deployAndSetupPool(
     await testTokenContract.connect(evaluationAgent).approve(poolContract.address, 2_000_000);
     await poolContract.connect(evaluationAgent).makeInitialDeposit(2_000_000);
 
-    await poolContract.connect(poolOwner).enablePool();
+    await expect(poolContract.connect(poolOwner).enablePool()).to.emit(
+        poolContract,
+        "PoolEnabled"
+    );
 
     await poolContract.connect(poolOwner).setAPR(1217);
     await poolContract.connect(poolOwner).setMaxCreditLine(10_000_000);
