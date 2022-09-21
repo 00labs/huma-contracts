@@ -29,6 +29,8 @@ let borrower2;
 let treasury;
 let evaluationAgent;
 let poolOwner;
+let protocolOwner;
+let eaNFTContract;
 
 describe("Base Pool - LP and Admin functions", function () {
     before(async function () {
@@ -37,19 +39,16 @@ describe("Base Pool - LP and Admin functions", function () {
             proxyOwner,
             lender,
             borrower,
-            borrower2,
             treasury,
             evaluationAgent,
             poolOwner,
+            protocolOwner,
         ] = await ethers.getSigners();
     });
 
     beforeEach(async function () {
-        [humaConfigContract, feeManagerContract, testTokenContract] = await deployContracts(
-            poolOwner,
-            treasury,
-            lender
-        );
+        [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
+            await deployContracts(poolOwner, treasury, lender, protocolOwner);
 
         [hdtContract, poolContract] = await deployAndSetupPool(
             poolOwner,
@@ -59,7 +58,8 @@ describe("Base Pool - LP and Admin functions", function () {
             humaConfigContract,
             feeManagerContract,
             testTokenContract,
-            0
+            0,
+            eaNFTContract
         );
     });
 
@@ -131,7 +131,7 @@ describe("Base Pool - LP and Admin functions", function () {
 
     describe("Deposit", function () {
         afterEach(async function () {
-            await humaConfigContract.connect(poolOwner).unpauseProtocol();
+            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
 
         it("Cannot deposit while protocol is paused", async function () {
@@ -163,12 +163,25 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
             expect(await hdtContract.totalSupply()).to.equal(6_000_000);
         });
+
+        it("Unapproved lenders cannot deposit", async function () {
+            await expect(poolContract.connect(borrower).deposit(1_000_000)).to.be.revertedWith(
+                "PERMISSION_DENIED_NOT_LENDER"
+            );
+        });
+
+        it("Removed lenders cannot deposit", async function () {
+            await poolContract.connect(poolOwner).removeApprovedLender(lender.address);
+            await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
+                "PERMISSION_DENIED_NOT_LENDER"
+            );
+        });
     });
 
     // In beforeEach() of Withdraw, we make sure there is 100 liquidity provided.
     describe("Withdraw", function () {
         afterEach(async function () {
-            await humaConfigContract.connect(poolOwner).unpauseProtocol();
+            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
 
         it("Should not withdraw while protocol is paused", async function () {

@@ -27,6 +27,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     event PoolInitialized(address _poolAddress);
 
     event EvaluationAgentChanged(address oldEA, address newEA, address by);
+    event AddApprovedLender(address lender, address by);
+    event RemoveApprovedLender(address lender, address by);
     event PoolNameChanged(string newName, address by);
     event PoolDisabled(address by);
     event PoolEnabled(address by);
@@ -127,6 +129,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
     function _deposit(address lender, uint256 amount) internal {
         require(amount > 0, "AMOUNT_IS_ZERO");
+        onlyApprovedLender(lender);
 
         _underlyingToken.safeTransferFrom(lender, address(this), amount);
         uint256 shares = _poolToken.mintAmount(lender, amount);
@@ -276,6 +279,18 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         emit EvaluationAgentChanged(oldEA, agent, msg.sender);
     }
 
+    function addApprovedLender(address lender) external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        approvedLenders[lender] = true;
+        emit AddApprovedLender(lender, msg.sender);
+    }
+
+    function removeApprovedLender(address lender) external virtual override {
+        onlyOwnerOrHumaMasterAdmin();
+        approvedLenders[lender] = false;
+        emit RemoveApprovedLender(lender, msg.sender);
+    }
+
     /**
      * @notice change the default APR for the pool
      * @param aprInBps APR in basis points, use 500 for 5%
@@ -413,7 +428,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
             string memory name,
             string memory symbol,
             uint8 decimals,
-            uint256 evaluationAgentId
+            uint256 evaluationAgentId,
+            address eaNFTAddress
         )
     {
         IERC20Metadata erc20Contract = IERC20Metadata(address(_poolToken));
@@ -426,7 +442,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
             erc20Contract.name(),
             erc20Contract.symbol(),
             erc20Contract.decimals(),
-            _evaluationAgentId
+            _evaluationAgentId,
+            HumaConfig(_humaConfig).eaNFTContractAddress()
         );
     }
 
@@ -459,6 +476,10 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
     function getFeeManager() external view returns (address) {
         return _feeManagerAddress;
+    }
+
+    function getEvaluationAgent() external view returns (address) {
+        return _evaluationAgent;
     }
 
     function creditApprovalExpiration() external view returns (uint256) {
@@ -500,6 +521,10 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
     function isOwnerOrEA() internal view returns (bool) {
         return (msg.sender == owner() || msg.sender == _evaluationAgent);
+    }
+
+    function onlyApprovedLender(address lender) internal view {
+        require((approvedLenders[lender] == true), "PERMISSION_DENIED_NOT_LENDER");
     }
 
     // In order for a pool to issue new loans, it must be turned on by an admin

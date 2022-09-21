@@ -216,7 +216,7 @@ contract HumaConfig is Ownable {
         emit PoolAdminRemoved(_poolAdmin, owner());
     }
 
-    function addEANFTContractAddress(address contractAddress) external onlyOwner {
+    function setEANFTContractAddress(address contractAddress) external onlyOwner {
         require(contractAddress != address(0), "EA_NFT_CONTRACT_ADDRESS_ZERO");
         eaNFTContractAddress = contractAddress;
     }

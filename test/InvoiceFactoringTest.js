@@ -23,7 +23,7 @@ const getInvoiceContractFromAddress = async function (address, signer) {
 // 3. Borrower borrows 400. 14 fee charged (2 to treasury, 12 to the pool). Borrower get 386
 // 4. Payback 500. The 100 extra will be transferred to the borrower, led to a balance of 486.
 // 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
-describe("Huma Invoice Financing", function () {
+describe("Invoice Factoring", function () {
     let invoiceContract;
     let hdtContract;
     let humaConfigContract;
@@ -103,7 +103,10 @@ describe("Huma Invoice Financing", function () {
 
         await testTokenContract.approve(invoiceContract.address, 100);
 
-        await invoiceContract.makeInitialDeposit(100);
+        await invoiceContract.connect(owner).addApprovedLender(owner.address);
+        await invoiceContract.connect(owner).addApprovedLender(lender.address);
+
+        await invoiceContract.connect(owner).makeInitialDeposit(100);
 
         expect(await invoiceContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(100);
@@ -145,7 +148,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(lender)
-                    .recordPreapprovedCredit(
+                    .recordApprovedCredit(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -163,7 +166,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(evaluationAgent)
-                    .recordPreapprovedCredit(
+                    .recordApprovedCredit(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -181,7 +184,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(evaluationAgent)
-                    .recordPreapprovedCredit(
+                    .recordApprovedCredit(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -197,7 +200,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(evaluationAgent)
-                    .recordPreapprovedCredit(
+                    .recordApprovedCredit(
                         borrower.address,
                         9999,
                         ethers.constants.AddressZero,
@@ -216,7 +219,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(evaluationAgent)
-                .recordPreapprovedCredit(
+                .recordApprovedCredit(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -240,7 +243,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(evaluationAgent)
-                .recordPreapprovedCredit(
+                .recordApprovedCredit(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -272,7 +275,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(evaluationAgent)
-                .recordPreapprovedCredit(
+                .recordApprovedCredit(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -404,7 +407,7 @@ describe("Huma Invoice Financing", function () {
             await invoiceContract.connect(lender).deposit(300);
             await invoiceContract
                 .connect(evaluationAgent)
-                .recordPreapprovedCredit(
+                .recordApprovedCredit(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
