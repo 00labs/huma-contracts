@@ -145,7 +145,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(lender)
-                    .recordPreapprovedCredit(
+                    .recordApprovedCredit(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -163,7 +163,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(evaluationAgent)
-                    .recordPreapprovedCredit(
+                    .recordApprovedCredit(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -181,7 +181,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(evaluationAgent)
-                    .recordPreapprovedCredit(
+                    .recordApprovedCredit(
                         borrower.address,
                         400,
                         ethers.constants.AddressZero,
@@ -197,7 +197,7 @@ describe("Huma Invoice Financing", function () {
             await expect(
                 invoiceContract
                     .connect(evaluationAgent)
-                    .recordPreapprovedCredit(
+                    .recordApprovedCredit(
                         borrower.address,
                         9999,
                         ethers.constants.AddressZero,
@@ -216,7 +216,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(evaluationAgent)
-                .recordPreapprovedCredit(
+                .recordApprovedCredit(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -240,7 +240,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(evaluationAgent)
-                .recordPreapprovedCredit(
+                .recordApprovedCredit(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -272,7 +272,7 @@ describe("Huma Invoice Financing", function () {
 
             await invoiceContract
                 .connect(evaluationAgent)
-                .recordPreapprovedCredit(
+                .recordApprovedCredit(
                     borrower.address,
                     400,
                     ethers.constants.AddressZero,
@@ -404,7 +404,7 @@ describe("Huma Invoice Financing", function () {
             await invoiceContract.connect(lender).deposit(300);
             await invoiceContract
                 .connect(evaluationAgent)
-                .recordPreapprovedCredit(
+                .recordApprovedCredit(
                     borrower.address,
                     400,
                     invoiceNFTContract.address,

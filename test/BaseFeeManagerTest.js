@@ -6,19 +6,19 @@ const {deployContracts, deployAndSetupPool} = require("./BaseTest");
 
 use(solidity);
 
+let eaNFTContract;
 let poolContract;
 let hdtContract;
 let humaConfigContract;
-let testTokenContract;
 let feeManagerContract;
-let defaultDeployer;
+let testTokenContract;
 let proxyOwner;
 let lender;
 let borrower;
-let borrower2;
 let treasury;
 let evaluationAgent;
-let poolOwner;
+let protocolOwner;
+
 let record;
 
 let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
@@ -45,14 +45,19 @@ let checkResult = function (r, v1, v2, v3, v4, v5) {
 
 describe("Base Fee Manager", function () {
     before(async function () {
-        [defaultDeployer, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
-            await ethers.getSigners();
-
-        [humaConfigContract, feeManagerContract, testTokenContract] = await deployContracts(
-            poolOwner,
+        [
+            defaultDeployer,
+            proxyOwner,
+            lender,
+            borrower,
             treasury,
-            lender
-        );
+            evaluationAgent,
+            poolOwner,
+            protocolOwner,
+        ] = await ethers.getSigners();
+
+        [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
+            await deployContracts(poolOwner, treasury, lender, protocolOwner);
 
         [hdtContract, poolContract] = await deployAndSetupPool(
             poolOwner,
@@ -62,8 +67,12 @@ describe("Base Fee Manager", function () {
             humaConfigContract,
             feeManagerContract,
             testTokenContract,
-            0
+            0,
+            eaNFTContract
         );
+
+        await poolContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
+        await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
     });
 
     describe("Admin functions", function () {
@@ -126,8 +135,10 @@ describe("Base Fee Manager", function () {
                 humaConfigContract,
                 feeManagerContract,
                 testTokenContract,
-                0
-            ); // Create a borrowing record
+                0,
+                eaNFTContract
+            );
+
             await poolContract.connect(borrower).requestCredit(400, 30, 12);
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
             await testTokenContract.connect(lender).approve(poolContract.address, 300);
@@ -194,8 +205,9 @@ describe("Base Fee Manager", function () {
                 humaConfigContract,
                 feeManagerContract,
                 testTokenContract,
-                500
-            ); // Principal payment 5% (500 bps) per cycle
+                500,
+                eaNFTContract
+            );
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100);
             await poolContract.connect(poolOwner).setAPR(1217);
