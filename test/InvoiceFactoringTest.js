@@ -157,7 +157,7 @@ describe("Invoice Factoring", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("APPROVER_REQUIRED");
+            ).to.be.revertedWith("evaluationAgentRequired()");
         });
 
         it("Should not allow posting approved loans while protocol is paused", async function () {
@@ -255,7 +255,7 @@ describe("Invoice Factoring", function () {
 
             await expect(
                 invoiceContract.connect(payer).invalidateApprovedCredit(borrower.address)
-            ).to.be.revertedWith("APPROVER_REQUIRED");
+            ).to.be.revertedWith("evaluationAgentRequired()");
 
             await invoiceContract
                 .connect(evaluationAgent)
@@ -451,7 +451,7 @@ describe("Invoice Factoring", function () {
                 invoiceContract
                     .connect(borrower)
                     .onReceivedPayment(borrower.address, testTokenContract.address, 500)
-            ).to.be.revertedWith("APPROVER_REQUIRED");
+            ).to.be.revertedWith("evaluationAgentRequired()");
         });
 
         it("Process payback", async function () {

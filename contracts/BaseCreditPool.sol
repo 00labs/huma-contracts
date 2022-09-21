@@ -8,6 +8,7 @@ import "./interfaces/ICredit.sol";
 
 import "./BasePool.sol";
 import "./BaseCreditPoolStorage.sol";
+import "./Errors.sol";
 
 import "hardhat/console.sol";
 
@@ -15,7 +16,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
     using BS for BS.CreditRecord;
-    error creditExpired();
 
     event DefaultTriggered(address indexed borrower, uint256 losses, address by);
     event PaymentMade(address indexed borrower, uint256 amount, address by);
@@ -226,18 +226,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             "NOT_APPROVED_OR_IN_GOOD_STANDING"
         );
 
-        // After the credit approval, if the pool has expiration for credit approval,
-        // the borrower must complete the first drawdown before the expiration date.
-        if (cr.state == BS.CreditState.Approved && cr.dueDate > 0 && block.timestamp > cr.dueDate)
-            revert creditExpired();
-
-        // Bring the account current by moving forward cycles to allow the due date of
-        // the current cycle to be ahead of block.timestamp.
-        if (cr.dueDate > 0) {
-            if (block.timestamp > cr.dueDate) cr = updateDueInfo(borrower, true);
-            require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
-        }
-
         // todo 8/23 add a test for this check
         require(
             borrowAmount <=
@@ -245,18 +233,35 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             "EXCEEDED_CREDIT_LMIIT"
         );
 
-        if (cr.dueDate > 0) {
-            // For non-first bill, we will accrue interest for the rest of the pay period
-            // and add to the bill of the next cycle.
+        bool isFirstDrawdown = cr.state == BS.CreditState.Approved ? true : false;
+
+        if (isFirstDrawdown) {
+            // After the credit approval, if the pool has credit expiration for first drawdown,
+            // the borrower must complete the first drawdown before the expiration date, which
+            // is set in cr.dueDate in approveCredit().
+            // note For pools without credit expiration for first drawdown, cr.dueDate is 0
+            // before the first drawdown, thus the cr.dueDate > 0 check
+            if (cr.dueDate > 0 && block.timestamp > cr.dueDate)
+                revert Errors.creditExpiredDueToFirstDrawdownTooLate();
+
+            // Update total principal
+            // cr.unbilledPrincipal = uint96(borrowAmount);
+            // _creditRecordMapping[borrower] = cr;
+            _creditRecordMapping[borrower].unbilledPrincipal = uint96(borrowAmount);
+
+            // Generates the first bill
+            cr = updateDueInfo(borrower, true);
+        } else {
+            // Bring the account current.
+            if (block.timestamp > cr.dueDate) cr = updateDueInfo(borrower, true);
+            require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
+
+            // For non-first bill, we do not update the current bill, the interest for the rest of
+            // this pay period is accrued in correction and be add to the next bill.
             cr.correction += int96(
                 uint96(IFeeManager(_feeManagerAddress).calcCorrection(cr, borrowAmount))
             );
-            cr.unbilledPrincipal = uint96(uint256(cr.unbilledPrincipal) + borrowAmount);
-        } else {
-            // For the first drawdown, generates the first bill
-            cr.unbilledPrincipal = uint96(borrowAmount);
-            _creditRecordMapping[borrower] = cr;
-            cr = updateDueInfo(borrower, true);
+            cr.unbilledPrincipal = uint96(cr.unbilledPrincipal + borrowAmount);
         }
 
         // Set account status in good standing
@@ -537,7 +542,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     }
 
     function onlyEvaluationAgent() internal view {
-        require(msg.sender == _evaluationAgent, "APPROVER_REQUIRED");
-        // require(msg.sender == HumaConfig(_humaConfig).eaServiceAccount(), "APPROVER_REQUIRED");
+        if (msg.sender != _evaluationAgent) revert Errors.evaluationAgentRequired();
     }
 }
