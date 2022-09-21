@@ -44,7 +44,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
-describe.only("Base Credit Pool", function () {
+describe("Base Credit Pool", function () {
     let poolContract;
     let hdtContract;
     let humaConfigContract;
@@ -109,7 +109,7 @@ describe.only("Base Credit Pool", function () {
         it("Should not allow credit line to be changed to above maximal credit line", async function () {
             await expect(
                 poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 50000000)
-            ).to.be.revertedWith("GREATER_THAN_LIMIT");
+            ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
         it("Should allow credit limit to be changed", async function () {
             await poolContract

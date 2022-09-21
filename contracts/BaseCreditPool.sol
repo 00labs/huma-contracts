@@ -167,7 +167,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
         onlyEvaluationAgent();
         // Borrowing amount needs to be lower than max for the pool.
-        require(_poolConfig._maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
+        if (newLine > _poolConfig._maxCreditLine) revert Errors.greaterThanMaxCreditLine();
 
         _creditRecordMapping[borrower].creditLimit = uint96(newLine);
     }
