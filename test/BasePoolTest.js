@@ -195,15 +195,17 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Should reject if the withdraw amount is higher than deposit", async function () {
             const loanWithdrawalLockout = await poolContract.withdrawalLockoutPeriodInSeconds();
             await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
+            await ethers.provider.send("evm_mine", []);
+
             await expect(poolContract.connect(lender).withdraw(3_000_000)).to.be.revertedWith(
                 "WITHDRAW_AMT_TOO_GREAT"
             );
         });
 
         it("Pool withdrawal works correctly", async function () {
-            // Increment block by lockout period
             const loanWithdrawalLockout = await poolContract.withdrawalLockoutPeriodInSeconds();
             await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
+            await ethers.provider.send("evm_mine", []);
 
             await poolContract.connect(lender).withdraw(1_000_000);
 
@@ -212,6 +214,32 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(await hdtContract.balanceOf(lender.address)).to.equal(1_000_000);
             expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
             expect(await hdtContract.totalSupply()).to.equal(4_000_000);
+        });
+
+        it("Minimum liquidity requirements for pool owner and EA", async function () {
+            const loanWithdrawalLockout = await poolContract.withdrawalLockoutPeriodInSeconds();
+            await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
+            await ethers.provider.send("evm_mine", []);
+
+            await expect(poolContract.connect(poolOwner).withdraw(10)).to.be.revertedWith(
+                "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
+            );
+
+            // Should succeed
+            await poolContract.connect(evaluationAgent).withdraw(10);
+            // Should fail
+            await expect(
+                poolContract.connect(evaluationAgent).withdraw(1_000_000)
+            ).to.be.revertedWith("POOL_EA_NOT_ENOUGH_LIQUIDITY");
+            // Update liquidity rate for EA to be lower
+            await poolContract.connect(poolOwner).setEARewardsAndLiquidity(625, 5);
+            // Should succeed
+            await poolContract.connect(evaluationAgent).withdraw(1_000_000);
+
+            // Update liquidity rate for pool owner to be lower
+            await poolContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 1);
+            // Should succeed
+            await poolContract.connect(poolOwner).withdraw(10);
         });
     });
 });

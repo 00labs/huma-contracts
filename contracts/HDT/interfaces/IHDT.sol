@@ -20,5 +20,9 @@ interface IHDT {
 
     function burn(address account, uint256 shares) external returns (uint256 amount);
 
+    function convertToShares(uint256 assets) external returns (uint256);
+
+    function convertToAssets(uint256 shares) external returns (uint256);
+
     function assetToken() external view returns (address);
 }

@@ -11,6 +11,7 @@ import "./BasePoolStorage.sol";
 import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
 
+import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./EvaluationAgentNFT.sol";
 
@@ -156,11 +157,13 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
         require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
 
-        // Todo If msg.sender is pool owner or EA, make sure they have enough reserve in the pool
-
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
+
+        if (isOwnerOrEA()) {
+            requireMinimumPoolOwnerAndEALiquidity();
+        }
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
@@ -319,20 +322,8 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
+        requireMinimumPoolOwnerAndEALiquidity();
 
-        require(
-            IERC20(address(_poolToken)).balanceOf(owner()) >=
-                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByPoolOwner) /
-                    BPS_DIVIDER,
-            "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
-        );
-        require(
-            IERC20(address(_poolToken)).balanceOf(_evaluationAgent) >=
-                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByEA) / BPS_DIVIDER,
-            "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
-        );
-
-        // Todo make sure pool owner has contributed the required liquidity to the pool.
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
     }
@@ -504,10 +495,11 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     }
 
     function onlyOwnerOrEA() internal view {
-        require(
-            (msg.sender == owner() || msg.sender == _evaluationAgent),
-            "PERMISSION_DENIED_NOT_ADMIN"
-        );
+        require(isOwnerOrEA(), "PERMISSION_DENIED_NOT_ADMIN");
+    }
+
+    function isOwnerOrEA() internal view returns (bool) {
+        return (msg.sender == owner() || msg.sender == _evaluationAgent);
     }
 
     // In order for a pool to issue new loans, it must be turned on by an admin
@@ -519,5 +511,20 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
     function denyZeroAddress(address addr) internal pure {
         require(addr != address(0), "ADDRESS_0_PROVIDED");
+    }
+
+    function requireMinimumPoolOwnerAndEALiquidity() internal view {
+        HDT poolTokenContract = HDT(address(_poolToken));
+        require(
+            poolTokenContract.convertToAssets(poolTokenContract.balanceOf(owner())) >=
+                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByPoolOwner) /
+                    BPS_DIVIDER,
+            "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
+        );
+        require(
+            poolTokenContract.convertToAssets(poolTokenContract.balanceOf(_evaluationAgent)) >=
+                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByEA) / BPS_DIVIDER,
+            "POOL_EA_NOT_ENOUGH_LIQUIDITY"
+        );
     }
 }
