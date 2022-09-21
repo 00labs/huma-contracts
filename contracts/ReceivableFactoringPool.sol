@@ -14,10 +14,12 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     using SafeERC20 for IERC20;
 
     event ReceivedPayment(
+        address indexed sender,
         address indexed borrower,
-        uint256 timestamp,
         address asset,
-        uint256 amount
+        uint256 assetId,
+        uint256 amount,
+        uint256 paymentId
     );
 
     /**
@@ -29,7 +31,9 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     function onReceivedPayment(
         address borrower,
         address asset,
-        uint256 amount
+        uint256 assetId,
+        uint256 amount,
+        uint256 paymentId
     ) external virtual override {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
@@ -60,7 +64,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
 
         disperseRemainingFunds(borrower, refundAmount);
 
-        emit ReceivedPayment(borrower, block.timestamp, asset, amount);
+        emit ReceivedPayment(msg.sender, borrower, asset, assetId, amount, paymentId);
     }
 
     /**

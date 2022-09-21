@@ -12,6 +12,8 @@ interface IReceivable {
     function onReceivedPayment(
         address borrower,
         address asset,
-        uint256 amount
+        uint256 assetId,
+        uint256 amount,
+        uint256 paymentId
     ) external;
 }
