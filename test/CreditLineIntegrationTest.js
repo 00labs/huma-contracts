@@ -300,7 +300,7 @@ describe("Credit Line Integration Test", async function () {
     it("Day 352: Drawdown blocked due to over limit", async function () {
         advanceClock(2);
         await expect(poolContract.connect(borrower).drawdown(2000)).to.be.revertedWith(
-            "EXCEEDED_CREDIT_LMIIT"
+            "creditLineExceeded()"
         );
     });
 
@@ -347,7 +347,9 @@ describe("Credit Line Integration Test", async function () {
 
     it("Day 400: Additional drawdown blocked (credit line matured)", async function () {
         advanceClock(10);
-        await expect(poolContract.connect(borrower).drawdown(10)).to.be.revertedWith("EXPIRED");
+        await expect(poolContract.connect(borrower).drawdown(10)).to.be.revertedWith(
+            "creditExpiredDueToMaturity()"
+        );
     });
 
     it("Day 415: Payoff", async function () {

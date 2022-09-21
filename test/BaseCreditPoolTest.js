@@ -44,7 +44,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
-describe("Base Credit Pool", function () {
+describe.only("Base Credit Pool", function () {
     let poolContract;
     let hdtContract;
     let humaConfigContract;
@@ -154,7 +154,7 @@ describe("Base Credit Pool", function () {
         it("Cannot request loan greater than limit", async function () {
             await expect(
                 poolContract.connect(borrower).requestCredit(10_000_001, 30, 12)
-            ).to.be.revertedWith("GREATER_THAN_LIMIT");
+            ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
 
         it("Loan requested by borrower initiates correctly", async function () {
@@ -162,16 +162,22 @@ describe("Base Credit Pool", function () {
 
             await poolContract.connect(poolOwner).setAPR(1217);
 
-            // await testTokenContract.connect(borrower).approve(poolContract.address, 0);
-
-            // await testTokenContract.connect(borrower).approve(poolContract.address, 1_000_000);
-
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
             const loanInformation = await poolContract.getCreditInformation(borrower.address);
             expect(loanInformation.creditLimit).to.equal(1_000_000);
             expect(loanInformation.intervalInDays).to.equal(30);
             expect(loanInformation.aprInBps).to.equal(1217);
+        });
+
+        it("Shall reject loan requests if there is an outstanding laon", async function () {
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
+            await poolContract.connect(poolOwner).setAPR(1217);
+            await poolContract.connect(borrower).requestCredit(1_000, 30, 12);
+
+            await expect(
+                poolContract.connect(borrower).requestCredit(1_000, 30, 12)
+            ).to.be.revertedWith("creditLineAlreadyExists()");
         });
     });
 
@@ -193,19 +199,24 @@ describe("Base Credit Pool", function () {
 
         it("Should reject drawdown before approval", async function () {
             await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
-                "NOT_APPROVED_OR_IN_GOOD_STANDING"
+                "creditLineNotInApprovedOrGoodStandingState()"
             );
         });
 
-        it("Should reject drawdown when account is defaulted or in default grace period", async function () {});
+        it("Should reject drawdown when account is defaulted or in default grace period", async function () {
+            // await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            // await poolContract.connect(borrower).drawdown(1_000);
+            //advanceClock(180);
+            // await expect(poolContract.connect(borrower).drawdown(1_000)).to.be.revertedWith(
+            //     "creditLineNotInApprovedOrGoodStandingState()"
+            // );
+        });
         it("Should reject drawdown when account is deleted", async function () {});
         it("Should reject drawdown in the final pay period of the credit line", async function () {});
         it("Should reject drawdown if the combined balance is higher than the credit limit", async function () {});
 
         it("Borrow less than approved amount", async function () {
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
-
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
             // Should return false when no loan exists

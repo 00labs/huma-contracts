@@ -68,10 +68,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
         // todo add a test for this check
-        require(_creditRecordMapping[borrower].creditLimit == 0, "CREDIT_LINE_ALREADY_EXIST");
+        if (_creditRecordMapping[borrower].state != BS.CreditState.Deleted)
+            revert Errors.creditLineAlreadyExists();
 
         // Borrowing amount needs to be lower than max for the pool.
-        require(_poolConfig._maxCreditLine >= creditLimit, "GREATER_THAN_LIMIT");
+        if (creditLimit > _poolConfig._maxCreditLine) {
+            revert Errors.greaterThanMaxCreditLine();
+        }
 
         // Populates basic credit info fields
         BS.CreditRecord memory cr;
@@ -221,17 +224,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        require(
-            cr.state == BS.CreditState.Approved || cr.state == BS.CreditState.GoodStanding,
-            "NOT_APPROVED_OR_IN_GOOD_STANDING"
-        );
+        if (cr.state != BS.CreditState.Approved && cr.state != BS.CreditState.GoodStanding)
+            revert Errors.creditLineNotInApprovedOrGoodStandingState();
 
         // todo 8/23 add a test for this check
-        require(
-            borrowAmount <=
-                (cr.creditLimit - cr.unbilledPrincipal - (cr.totalDue - cr.feesAndInterestDue)),
-            "EXCEEDED_CREDIT_LMIIT"
-        );
+        if (
+            borrowAmount >
+            (cr.creditLimit - cr.unbilledPrincipal - (cr.totalDue - cr.feesAndInterestDue))
+        ) revert Errors.creditLineExceeded();
 
         bool isFirstDrawdown = cr.state == BS.CreditState.Approved ? true : false;
 
@@ -254,7 +254,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         } else {
             // Bring the account current.
             if (block.timestamp > cr.dueDate) cr = updateDueInfo(borrower, true);
-            require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
+
+            // note Drawdown is not allowed in the final pay period since the payment due for
+            // such drawdown will fall outside of the window of the credit line.
+            // note since we bill at the beginning of a period, cr.remainingPeriods is zero
+            // in the final period.
+            if (cr.remainingPeriods == 0) revert Errors.creditExpiredDueToMaturity();
+            //            require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
 
             // For non-first bill, we do not update the current bill, the interest for the rest of
             // this pay period is accrued in correction and be add to the next bill.
