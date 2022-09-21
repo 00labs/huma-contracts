@@ -36,6 +36,9 @@ async function deployContracts() {
     ]);
 
     const evaluation_agent_NFT = await deploy("EvaluationAgentNFT", "EANFT");
+
+    const invoice_NFT = await deploy("InvoiceNFT", "RNNFT",
+        [usdc.address]);
 }
 
 deployContracts()
