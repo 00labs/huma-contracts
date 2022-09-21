@@ -79,14 +79,14 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         _burn(account, shares);
     }
 
-    function convertToShares(uint256 assets) public view virtual override returns (uint256) {
+    function convertToShares(uint256 assets) public view virtual returns (uint256) {
         uint256 ts = totalSupply();
         uint256 ta = totalAssets();
 
         return ts == 0 ? assets : (assets * ts) / ta;
     }
 
-    function convertToAssets(uint256 shares) public view virtual override returns (uint256) {
+    function convertToAssets(uint256 shares) public view virtual returns (uint256) {
         uint256 ts = totalSupply();
         uint256 ta = totalAssets();
 

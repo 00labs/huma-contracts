@@ -515,15 +515,15 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
     function requireMinimumPoolOwnerAndEALiquidity() internal view {
         HDT poolTokenContract = HDT(address(_poolToken));
+        PoolConfig memory config = _poolConfig;
         require(
             poolTokenContract.convertToAssets(poolTokenContract.balanceOf(owner())) >=
-                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByPoolOwner) /
-                    BPS_DIVIDER,
+                (config._liquidityCap * config._liquidityRateInBpsByPoolOwner) / BPS_DIVIDER,
             "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
         );
         require(
             poolTokenContract.convertToAssets(poolTokenContract.balanceOf(_evaluationAgent)) >=
-                (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByEA) / BPS_DIVIDER,
+                (config._liquidityCap * config._liquidityRateInBpsByEA) / BPS_DIVIDER,
             "POOL_EA_NOT_ENOUGH_LIQUIDITY"
         );
     }
