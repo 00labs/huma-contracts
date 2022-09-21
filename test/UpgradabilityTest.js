@@ -16,14 +16,30 @@ describe("Upgradability Test", function () {
     let evaluationAgent;
     let poolImpl;
     let poolProxy;
+    let protocolOwner;
+    let eaNFTContract;
 
     before(async function () {
-        [owner, proxyOwner, lender, borrower, borrower2, treasury, evaluationAgent] =
-            await ethers.getSigners();
+        [
+            defaultDeployer,
+            proxyOwner,
+            lender,
+            borrower,
+            treasury,
+            evaluationAgent,
+            owner,
+            protocolOwner,
+        ] = await ethers.getSigners();
+
+        // Deploy EvaluationAgentNFT
+        const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
+        eaNFTContract = await EvaluationAgentNFT.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         humaConfigContract = await HumaConfig.deploy(treasury.address);
-        humaConfigContract.setHumaTreasury(treasury.address);
+        await humaConfigContract.setHumaTreasury(treasury.address);
+        await humaConfigContract.setEANFTContractAddress(eaNFTContract.address);
+        await humaConfigContract.transferOwnership(protocolOwner.address);
 
         const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
         feeManagerContract = await feeManagerFactory.deploy();
@@ -77,7 +93,19 @@ describe("Upgradability Test", function () {
         await testTokenContract.approve(poolContract.address, 100);
 
         await poolContract.setMaxCreditLine(1000);
-        await poolContract.setEvaluationAgent(12345, evaluationAgent.address);
+
+        let eaNFTTokenId;
+        // Mint EANFT to the borrower
+        const tx = await eaNFTContract.mint(evaluationAgent.address, "");
+        const receipt = await tx.wait();
+        for (const evt of receipt.events) {
+            if (evt.event === "EANFTGenerated") {
+                eaNFTTokenId = evt.args[0];
+            }
+        }
+
+        await poolContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
+
         await poolContract.enablePool();
     });
 

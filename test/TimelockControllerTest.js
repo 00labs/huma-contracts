@@ -18,6 +18,7 @@ describe("TimelockController Test", function () {
     let treasury;
     let lender;
     let timelockContract;
+    let eaNFTContract;
 
     async function advanceClock(seconds) {
         await ethers.provider.send("evm_increaseTime", [seconds]);
@@ -48,20 +49,18 @@ describe("TimelockController Test", function () {
         [
             defaultDeployer,
             proxyOwner,
-            protocolOwner,
-            poolOwner,
-            evaluationAgent,
-            treasury,
             lender,
+            borrower,
+            treasury,
+            evaluationAgent,
+            poolOwner,
+            protocolOwner,
         ] = await ethers.getSigners();
     });
 
     beforeEach(async function () {
-        [humaConfigContract, feeManagerContract, testTokenContract] = await deployContracts(
-            poolOwner,
-            treasury,
-            lender
-        );
+        [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
+            await deployContracts(poolOwner, treasury, lender, protocolOwner);
 
         [hdtContract, poolContract] = await deployAndSetupPool(
             poolOwner,
@@ -71,7 +70,8 @@ describe("TimelockController Test", function () {
             humaConfigContract,
             feeManagerContract,
             testTokenContract,
-            0
+            0,
+            eaNFTContract
         );
 
         const TimelockController = await ethers.getContractFactory("TimelockController");

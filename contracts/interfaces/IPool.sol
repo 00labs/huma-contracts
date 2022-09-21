@@ -59,7 +59,8 @@ interface IPool {
             string memory name,
             string memory symbol,
             uint8 decimal,
-            uint256 evaluationAgentId
+            uint256 evaluationAgentId,
+            address eaNFTContractAddress
         );
 
     function totalPoolValue() external view returns (uint256);

@@ -22,6 +22,8 @@ let poolOwner;
 let record;
 let initialTimestamp;
 let dueDate;
+let protocolOwner;
+let eaNFTContract;
 
 let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
     if (v1 != "SKIP") expect(r.creditLimit).to.equal(v1);
@@ -52,14 +54,19 @@ let advanceClock = async function (days) {
 
 describe("Credit Line Integration Test", async function () {
     before(async function () {
-        [defaultDeployer, proxyOwner, lender, borrower, treasury, evaluationAgent, poolOwner] =
-            await ethers.getSigners();
-
-        [humaConfigContract, feeManagerContract, testTokenContract] = await deployContracts(
-            poolOwner,
+        [
+            defaultDeployer,
+            proxyOwner,
+            lender,
+            borrower,
             treasury,
-            lender
-        );
+            evaluationAgent,
+            poolOwner,
+            protocolOwner,
+        ] = await ethers.getSigners();
+
+        [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
+            await deployContracts(poolOwner, treasury, lender, protocolOwner);
 
         [hdtContract, poolContract] = await deployAndSetupPool(
             poolOwner,
@@ -69,7 +76,8 @@ describe("Credit Line Integration Test", async function () {
             humaConfigContract,
             feeManagerContract,
             testTokenContract,
-            500
+            500,
+            eaNFTContract
         );
 
         await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500);
