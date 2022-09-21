@@ -13,6 +13,13 @@ import "./BaseCreditPool.sol";
 contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     using SafeERC20 for IERC20;
 
+    event ReceivedPayment(
+        address indexed borrower,
+        uint256 timestamp,
+        address asset,
+        uint256 amount
+    );
+
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
@@ -52,6 +59,8 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         _creditRecordMapping[borrower] = cr;
 
         disperseRemainingFunds(borrower, refundAmount);
+
+        emit ReceivedPayment(borrower, block.timestamp, asset, amount);
     }
 
     /**
