@@ -500,12 +500,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Check if grace period has exceeded. Please note it takes a full pay period
         // before the account is considered to be late. The time passed should be one pay period
         // plus the grace period.
-        uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
-        require(
-            cr.missedPeriods * intervalInDays * SECONDS_IN_A_DAY >=
-                _poolConfig._poolDefaultGracePeriodInSeconds + intervalInDays * SECONDS_IN_A_DAY,
-            "DEFAULT_TRIGGERED_TOO_EARLY"
-        );
+        if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
+
         losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
         distributeLosses(losses);
 
@@ -583,6 +579,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function isLate(address borrower) external view returns (bool) {
         return block.timestamp > _creditRecordMapping[borrower].dueDate ? true : false;
+    }
+
+    function isDefaultReady(address borrower) public view returns (bool) {
+        uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
+        return
+            _creditRecordMapping[borrower].missedPeriods * intervalInDays * SECONDS_IN_A_DAY >=
+                _poolConfig._poolDefaultGracePeriodInSeconds + intervalInDays * SECONDS_IN_A_DAY
+                ? true
+                : false;
     }
 
     function onlyEvaluationAgent() internal view {
