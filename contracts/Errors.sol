@@ -11,4 +11,5 @@ contract Errors {
     error greaterThanMaxCreditLine();
     error zeroAddressProvided();
     error paymentDetectionServiceAccountRequired();
+    error defaultTriggeredTooEarly();
 }

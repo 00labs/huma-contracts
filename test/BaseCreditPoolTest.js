@@ -383,7 +383,7 @@ describe("Base Credit Pool", function () {
             await poolContract.updateDueInfo(borrower.address, true);
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
             await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                "DEFAULT_TRIGGERED_TOO_EARLY"
+                "defaultTriggeredTooEarly()"
             );
 
             expect(creditInfo.unbilledPrincipal).to.equal(1_010_002);
@@ -399,7 +399,7 @@ describe("Base Credit Pool", function () {
             await poolContract.updateDueInfo(borrower.address, true);
             creditInfo = await poolContract.getCreditInformation(borrower.address);
             await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                "DEFAULT_TRIGGERED_TOO_EARLY"
+                "defaultTriggeredTooEarly()"
             );
 
             expect(creditInfo.unbilledPrincipal).to.equal(1_032_204);

@@ -495,7 +495,7 @@ describe("Invoice Factoring", function () {
         describe("Default flow", async function () {
             it("Writeoff less than pool value", async function () {
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                    "defaultTriggeredTooEarly()"
                 );
                 // post withdraw
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(102);
@@ -514,7 +514,7 @@ describe("Invoice Factoring", function () {
                 await invoiceContract.updateDueInfo(borrower.address, true);
 
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                    "defaultTriggeredTooEarly()"
                 );
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(105);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(420);
@@ -529,7 +529,7 @@ describe("Invoice Factoring", function () {
                 await invoiceContract.updateDueInfo(borrower.address, true);
 
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                    "defaultTriggeredTooEarly()"
                 );
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(109);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(432);
@@ -566,12 +566,12 @@ describe("Invoice Factoring", function () {
             });
             it("Writeoff more than pool value", async function () {
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                    "defaultTriggeredTooEarly()"
                 );
 
                 advanceClock(60);
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "DEFAULT_TRIGGERED_TOO_EARLY"
+                    "defaultTriggeredTooEarly()"
                 );
 
                 advanceClock(60);

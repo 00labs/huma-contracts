@@ -42,8 +42,6 @@ contract HumaConfig is Ownable {
     /// address of EvaluationAgentNFT contract
     address public eaNFTContractAddress;
 
-    error zeroAddress();
-
     /// pausers can pause the pool.
     mapping(address => bool) private pausers;
 
