@@ -203,14 +203,7 @@ describe("Base Credit Pool", function () {
             );
         });
 
-        it("Should reject drawdown when account is defaulted or in default grace period", async function () {
-            // await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
-            // await poolContract.connect(borrower).drawdown(1_000);
-            //advanceClock(180);
-            // await expect(poolContract.connect(borrower).drawdown(1_000)).to.be.revertedWith(
-            //     "creditLineNotInApprovedOrGoodStandingState()"
-            // );
-        });
+        it("Should reject drawdown when account is defaulted or in default grace period", async function () {});
         it("Should reject drawdown when account is deleted", async function () {});
         it("Should reject drawdown in the final pay period of the credit line", async function () {});
         it("Should reject drawdown if the combined balance is higher than the credit limit", async function () {});
@@ -222,6 +215,7 @@ describe("Base Credit Pool", function () {
             // Should return false when no loan exists
             expect(await poolContract.isApproved(evaluationAgent.address)).to.equal(false);
 
+            console.log(await testTokenContract.balanceOf(borrower.address));
             await poolContract.connect(borrower).drawdown(100_000);
 
             // Two streams of income
