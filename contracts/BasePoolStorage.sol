@@ -26,7 +26,7 @@ contract BasePoolStorage {
     address internal _humaConfig;
 
     // Address for the fee manager contract
-    address internal _feeManagerAddress;
+    address internal _feeManager;
 
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => uint256) internal _lastDepositTime;
@@ -95,5 +95,5 @@ contract BasePoolStorage {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[100] private __gap;
+    uint256[99] private __gap;
 }

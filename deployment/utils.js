@@ -24,40 +24,52 @@ const readFileContent = async function (fileType = "deployed") {
 };
 
 const getDeployedContract = async function (contractName) {
-    const content = await readFileContent("deployed");
-    const contracts = JSON.parse(content);
-    return contracts[contractName];
+    return await getContract("deployed", contractName);
 };
 
 const getInitilizedContract = async function (contractName) {
-    const content = await readFileContent("initialized");
-    const contracts = JSON.parse(content);
-    return contracts[contractName];
+    return await getContract("initialized", contractName);
+};
+
+const getUpgradedContract = async function (contractName) {
+    return await getContract("upgraded", contractName);
 };
 
 const getDeployedContracts = async function () {
-    const content = await readFileContent("deployed");
+    return await getContracts("deployed");
+};
+
+async function getContracts(type) {
+    const content = await readFileContent(type);
     const contracts = JSON.parse(content);
     return contracts;
+}
+
+async function getContract(type, contractName) {
+    const contracts = await getContracts(type);
+    return contracts[contractName];
+}
+
+const updateDeployedContract = async function (contractName, contractAddress) {
+    await updateContract("deployed", contractName, contractAddress);
 };
 
-const updateDeployedContracts = async function (contractName, contractAddress) {
-    const oldData = await readFileContent("deployed");
-    let contracts = JSON.parse(oldData);
-    contracts[contractName] = contractAddress;
-    const newData = JSON.stringify(contracts);
-    const deployedContractsFile = await getContractAddressFile("deployed");
-    fs.writeFileSync(deployedContractsFile, newData);
+const updateInitilizedContract = async function (contractName) {
+    await updateContract("initialized", contractName, "Done");
 };
 
-const updateInitilizedContracts = async function (contractName) {
-    const oldData = await readFileContent("initialized");
-    let contracts = JSON.parse(oldData);
-    contracts[contractName] = "Done";
-    const newData = JSON.stringify(contracts);
-    const deployedContractsFile = await getContractAddressFile("initialized");
-    fs.writeFileSync(deployedContractsFile, newData);
+const updateUpgradedContract = async function (contractName) {
+    await updateContract("upgraded", contractName, "Done");
 };
+
+async function updateContract(type, contractName, value) {
+    const oldData = await readFileContent(type);
+    let contracts = JSON.parse(oldData);
+    contracts[contractName] = value;
+    const newData = JSON.stringify(contracts);
+    const deployedContractsFile = await getContractAddressFile(type);
+    fs.writeFileSync(deployedContractsFile, newData);
+}
 
 const getSigner = async function (index) {
     const accounts = await hre.ethers.getSigners();
@@ -125,17 +137,19 @@ async function deploy(contractName, keyName, contractParameters, deployer) {
     console.log(`${keyName} TransactionHash: ${contract.deployTransaction.hash}`);
     await contract.deployed();
     console.log(`${keyName}: ${contract.address}`);
-    await updateDeployedContracts(keyName, contract.address);
+    await updateDeployedContract(keyName, contract.address);
     console.log(`Deploy ${keyName} Done!`);
     return contract;
 }
 
 module.exports = {
     getInitilizedContract,
-    updateInitilizedContracts,
+    updateInitilizedContract,
     getDeployedContract,
     getDeployedContracts,
-    updateDeployedContracts,
+    updateDeployedContract,
+    getUpgradedContract,
+    updateUpgradedContract,
     getSigner,
     checkReceiptOk,
     sendTransaction,

@@ -86,7 +86,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         _poolToken = IHDT(poolToken);
         _underlyingToken = IERC20(_poolToken.assetToken());
         _humaConfig = humaConfig;
-        _feeManagerAddress = feeManager;
+        _feeManager = feeManager;
 
         _poolConfig._withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS; // todo need to make this configurable
         _poolConfig._poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
@@ -96,6 +96,12 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
         __Ownable_init();
 
         emit PoolInitialized(address(this));
+    }
+
+    function setHumaConfigAndFeeManager(address humaConfig, address feeManager) external {
+        onlyOwnerOrHumaMasterAdmin();
+        _humaConfig = humaConfig;
+        _feeManager = feeManager;
     }
 
     function setPoolToken(address poolToken) external {
@@ -475,7 +481,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     }
 
     function getFeeManager() external view returns (address) {
-        return _feeManagerAddress;
+        return _feeManager;
     }
 
     function getEvaluationAgent() external view returns (address) {

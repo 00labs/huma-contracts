@@ -1,12 +1,12 @@
 const {BigNumber: BN} = require("ethers");
-const {isPrefixUnaryExpression} = require("typescript");
 const {
     getInitilizedContract,
-    updateInitilizedContracts,
+    updateInitilizedContract,
     getDeployedContracts,
     sendTransaction,
-    getSigner,
 } = require("./utils.js");
+
+const EA_SERVICE_ACCOUNT = "0xDE5Db91B5F82f8b8c085fA9C5F290B00A0101D81";
 
 let deployer, deployedContracts;
 
@@ -25,6 +25,10 @@ async function initHumaConfig() {
         throw new Error("HumaConfigTimelock not deployed yet!");
     }
 
+    if (!deployedContracts["EANFT"]) {
+        throw new Error("EANFT not deployed yet!");
+    }
+
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
 
@@ -35,15 +39,19 @@ async function initHumaConfig() {
         30 * 24 * 3600,
     ]);
     await sendTransaction("HumaConfig", humaConfig, "setTreasuryFee", [500]);
-    await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
+    await sendTransaction("HumaConfig", humaConfig, "setEANFTContractAddress", [
+        deployedContracts["EANFT"],
+    ]);
+    await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [EA_SERVICE_ACCOUNT]);
 
+    await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
     const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
     await sendTransaction("HumaConfigTimelock", humaConfigTL, "renounceRole", [
         adminRole,
         deployer.address,
     ]);
 
-    await updateInitilizedContracts("HumaConfig");
+    await updateInitilizedContract("HumaConfig");
 }
 
 async function initFeeManager() {
@@ -70,7 +78,7 @@ async function initFeeManager() {
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
 
-    await updateInitilizedContracts("ReceivableFactoringPoolFeeManager");
+    await updateInitilizedContract("ReceivableFactoringPoolFeeManager");
 }
 async function initHDT() {
     const initilized = await getInitilizedContract("HDT");
@@ -102,7 +110,7 @@ async function initHDT() {
 
     await sendTransaction("HDT", hdt, "setPool", [deployedContracts["ReceivableFactoringPool"]]);
 
-    await updateInitilizedContracts("HDT");
+    await updateInitilizedContract("HDT");
 }
 async function initPool() {
     const initilized = await getInitilizedContract("ReceivableFactoringPool");
@@ -169,7 +177,7 @@ async function initPool() {
     await sendTransaction("ReceivableFactoringPool", pool, "setWithdrawalLockoutPeriod", [90]);
     await sendTransaction("ReceivableFactoringPool", pool, "setPoolDefaultGracePeriod", [60]);
 
-    await updateInitilizedContracts("ReceivableFactoringPool");
+    await updateInitilizedContract("ReceivableFactoringPool");
 }
 
 async function prepare() {

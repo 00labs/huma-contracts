@@ -47,7 +47,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         // todo For security, verify that we have indeeded received the payment.
         // If asset is not received, EA might be compromised. Emit event.
 
-        uint256 lateFee = IFeeManager(_feeManagerAddress).calcLateFee(
+        uint256 lateFee = IFeeManager(_feeManager).calcLateFee(
             cr.dueDate,
             cr.totalDue,
             cr.unbilledPrincipal
