@@ -44,7 +44,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
-describe.only("Base Credit Pool", function () {
+describe("Base Credit Pool", function () {
     let poolContract;
     let hdtContract;
     let humaConfigContract;
@@ -432,7 +432,7 @@ describe.only("Base Credit Pool", function () {
             expect(await hdtContract.totalSupply()).to.equal(5_000_000);
             expect(await poolContract.totalPoolValue()).to.equal(3_984_663);
             expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(796_932);
-            expect(await hdtContract.withdrawableFundsOf(eaServiceAccount.address)).to.equal(
+            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
                 1_593_865
             );
             expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_593_865);

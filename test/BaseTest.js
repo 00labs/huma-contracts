@@ -11,7 +11,6 @@ async function deployContracts(
     pdsServiceAccount,
     fees = [1000, 100, 2000, 100]
 ) {
-    console.log("In deployContracts, eaServiceAccount=", eaServiceAccount.address);
     // Deploy EvaluationAgentNFT
     const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
     eaNFTContract = await EvaluationAgentNFT.deploy();

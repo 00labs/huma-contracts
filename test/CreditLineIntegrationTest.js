@@ -25,6 +25,8 @@ let initialTimestamp;
 let dueDate;
 let protocolOwner;
 let eaNFTContract;
+let eaServiceAccount;
+let pdsServiceAccount;
 
 let checkRecord = function (r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
     if (v1 != "SKIP") expect(rs.creditLimit).to.equal(v1);
@@ -59,10 +61,19 @@ describe("Credit Line Integration Test", async function () {
             evaluationAgent,
             poolOwner,
             protocolOwner,
+            eaServiceAccount,
+            pdsServiceAccount,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
-            await deployContracts(poolOwner, treasury, lender, protocolOwner);
+            await deployContracts(
+                poolOwner,
+                treasury,
+                lender,
+                protocolOwner,
+                eaServiceAccount,
+                pdsServiceAccount
+            );
 
         [hdtContract, poolContract] = await deployAndSetupPool(
             poolOwner,
@@ -88,7 +99,7 @@ describe("Credit Line Integration Test", async function () {
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5000, 0, "SKIP", 0, 0, 0, 0, 12, 1217, 30, 1);
 
-        await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+        await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5000, 0, "SKIP", 0, 0, 0, 0, 12, 1217, 30, 2);
@@ -295,7 +306,7 @@ describe("Credit Line Integration Test", async function () {
     // Note, this is for testing purpose. In reality, it is unliekly to extend the line by 30 days
     it("Day 345: Extend the credit line by 60 days", async function () {
         advanceClock(15);
-        await poolContract.connect(evaluationAgent).extendCreditLineDuration(borrower.address, 2);
+        await poolContract.connect(eaServiceAccount).extendCreditLineDuration(borrower.address, 2);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 4080, 80, 0, 2, 1217, 30, 3);
