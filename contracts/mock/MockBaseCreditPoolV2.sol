@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../BasePool.sol";
 import "../BaseCreditPoolStorage.sol";
+import "../Errors.sol";
 
 contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
     function changeCreditLine(address borrower, uint256 newLine) external {
@@ -23,6 +24,6 @@ contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
     }
 
     function onlyEvaluationAgent() internal view {
-        require(_evaluationAgent == msg.sender, "APPROVER_REQUIRED");
+        if (_evaluationAgent != msg.sender) revert Errors.evaluationAgentRequired();
     }
 }

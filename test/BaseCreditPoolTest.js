@@ -44,7 +44,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
-describe("Base Credit Pool", function () {
+describe.only("Base Credit Pool", function () {
     let poolContract;
     let hdtContract;
     let humaConfigContract;
@@ -104,7 +104,7 @@ describe("Base Credit Pool", function () {
         it("Should not allow non-EA to change credit line", async function () {
             await expect(
                 poolContract.connect(borrower).changeCreditLine(borrower.address, 1000000)
-            ).to.be.revertedWith("APPROVER_REQUIRED");
+            ).to.be.revertedWith("evaluationAgentRequired");
         });
         it("Should not allow credit line to be changed to above maximal credit line", async function () {
             await expect(
@@ -175,7 +175,7 @@ describe("Base Credit Pool", function () {
         });
     });
 
-    describe("Loan Funding", function () {
+    describe("Drawdown", function () {
         beforeEach(async function () {
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
         });
@@ -191,7 +191,7 @@ describe("Base Credit Pool", function () {
             );
         });
 
-        it("Prevent loan funding before approval", async function () {
+        it("Should reject drawdown before approval", async function () {
             await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
                 "NOT_APPROVED_OR_IN_GOOD_STANDING"
             );
@@ -209,8 +209,8 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(borrower).drawdown(100_000);
 
             // Two streams of income
-            // fees: 2000. protocol: 400, pool owner: 300, EA: 100, pool: 1200
-            // interest income: 1000
+            // fees: 2000. {protocol, poolOwner, EA, Pool}: {400, 100, 300, 1200}
+            // interest income: 1000 {protocol, poolOwner, EA, Pool}: {200, 50, 150, 600}
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(98_000);
 
             let accruedIncome = await poolContract.accruedIncome();
@@ -254,7 +254,7 @@ describe("Base Credit Pool", function () {
             await ethers.provider.send("evm_mine", []);
 
             await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.revertedWith(
-                "creditExpired()"
+                "creditExpiredDueToFirstDrawdownTooLate()"
             );
         });
 
