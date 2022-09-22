@@ -44,7 +44,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
-describe.only("Base Credit Pool", function () {
+describe("Base Credit Pool", function () {
     let poolContract;
     let hdtContract;
     let humaConfigContract;
