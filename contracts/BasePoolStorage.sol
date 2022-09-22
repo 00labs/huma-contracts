@@ -89,6 +89,7 @@ contract BasePoolStorage {
 
     // The addresses that are allowed to lend to this pool. Configurable only by the pool owner
     mapping(address => bool) internal approvedLenders;
+    address internal _testEAServiceAccount;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

@@ -4,9 +4,11 @@ pragma solidity ^0.8.0;
 contract Errors {
     error creditExpiredDueToFirstDrawdownTooLate();
     error creditExpiredDueToMaturity();
-    error evaluationAgentRequired();
+    error evaluationAgentServiceAccountRequired();
     error creditLineNotInApprovedOrGoodStandingState();
     error creditLineExceeded();
     error creditLineAlreadyExists();
     error greaterThanMaxCreditLine();
+    error zeroAddressProvided();
+    error paymentDetectionServiceAccountRequired();
 }

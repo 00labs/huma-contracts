@@ -44,7 +44,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
-describe("Base Credit Pool", function () {
+describe.only("Base Credit Pool", function () {
     let poolContract;
     let hdtContract;
     let humaConfigContract;
@@ -57,6 +57,8 @@ describe("Base Credit Pool", function () {
     let evaluationAgent;
     let protocolOwner;
     let eaNFTContract;
+    let eaServiceAccount;
+    let pdsServiceAccount;
 
     before(async function () {
         [
@@ -68,10 +70,19 @@ describe("Base Credit Pool", function () {
             evaluationAgent,
             poolOwner,
             protocolOwner,
+            eaServiceAccount,
+            pdsServiceAccount,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
-            await deployContracts(poolOwner, treasury, lender, protocolOwner);
+            await deployContracts(
+                poolOwner,
+                treasury,
+                lender,
+                protocolOwner,
+                eaServiceAccount,
+                pdsServiceAccount
+            );
     });
 
     beforeEach(async function () {
@@ -97,23 +108,23 @@ describe("Base Credit Pool", function () {
         it("Should not allow credit line to be changed when protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(
-                poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 1000000)
+                poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000000)
             ).to.be.revertedWith("PROTOCOL_PAUSED");
             await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
         it("Should not allow non-EA to change credit line", async function () {
             await expect(
                 poolContract.connect(borrower).changeCreditLine(borrower.address, 1000000)
-            ).to.be.revertedWith("evaluationAgentRequired");
+            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
         });
         it("Should not allow credit line to be changed to above maximal credit line", async function () {
             await expect(
-                poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 50000000)
+                poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 50000000)
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
         it("Should allow credit limit to be changed", async function () {
             await poolContract
-                .connect(evaluationAgent)
+                .connect(eaServiceAccount)
                 .changeCreditLine(borrower.address, 1000000);
             let result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
@@ -209,13 +220,12 @@ describe("Base Credit Pool", function () {
         it("Should reject drawdown if the combined balance is higher than the credit limit", async function () {});
 
         it("Borrow less than approved amount", async function () {
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
             // Should return false when no loan exists
             expect(await poolContract.isApproved(evaluationAgent.address)).to.equal(false);
 
-            console.log(await testTokenContract.balanceOf(borrower.address));
             await poolContract.connect(borrower).drawdown(100_000);
 
             // Two streams of income
@@ -233,7 +243,7 @@ describe("Base Credit Pool", function () {
 
         it("Borrow full amount that has been approved", async function () {
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(98_000);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
@@ -258,7 +268,7 @@ describe("Base Credit Pool", function () {
         it("Cannot borrow after credit expiration window", async function () {
             await poolContract.connect(poolOwner).setCreditApprovalExpiration(5);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
 
             advanceClock(6);
 
@@ -270,7 +280,7 @@ describe("Base Credit Pool", function () {
         it("Can borrow if no credit expiration has been setup for the pool", async function () {
             await poolContract.connect(poolOwner).setCreditApprovalExpiration(0);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
 
             advanceClock(6);
 
@@ -282,7 +292,7 @@ describe("Base Credit Pool", function () {
         it("Expiration window does not apply after initial drawdown", async function () {
             await poolContract.connect(poolOwner).setCreditApprovalExpiration(5);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await expect(poolContract.connect(borrower).drawdown(500_000));
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(500_000);
@@ -303,7 +313,7 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(poolOwner).setAPR(1217);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(1_000_000);
         });
 
@@ -360,7 +370,7 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(poolOwner).setAPR(1217);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(1_000_000);
         });
 
@@ -407,9 +417,9 @@ describe("Base Credit Pool", function () {
             // creditInfo = await poolContract.getCreditInformation(borrower.address);
 
             // Triggers default and makes sure the event is emitted
-            await expect(poolContract.connect(evaluationAgent).triggerDefault(borrower.address))
+            await expect(poolContract.connect(eaServiceAccount).triggerDefault(borrower.address))
                 .to.emit(poolContract, "DefaultTriggered")
-                .withArgs(borrower.address, 1_054_850, evaluationAgent.address);
+                .withArgs(borrower.address, 1_054_850, eaServiceAccount.address);
 
             creditInfo = await poolContract.getCreditInformation(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(1_054_850);
@@ -422,7 +432,7 @@ describe("Base Credit Pool", function () {
             expect(await hdtContract.totalSupply()).to.equal(5_000_000);
             expect(await poolContract.totalPoolValue()).to.equal(3_984_663);
             expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(796_932);
-            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+            expect(await hdtContract.withdrawableFundsOf(eaServiceAccount.address)).to.equal(
                 1_593_865
             );
             expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_593_865);

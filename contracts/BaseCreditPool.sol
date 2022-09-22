@@ -122,7 +122,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 intervalInDays,
         uint256 remainingPeriods
     ) external virtual override {
-        onlyEvaluationAgent();
+        onlyEAServiceAccount();
 
         // Pool status and data validation happens within initiate().
         initiateCredit(
@@ -145,7 +145,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      */
     function approveCredit(address borrower) public virtual override {
         protocolAndPoolOn();
-        onlyEvaluationAgent();
+        onlyEAServiceAccount();
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         require(
@@ -172,7 +172,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      */
     function changeCreditLine(address borrower, uint256 newLine) external {
         protocolAndPoolOn();
-        onlyEvaluationAgent();
+        onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
         if (newLine > _poolConfig._maxCreditLine) revert Errors.greaterThanMaxCreditLine();
 
@@ -185,7 +185,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      */
     function invalidateApprovedCredit(address borrower) external virtual override {
         protocolAndPoolOn();
-        onlyEvaluationAgent();
+        onlyEAServiceAccount();
         //critical todo need to make sure there is no outstanding balance
         _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
         _creditRecordStaticMapping[borrower].creditLimit = 0;
@@ -225,7 +225,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
 
         ///msg.sender needs to be the borrower themselvers or the EA.
-        if (msg.sender != borrower) onlyEvaluationAgent();
+        if (msg.sender != borrower) onlyEAServiceAccount();
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
@@ -515,7 +515,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     }
 
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
-        onlyEvaluationAgent();
+        onlyEAServiceAccount();
         // Brings the account current. todo research why this is needed to extend remainingPeriods.
         updateDueInfo(borrower, false);
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
@@ -585,7 +585,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return block.timestamp > _creditRecordMapping[borrower].dueDate ? true : false;
     }
 
-    function onlyEvaluationAgent() internal view {
-        if (msg.sender != _evaluationAgent) revert Errors.evaluationAgentRequired();
+    function onlyEAServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).eaServiceAccount())
+            revert Errors.evaluationAgentServiceAccountRequired();
     }
 }
