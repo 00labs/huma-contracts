@@ -10,8 +10,6 @@ contract BasePoolStorage {
     uint256 internal constant SECONDS_IN_A_DAY = 86400;
     uint256 internal constant SECONDS_IN_180_DAYS = 15552000;
 
-    string internal _poolName;
-
     // The ERC20 token this pool manages
     IERC20 internal _underlyingToken;
 

@@ -17,7 +17,7 @@ import "./EvaluationAgentNFT.sol";
 
 import "hardhat/console.sol";
 
-abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IPool {
+contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IPool {
     using SafeERC20 for IERC20;
 
     error notEvaluationAgentOwnerProvided();
@@ -74,15 +74,12 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
      * @param poolToken the token supported by the pool.
      * @param humaConfig the configurator for the protocol
      * @param feeManager support key calculations for each pool
-     * @param poolName the name for the pool
      */
     function initialize(
         address poolToken,
         address humaConfig,
-        address feeManager,
-        string memory poolName
+        address feeManager
     ) external initializer {
-        _poolName = poolName;
         _poolToken = IHDT(poolToken);
         _underlyingToken = IERC20(_poolToken.assetToken());
         _humaConfig = humaConfig;
@@ -247,15 +244,6 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     /********************************************/
     //                Settings                  //
     /********************************************/
-
-    /**
-     * @notice Change pool name
-     */
-    function setPoolName(string memory newName) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _poolName = newName;
-        emit PoolNameChanged(newName, msg.sender);
-    }
 
     /**
      * @notice Adds an evaluation agent to the list who can approve loans.
