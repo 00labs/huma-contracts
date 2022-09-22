@@ -35,7 +35,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     ) external virtual override {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
-        onlyEvaluationAgent();
+        onlyPDSServiceAccount();
         BaseStructs.CreditRecord memory cr = _creditRecordMapping[borrower];
 
         require(asset == address(_underlyingToken), "HumaIF:WRONG_ASSET");
@@ -72,5 +72,10 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
      */
     function disperseRemainingFunds(address receiver, uint256 amount) internal {
         _underlyingToken.safeTransfer(receiver, amount);
+    }
+
+    function onlyPDSServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
+            revert Errors.paymentDetectionServiceAccountRequired();
     }
 }

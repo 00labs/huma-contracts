@@ -39,18 +39,32 @@ describe("Invoice Factoring", function () {
     let treasury;
     let evaluationAgent;
     let invoiceNFTTokenId;
+    let eaServiceAccount;
+    let pdsServiceAccount;
 
     before(async function () {
-        [owner, proxyOwner, lender, borrower, treasury, evaluationAgent, payer] =
-            await ethers.getSigners();
+        [
+            owner,
+            proxyOwner,
+            lender,
+            borrower,
+            treasury,
+            evaluationAgent,
+            payer,
+            eaServiceAccount,
+            pdsServiceAccount,
+        ] = await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         humaConfigContract = await HumaConfig.deploy(treasury.address);
-        humaConfigContract.setHumaTreasury(treasury.address);
+        await humaConfigContract.setHumaTreasury(treasury.address);
 
         const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
         feeManagerContract = await feeManagerFactory.deploy();
-        humaConfigContract.setHumaTreasury(treasury.address);
+        await humaConfigContract.setHumaTreasury(treasury.address);
+
+        await humaConfigContract.setEAServiceAccount(eaServiceAccount.address);
+        await humaConfigContract.setPDSServiceAccount(pdsServiceAccount.address);
 
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
@@ -158,7 +172,7 @@ describe("Invoice Factoring", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("evaluationAgentRequired()");
+            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
         });
 
         it("Should not allow posting approved loans while protocol is paused", async function () {
@@ -166,7 +180,7 @@ describe("Invoice Factoring", function () {
 
             await expect(
                 invoiceContract
-                    .connect(evaluationAgent)
+                    .connect(eaServiceAccount)
                     .recordApprovedCredit(
                         borrower.address,
                         400,
@@ -184,7 +198,7 @@ describe("Invoice Factoring", function () {
 
             await expect(
                 invoiceContract
-                    .connect(evaluationAgent)
+                    .connect(eaServiceAccount)
                     .recordApprovedCredit(
                         borrower.address,
                         400,
@@ -200,7 +214,7 @@ describe("Invoice Factoring", function () {
         it("Cannot post approved loan with amount greater than limit", async function () {
             await expect(
                 invoiceContract
-                    .connect(evaluationAgent)
+                    .connect(eaServiceAccount)
                     .recordApprovedCredit(
                         borrower.address,
                         9999,
@@ -219,7 +233,7 @@ describe("Invoice Factoring", function () {
             await invoiceContract.connect(owner).setAPR(0);
 
             await invoiceContract
-                .connect(evaluationAgent)
+                .connect(eaServiceAccount)
                 .recordApprovedCredit(
                     borrower.address,
                     400,
@@ -243,7 +257,7 @@ describe("Invoice Factoring", function () {
             await invoiceContract.connect(owner).setAPR(0);
 
             await invoiceContract
-                .connect(evaluationAgent)
+                .connect(eaServiceAccount)
                 .recordApprovedCredit(
                     borrower.address,
                     400,
@@ -256,10 +270,10 @@ describe("Invoice Factoring", function () {
 
             await expect(
                 invoiceContract.connect(payer).invalidateApprovedCredit(borrower.address)
-            ).to.be.revertedWith("evaluationAgentRequired()");
+            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
 
             await invoiceContract
-                .connect(evaluationAgent)
+                .connect(eaServiceAccount)
                 .invalidateApprovedCredit(borrower.address);
 
             //await invoiceContract.printDetailStatus(borrower.address);
@@ -275,7 +289,7 @@ describe("Invoice Factoring", function () {
             await invoiceContract.connect(lender).deposit(300);
 
             await invoiceContract
-                .connect(evaluationAgent)
+                .connect(eaServiceAccount)
                 .recordApprovedCredit(
                     borrower.address,
                     400,
@@ -320,7 +334,7 @@ describe("Invoice Factoring", function () {
         });
 
         it("Should be able to borrow amount less than approved", async function () {
-            await invoiceContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await invoiceContract.connect(eaServiceAccount).approveCredit(borrower.address);
 
             await invoiceContract
                 .connect(borrower)
@@ -350,7 +364,7 @@ describe("Invoice Factoring", function () {
         });
 
         it("Should be able to borrow the full approved amount", async function () {
-            await invoiceContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await invoiceContract.connect(eaServiceAccount).approveCredit(borrower.address);
             // expect(await invoiceContract.isApproved()).to.equal(true);
 
             await invoiceContract
@@ -407,7 +421,7 @@ describe("Invoice Factoring", function () {
 
             await invoiceContract.connect(lender).deposit(300);
             await invoiceContract
-                .connect(evaluationAgent)
+                .connect(eaServiceAccount)
                 .recordApprovedCredit(
                     borrower.address,
                     400,
@@ -446,13 +460,13 @@ describe("Invoice Factoring", function () {
 
         // todo if the pool is stopped, shall we accept payback?
 
-        it("Should reject if non-EA calls to report payments received", async function () {
+        it("Should reject if non-PDS calls to report payments received", async function () {
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
             await expect(
                 invoiceContract
                     .connect(borrower)
                     .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1)
-            ).to.be.revertedWith("evaluationAgentRequired()");
+            ).to.be.revertedWith("paymentDetectionServiceAccountRequired()");
         });
 
         it("Process payback", async function () {
@@ -463,7 +477,7 @@ describe("Invoice Factoring", function () {
             await testTokenContract.connect(payer).transfer(invoiceContract.address, 500);
 
             await invoiceContract
-                .connect(evaluationAgent)
+                .connect(pdsServiceAccount)
                 .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1);
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
@@ -535,10 +549,10 @@ describe("Invoice Factoring", function () {
                 // The pool value was 531 before the loss. With a loss of 448, pool vlue became
                 // 83, {poolOwnerAsLP, lender} split is {18, 73}.
                 await expect(
-                    invoiceContract.connect(evaluationAgent).triggerDefault(borrower.address)
+                    invoiceContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 )
                     .to.emit(invoiceContract, "DefaultTriggered")
-                    .withArgs(borrower.address, 448, evaluationAgent.address);
+                    .withArgs(borrower.address, 448, eaServiceAccount.address);
 
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(18);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(75);
@@ -567,10 +581,10 @@ describe("Invoice Factoring", function () {
                 // cycle by cycle, all the 84 will be distrbiuted once, vs. distribute 28 for 3
                 // times, this leads to different rounding result.
                 await expect(
-                    invoiceContract.connect(evaluationAgent).triggerDefault(borrower.address)
+                    invoiceContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 )
                     .to.emit(invoiceContract, "DefaultTriggered")
-                    .withArgs(borrower.address, 472, evaluationAgent.address);
+                    .withArgs(borrower.address, 472, eaServiceAccount.address);
 
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(0);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(0);

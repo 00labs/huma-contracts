@@ -31,6 +31,8 @@ let evaluationAgent;
 let poolOwner;
 let protocolOwner;
 let eaNFTContract;
+let eaServiceAccount;
+let pdsServiceAccount;
 
 describe("Base Pool - LP and Admin functions", function () {
     before(async function () {
@@ -43,12 +45,21 @@ describe("Base Pool - LP and Admin functions", function () {
             evaluationAgent,
             poolOwner,
             protocolOwner,
+            eaServiceAccount,
+            pdsServiceAccount,
         ] = await ethers.getSigners();
     });
 
     beforeEach(async function () {
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
-            await deployContracts(poolOwner, treasury, lender, protocolOwner);
+            await deployContracts(
+                poolOwner,
+                treasury,
+                lender,
+                protocolOwner,
+                evaluationAgent,
+                evaluationAgent
+            );
 
         [hdtContract, poolContract] = await deployAndSetupPool(
             poolOwner,

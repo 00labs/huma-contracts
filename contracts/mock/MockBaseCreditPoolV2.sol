@@ -8,7 +8,7 @@ import "../Errors.sol";
 contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
     function changeCreditLine(address borrower, uint256 newLine) external {
         protocolAndPoolOn();
-        onlyEvaluationAgent();
+        onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
         require(_poolConfig._maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
 
@@ -23,7 +23,8 @@ contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
         return _creditRecordMapping[account];
     }
 
-    function onlyEvaluationAgent() internal view {
-        if (_evaluationAgent != msg.sender) revert Errors.evaluationAgentRequired();
+    function onlyEAServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).eaServiceAccount())
+            revert Errors.evaluationAgentServiceAccountRequired();
     }
 }

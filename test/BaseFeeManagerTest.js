@@ -18,6 +18,8 @@ let borrower;
 let treasury;
 let evaluationAgent;
 let protocolOwner;
+let eaServiceAccount;
+let pdsServiceAccount;
 
 let record;
 let recordStatic;
@@ -55,10 +57,19 @@ describe("Base Fee Manager", function () {
             evaluationAgent,
             poolOwner,
             protocolOwner,
+            eaServiceAccount,
+            pdsServiceAccount,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
-            await deployContracts(poolOwner, treasury, lender, protocolOwner);
+            await deployContracts(
+                poolOwner,
+                treasury,
+                lender,
+                protocolOwner,
+                eaServiceAccount,
+                pdsServiceAccount
+            );
 
         [hdtContract, poolContract] = await deployAndSetupPool(
             poolOwner,
@@ -141,7 +152,7 @@ describe("Base Fee Manager", function () {
             );
 
             await poolContract.connect(borrower).requestCredit(400, 30, 12);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await testTokenContract.connect(lender).approve(poolContract.address, 300);
             await poolContract.connect(borrower).drawdown(400);
 
@@ -213,7 +224,7 @@ describe("Base Fee Manager", function () {
 
             // Create a borrowing record
             await poolContract.connect(borrower).requestCredit(5000, 30, 12);
-            await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await testTokenContract.connect(poolOwner).approve(poolContract.address, 4000);
             await poolContract.connect(borrower).drawdown(4000);
 

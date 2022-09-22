@@ -18,6 +18,8 @@ describe("Upgradability Test", function () {
     let poolProxy;
     let protocolOwner;
     let eaNFTContract;
+    let eaServiceAccount;
+    let pdsServiceAccount;
 
     before(async function () {
         [
@@ -29,6 +31,8 @@ describe("Upgradability Test", function () {
             evaluationAgent,
             owner,
             protocolOwner,
+            eaServiceAccount,
+            pdsServiceAccount,
         ] = await ethers.getSigners();
 
         // Deploy EvaluationAgentNFT
@@ -39,6 +43,8 @@ describe("Upgradability Test", function () {
         humaConfigContract = await HumaConfig.deploy(treasury.address);
         await humaConfigContract.setHumaTreasury(treasury.address);
         await humaConfigContract.setEANFTContractAddress(eaNFTContract.address);
+        await humaConfigContract.setEAServiceAccount(eaServiceAccount.address);
+        await humaConfigContract.setPDSServiceAccount(pdsServiceAccount.address);
         await humaConfigContract.transferOwnership(protocolOwner.address);
 
         const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
@@ -154,7 +160,7 @@ describe("Upgradability Test", function () {
 
         it("Should call changed function and new function successfully", async function () {
             await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
-            await poolContract.connect(evaluationAgent).changeCreditLine(owner.address, 100);
+            await poolContract.connect(eaServiceAccount).changeCreditLine(owner.address, 100);
             poolContract = MockBaseCreditPoolV2.attach(poolContract.address);
             const cl = await poolContract.getCreditLine(owner.address);
             expect(cl).equals(200);

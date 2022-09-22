@@ -7,6 +7,8 @@ async function deployContracts(
     treasury,
     lender,
     protocolOwner,
+    eaServiceAccount,
+    pdsServiceAccount,
     fees = [1000, 100, 2000, 100]
 ) {
     // Deploy EvaluationAgentNFT
@@ -20,6 +22,8 @@ async function deployContracts(
     await humaConfigContract.setTreasuryFee(2000);
     await humaConfigContract.addPauser(poolOwner.address);
     await humaConfigContract.setEANFTContractAddress(eaNFTContract.address);
+    await humaConfigContract.setEAServiceAccount(eaServiceAccount.address);
+    await humaConfigContract.setPDSServiceAccount(pdsServiceAccount.address);
 
     await humaConfigContract.transferOwnership(protocolOwner.address);
     await humaConfigContract.connect(protocolOwner).unpauseProtocol();

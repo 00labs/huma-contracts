@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./Errors.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "hardhat/console.sol";
 
@@ -49,6 +50,12 @@ contract HumaConfig is Ownable {
 
     /// List of assets supported by the protocol for investing and borrowing
     mapping(address => bool) private validLiquidityAssets;
+
+    /// service account for Huma's evaluation agent hosting service
+    address public eaServiceAccount;
+
+    /// service account for Huma's payment detection service
+    address public pdsServiceAccount;
 
     event ProtocolInitialized(address by);
 
@@ -217,6 +224,16 @@ contract HumaConfig is Ownable {
     function setEANFTContractAddress(address contractAddress) external onlyOwner {
         require(contractAddress != address(0), "EA_NFT_CONTRACT_ADDRESS_ZERO");
         eaNFTContractAddress = contractAddress;
+    }
+
+    function setEAServiceAccount(address accountAddress) external onlyOwner {
+        if (accountAddress == address(0)) revert Errors.zeroAddressProvided();
+        eaServiceAccount = accountAddress;
+    }
+
+    function setPDSServiceAccount(address accountAddress) external onlyOwner {
+        if (accountAddress == address(0)) revert Errors.zeroAddressProvided();
+        pdsServiceAccount = accountAddress;
     }
 
     /**
