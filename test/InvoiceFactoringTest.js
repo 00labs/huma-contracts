@@ -126,7 +126,15 @@ describe("Invoice Factoring", function () {
         expect(await invoiceContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(100);
 
-        await invoiceContract.setEvaluationAgent(12345, evaluationAgent.address);
+        const tx = await eaNFTContract.mint(evaluationAgent.address, "");
+        const receipt = await tx.wait();
+        for (const evt of receipt.events) {
+            if (evt.event === "EANFTGenerated") {
+                eaNFTTokenId = evt.args[0];
+            }
+        }
+
+        await invoiceContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
 
         await invoiceContract.connect(owner).setAPR(0); //bps
         await invoiceContract.setMaxCreditLine(1000);
