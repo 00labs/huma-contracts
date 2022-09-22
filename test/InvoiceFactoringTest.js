@@ -50,17 +50,18 @@ describe("Invoice Factoring", function () {
 
         const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
         feeManagerContract = await feeManagerFactory.deploy();
+        humaConfigContract.setHumaTreasury(treasury.address);
+
+        const TestToken = await ethers.getContractFactory("TestToken");
+        testTokenContract = await TestToken.deploy();
 
         await feeManagerContract.setFees(10, 100, 20, 100);
 
         const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
-        invoiceNFTContract = await InvoiceNFT.deploy();
+        invoiceNFTContract = await InvoiceNFT.deploy(testTokenContract.address);
     });
 
     beforeEach(async function () {
-        const TestToken = await ethers.getContractFactory("TestToken");
-        testTokenContract = await TestToken.deploy();
-
         const TransparentUpgradeableProxy = await ethers.getContractFactory(
             "TransparentUpgradeableProxy"
         );
@@ -209,7 +210,7 @@ describe("Invoice Factoring", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("GREATER_THAN_LIMIT");
+            ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
 
         it("Should post approved invoice financing successfully", async function () {
@@ -450,7 +451,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 invoiceContract
                     .connect(borrower)
-                    .onReceivedPayment(borrower.address, testTokenContract.address, 500)
+                    .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1)
             ).to.be.revertedWith("evaluationAgentRequired()");
         });
 
@@ -463,7 +464,7 @@ describe("Invoice Factoring", function () {
 
             await invoiceContract
                 .connect(evaluationAgent)
-                .onReceivedPayment(borrower.address, testTokenContract.address, 500);
+                .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1);
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
 
