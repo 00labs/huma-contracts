@@ -6,8 +6,6 @@ import "../libraries/BaseStructs.sol";
 interface IFeeManager {
     /**
      * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
-     * @param _cr the credit record associated with the account associated with the drawdown/payment
-     * @param amount the amount of the drawdown/payment that we are trying to compute correction
      * @dev Correction is used when there is change to the principal in the middle of the cycle
      * due to drawdown or principal payment. For a drawdown, principal goes up, the interest at
      * the end of cycle will be higher than the actual interest that should have been generated
@@ -15,10 +13,11 @@ interface IFeeManager {
      * negative to offset the over-count at the end of the cycle. It will be positive for
      * principal payment.
      */
-    function calcCorrection(BaseStructs.CreditRecord memory _cr, uint256 amount)
-        external
-        view
-        returns (uint256 correction);
+    function calcCorrection(
+        uint256 dueDate,
+        uint256 aprInBps,
+        uint256 amount
+    ) external view returns (uint256 correction);
 
     /**
      * @notice Computes the front loading fee including both the flat fee and percentage fee
@@ -65,7 +64,10 @@ interface IFeeManager {
      * that is due currently.
      * @return totalDue amount due in this period, it includes fees, interest, and min principal
      */
-    function getDueInfo(BaseStructs.CreditRecord memory _cr)
+    function getDueInfo(
+        BaseStructs.CreditRecord memory _cr,
+        BaseStructs.CreditRecordStatic memory _crStatic
+    )
         external
         view
         returns (

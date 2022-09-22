@@ -109,13 +109,13 @@ describe("Base Credit Pool", function () {
         it("Should not allow credit line to be changed to above maximal credit line", async function () {
             await expect(
                 poolContract.connect(evaluationAgent).changeCreditLine(borrower.address, 50000000)
-            ).to.be.revertedWith("GREATER_THAN_LIMIT");
+            ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
         it("Should allow credit limit to be changed", async function () {
             await poolContract
                 .connect(evaluationAgent)
                 .changeCreditLine(borrower.address, 1000000);
-            let result = await poolContract.creditRecordMapping(borrower.address);
+            let result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
         });
         it("Should not allow non-pool-owner-or-huma-admin to change credit expiration before first drawdown", async function () {

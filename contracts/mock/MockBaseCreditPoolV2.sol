@@ -12,11 +12,11 @@ contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
         // Borrowing amount needs to be lower than max for the pool.
         require(_poolConfig._maxCreditLine >= newLine, "GREATER_THAN_LIMIT");
 
-        _creditRecordMapping[borrower].creditLimit = uint96(newLine * 2);
+        _creditRecordStaticMapping[borrower].creditLimit = uint96(newLine * 2);
     }
 
     function getCreditLine(address account) external view returns (uint256) {
-        return _creditRecordMapping[account].creditLimit;
+        return _creditRecordStaticMapping[account].creditLimit;
     }
 
     function creditRecordMapping(address account) external view returns (BS.CreditRecord memory) {

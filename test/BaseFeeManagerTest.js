@@ -20,6 +20,7 @@ let evaluationAgent;
 let protocolOwner;
 
 let record;
+let recordStatic;
 
 let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
     if (v1 != "SKIP") expect(r.creditLimit).to.equal(v1);
@@ -145,7 +146,8 @@ describe("Base Fee Manager", function () {
             await poolContract.connect(borrower).drawdown(400);
 
             record = await poolContract.creditRecordMapping(borrower.address);
-            let r = await feeManagerContract.getDueInfo(record);
+            recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+            let r = await feeManagerContract.getDueInfo(record, recordStatic);
             checkResult(r, 0, 4, 4, 400, 0);
 
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
@@ -153,7 +155,7 @@ describe("Base Fee Manager", function () {
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("IntOnly", async function () {
-                    let r = await feeManagerContract.getDueInfo(record);
+                    let r = await feeManagerContract.getDueInfo(record, recordStatic);
                     checkResult(r, 0, 4, 4, 400, 0);
                 });
             });
@@ -164,7 +166,7 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("IntOnly", async function () {
-                        let r = await feeManagerContract.getDueInfo(record);
+                        let r = await feeManagerContract.getDueInfo(record, recordStatic);
                         checkResult(r, 1, 44, 44, 404, 44); // late fee = 20 flat + 20 bps
                     });
                 });
@@ -173,7 +175,7 @@ describe("Base Fee Manager", function () {
                         advanceClock(30);
                     });
                     it("IntOnly", async function () {
-                        let r = await feeManagerContract.getDueInfo(record);
+                        let r = await feeManagerContract.getDueInfo(record, recordStatic);
                         checkResult(r, 2, 46, 46, 448, 90);
                     });
                 });
@@ -183,7 +185,7 @@ describe("Base Fee Manager", function () {
                     });
                     it("IntOnly", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
-                        let r = await feeManagerContract.getDueInfo(record);
+                        let r = await feeManagerContract.getDueInfo(record, recordStatic);
                         checkResult(r, 3, 48, 48, 494, 138);
                     });
                 });
@@ -216,7 +218,8 @@ describe("Base Fee Manager", function () {
             await poolContract.connect(borrower).drawdown(4000);
 
             record = await poolContract.creditRecordMapping(borrower.address);
-            let r = await feeManagerContract.getDueInfo(record);
+            recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+            let r = await feeManagerContract.getDueInfo(record, recordStatic);
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
             checkResult(r, 0, 40, 240, 3800, 0);
@@ -224,7 +227,7 @@ describe("Base Fee Manager", function () {
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("WithMinPrincipal", async function () {
-                    let r = await feeManagerContract.getDueInfo(record);
+                    let r = await feeManagerContract.getDueInfo(record, recordStatic);
                     checkResult(r, 0, 40, 240, 3800, 0);
                 });
             });
@@ -235,7 +238,7 @@ describe("Base Fee Manager", function () {
                         await ethers.provider.send("evm_mine", []);
                     });
                     it("WithMinPrincipal", async function () {
-                        let r = await feeManagerContract.getDueInfo(record);
+                        let r = await feeManagerContract.getDueInfo(record, recordStatic);
                         checkResult(r, 1, 100, 302, 3838, 100);
                     });
                 });
@@ -245,7 +248,7 @@ describe("Base Fee Manager", function () {
                     });
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManagerContract.getDueInfo(record);
+                        let r = await feeManagerContract.getDueInfo(record, recordStatic);
                         checkResult(r, 2, 102, 309, 3933, 202);
                     });
                 });
@@ -255,7 +258,7 @@ describe("Base Fee Manager", function () {
                     });
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
-                        let r = await feeManagerContract.getDueInfo(record);
+                        let r = await feeManagerContract.getDueInfo(record, recordStatic);
                         checkResult(r, 3, 104, 316, 4030, 306);
                     });
                 });

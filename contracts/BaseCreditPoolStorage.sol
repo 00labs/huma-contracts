@@ -13,6 +13,7 @@ contract BaseCreditPoolStorage {
     mapping(address => BS.CreditRecord) internal _creditRecordMapping;
     /// mapping from wallet address to the receivable supplied by this wallet
     mapping(address => BS.ReceivableInfo) internal _receivableInfoMapping;
+    mapping(address => BS.CreditRecordStatic) internal _creditRecordStaticMapping;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
