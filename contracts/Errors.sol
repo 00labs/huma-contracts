@@ -9,4 +9,6 @@ contract Errors {
     error creditLineExceeded();
     error creditLineAlreadyExists();
     error greaterThanMaxCreditLine();
+    error zeroAddressProvided();
+    error defaultTriggeredTooEarly();
 }
