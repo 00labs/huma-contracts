@@ -460,13 +460,13 @@ describe("Invoice Factoring", function () {
 
         // todo if the pool is stopped, shall we accept payback?
 
-        it("Should reject if non-EA calls to report payments received", async function () {
+        it("Should reject if non-PDS calls to report payments received", async function () {
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
             await expect(
                 invoiceContract
                     .connect(borrower)
                     .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1)
-            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
+            ).to.be.revertedWith("paymentDetectionServiceAccountRequired()");
         });
 
         it("Process payback", async function () {
@@ -477,7 +477,7 @@ describe("Invoice Factoring", function () {
             await testTokenContract.connect(payer).transfer(invoiceContract.address, 500);
 
             await invoiceContract
-                .connect(eaServiceAccount)
+                .connect(pdsServiceAccount)
                 .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1);
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
