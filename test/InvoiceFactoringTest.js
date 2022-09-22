@@ -210,7 +210,7 @@ describe("Invoice Factoring", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("GREATER_THAN_LIMIT");
+            ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
 
         it("Should post approved invoice financing successfully", async function () {
