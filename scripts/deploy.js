@@ -68,11 +68,13 @@ async function deployContracts() {
 
     // Pool setup
     await testToken.connect(owner).approve(poolContract.address, 100);
+    await poolContract.connect(owner).addApprovedLender(owner.address);
+    await poolContract.connect(owner).addApprovedLender(lender.address);
     await poolContract.connect(owner).makeInitialDeposit(100);
     await poolContract.enablePool();
     await poolContract.connect(owner).setAPR(1217);
     await poolContract.setMaxCreditLine(10000);
-    await poolContract.setEvaluationAgent(evaluationAgent.address);
+    await poolContract.setEvaluationAgent(1, evaluationAgent.address);
     await testToken.connect(lender).approve(poolContract.address, 10000);
     await poolContract.connect(lender).deposit(10000);
 }

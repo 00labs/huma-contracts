@@ -46,14 +46,14 @@ describe("Upgradability Test", function () {
 
         await feeManagerContract.setFees(10, 100, 20, 100);
 
-        const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
-        invoiceNFTContract = await InvoiceNFT.deploy();
-    });
-
-    beforeEach(async function () {
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
 
+        const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
+        invoiceNFTContract = await InvoiceNFT.deploy(testTokenContract.address);
+    });
+
+    beforeEach(async function () {
         const TransparentUpgradeableProxy = await ethers.getContractFactory(
             "TransparentUpgradeableProxy"
         );
