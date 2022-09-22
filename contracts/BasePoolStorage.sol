@@ -26,7 +26,7 @@ contract BasePoolStorage {
     address internal _humaConfig;
 
     // Address for the fee manager contract
-    address internal _feeManagerAddress;
+    address internal _feeManager;
 
     // Tracks the amount of liquidity in poolTokens provided to this pool by an address
     mapping(address => uint256) internal _lastDepositTime;
@@ -88,7 +88,7 @@ contract BasePoolStorage {
     }
 
     // The addresses that are allowed to lend to this pool. Configurable only by the pool owner
-    mapping(address => bool) internal approvedLenders;
+    mapping(address => bool) internal _approvedLenders;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

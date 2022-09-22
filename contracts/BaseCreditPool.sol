@@ -273,7 +273,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // this pay period is accrued in correction and be add to the next bill.
             cr.correction += int96(
                 uint96(
-                    IFeeManager(_feeManagerAddress).calcCorrection(
+                    IFeeManager(_feeManager).calcCorrection(
                         cr.dueDate,
                         _creditRecordStaticMapping[borrower].aprInBps,
                         borrowAmount
@@ -288,7 +288,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         _creditRecordMapping[borrower] = cr;
 
-        (uint256 amtToBorrower, uint256 platformFees) = IFeeManager(_feeManagerAddress)
+        (uint256 amtToBorrower, uint256 platformFees) = IFeeManager(_feeManager)
             .distBorrowingAmount(borrowAmount);
 
         if (platformFees > 0) distributeIncome(platformFees);
@@ -390,7 +390,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         if (principalPayment > 0) {
             cr.correction -= int96(
                 uint96(
-                    IFeeManager(_feeManagerAddress).calcCorrection(
+                    IFeeManager(_feeManager).calcCorrection(
                         cr.dueDate,
                         _creditRecordStaticMapping[borrower].aprInBps,
                         principalPayment
@@ -439,7 +439,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.totalDue,
             cr.unbilledPrincipal,
             newCharges
-        ) = IFeeManager(_feeManagerAddress).getDueInfo(cr, _creditRecordStaticMapping[borrower]);
+        ) = IFeeManager(_feeManager).getDueInfo(cr, _creditRecordStaticMapping[borrower]);
 
         // Distribute income
         if (distributeChargesForLastCycle) distributeIncome(newCharges);
