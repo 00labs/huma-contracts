@@ -287,13 +287,13 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
 
     function addApprovedLender(address lender) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        approvedLenders[lender] = true;
+        _approvedLenders[lender] = true;
         emit AddApprovedLender(lender, msg.sender);
     }
 
     function removeApprovedLender(address lender) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        approvedLenders[lender] = false;
+        _approvedLenders[lender] = false;
         emit RemoveApprovedLender(lender, msg.sender);
     }
 
@@ -530,7 +530,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
     }
 
     function onlyApprovedLender(address lender) internal view {
-        require((approvedLenders[lender] == true), "PERMISSION_DENIED_NOT_LENDER");
+        require((_approvedLenders[lender] == true), "PERMISSION_DENIED_NOT_LENDER");
     }
 
     // In order for a pool to issue new loans, it must be turned on by an admin

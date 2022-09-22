@@ -88,12 +88,12 @@ contract BasePoolStorage {
     }
 
     // The addresses that are allowed to lend to this pool. Configurable only by the pool owner
-    mapping(address => bool) internal approvedLenders;
+    mapping(address => bool) internal _approvedLenders;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[99] private __gap;
+    uint256[100] private __gap;
 }
