@@ -2,7 +2,7 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
-const {deployContracts, deployAndSetupPool} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest");
 
 use(solidity);
 
@@ -495,7 +495,7 @@ describe("Invoice Factoring", function () {
                 await invoiceContract.connect(lender).deposit(100);
 
                 // pay period 1
-                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
+                advanceClock(30);
                 await ethers.provider.send("evm_mine", []);
                 await invoiceContract.updateDueInfo(borrower.address, true);
 
@@ -511,8 +511,7 @@ describe("Invoice Factoring", function () {
                 expect(accruedIncome.poolOwnerIncome).to.equal(1);
 
                 // pay period 2
-                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
+                advanceClock(30);
                 await invoiceContract.updateDueInfo(borrower.address, true);
 
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
@@ -527,8 +526,7 @@ describe("Invoice Factoring", function () {
                 expect(accruedIncome.poolOwnerIncome).to.equal(2);
 
                 // Pay period 3
-                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
+                advanceClock(30);
 
                 // Total 3 cycles late, do not charge fees for the final cycle, we got
                 // 2 cycles of late fee for 48. Distribution among {protocol, EA, poolOwner, pool}
@@ -557,17 +555,12 @@ describe("Invoice Factoring", function () {
                     "DEFAULT_TRIGGERED_TOO_EARLY"
                 );
 
-                await ethers.provider.send("evm_increaseTime", [60 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
+                advanceClock(60);
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
                     "DEFAULT_TRIGGERED_TOO_EARLY"
                 );
 
-                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
-
-                await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-                await ethers.provider.send("evm_mine", []);
+                advanceClock(60);
 
                 // It was delayed for 4 cycles, we do not charge fees for the final cycle.
                 // This gets us 84 total late fees. Please note since updateDueInfo() was not called

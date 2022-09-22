@@ -1,6 +1,6 @@
 const {ethers} = require("hardhat");
 const {expect} = require("chai");
-const {deployContracts, deployAndSetupPool} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest");
 
 describe("TimelockController Test", function () {
     const salt = ethers.utils.formatBytes32String("salt");

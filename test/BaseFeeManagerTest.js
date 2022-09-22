@@ -2,7 +2,7 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
-const {deployContracts, deployAndSetupPool} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest");
 
 use(solidity);
 
@@ -149,8 +149,6 @@ describe("Base Fee Manager", function () {
             checkResult(r, 0, 4, 4, 400, 0);
 
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
-            // await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
-            // await ethers.provider.send("evm_mine", []);
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
@@ -172,8 +170,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 2 periods", async function () {
                     before(async function () {
-                        await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
-                        await ethers.provider.send("evm_mine", []);
+                        advanceClock(30);
                     });
                     it("IntOnly", async function () {
                         let r = await feeManagerContract.getDueInfo(record);
@@ -182,8 +179,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 3 periods", async function () {
                     before(async function () {
-                        await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
-                        await ethers.provider.send("evm_mine", []);
+                        advanceClock(30);
                     });
                     it("IntOnly", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
@@ -224,9 +220,6 @@ describe("Base Fee Manager", function () {
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
             checkResult(r, 0, 40, 240, 3800, 0);
-
-            // await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30 + 10]);
-            // await ethers.provider.send("evm_mine", []);
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
@@ -248,8 +241,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 2 periods", async function () {
                     before(async function () {
-                        await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
-                        await ethers.provider.send("evm_mine", []);
+                        advanceClock(30);
                     });
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
@@ -259,8 +251,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 3 periods", async function () {
                     before(async function () {
-                        await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
-                        await ethers.provider.send("evm_mine", []);
+                        advanceClock(30);
                     });
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);

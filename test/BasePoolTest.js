@@ -2,7 +2,7 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
-const {deployContracts, deployAndSetupPool} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest");
 
 use(solidity);
 

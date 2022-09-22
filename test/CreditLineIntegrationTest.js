@@ -2,7 +2,7 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
-const {deployContracts, deployAndSetupPool} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest");
 
 use(solidity);
 
@@ -45,11 +45,6 @@ let checkResult = function (r, v1, v2, v3, v4, v5) {
     expect(r.totalDue).to.equal(v3);
     expect(r.unbilledPrincipal).to.equal(v4);
     expect(r.totalCharges).to.equal(v5);
-};
-
-let advanceClock = async function (days) {
-    await ethers.provider.send("evm_increaseTime", [3600 * 24 * days]);
-    await ethers.provider.send("evm_mine", []);
 };
 
 describe("Credit Line Integration Test", async function () {

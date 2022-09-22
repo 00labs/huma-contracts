@@ -2,7 +2,7 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
-const {deployContracts, deployAndSetupPool} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest");
 
 use(solidity);
 
@@ -44,7 +44,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 //
-describe.only("Base Credit Pool", function () {
+describe("Base Credit Pool", function () {
     let poolContract;
     let hdtContract;
     let humaConfigContract;
@@ -197,6 +197,11 @@ describe.only("Base Credit Pool", function () {
             );
         });
 
+        it("Should reject drawdown when account is defaulted or in default grace period", async function () {});
+        it("Should reject drawdown when account is deleted", async function () {});
+        it("Should reject drawdown in the final pay period of the credit line", async function () {});
+        it("Should reject drawdown if the combined balance is higher than the credit limit", async function () {});
+
         it("Borrow less than approved amount", async function () {
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
@@ -206,6 +211,7 @@ describe.only("Base Credit Pool", function () {
             // Should return false when no loan exists
             expect(await poolContract.isApproved(evaluationAgent.address)).to.equal(false);
 
+            console.log(await testTokenContract.balanceOf(borrower.address));
             await poolContract.connect(borrower).drawdown(100_000);
 
             // Two streams of income
@@ -250,8 +256,7 @@ describe.only("Base Credit Pool", function () {
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
 
-            await ethers.provider.send("evm_increaseTime", [6 * 24 * 3600]);
-            await ethers.provider.send("evm_mine", []);
+            advanceClock(6);
 
             await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.revertedWith(
                 "creditExpiredDueToFirstDrawdownTooLate()"
@@ -263,8 +268,7 @@ describe.only("Base Credit Pool", function () {
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
             await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
 
-            await ethers.provider.send("evm_increaseTime", [6 * 24 * 3600]);
-            await ethers.provider.send("evm_mine", []);
+            advanceClock(6);
 
             await expect(poolContract.connect(borrower).drawdown(1_000_000));
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
@@ -279,8 +283,7 @@ describe.only("Base Credit Pool", function () {
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(500_000);
 
-            await ethers.provider.send("evm_increaseTime", [6 * 24 * 3600]);
-            await ethers.provider.send("evm_mine", []);
+            advanceClock(6);
 
             await poolContract.connect(borrower).drawdown(500_000);
             creditInfo = await poolContract.getCreditInformation(borrower.address);
@@ -314,8 +317,7 @@ describe.only("Base Credit Pool", function () {
         });
 
         it("Process payback", async function () {
-            await ethers.provider.send("evm_increaseTime", [29 * 24 * 3600]);
-            await ethers.provider.send("evm_mine", []);
+            advanceClock(29);
 
             // AmountDue (10002) + 1000 extra principal payment
             await testTokenContract.connect(borrower).approve(poolContract.address, 11002);
@@ -362,8 +364,7 @@ describe.only("Base Credit Pool", function () {
             await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
 
             // Period 1: Late for payment
-            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-            await ethers.provider.send("evm_mine", []);
+            advanceClock(30);
 
             await poolContract.updateDueInfo(borrower.address, true);
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
@@ -379,8 +380,7 @@ describe.only("Base Credit Pool", function () {
             expect(await poolContract.totalPoolValue()).to.equal(5_025_924);
 
             //Period 2: Two periods lates
-            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-            await ethers.provider.send("evm_mine", []);
+            advanceClock(30);
 
             await poolContract.updateDueInfo(borrower.address, true);
             creditInfo = await poolContract.getCreditInformation(borrower.address);
@@ -396,8 +396,7 @@ describe.only("Base Credit Pool", function () {
             expect(await poolContract.totalPoolValue()).to.equal(5_039_513);
 
             // Period 3: 3 periods late. ready for default.
-            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600]);
-            await ethers.provider.send("evm_mine", []);
+            advanceClock(30);
 
             // Intertionally bypass calling updateDueInfo(), and expects triggerDefault() to call it
             // await poolContract.updateDueInfo(borrower.address);

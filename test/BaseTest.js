@@ -138,7 +138,13 @@ async function deployAndSetupPool(
     return [hdtContract, poolContract];
 }
 
+async function advanceClock(days) {
+    await ethers.provider.send("evm_increaseTime", [3600 * 24 * days]);
+    await ethers.provider.send("evm_mine", []);
+}
+
 module.exports = {
     deployContracts,
     deployAndSetupPool,
+    advanceClock,
 };
