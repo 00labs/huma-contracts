@@ -115,7 +115,7 @@ describe("Base Credit Pool", function () {
             await poolContract
                 .connect(evaluationAgent)
                 .changeCreditLine(borrower.address, 1000000);
-            let result = await poolContract.creditRecordMapping(borrower.address);
+            let result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
         });
         it("Should not allow non-pool-owner-or-huma-admin to change credit expiration before first drawdown", async function () {
@@ -222,7 +222,6 @@ describe("Base Credit Pool", function () {
             // Should return false when no loan exists
             expect(await poolContract.isApproved(evaluationAgent.address)).to.equal(false);
 
-            console.log(await testTokenContract.balanceOf(borrower.address));
             await poolContract.connect(borrower).drawdown(100_000);
 
             // Two streams of income

@@ -47,8 +47,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
     /**
      * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
-     * @param _cr the credit record associated with the account associated with the drawdown/payment
-     * @param amount the amount of the drawdown/payment that we are trying to compute correction
      * @dev Correction is used when there is change to the principal in the middle of the cycle
      * due to drawdown or principal payment. For a drawdown, principal goes up, the interest at
      * the end of cycle will be higher than the actual interest that should have been generated
@@ -56,17 +54,15 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * negative to offset the over-count at the end of the cycle. It will be positive for
      * principal payment.
      */
-    function calcCorrection(BS.CreditRecord memory _cr, uint256 amount)
-        external
-        view
-        virtual
-        override
-        returns (uint256 correction)
-    {
+    function calcCorrection(
+        uint256 dueDate,
+        uint256 aprInBps,
+        uint256 amount
+    ) external view virtual override returns (uint256 correction) {
         // rounding to days
-        uint256 remainingTime = _cr.dueDate - block.timestamp;
+        uint256 remainingTime = dueDate - block.timestamp;
 
-        return (amount * _cr.aprInBps * remainingTime) / SECONDS_IN_A_YEAR / 10000;
+        return (amount * aprInBps * remainingTime) / SECONDS_IN_A_YEAR / 10000;
     }
 
     /**
@@ -147,7 +143,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * that is due currently.
      * @return totalDue amount due in this period, it includes fees, interest, and min principal
      */
-    function getDueInfo(BaseStructs.CreditRecord memory _cr)
+    function getDueInfo(
+        BaseStructs.CreditRecord memory _cr,
+        BaseStructs.CreditRecordStatic memory _crStatic
+    )
         public
         view
         virtual
@@ -171,7 +170,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             periodsPassed =
                 1 +
                 (block.timestamp - _cr.dueDate) /
-                (_cr.intervalInDays * SECONDS_IN_A_DAY);
+                (_crStatic.intervalInDays * SECONDS_IN_A_DAY);
         } else {
             periodsPassed = 1;
         }
@@ -193,7 +192,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // step 1. late fee calculation
             if (_cr.totalDue > 0)
                 fees = calcLateFee(
-                    _cr.dueDate + i * _cr.intervalInDays * SECONDS_IN_A_DAY,
+                    _cr.dueDate + i * _crStatic.intervalInDays * SECONDS_IN_A_DAY,
                     _cr.totalDue,
                     _cr.unbilledPrincipal + _cr.totalDue
                 );
@@ -203,7 +202,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
             // step 3. computer interest
             interest =
-                (_cr.unbilledPrincipal * _cr.aprInBps * _cr.intervalInDays * SECONDS_IN_A_DAY) /
+                (_cr.unbilledPrincipal * _crStatic.aprInBps * _crStatic.intervalInDays * SECONDS_IN_A_DAY) /
                 SECONDS_IN_A_YEAR /
                 BPS_DIVIDER;
 

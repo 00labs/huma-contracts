@@ -20,13 +20,14 @@ let treasury;
 let evaluationAgent;
 let poolOwner;
 let record;
+let recordStatic;
 let initialTimestamp;
 let dueDate;
 let protocolOwner;
 let eaNFTContract;
 
-let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
-    if (v1 != "SKIP") expect(r.creditLimit).to.equal(v1);
+let checkRecord = function (r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
+    if (v1 != "SKIP") expect(rs.creditLimit).to.equal(v1);
     if (v2 != "SKIP") expect(r.unbilledPrincipal).to.equal(v2);
     if (v3 != "SKIP") expect(r.dueDate).to.be.within(v3 - 60, v3 + 60);
     if (v4 != "SKIP") expect(r.correction).to.equal(v4); //be.within(v4 - 1, v4 + 1);
@@ -34,8 +35,8 @@ let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
     if (v6 != "SKIP") expect(r.feesAndInterestDue).to.equal(v6);
     if (v7 != "SKIP") expect(r.missedPeriods).to.equal(v7);
     if (v8 != "SKIP") expect(r.remainingPeriods).to.equal(v8);
-    if (v9 != "SKIP") expect(r.aprInBps).to.equal(v9);
-    if (v10 != "SKIP") expect(r.intervalInDays).to.equal(v10);
+    if (v9 != "SKIP") expect(rs.aprInBps).to.equal(v9);
+    if (v10 != "SKIP") expect(rs.intervalInDays).to.equal(v10);
     if (v11 != "SKIP") expect(r.state).to.equal(v11);
 };
 
@@ -84,11 +85,13 @@ describe("Credit Line Integration Test", async function () {
         // Establish credit line
         await poolContract.connect(borrower).requestCredit(5000, 30, 12);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 0, "SKIP", 0, 0, 0, 0, 12, 1217, 30, 1);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 0, "SKIP", 0, 0, 0, 0, 12, 1217, 30, 1);
 
         await poolContract.connect(evaluationAgent).approveCredit(borrower.address);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 0, "SKIP", 0, 0, 0, 0, 12, 1217, 30, 2);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 0, "SKIP", 0, 0, 0, 0, 12, 1217, 30, 2);
 
         let blockNumBefore = await ethers.provider.getBlockNumber();
         let blockBefore = await ethers.provider.getBlock(blockNumBefore);
@@ -97,9 +100,10 @@ describe("Credit Line Integration Test", async function () {
 
         await poolContract.connect(borrower).drawdown(2000);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 1900, dueDate, 0, 120, 20, 0, 11, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 1900, dueDate, 0, 120, 20, 0, 11, 1217, 30, 3);
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 0, 20, 120, 1900, 0);
     });
 
@@ -108,9 +112,10 @@ describe("Credit Line Integration Test", async function () {
 
         await poolContract.connect(borrower).drawdown(2000);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 3900, dueDate, 10, 120, 20, 0, 11, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 3900, dueDate, 10, 120, 20, 0, 11, 1217, 30, 3);
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 0, 20, 120, 3900, 0);
     });
 
@@ -122,9 +127,10 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 120);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 3900, dueDate, 10, 0, 0, 0, 11, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 3900, dueDate, 10, 0, 0, 0, 11, 1217, 30, 3);
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 0, 0, 0, 3900, 0);
     });
 
@@ -132,7 +138,7 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(12);
         dueDate += 2592000;
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 1, 49, 244, 3705, 49);
     });
 
@@ -144,14 +150,15 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 244);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 3705, dueDate, -1, 0, 0, 0, 10, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 3705, dueDate, -1, 0, 0, 0, 10, 1217, 30, 3);
     });
 
     it("Day 60: 3rd statement", async function () {
         advanceClock(20);
         dueDate += 2592000;
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 1, 36, 221, 3520, 36);
     });
 
@@ -164,7 +171,8 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 100);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 3520, dueDate, 0, 121, 0, 0, 9, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 3520, dueDate, 0, 121, 0, 0, 9, 1217, 30, 3);
     });
 
     it("Day 90: 4th statement (late due to partial payment", async function () {
@@ -172,7 +180,7 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(15);
         dueDate += 2592000;
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 1, 238, 420, 3459, 238);
     });
 
@@ -184,7 +192,8 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 100);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 3459, dueDate, 0, 320, 138, 1, 8, 1217, 30, 4);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 3459, dueDate, 0, 320, 138, 1, 8, 1217, 30, 4);
     });
 
     it("Day 105: Over payment", async function () {
@@ -195,7 +204,8 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 400);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 3379, dueDate, -1, 0, 0, 0, 8, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 3379, dueDate, -1, 0, 0, 0, 8, 1217, 30, 3);
     });
 
     it("Day 110: Extra principal payment)", async function () {
@@ -206,14 +216,15 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 400);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 2979, dueDate, -2, 0, 0, 0, 8, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 2979, dueDate, -2, 0, 0, 0, 8, 1217, 30, 3);
     });
 
     it("Day 120: 5th statement", async function () {
         advanceClock(10);
         dueDate += 2592000;
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 1, 27, 175, 2831, 27);
     });
 
@@ -221,7 +232,7 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(30);
         dueDate += 2592000;
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 2, 200, 350, 2856, 227);
     });
 
@@ -229,7 +240,7 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(30);
         dueDate += 2592000;
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 3, 212, 372, 3046, 439);
     });
 
@@ -237,7 +248,7 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(30);
         dueDate += 2592000;
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 4, 224, 394, 3248, 663);
     });
 
@@ -259,7 +270,8 @@ describe("Credit Line Integration Test", async function () {
             .withArgs(borrower.address, 3620, borrower.address);
 
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 0, dueDate, 0, 0, 0, 0, 4, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 0, 0, 0, 4, 1217, 30, 3);
     });
 
     it("Day 300: New borrow after being dormant for 4 periods", async function () {
@@ -268,14 +280,15 @@ describe("Credit Line Integration Test", async function () {
 
         await poolContract.connect(borrower).drawdown(4000);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 4000, dueDate, 40, 0, 0, 0, 1, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 4000, dueDate, 40, 0, 0, 0, 1, 1217, 30, 3);
     });
 
     it("Day 330: new bill", async function () {
         advanceClock(30);
         dueDate += 2592000;
 
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 1, 80, 4080, 0, 80);
     });
 
@@ -284,7 +297,8 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(15);
         await poolContract.connect(evaluationAgent).extendCreditLineDuration(borrower.address, 2);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 0, dueDate, 0, 4080, 80, 0, 2, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 4080, 80, 0, 2, 1217, 30, 3);
     });
 
     it("Day 350: Partial pay, below required interest", async function () {
@@ -294,7 +308,8 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 20);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 0, dueDate, 0, 4060, 60, 0, 2, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 4060, 60, 0, 2, 1217, 30, 3);
     });
 
     it("Day 352: Drawdown blocked due to over limit", async function () {
@@ -308,7 +323,8 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(3);
         await poolContract.connect(borrower).drawdown(1000);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 1000, dueDate, 1, 4060, 60, 0, 2, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 1000, dueDate, 1, 4060, 60, 0, 2, 1217, 30, 3);
     });
 
     it("Day 358: Pay with amountDue", async function () {
@@ -318,13 +334,14 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 4060);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 1000, dueDate, -1, 0, 0, 0, 2, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 1000, dueDate, -1, 0, 0, 0, 2, 1217, 30, 3);
     });
 
     it("Day 360: normal statement", async function () {
         advanceClock(2);
         dueDate += 2592000;
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 1, 9, 59, 950, 9);
     });
 
@@ -335,13 +352,14 @@ describe("Credit Line Integration Test", async function () {
             .connect(borrower)
             .makePayment(borrower.address, testTokenContract.address, 59);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 950, dueDate, 0, 0, 0, 0, 1, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 950, dueDate, 0, 0, 0, 0, 1, 1217, 30, 3);
     });
 
     it("Day 390: Final statement, all principal due", async function () {
         advanceClock(10);
         dueDate += 2592000;
-        let r = await feeManagerContract.getDueInfo(record);
+        let r = await feeManagerContract.getDueInfo(record, recordStatic);
         checkResult(r, 1, 9, 959, 0, 9);
     });
 
@@ -363,6 +381,7 @@ describe("Credit Line Integration Test", async function () {
             .emit(poolContract, "PaymentMade")
             .withArgs(borrower.address, 955, borrower.address);
         record = await poolContract.creditRecordMapping(borrower.address);
-        checkRecord(record, 5000, 0, dueDate, 0, 0, 0, 0, 0, 1217, 30, 3);
+        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+        checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 0, 0, 0, 0, 1217, 30, 3);
     });
 });

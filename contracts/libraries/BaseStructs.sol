@@ -21,9 +21,13 @@ library BaseStructs {
         uint16 missedPeriods; // # of consecutive missed payments, for default processing
         uint16 remainingPeriods; // # of payment periods until the maturity of the credit line
         CreditState state; // status of the credit line
+    }
+
+    struct CreditRecordStatic {
         uint96 creditLimit; // the limit of the credit line
         uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
         uint16 intervalInDays; // # of days in one billing period
+        uint96 defaultAmount; // the amount that has been defaulted. 
     }
 
     /**

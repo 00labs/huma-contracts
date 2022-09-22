@@ -78,13 +78,16 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Populates basic credit info fields
         BS.CreditRecord memory cr;
-        cr.creditLimit = uint96(creditLimit);
         // note, leaving balance at the default 0, update balance only after drawdown
-        cr.aprInBps = uint16(aprInBps);
-        cr.intervalInDays = uint16(intervalInDays);
         cr.remainingPeriods = uint16(remainingPeriods);
         cr.state = BS.CreditState.Requested;
         _creditRecordMapping[borrower] = cr;
+
+        BS.CreditRecordStatic memory crStatic;
+        crStatic.creditLimit = uint96(creditLimit);
+        crStatic.aprInBps = uint16(aprInBps);
+        crStatic.intervalInDays = uint16(intervalInDays);
+        _creditRecordStaticMapping[borrower] = crStatic;
 
         // Populates fields related to receivable
         if (receivableAsset != address(0)) {
@@ -144,7 +147,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         onlyEvaluationAgent();
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-        require(cr.creditLimit <= _poolConfig._maxCreditLine, "GREATER_THAN_LIMIT");
+        require(
+            _creditRecordStaticMapping[borrower].creditLimit <= _poolConfig._maxCreditLine,
+            "GREATER_THAN_LIMIT"
+        );
         cr.state = BS.CreditState.Approved;
 
         // Note: Special logic. dueDate is normally used to track the next bill due.
@@ -169,7 +175,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Borrowing amount needs to be lower than max for the pool.
         if (newLine > _poolConfig._maxCreditLine) revert Errors.greaterThanMaxCreditLine();
 
-        _creditRecordMapping[borrower].creditLimit = uint96(newLine);
+        _creditRecordStaticMapping[borrower].creditLimit = uint96(newLine);
     }
 
     /**
@@ -180,10 +186,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
         onlyEvaluationAgent();
         //critical todo need to make sure there is no outstanding balance
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-        cr.state = BS.CreditState.Deleted;
-        cr.creditLimit = 0;
-        _creditRecordMapping[borrower] = cr;
+        _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
+        _creditRecordStaticMapping[borrower].creditLimit = 0;
     }
 
     function isApproved(address borrower) external view virtual override returns (bool) {
@@ -230,7 +234,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // todo 8/23 add a test for this check
         if (
             borrowAmount >
-            (cr.creditLimit - cr.unbilledPrincipal - (cr.totalDue - cr.feesAndInterestDue))
+            (_creditRecordStaticMapping[borrower].creditLimit -
+                cr.unbilledPrincipal -
+                (cr.totalDue - cr.feesAndInterestDue))
         ) revert Errors.creditLineExceeded();
 
         bool isFirstDrawdown = cr.state == BS.CreditState.Approved ? true : false;
@@ -265,7 +271,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // For non-first bill, we do not update the current bill, the interest for the rest of
             // this pay period is accrued in correction and be add to the next bill.
             cr.correction += int96(
-                uint96(IFeeManager(_feeManagerAddress).calcCorrection(cr, borrowAmount))
+                uint96(
+                    IFeeManager(_feeManagerAddress).calcCorrection(
+                        cr.dueDate,
+                        _creditRecordStaticMapping[borrower].aprInBps,
+                        borrowAmount
+                    )
+                )
             );
             cr.unbilledPrincipal = uint96(cr.unbilledPrincipal + borrowAmount);
         }
@@ -374,7 +386,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // If there is principal payment, calcuate new correction
         if (principalPayment > 0) {
             cr.correction -= int96(
-                uint96(IFeeManager(_feeManagerAddress).calcCorrection(cr, principalPayment))
+                uint96(
+                    IFeeManager(_feeManagerAddress).calcCorrection(
+                        cr.dueDate,
+                        _creditRecordStaticMapping[borrower].aprInBps,
+                        principalPayment
+                    )
+                )
             );
         }
 
@@ -418,7 +436,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.totalDue,
             cr.unbilledPrincipal,
             newCharges
-        ) = IFeeManager(_feeManagerAddress).getDueInfo(cr);
+        ) = IFeeManager(_feeManagerAddress).getDueInfo(cr, _creditRecordStaticMapping[borrower]);
 
         // Distribute income
         if (distributeChargesForLastCycle) distributeIncome(newCharges);
@@ -427,9 +445,17 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         if (periodsPassed > 0) {
             if (cr.dueDate > 0)
                 cr.dueDate = uint64(
-                    cr.dueDate + periodsPassed * cr.intervalInDays * SECONDS_IN_A_DAY
+                    cr.dueDate +
+                        periodsPassed *
+                        _creditRecordStaticMapping[borrower].intervalInDays *
+                        SECONDS_IN_A_DAY
                 );
-            else cr.dueDate = uint64(block.timestamp + cr.intervalInDays * SECONDS_IN_A_DAY);
+            else
+                cr.dueDate = uint64(
+                    block.timestamp +
+                        _creditRecordStaticMapping[borrower].intervalInDays *
+                        SECONDS_IN_A_DAY
+                );
 
             // Adjusts remainingPeriods, special handling when reached the maturity of the credit line
             if (cr.remainingPeriods > periodsPassed) {
@@ -471,11 +497,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Check if grace period has exceeded. Please note it takes a full pay period
         // before the account is considered to be late. The time passed should be one pay period
         // plus the grace period.
+        uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
         require(
-            cr.missedPeriods * cr.intervalInDays * SECONDS_IN_A_DAY >=
-                _poolConfig._poolDefaultGracePeriodInSeconds +
-                    cr.intervalInDays *
-                    SECONDS_IN_A_DAY,
+            cr.missedPeriods * intervalInDays * SECONDS_IN_A_DAY >=
+                _poolConfig._poolDefaultGracePeriodInSeconds + intervalInDays * SECONDS_IN_A_DAY,
             "DEFAULT_TRIGGERED_TOO_EARLY"
         );
         losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
@@ -524,6 +549,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         )
     {
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        BS.CreditRecordStatic memory crStatic = _creditRecordStaticMapping[borrower];
+
         return (
             cr.unbilledPrincipal,
             cr.dueDate,
@@ -533,14 +560,22 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.missedPeriods,
             cr.remainingPeriods,
             cr.state,
-            cr.creditLimit,
-            cr.aprInBps,
-            cr.intervalInDays
+            crStatic.creditLimit,
+            crStatic.aprInBps,
+            crStatic.intervalInDays
         );
     }
 
     function creditRecordMapping(address account) external view returns (BS.CreditRecord memory) {
         return _creditRecordMapping[account];
+    }
+
+    function creditRecordStaticMapping(address account)
+        external
+        view
+        returns (BS.CreditRecordStatic memory)
+    {
+        return _creditRecordStaticMapping[account];
     }
 
     function isLate(address borrower) external view returns (bool) {
