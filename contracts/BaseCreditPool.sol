@@ -32,20 +32,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 intervalInDays,
         uint256 numOfPayments
     ) external virtual override {
-        // todo _internalInDays and _numOfPayments are set by the pool owner.
-        // Need to add these two in pool settings and remove them from the constructor parameter.
-
-        // Open access to the borrower
-        // Parameter and condition validation happens in initiate()
+        // Open access to the borrower. Data validation happens in initiateCredit()
         initiateCredit(
             msg.sender,
             creditLimit,
-            address(0),
-            0,
-            0,
             _poolConfig._poolAprInBps,
             intervalInDays,
-            numOfPayments
+            numOfPayments,
+            false
         );
     }
 
@@ -53,18 +47,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @notice initiation of a credit line
      * @param borrower the address of the borrower
      * @param creditLimit the amount of the liquidity asset that the borrower obtains
-     * @param receivableAsset the address of the receivable asset.
-     * @param receivableAmount the amount of the receivable asset
      */
     function initiateCredit(
         address borrower,
         uint256 creditLimit,
-        address receivableAsset,
-        uint256 receivableParam,
-        uint256 receivableAmount,
         uint256 aprInBps,
         uint256 intervalInDays,
-        uint256 remainingPeriods
+        uint256 remainingPeriods,
+        bool preApproved
     ) internal virtual {
         protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
@@ -73,70 +63,23 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             revert Errors.creditLineAlreadyExists();
 
         // Borrowing amount needs to be lower than max for the pool.
-        if (creditLimit > _poolConfig._maxCreditLine) {
-            revert Errors.greaterThanMaxCreditLine();
-        }
+        _maxCreditLineCheck(creditLimit);
 
-        // Populates basic credit info fields
+        _creditRecordStaticMapping[borrower] = BS.CreditRecordStatic({
+            creditLimit: uint96(creditLimit),
+            aprInBps: uint16(aprInBps),
+            intervalInDays: uint16(intervalInDays),
+            defaultAmount: uint96(0)
+        });
+
         BS.CreditRecord memory cr;
-        // note, leaving balance at the default 0, update balance only after drawdown
+
         cr.remainingPeriods = uint16(remainingPeriods);
-        cr.state = BS.CreditState.Requested;
+
+        if (preApproved) cr = _approveCredit(cr);
+        else cr.state = BS.CreditState.Requested;
+
         _creditRecordMapping[borrower] = cr;
-
-        BS.CreditRecordStatic memory crStatic;
-        crStatic.creditLimit = uint96(creditLimit);
-        crStatic.aprInBps = uint16(aprInBps);
-        crStatic.intervalInDays = uint16(intervalInDays);
-        _creditRecordStaticMapping[borrower] = crStatic;
-
-        // Populates fields related to receivable
-        if (receivableAsset != address(0)) {
-            BS.ReceivableInfo memory ci;
-            ci.receivableAsset = receivableAsset;
-            ci.receivableParam = receivableParam;
-            ci.receivableAmount = uint88(receivableAmount);
-            _receivableInfoMapping[borrower] = ci;
-        }
-    }
-
-    /**
-     * @notice After the EA (EvalutionAgent) has approved a factoring, it calls this function
-     * to record the approval on chain and mark as factoring as approved, which will enable
-     * the borrower to drawdown (borrow) from the approved credit.
-     * @param borrower the borrower address
-     * @param creditAmount the limit of the credit
-     * @param receivableAsset the receivable asset used for this credit
-     * @param receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
-     * @param receivableAmount amount of the receivable asset
-     * @param intervalInDays time interval for each payback in units of days
-     * @param remainingPeriods the number of pay periods for this credit
-     * @dev Only Evaluation Agents for this contract can call this function.
-     */
-    function recordApprovedCredit(
-        address borrower,
-        uint256 creditAmount,
-        address receivableAsset,
-        uint256 receivableParam,
-        uint256 receivableAmount,
-        uint256 intervalInDays,
-        uint256 remainingPeriods
-    ) external virtual override {
-        onlyEAServiceAccount();
-
-        // Pool status and data validation happens within initiate().
-        initiateCredit(
-            borrower,
-            creditAmount,
-            receivableAsset,
-            receivableParam,
-            receivableAmount,
-            _poolConfig._poolAprInBps,
-            intervalInDays,
-            remainingPeriods
-        );
-
-        approveCredit(borrower);
     }
 
     /**
@@ -147,13 +90,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
         onlyEAServiceAccount();
 
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-        require(
-            _creditRecordStaticMapping[borrower].creditLimit <= _poolConfig._maxCreditLine,
-            "GREATER_THAN_LIMIT"
-        );
-        cr.state = BS.CreditState.Approved;
+        _creditRecordMapping[borrower] = _approveCredit(_creditRecordMapping[borrower]);
+    }
 
+    function _approveCredit(BS.CreditRecord memory cr)
+        internal
+        view
+        returns (BS.CreditRecord memory)
+    {
         // Note: Special logic. dueDate is normally used to track the next bill due.
         // Before the first drawdown, it is also used to set the deadline for the first
         // drawdown to happen, otherwise, the credit line expires.
@@ -161,7 +105,23 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 validPeriod = _poolConfig._creditApprovalExpirationInSeconds;
         if (validPeriod > 0) cr.dueDate = uint64(block.timestamp + validPeriod);
 
-        _creditRecordMapping[borrower] = cr;
+        cr.state = BS.CreditState.Approved;
+
+        return cr;
+    }
+
+    function _maxCreditLineCheck(uint256 amount) internal view {
+        if (amount > _poolConfig._maxCreditLine) {
+            revert Errors.greaterThanMaxCreditLine();
+        }
+    }
+
+    function _receivableRequirementCheck(uint256 creditLine, uint256 receivableAmount)
+        internal
+        view
+    {
+        if (receivableAmount < creditLine * _poolConfig._receivableRequiredInBps)
+            revert Errors.insufficientReceivableAmount();
     }
 
     /**
@@ -174,7 +134,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
-        if (newLine > _poolConfig._maxCreditLine) revert Errors.greaterThanMaxCreditLine();
+        _maxCreditLineCheck(newLine);
+
+        if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
+            _receivableRequirementCheck(
+                newLine,
+                _receivableInfoMapping[borrower].receivableAmount
+            );
+        }
 
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newLine);
     }
@@ -196,6 +163,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         else return false;
     }
 
+    function _checkAccountState(BS.CreditState state) internal pure {
+        if (state != BS.CreditState.Approved && state != BS.CreditState.GoodStanding)
+            revert Errors.creditLineNotInApprovedOrGoodStandingState();
+    }
+
     /**
      * @notice allows the borrower to borrow against an approved credit line
      * The borrower can borrow and pay back as many times as they would like.
@@ -204,7 +176,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     function drawdown(uint256 borrowAmount) external virtual override {
         // Open access to the borrower
         // Condition validation happens in drawdownWithReceivable()
-        return drawdownWithReceivable(msg.sender, borrowAmount, address(0), 0, 0);
+        return drawdownWithReceivable(msg.sender, borrowAmount, address(0), 0);
     }
 
     /**
@@ -212,15 +184,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @param borrower the borrower
      * @param borrowAmount the amount to borrow
      * @param receivableAsset the contract address of the receivable
-     * @param receivableParam is additional parameter of the receivable asset, such as NFT Tokenid
-     * @param receivableAmount the amount of the receivable asset
+     * @param receivableParam is additional parameter of the receivable asset. For ERC721,
+     * it is tokenId; for ERC20, it is the quantity of the asset
      */
     function drawdownWithReceivable(
         address borrower,
         uint256 borrowAmount,
         address receivableAsset,
-        uint256 receivableParam,
-        uint256 receivableAmount
+        uint256 receivableParam
     ) public virtual override {
         protocolAndPoolOn();
 
@@ -229,10 +200,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        if (cr.state != BS.CreditState.Approved && cr.state != BS.CreditState.GoodStanding)
-            revert Errors.creditLineNotInApprovedOrGoodStandingState();
+        _checkAccountState(cr.state);
 
-        // todo 8/23 add a test for this check
         if (
             borrowAmount >
             (_creditRecordStaticMapping[borrower].creditLimit -
@@ -252,15 +221,43 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                 revert Errors.creditExpiredDueToFirstDrawdownTooLate();
 
             // Update total principal
-            // cr.unbilledPrincipal = uint96(borrowAmount);
-            // _creditRecordMapping[borrower] = cr;
             _creditRecordMapping[borrower].unbilledPrincipal = uint96(borrowAmount);
 
             // Generates the first bill
             cr = updateDueInfo(borrower, true);
+
+            // Transfer receivable assset.
+            BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
+            if (ri.receivableAsset != address(0)) {
+                if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
+                if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
+                    // For ERC721, receivableParam is the tokenId
+                    if (ri.receivableParam != receivableParam)
+                        revert Errors.receivableAssetParamMismatch();
+
+                    IERC721(receivableAsset).safeTransferFrom(
+                        borrower,
+                        address(this),
+                        receivableParam
+                    );
+                } else if (receivableAsset.supportsInterface(type(IERC20).interfaceId)) {
+                    if (receivableParam < ri.receivableParam)
+                        revert Errors.insufficientReceivableAmount();
+
+                    IERC20(receivableAsset).safeTransferFrom(
+                        borrower,
+                        address(this),
+                        receivableParam
+                    );
+                } else {
+                    revert Errors.unsupportedReceivableAsset();
+                }
+            }
         } else {
             // Bring the account current.
             if (block.timestamp > cr.dueDate) cr = updateDueInfo(borrower, true);
+
+            _checkAccountState(cr.state);
 
             // note Drawdown is not allowed in the final pay period since the payment due for
             // such drawdown will fall outside of the window of the credit line.
@@ -280,6 +277,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                     )
                 )
             );
+
             cr.unbilledPrincipal = uint96(cr.unbilledPrincipal + borrowAmount);
         }
 
@@ -292,39 +290,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             .distBorrowingAmount(borrowAmount);
 
         if (platformFees > 0) distributeIncome(platformFees);
-
-        // Record the receivable info.
-        if (receivableAsset != address(0)) {
-            BS.ReceivableInfo memory ci = _receivableInfoMapping[borrower];
-            if (ci.receivableAsset != address(0)) {
-                // review remove _receivableAsset, _receivableParam and _receivableAmount parameters,
-                // use data in cr directly
-                require(receivableAsset == ci.receivableAsset, "COLLATERAL_MISMATCH");
-            }
-
-            // todo only do this at the first time,
-            // Need to add periodForFirstDrawn(), if not completed, the credit line is invalidated.
-            if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
-                IERC721(receivableAsset).safeTransferFrom(
-                    borrower,
-                    address(this),
-                    receivableParam
-                );
-            } else if (receivableAsset.supportsInterface(type(IERC20).interfaceId)) {
-                IERC20(receivableAsset).safeTransferFrom(
-                    borrower,
-                    address(this),
-                    receivableAmount
-                );
-            } else {
-                revert("COLLATERAL_ASSET_NOT_SUPPORTED");
-            }
-
-            // todo check to make sure the receivable amount meets the requirements
-            ci.receivableAmount = uint88(receivableAmount);
-            ci.receivableParam = receivableParam;
-            _receivableInfoMapping[borrower] = ci;
-        }
 
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);

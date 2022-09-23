@@ -12,4 +12,10 @@ contract Errors {
     error zeroAddressProvided();
     error paymentDetectionServiceAccountRequired();
     error defaultTriggeredTooEarly();
+    error receivableAssetMismatch();
+    error unsupportedReceivableAsset();
+    error receivableAssetParamMismatch();
+    error insufficientReceivableAmount();
+    error maxCreditLimitExceeded();
+    error borrowingAmountLessThanPlatformFees();
 }
