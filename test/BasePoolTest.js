@@ -98,10 +98,15 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Should have the right liquidity token and interest", async function () {
-            var [token, interest] = await poolContract.getPoolSummary();
+            let summary = await poolContract.getPoolSummary();
 
-            expect(token).to.equal(testTokenContract.address);
-            expect(interest).to.equal(1217);
+            expect(summary.token).to.equal(testTokenContract.address);
+            expect(summary.apr).to.equal(1217);
+            expect(summary.name).to.equal("TestToken");
+            expect(summary.symbol).to.equal("USDC");
+            expect(summary.decimals).to.equal(6);
+            expect(summary.evaluationAgentId).equal(1);
+            expect(summary.eaNFTAddress).equal(eaNFTContract.address);
         });
 
         it("Should be able to set min and max credit size", async function () {
