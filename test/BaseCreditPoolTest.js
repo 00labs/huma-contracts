@@ -371,6 +371,39 @@ describe("Base Credit Pool", function () {
         });
     });
 
+    describe("Account update by service account", function () {
+        it("Shall not emit BillRefreshed event when the bill should not be refreshed", async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(1_000_000);
+            await expect(
+                poolContract.connect(pdsServiceAccount).updateDueInfo(borrower.address, true)
+            ).to.not.emit(poolContract, "BillRefreshed");
+        });
+
+        it("Shall emit BillRefreshed event when the bill is refreshed", async function () {
+            let blockNumBefore = await ethers.provider.getBlockNumber();
+            let blockBefore = await ethers.provider.getBlock(blockNumBefore);
+
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(1_000_000);
+
+            let record = await poolContract.getCreditInformation(borrower.address);
+            let previousDueDate = record.dueDate;
+
+            advanceClock(40);
+
+            let expectedDueDate = +previousDueDate + 2592000;
+
+            await expect(
+                poolContract.connect(pdsServiceAccount).updateDueInfo(borrower.address, true)
+            )
+                .to.emit(poolContract, "BillRefreshed")
+                .withArgs(borrower.address, expectedDueDate, pdsServiceAccount.address);
+        });
+    });
+
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", function () {
         beforeEach(async function () {
