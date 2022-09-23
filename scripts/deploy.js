@@ -1,3 +1,5 @@
+const {ethers} = require("hardhat");
+
 async function deployContracts() {
     // Deploy HumaConfig
     [owner, proxyOwner, lender, borrower, treasury, evaluationAgent] = await ethers.getSigners();
@@ -42,6 +44,15 @@ async function deployContracts() {
     await hdtContract.initialize("Base HDT", "BHDT", testToken.address);
     console.log("hdt contract deployed to:", hdtContract.address);
 
+    const BasePoolConfig = await ethers.getContractFactory("BasePoolConfig");
+    const poolConfig = await BasePoolConfig.deploy(
+        "Base Credit Pool",
+        hdtContract.address,
+        humaConfigContract.address,
+        feeManager.address
+    );
+    await poolConfig.deployed();
+
     // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
     const poolImpl = await BaseCreditPool.deploy();
@@ -53,17 +64,15 @@ async function deployContracts() {
     );
     await poolProxy.deployed();
 
+    console.log("poolProxy deployed to:", poolProxy.address);
+
     let poolContract = BaseCreditPool.attach(poolProxy.address);
     await poolContract
         .connect(owner)
-        .initialize(
-            hdtContract.address,
-            humaConfigContract.address,
-            feeManager.address,
-            "Base Credit Pool"
-        );
+        .initialize(poolConfig.address);
 
     console.log("BaseCreditPool deployed to:", poolContract.address);
+    await poolConfig.setPool(poolContract.address);
     await hdtContract.setPool(poolContract.address);
 
     // Pool setup
@@ -72,9 +81,9 @@ async function deployContracts() {
     await poolContract.connect(owner).addApprovedLender(lender.address);
     await poolContract.connect(owner).makeInitialDeposit(100);
     await poolContract.enablePool();
-    await poolContract.connect(owner).setAPR(1217);
-    await poolContract.setMaxCreditLine(10000);
-    await poolContract.setEvaluationAgent(1, evaluationAgent.address);
+    await poolConfig.connect(owner).setAPR(1217);
+    await poolConfig.setMaxCreditLine(10_000_000);
+    await poolConfig.setEvaluationAgent(1, evaluationAgent.address);
     await testToken.connect(lender).approve(poolContract.address, 10000);
     await poolContract.connect(lender).deposit(10000);
 }
