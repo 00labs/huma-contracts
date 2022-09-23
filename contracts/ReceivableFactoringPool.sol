@@ -60,7 +60,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         initiateCredit(
             borrower,
             creditLimit,
-            _poolConfig._poolAprInBps,
+            _poolConfig.poolAprInBps(),
             intervalInDays,
             remainingPeriods,
             true

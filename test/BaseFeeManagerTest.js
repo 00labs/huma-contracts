@@ -8,6 +8,7 @@ use(solidity);
 
 let eaNFTContract;
 let poolContract;
+let poolConfigContract;
 let hdtContract;
 let humaConfigContract;
 let feeManagerContract;
@@ -71,7 +72,7 @@ describe("Base Fee Manager", function () {
                 pdsServiceAccount
             );
 
-        [hdtContract, poolContract] = await deployAndSetupPool(
+        [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
             poolOwner,
             proxyOwner,
             evaluationAgent,
@@ -83,8 +84,8 @@ describe("Base Fee Manager", function () {
             eaNFTContract
         );
 
-        await poolContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
-        await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+        await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
+        await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
     });
 
     describe("Admin functions", function () {
@@ -139,7 +140,7 @@ describe("Base Fee Manager", function () {
 
     describe("getDueInfo(), IntOnly", async function () {
         before(async function () {
-            [hdtContract, poolContract] = await deployAndSetupPool(
+            [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
                 poolOwner,
                 proxyOwner,
                 evaluationAgent,
@@ -206,7 +207,7 @@ describe("Base Fee Manager", function () {
 
     describe("getDueInfo(), MinPrincipal", async function () {
         before(async function () {
-            [hdtContract, poolContract] = await deployAndSetupPool(
+            [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
                 poolOwner,
                 proxyOwner,
                 evaluationAgent,
@@ -219,7 +220,7 @@ describe("Base Fee Manager", function () {
             );
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100);
-            await poolContract.connect(poolOwner).setAPR(1217);
+            await poolConfigContract.connect(poolOwner).setAPR(1217);
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
 
             // Create a borrowing record

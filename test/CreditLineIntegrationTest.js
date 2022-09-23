@@ -7,6 +7,7 @@ const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest"
 use(solidity);
 
 let poolContract;
+let poolConfigContract;
 let hdtContract;
 let humaConfigContract;
 let testTokenContract;
@@ -75,7 +76,7 @@ describe("Credit Line Integration Test", async function () {
                 pdsServiceAccount
             );
 
-        [hdtContract, poolContract] = await deployAndSetupPool(
+        [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
             poolOwner,
             proxyOwner,
             evaluationAgent,
@@ -89,7 +90,7 @@ describe("Credit Line Integration Test", async function () {
 
         await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500);
         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
-        await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+        await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
     });
 
     it("Day 0: Initial drawdown", async function () {

@@ -46,6 +46,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 describe("Base Credit Pool", function () {
     let poolContract;
+    let poolConfigContract;
     let hdtContract;
     let humaConfigContract;
     let feeManagerContract;
@@ -86,7 +87,7 @@ describe("Base Credit Pool", function () {
     });
 
     beforeEach(async function () {
-        [hdtContract, poolContract] = await deployAndSetupPool(
+        [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
             poolOwner,
             proxyOwner,
             evaluationAgent,
@@ -98,8 +99,8 @@ describe("Base Credit Pool", function () {
             eaNFTContract
         );
 
-        await poolContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
-        await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+        await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
+        await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
     });
 
     afterEach(async function () {});
@@ -131,12 +132,12 @@ describe("Base Credit Pool", function () {
         });
         it("Should not allow non-pool-owner-or-huma-admin to change credit expiration before first drawdown", async function () {
             await expect(
-                poolContract.connect(lender).setCreditApprovalExpiration(5)
-            ).to.be.revertedWith("PERMISSION_DENIED_NOT_ADMIN");
+                poolConfigContract.connect(lender).setCreditApprovalExpiration(5)
+            ).to.be.revertedWith("permissionDeniedNotAdmin");
         });
         it("Should allow pool owner to change credit expiration before first drawdown", async function () {
-            await expect(poolContract.connect(poolOwner).setCreditApprovalExpiration(5))
-                .to.emit(poolContract, "CreditApprovalExpirationChanged")
+            await expect(poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5))
+                .to.emit(poolConfigContract, "CreditApprovalExpirationChanged")
                 .withArgs(432000, poolOwner.address);
         });
     });
@@ -171,7 +172,7 @@ describe("Base Credit Pool", function () {
         it("Shall allow loan request", async function () {
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
 
-            await poolContract.connect(poolOwner).setAPR(1217);
+            await poolConfigContract.connect(poolOwner).setAPR(1217);
 
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
@@ -257,7 +258,7 @@ describe("Base Credit Pool", function () {
             // interest income: 1000 {protocol, poolOwner, EA, Pool}: {200, 50, 150, 600}
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(98_000);
 
-            let accruedIncome = await poolContract.accruedIncome();
+            let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(600);
             expect(accruedIncome.poolOwnerIncome).to.equal(150);
             expect(accruedIncome.eaIncome).to.equal(450);
@@ -287,7 +288,7 @@ describe("Base Credit Pool", function () {
             // interest income: 10,002. {proto, poolowner, ea, pool} = {2000, 500, 1500, 6002}
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(989_000);
 
-            let accruedIncome = await poolContract.accruedIncome();
+            let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(4200);
             expect(accruedIncome.poolOwnerIncome).to.equal(1050);
             expect(accruedIncome.eaIncome).to.equal(3150);
@@ -332,7 +333,7 @@ describe("Base Credit Pool", function () {
 
     describe("Credit expiration without a timely first drawdown", function () {
         it("Cannot borrow after credit expiration window", async function () {
-            await poolContract.connect(poolOwner).setCreditApprovalExpiration(5);
+            await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
 
@@ -344,7 +345,7 @@ describe("Base Credit Pool", function () {
         });
 
         it("Can borrow if no credit expiration has been setup for the pool", async function () {
-            await poolContract.connect(poolOwner).setCreditApprovalExpiration(0);
+            await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(0);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
 
@@ -356,7 +357,7 @@ describe("Base Credit Pool", function () {
         });
 
         it("Expiration window does not apply after initial drawdown", async function () {
-            await poolContract.connect(poolOwner).setCreditApprovalExpiration(5);
+            await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await expect(poolContract.connect(borrower).drawdown(500_000));
@@ -409,7 +410,7 @@ describe("Base Credit Pool", function () {
         beforeEach(async function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
-            await poolContract.connect(poolOwner).setAPR(1217);
+            await poolConfigContract.connect(poolOwner).setAPR(1217);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
@@ -445,7 +446,7 @@ describe("Base Credit Pool", function () {
             expect(creditInfo.remainingPeriods).to.equal(11);
 
             // Interest income 10_002. Protocol: 2000, PoolOwner: 1500, EA: 500, pool: 6002
-            let accruedIncome = await poolContract.accruedIncome();
+            let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(4200);
             expect(accruedIncome.poolOwnerIncome).to.equal(1050);
             expect(accruedIncome.eaIncome).to.equal(3150);
@@ -466,7 +467,7 @@ describe("Base Credit Pool", function () {
         beforeEach(async function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
-            await poolContract.connect(poolOwner).setAPR(1217);
+            await poolConfigContract.connect(poolOwner).setAPR(1217);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
@@ -474,7 +475,7 @@ describe("Base Credit Pool", function () {
         });
 
         it("Default flow", async function () {
-            await poolContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+            await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
 
             // Period 1: Late for payment
             advanceClock(30);
@@ -539,7 +540,7 @@ describe("Base Credit Pool", function () {
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_011_000);
 
             // Checks all the accrued income of protocol, poolOwner, and EA.
-            let accruedIncome = await poolContract.accruedIncome();
+            let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(13169);
             expect(accruedIncome.poolOwnerIncome).to.equal(3292);
             expect(accruedIncome.eaIncome).to.equal(9876);

@@ -74,6 +74,15 @@ async function deployAndSetupPool(
     hdtContract = HDT.attach(hdtProxy.address);
     await hdtContract.initialize("Base Credit HDT", "CHDT", testTokenContract.address);
 
+    const BasePoolConfig = await ethers.getContractFactory("BasePoolConfig");
+    const poolConfig = await BasePoolConfig.deploy(
+        "Base Credit Pool",
+        hdtContract.address,
+        humaConfigContract.address,
+        feeManagerContract.address
+    );
+    await poolConfig.deployed();
+
     // Deploy BaseCreditPool
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
     const poolImpl = await BaseCreditPool.deploy();
@@ -86,22 +95,18 @@ async function deployAndSetupPool(
     await poolProxy.deployed();
 
     poolContract = BaseCreditPool.attach(poolProxy.address);
-    await poolContract.initialize(
-        hdtContract.address,
-        humaConfigContract.address,
-        feeManagerContract.address,
-        "Base Credit Pool"
-    );
+    await poolContract.initialize(poolConfig.address);
     await poolContract.deployed();
 
+    await poolConfig.setPool(poolContract.address);
     await hdtContract.setPool(poolContract.address);
 
     // Pool setup
-    await poolContract.transferOwnership(poolOwner.address);
+    await poolConfig.transferOwnership(poolOwner.address);
 
     // Config rewards and requirements for poolOwner and EA, make initial deposit, and enable pool
-    await poolContract.connect(poolOwner).setPoolLiquidityCap(1_000_000_000);
-    await poolContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 10);
+    await poolConfig.connect(poolOwner).setPoolLiquidityCap(1_000_000_000);
+    await poolConfig.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 10);
 
     let eaNFTTokenId;
     // Mint EANFT to the borrower
@@ -112,11 +117,11 @@ async function deployAndSetupPool(
             eaNFTTokenId = evt.args[0];
         }
     }
-    await poolContract
-        .connect(poolOwner)
-        .setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
 
-    await poolContract.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
+    await poolConfig.connect(poolOwner).setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
+    let s = await poolConfig.getPoolSummary();
+
+    await poolConfig.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
 
     await poolContract.connect(poolOwner).addApprovedLender(poolOwner.address);
     await poolContract.connect(poolOwner).addApprovedLender(evaluationAgent.address);
@@ -133,13 +138,13 @@ async function deployAndSetupPool(
         "PoolEnabled"
     );
 
-    await poolContract.connect(poolOwner).setAPR(1217);
-    await poolContract.connect(poolOwner).setMaxCreditLine(10_000_000);
+    await poolConfig.connect(poolOwner).setAPR(1217);
+    await poolConfig.connect(poolOwner).setMaxCreditLine(10_000_000);
 
     await testTokenContract.connect(lender).approve(poolContract.address, 2_000_000);
     await poolContract.connect(lender).deposit(2_000_000);
 
-    return [hdtContract, poolContract];
+    return [hdtContract, poolConfig, poolContract];
 }
 
 async function advanceClock(days) {
