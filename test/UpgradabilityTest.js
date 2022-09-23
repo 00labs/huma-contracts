@@ -145,7 +145,7 @@ describe("Upgradability Test", function () {
             );
         });
 
-        it.only("Should call existing function successfully", async function () {
+        it("Should call existing function successfully", async function () {
             const r1 = await poolConfigContract.poolDefaultGracePeriodInSeconds();
             await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
             const r2 = await poolConfigContract.poolDefaultGracePeriodInSeconds();
