@@ -218,10 +218,7 @@ async function prepare() {
     await sendTransaction("ReceivableFactoringPool", poolFromEA,
         "makeInitialDeposit", [BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)))])
 
-    await expect(pool.connect(deployer).enablePool()).to.emit(
-        pool,
-        "PoolEnabled"
-    );
+    await pool.enablePool();
 }
 
 async function initContracts() {
