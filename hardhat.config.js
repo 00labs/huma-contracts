@@ -31,7 +31,14 @@ let proxyOwner = process.env["PROXY_OWNER"];
 if (!proxyOwner) {
     proxyOwner = EMPTY_PRIVATE_KEY;
 }
-
+let lender = process.env["LENDER"];
+if (!lender) {
+    lender = EMPTY_PRIVATE_KEY;
+}
+let ea = process.env["EA"];
+if (!ea) {
+    ea = EMPTY_PRIVATE_KEY;
+}
 //
 // Select the network you want to deploy to here:
 //
@@ -111,7 +118,7 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [deployer, proxyOwner],
+            accounts: [deployer, proxyOwner, lender, ea],
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",

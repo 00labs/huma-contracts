@@ -16,7 +16,7 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
 
     constructor() ERC721("EvaluationAgentNFT", "EANFT") {}
 
-    function mint(address recipient, string memory tokenURI) external returns (uint256) {
+    function mintNFT(address recipient, string memory tokenURI) external returns (uint256) {
         emit Mint(recipient, tokenURI);
         _tokenIds.increment();
 

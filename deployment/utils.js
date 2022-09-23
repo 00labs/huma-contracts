@@ -98,7 +98,7 @@ const sendTransaction = async function (
     logMessage = !logMessage ? methodName : logMessage;
     const method = contractInstance[methodName];
     console.log(`${contractName}:${logMessage} Start!`);
-    console.log(`pramaters: ${parameters}`);
+    console.log(`paramaters: ${parameters}`);
     await checkReceiptOk(
         await method(...parameters, {
             maxFeePerGas: MAX_FEE_PER_GAS,

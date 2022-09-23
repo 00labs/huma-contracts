@@ -102,7 +102,7 @@ describe("Upgradability Test", function () {
 
         let eaNFTTokenId;
         // Mint EANFT to the borrower
-        const tx = await eaNFTContract.mint(evaluationAgent.address, "");
+        const tx = await eaNFTContract.mintNFT(evaluationAgent.address, "");
         const receipt = await tx.wait();
         for (const evt of receipt.events) {
             if (evt.event === "EANFTGenerated") {
