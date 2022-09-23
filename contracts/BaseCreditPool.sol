@@ -20,6 +20,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     event DefaultTriggered(address indexed borrower, uint256 losses, address by);
     event PaymentMade(address indexed borrower, uint256 amount, address by);
     event DrawdownWithReceivable(address indexed borrower, uint256 amount, address by);
+    event BillRefreshedByServiceAccount(address indexed borrower, uint256 newDueDate, address by);
 
     /**
      * @notice accepts a credit request from msg.sender
@@ -444,6 +445,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             if (periodsPassed > 0) cr.correction = 0;
 
             _creditRecordMapping[borrower] = cr;
+
+            if (msg.sender == HumaConfig(_humaConfig).pdsServiceAccount())
+                emit BillRefreshedByServiceAccount(borrower, cr.dueDate, msg.sender);
         }
     }
 
@@ -558,5 +562,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     function onlyEAServiceAccount() internal view {
         if (msg.sender != HumaConfig(_humaConfig).eaServiceAccount())
             revert Errors.evaluationAgentServiceAccountRequired();
+    }
+
+    function onlyPDSServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
+            revert Errors.paymentDetectionServiceAccountRequired();
     }
 }

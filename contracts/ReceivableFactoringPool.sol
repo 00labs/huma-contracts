@@ -119,9 +119,4 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     function disperseRemainingFunds(address receiver, uint256 amount) internal {
         _underlyingToken.safeTransfer(receiver, amount);
     }
-
-    function onlyPDSServiceAccount() internal view {
-        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
-            revert Errors.paymentDetectionServiceAccountRequired();
-    }
 }
