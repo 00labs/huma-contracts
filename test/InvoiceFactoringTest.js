@@ -31,6 +31,7 @@ describe("Invoice Factoring", function () {
     // let humaCreditFactoryContract;
     let testTokenContract;
     let invoiceNFTContract;
+    let eaNFTContract;
     let feeManagerContract;
     let proxyOwner;
     let owner;
@@ -74,6 +75,9 @@ describe("Invoice Factoring", function () {
 
         const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
         invoiceNFTContract = await InvoiceNFT.deploy(testTokenContract.address);
+
+        const eaNFT = await ethers.getContractFactory("EvaluationAgentNFT");
+        eaNFTContract = await eaNFT.deploy();
     });
 
     beforeEach(async function () {
@@ -132,15 +136,15 @@ describe("Invoice Factoring", function () {
         expect(await invoiceContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(100);
 
-        // const tx = await eaNFTContract.mint(evaluationAgent.address, "");
-        // const receipt = await tx.wait();
-        // for (const evt of receipt.events) {
-        //     if (evt.event === "EANFTGenerated") {
-        //         eaNFTTokenId = evt.args[0];
-        //     }
-        // }
+        const tx = await eaNFTContract.mintNFT(evaluationAgent.address, "");
+        const receipt = await tx.wait();
+        for (const evt of receipt.events) {
+            if (evt.event === "NFTGenerated") {
+                eaNFTTokenId = evt.args[0];
+            }
+        }
 
-        // await poolConfigContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
+        await poolConfigContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
 
         await poolConfigContract.connect(owner).setAPR(0); //bps
         await poolConfigContract.setMaxCreditLine(1000);
@@ -302,24 +306,12 @@ describe("Invoice Factoring", function () {
         beforeEach(async function () {
             await invoiceContract.connect(lender).deposit(300);
 
-            await invoiceContract
-                .connect(eaServiceAccount)
-                .recordApprovedCredit(
-                    borrower.address,
-                    400,
-                    ethers.constants.AddressZero,
-                    0,
-                    0,
-                    30,
-                    1
-                );
-
             // Mint InvoiceNFT to the borrower
             const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
             const receipt = await tx.wait();
             // eslint-disable-next-line no-restricted-syntax
             for (const evt of receipt.events) {
-                if (evt.event === "TokenGenerated") {
+                if (evt.event === "NFTGenerated") {
                     invoiceNFTTokenId = evt.args[0];
                 }
             }
@@ -327,6 +319,18 @@ describe("Invoice Factoring", function () {
             await invoiceNFTContract
                 .connect(borrower)
                 .approve(invoiceContract.address, invoiceNFTTokenId);
+
+            await invoiceContract
+                .connect(eaServiceAccount)
+                .recordApprovedCredit(
+                    borrower.address,
+                    400,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    4000,
+                    30,
+                    1
+                );
         });
 
         afterEach(async function () {
@@ -348,16 +352,13 @@ describe("Invoice Factoring", function () {
         });
 
         it("Should be able to borrow amount less than approved", async function () {
-            await invoiceContract.connect(eaServiceAccount).approveCredit(borrower.address);
-
             await invoiceContract
                 .connect(borrower)
                 .drawdownWithReceivable(
                     borrower.address,
                     200,
                     invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1
+                    invoiceNFTTokenId
                 );
 
             expect(await invoiceNFTContract.ownerOf(invoiceNFTTokenId)).to.equal(
@@ -387,8 +388,7 @@ describe("Invoice Factoring", function () {
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1
+                    invoiceNFTTokenId
                 );
 
             expect(await invoiceNFTContract.ownerOf(invoiceNFTTokenId)).to.equal(
@@ -425,7 +425,7 @@ describe("Invoice Factoring", function () {
             const receipt = await tx.wait();
             // eslint-disable-next-line no-restricted-syntax
             for (const evt of receipt.events) {
-                if (evt.event === "TokenGenerated") {
+                if (evt.event === "NFTGenerated") {
                     invoiceNFTTokenId = evt.args[0];
                 }
             }
@@ -452,8 +452,7 @@ describe("Invoice Factoring", function () {
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1
+                    invoiceNFTTokenId
                 );
 
             await testTokenContract.give1000To(payer.address);

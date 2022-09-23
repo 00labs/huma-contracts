@@ -98,10 +98,15 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Should have the right liquidity token and interest", async function () {
-            var [token, interest] = await poolConfigContract.getPoolSummary();
+            let summary = await poolConfigContract.getPoolSummary();
 
-            expect(token).to.equal(testTokenContract.address);
-            expect(interest).to.equal(1217);
+            expect(summary.token).to.equal(testTokenContract.address);
+            expect(summary.apr).to.equal(1217);
+            expect(summary.name).to.equal("TestToken");
+            expect(summary.symbol).to.equal("USDC");
+            expect(summary.decimals).to.equal(6);
+            expect(summary.eaId).equal(1);
+            expect(summary.eaNFTAddress).equal(eaNFTContract.address);
         });
 
         it("Should be able to set min and max credit size", async function () {
@@ -110,13 +115,6 @@ describe("Base Pool - LP and Admin functions", function () {
 
             expect(max).to.equal(1_000_000);
         });
-
-        // todo decide protocol fee calculation, and add this check to either setTreasuryFee() or setFees()
-        // it("Should disallow platform fee bps lower than protocol fee bps", async function () {
-        //     await expect(
-        //         poolContract.setFees(20, 10, 0, 0)
-        //     ).to.be.revertedWith("PLATFORM_FEE_LESS_THAN_PROTOCOL_FEE");
-        // });
 
         it("Shall have the protocol-level default-grace-period", async function () {
             let poolDefaultGracePeriodInSconds =

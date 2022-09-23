@@ -110,14 +110,16 @@ async function deployAndSetupPool(
 
     let eaNFTTokenId;
     // Mint EANFT to the borrower
-    const tx = await eaNFTContract.mint(evaluationAgent.address, "");
+    const tx = await eaNFTContract.mintNFT(evaluationAgent.address, "");
     const receipt = await tx.wait();
     for (const evt of receipt.events) {
-        if (evt.event === "EANFTGenerated") {
+        if (evt.event === "NFTGenerated") {
             eaNFTTokenId = evt.args[0];
         }
     }
+
     await poolConfig.connect(poolOwner).setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
+    let s = await poolConfig.getPoolSummary();
 
     await poolConfig.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
 

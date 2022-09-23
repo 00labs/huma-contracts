@@ -108,10 +108,10 @@ describe("Upgradability Test", function () {
 
         let eaNFTTokenId;
         // Mint EANFT to the borrower
-        const tx = await eaNFTContract.mint(evaluationAgent.address, "");
+        const tx = await eaNFTContract.mintNFT(evaluationAgent.address, "");
         const receipt = await tx.wait();
         for (const evt of receipt.events) {
-            if (evt.event === "EANFTGenerated") {
+            if (evt.event === "NFTGenerated") {
                 eaNFTTokenId = evt.args[0];
             }
         }
@@ -145,7 +145,7 @@ describe("Upgradability Test", function () {
             );
         });
 
-        it.skip("Should call existing function successfully", async function () {
+        it.only("Should call existing function successfully", async function () {
             const r1 = await poolConfigContract.poolDefaultGracePeriodInSeconds();
             await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
             const r2 = await poolConfigContract.poolDefaultGracePeriodInSeconds();

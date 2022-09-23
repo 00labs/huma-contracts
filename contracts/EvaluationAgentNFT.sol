@@ -11,12 +11,12 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
     Counters.Counter private _tokenIds;
 
     event Mint(address recipient, string tokenURI);
-    event EANFTGenerated(uint256 tokenId);
+    event NFTGenerated(uint256 tokenId);
     event SetURI(uint256 tokenId, string tokenURI);
 
     constructor() ERC721("EvaluationAgentNFT", "EANFT") {}
 
-    function mint(address recipient, string memory tokenURI) external returns (uint256) {
+    function mintNFT(address recipient, string memory tokenURI) external returns (uint256) {
         emit Mint(recipient, tokenURI);
         _tokenIds.increment();
 
@@ -24,7 +24,7 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
         _mint(recipient, newItemId);
         _setTokenURI(newItemId, tokenURI);
 
-        emit EANFTGenerated(newItemId);
+        emit NFTGenerated(newItemId);
         return newItemId;
     }
 

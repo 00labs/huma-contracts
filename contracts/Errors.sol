@@ -21,4 +21,10 @@ contract Errors {
     error callNotFromPool();
 
     error sameValue();
+    error receivableAssetMismatch();
+    error unsupportedReceivableAsset();
+    error receivableAssetParamMismatch();
+    error insufficientReceivableAmount();
+    error maxCreditLimitExceeded();
+    error borrowingAmountLessThanPlatformFees();
 }

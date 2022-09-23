@@ -345,6 +345,10 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         return _poolConfig._maxCreditLine;
     }
 
+    function receivableRequiredInBps() external view returns (uint256) {
+        return _poolConfig._receivableRequiredInBps;
+    }
+
     function getCoreData()
         external
         view
@@ -384,7 +388,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
             address eaNFTAddress
         )
     {
-        IERC20Metadata erc20Contract = IERC20Metadata(address(poolToken));
+        IERC20Metadata erc20Contract = IERC20Metadata(address(underlyingToken));
         return (
             address(underlyingToken),
             _poolConfig._poolAprInBps,

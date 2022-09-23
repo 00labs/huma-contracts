@@ -9,11 +9,12 @@ const {
 const EA_SERVICE_ACCOUNT = "0xDE5Db91B5F82f8b8c085fA9C5F290B00A0101D81";
 
 let deployer, deployedContracts;
+let lender, ea;
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
     if (initilized) {
-        console.log("HumaConfig is initilized yet!");
+        console.log("HumaConfig is already initialized!");
         return;
     }
 
@@ -57,7 +58,7 @@ async function initHumaConfig() {
 async function initFeeManager() {
     const initilized = await getInitilizedContract("ReceivableFactoringPoolFeeManager");
     if (initilized) {
-        console.log("ReceivableFactoringPoolFeeManager is initilized yet!");
+        console.log("ReceivableFactoringPoolFeeManager is already initialized!");
         return;
     }
 
@@ -83,7 +84,7 @@ async function initFeeManager() {
 async function initHDT() {
     const initilized = await getInitilizedContract("HDT");
     if (initilized) {
-        console.log("HDT is initilized yet!");
+        console.log("HDT is already initialized!");
         return;
     }
 
@@ -115,7 +116,7 @@ async function initHDT() {
 async function initPool() {
     const initilized = await getInitilizedContract("ReceivableFactoringPool");
     if (initilized) {
-        console.log("ReceivableFactoringPool is initilized yet!");
+        console.log("ReceivableFactoringPool is already initialized!");
         return;
     }
 
@@ -162,12 +163,6 @@ async function initPool() {
         "setEARewardsAndLiquidity",
         [1000, 100]
     );
-    await sendTransaction(
-        "ReceivableFactoringPool",
-        pool,
-        "setEARewardsAndLiquidity",
-        [1000, 100]
-    );
     const maxCL = BN.from(1_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("maxCL: " + maxCL);
     await sendTransaction("ReceivableFactoringPool", pool, "setMaxCreditLine", [maxCL]);
@@ -184,14 +179,56 @@ async function prepare() {
     // prepare lender, browser accounts
     // makeInitialDeposit
     // enable pool
+    if (!deployedContracts["ReceivableFactoringPool"]) {
+        throw new Error("ReceivableFactoringPool not deployed yet!");
+    }
+    if (!deployedContracts["USDC"]) {
+        throw new Error("USDC not deployed yet!");
+    }
+    const USDC = await hre.ethers.getContractFactory("TestToken");
+    const usdc = USDC.attach(deployedContracts["USDC"]);
+    const usdcFromEA = await usdc.connect(ea);
+    const decimals = await usdc.decimals();
+    await sendTransaction("TestToken", usdc,
+        "mint", [deployer.address, BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)))]);
+    await sendTransaction("TestToken", usdc,
+        "mint", [ea.address, BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)))]);
+
+    const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
+    const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
+    const poolFromEA = await pool.connect(ea);
+
+    await sendTransaction("ReceivableFactoringPool", pool,
+        "setEvaluationAgent", [1, ea.address])
+
+    await sendTransaction("ReceivableFactoringPool", pool,
+        "addApprovedLender", [deployer.address])
+    await sendTransaction("ReceivableFactoringPool", pool,
+        "addApprovedLender", [ea.address])
+    await sendTransaction("ReceivableFactoringPool", pool,
+        "addApprovedLender", [lender.address])
+
+    await sendTransaction("TestToken", usdc,
+        "approve", [pool.address, BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)))]);
+    await sendTransaction("ReceivableFactoringPool", pool,
+        "makeInitialDeposit", [BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)))])
+
+    await sendTransaction("TestToken", usdcFromEA,
+        "approve", [pool.address, BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)))])
+    await sendTransaction("ReceivableFactoringPool", poolFromEA,
+        "makeInitialDeposit", [BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)))])
+
+    await pool.enablePool();
 }
 
 async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    deployer = await accounts[0];
+    [deployer, proxyOwner, lender, ea] = await accounts;
     console.log("deployer address: " + deployer.address);
+    console.log("lender address: " + lender.address);
+    console.log("ea address: " + ea.address);
 
     deployedContracts = await getDeployedContracts();
 
