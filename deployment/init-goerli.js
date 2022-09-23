@@ -5,7 +5,8 @@ const {
     getDeployedContracts,
     sendTransaction,
 } = require("./utils.js");
-const {expect} = require("chai");
+
+const EA_SERVICE_ACCOUNT = "0xDE5Db91B5F82f8b8c085fA9C5F290B00A0101D81";
 
 let deployer, deployedContracts;
 let lender, ea;
@@ -42,7 +43,7 @@ async function initHumaConfig() {
     await sendTransaction("HumaConfig", humaConfig, "setEANFTContractAddress", [
         deployedContracts["EANFT"],
     ]);
-    await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [ea.address]);
+    await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [EA_SERVICE_ACCOUNT]);
 
     await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
     const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
