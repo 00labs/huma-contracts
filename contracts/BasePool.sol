@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -18,7 +18,7 @@ import "./EvaluationAgentNFT.sol";
 
 import "hardhat/console.sol";
 
-contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IPool {
+contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider, IPool {
     using SafeERC20 for IERC20;
 
     error notEvaluationAgentOwnerProvided();
@@ -26,15 +26,20 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
     event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
     event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
     event PoolInitialized(address _poolAddress);
+    event PoolCoreDataChanged(
+        address indexed sender,
+        address underlyingToken,
+        address poolToken,
+        address humaConfig,
+        address feeManager
+    );
+    event PoolConfigChanged(address indexed sender, address newPoolConfig);
 
     event PoolDisabled(address by);
     event PoolEnabled(address by);
-    event PoolDefaultGracePeriodChanged(uint256 _gracePeriodInDays, address by);
-    event WithdrawalLockoutPeriodUpdated(uint256 _lockoutPeriodInDays, address by);
-    event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
-    event APRUpdated(uint256 _aprInBps);
-    event PoolPayPeriodChanged(uint256 periodInDays, address by);
-    event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
+
+    event AddApprovedLender(address lender, address by);
+    event RemoveApprovedLender(address lender, address by);
 
     /**
      * @dev This event emits when new funds are distributed
@@ -50,57 +55,71 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
      */
     event LossesDistributed(address indexed by, uint256 lossesDistributed);
 
-    event PoolOwnerCommisionAndLiquidityChanged(
-        uint256 rewardsRate,
-        uint256 liquidityRate,
-        address indexed by
-    );
-
-    event EACommisionAndLiquidityChanged(
-        uint256 rewardsRate,
-        uint256 liquidityRate,
-        address indexed by
-    );
-
     constructor() {
         _disableInitializers();
     }
 
-    /**
-     * @param poolToken the token supported by the pool.
-     * @param humaConfig the configurator for the protocol
-     * @param feeManager support key calculations for each pool
-     */
-    function initialize(
-        address poolToken,
-        address humaConfig,
-        address feeManager
-    ) external initializer {
-        _poolToken = IHDT(poolToken);
-        _underlyingToken = IERC20(_poolToken.assetToken());
-        _humaConfig = humaConfig;
-        _feeManager = feeManager;
+    function initialize(address poolConfigAddr) external initializer {
+        _poolConfig = BasePoolConfig(poolConfigAddr);
+        _updateCoreData();
+        safeApproveMax(poolConfigAddr, false);
 
-        _poolConfig._withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS; // todo need to make this configurable
-        _poolConfig._poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
-            .protocolDefaultGracePeriodInSeconds();
         _status = PoolStatus.Off;
-
-        __Ownable_init();
 
         emit PoolInitialized(address(this));
     }
 
-    function setHumaConfigAndFeeManager(address humaConfig, address feeManager) external {
+    function updateCoreData() external {
         onlyOwnerOrHumaMasterAdmin();
-        _humaConfig = humaConfig;
-        _feeManager = feeManager;
+        _updateCoreData();
     }
 
-    function setPoolToken(address poolToken) external {
+    function setPoolConfig(address poolConfigAddr) external {
         onlyOwnerOrHumaMasterAdmin();
-        _poolToken = IHDT(poolToken);
-        _underlyingToken = IERC20(_poolToken.assetToken());
+        address oldConfig = address(_poolConfig);
+        if (poolConfigAddr == oldConfig) revert Errors.sameValue();
+
+        BasePoolConfig newPoolConfig = BasePoolConfig(poolConfigAddr);
+        newPoolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
+
+        safeApproveMax(oldConfig, true);
+        _poolConfig = newPoolConfig;
+        safeApproveMax(poolConfigAddr, false);
+
+        emit PoolConfigChanged(msg.sender, poolConfigAddr);
+    }
+
+    function _updateCoreData() private {
+        (
+            address underlyingTokenAddr,
+            address poolTokenAddr,
+            address humaConfigAddr,
+            address feeManagerAddr
+        ) = _poolConfig.getCoreData();
+        // note Can underlyingToken be changed?
+        _underlyingToken = IERC20(underlyingTokenAddr);
+        _poolToken = IHDT(poolTokenAddr);
+        _humaConfig = HumaConfig(humaConfigAddr);
+        _feeManager = BaseFeeManager(feeManagerAddr);
+
+        emit PoolCoreDataChanged(
+            msg.sender,
+            underlyingTokenAddr,
+            poolTokenAddr,
+            humaConfigAddr,
+            feeManagerAddr
+        );
+    }
+
+    function safeApproveMax(address account, bool cancel) internal {
+        uint256 amount = 0;
+        if (!cancel) {
+            amount = type(uint256).max;
+        }
+
+        if (amount == 0 || _underlyingToken.allowance(address(this), account) == 0) {
+            _underlyingToken.safeApprove(account, amount);
+        }
     }
 
     //********************************************/
@@ -122,13 +141,13 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
      * @param amount the number of `poolToken` to be deposited
      */
     function makeInitialDeposit(uint256 amount) external virtual override {
-        _basePoolConfig.onlyOwnerOrEA(msg.sender);
+        _poolConfig.onlyOwnerOrEA(msg.sender);
         return _deposit(msg.sender, amount);
     }
 
     function _deposit(address lender, uint256 amount) internal {
         if (amount == 0) revert Errors.zeroAmountProvided();
-        _basePoolConfig.onlyApprovedLender(lender);
+        onlyApprovedLender(lender);
 
         _underlyingToken.safeTransferFrom(lender, address(this), amount);
         uint256 shares = _poolToken.mintAmount(lender, amount);
@@ -153,7 +172,7 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
 
         require(
             block.timestamp >=
-                _lastDepositTime[msg.sender] + _poolConfig._withdrawalLockoutPeriodInSeconds,
+                _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds(),
             "WITHDRAW_TOO_SOON"
         );
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
@@ -163,7 +182,7 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
-        _basePoolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
+        _poolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
@@ -188,19 +207,8 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
      *     and try to distribute it in the next distribution ....... todo implement
      */
     function distributeIncome(uint256 value) internal virtual {
-        uint256 protocolFee = (uint256(HumaConfig(_humaConfig).protocolFee()) * value) / 10000;
-        _accuredIncome._protocolIncome += protocolFee;
-
-        uint256 valueForPool = value - protocolFee;
-
-        uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
-            BPS_DIVIDER;
-        _accuredIncome._poolOwnerIncome += ownerIncome;
-
-        uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) / BPS_DIVIDER;
-        _accuredIncome._eaIncome += eaIncome;
-
-        _totalPoolValue += (valueForPool - ownerIncome - eaIncome);
+        uint256 poolIncome = _poolConfig.distributeIncome(value);
+        _totalPoolValue += poolIncome;
     }
 
     /**
@@ -214,54 +222,6 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
         // todo in extreme cases
         if (_totalPoolValue > value) _totalPoolValue -= value;
         else _totalPoolValue = 0;
-    }
-
-    function withdrawProtocolFee(uint256 amount) external virtual {
-        require(msg.sender == HumaConfig(_humaConfig).owner(), "NOT_PROTOCOL_OWNER");
-        require(amount <= _accuredIncome._protocolIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
-        address treasuryAddress = HumaConfig(_humaConfig).humaTreasury();
-        _underlyingToken.safeTransfer(treasuryAddress, amount);
-    }
-
-    function withdrawPoolOwnerFee(uint256 amount) external virtual {
-        require(msg.sender == this.owner(), "NOT_POOL_OWNER");
-        require(amount <= _accuredIncome._poolOwnerIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
-        _underlyingToken.safeTransfer(this.owner(), amount);
-    }
-
-    /********************************************/
-    //                Settings                  //
-    /********************************************/
-
-    /**
-     * @notice change the default APR for the pool
-     * @param aprInBps APR in basis points, use 500 for 5%
-     */
-    function setAPR(uint256 aprInBps) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        require(aprInBps <= 10000, "INVALID_APR");
-        _poolConfig._poolAprInBps = aprInBps;
-        emit APRUpdated(aprInBps);
-    }
-
-    /**
-     * @notice Set the receivable rate in terms of basis points.
-     * @param receivableInBps the percentage. A percentage over 10000 means overreceivableization.
-     */
-    function setReceivableRequiredInBps(uint256 receivableInBps) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        require(receivableInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
-        _poolConfig._receivableRequiredInBps = receivableInBps;
-    }
-
-    /**
-     * @notice Sets the min and max of each loan/credit allowed by the pool.
-     * @param maxCreditLine the max amount of a credit line
-     */
-    function setMaxCreditLine(uint256 maxCreditLine) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        require(maxCreditLine > 0, "MAX_IS_ZERO");
-        _poolConfig._maxCreditLine = maxCreditLine;
     }
 
     /**
@@ -279,112 +239,22 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
      */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _basePoolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
+        _poolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
 
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
     }
 
-    /**
-     * Sets the default grace period for this pool.
-     * @param gracePeriodInDays the desired grace period in days.
-     */
-    function setPoolDefaultGracePeriod(uint256 gracePeriodInDays) external virtual override {
+    function addApprovedLender(address lender) external virtual {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._poolDefaultGracePeriodInSeconds = gracePeriodInDays * SECONDS_IN_A_DAY;
-        emit PoolDefaultGracePeriodChanged(gracePeriodInDays, msg.sender);
+        _approvedLenders[lender] = true;
+        emit AddApprovedLender(lender, msg.sender);
     }
 
-    function setPoolPayPeriod(uint256 periodInDays) external virtual override {
+    function removeApprovedLender(address lender) external virtual {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._payPeriodInDays = periodInDays;
-        emit PoolPayPeriodChanged(periodInDays, msg.sender);
-    }
-
-    /**
-     * Sets withdrawal lockout period after the lender makes the last deposit
-     * @param lockoutPeriodInDays the lockout period in terms of days
-     */
-    function setWithdrawalLockoutPeriod(uint256 lockoutPeriodInDays) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._withdrawalLockoutPeriodInSeconds = lockoutPeriodInDays * SECONDS_IN_A_DAY;
-        emit WithdrawalLockoutPeriodUpdated(lockoutPeriodInDays, msg.sender);
-    }
-
-    /**
-     * @notice Sets the cap of the pool liquidity.
-     * @param liquidityCap the upper bound that the pool accepts liquidity from the depositers
-     */
-    function setPoolLiquidityCap(uint256 liquidityCap) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._liquidityCap = liquidityCap;
-        emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
-    }
-
-    function setPoolOwnerRewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate)
-        external
-        virtual
-        override
-    {
-        onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._rewardRateInBpsForPoolOwner = rewardsRate;
-        _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
-        emit PoolOwnerCommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
-    }
-
-    function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate)
-        external
-        virtual
-        override
-    {
-        onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._rewardRateInBpsForEA = rewardsRate;
-        _poolConfig._liquidityRateInBpsByEA = liquidityRate;
-        emit EACommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
-    }
-
-    function setCreditApprovalExpiration(uint256 durationInDays) external virtual {
-        onlyOwnerOrHumaMasterAdmin();
-        _poolConfig._creditApprovalExpirationInSeconds = durationInDays * SECONDS_IN_A_DAY;
-        emit CreditApprovalExpirationChanged(durationInDays * SECONDS_IN_A_DAY, msg.sender);
-    }
-
-    /**
-     * Returns a summary information of the pool.
-     * @return token the address of the pool token
-     * @return apr the default APR of the pool
-     * @return payPeriod the standard pay period for the pool
-     * @return maxCreditAmount the max amount for the credit line
-     */
-    function getPoolSummary()
-        external
-        view
-        virtual
-        override
-        returns (
-            address token,
-            uint256 apr,
-            uint256 payPeriod,
-            uint256 maxCreditAmount,
-            uint256 liquiditycap,
-            string memory name,
-            string memory symbol,
-            uint8 decimals,
-            address eaNFTAddress
-        )
-    {
-        IERC20Metadata erc20Contract = IERC20Metadata(address(_poolToken));
-        return (
-            address(_underlyingToken),
-            _poolConfig._poolAprInBps,
-            _poolConfig._payPeriodInDays,
-            _poolConfig._maxCreditLine,
-            _poolConfig._liquidityCap,
-            erc20Contract.name(),
-            erc20Contract.symbol(),
-            erc20Contract.decimals(),
-            HumaConfig(_humaConfig).eaNFTContractAddress()
-        );
+        _approvedLenders[lender] = false;
+        emit RemoveApprovedLender(lender, msg.sender);
     }
 
     function totalPoolValue() external view override returns (uint256) {
@@ -395,66 +265,22 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
         return _lastDepositTime[account];
     }
 
-    function poolDefaultGracePeriodInSeconds() external view returns (uint256) {
-        return _poolConfig._poolDefaultGracePeriodInSeconds;
-    }
-
-    function withdrawalLockoutPeriodInSeconds() external view returns (uint256) {
-        return _poolConfig._withdrawalLockoutPeriodInSeconds;
-    }
-
-    function rewardsAndLiquidityRateForEA() external view returns (uint256, uint256) {
-        return (_poolConfig._rewardRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
-    }
-
-    function rewardsAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
-        return (
-            _poolConfig._rewardRateInBpsForPoolOwner,
-            _poolConfig._liquidityRateInBpsByPoolOwner
-        );
-    }
-
-    function getFeeManager() external view returns (address) {
-        return _feeManager;
-    }
-
-    function creditApprovalExpiration() external view returns (uint256) {
-        return _poolConfig._creditApprovalExpirationInSeconds;
-    }
-
-    function accruedIncome()
-        external
-        view
-        returns (
-            uint256 protocolIncome,
-            uint256 poolOwnerIncome,
-            uint256 eaIncome
-        )
-    {
-        return (
-            _accuredIncome._protocolIncome,
-            _accuredIncome._poolOwnerIncome,
-            _accuredIncome._eaIncome
-        );
-    }
-
-    function payPeriodInDays() external view returns (uint256) {
-        return _poolConfig._payPeriodInDays;
-    }
-
-    // Allow for sensitive pool functions only to be called by
-    // the pool owner and the huma master admin
-    function onlyOwnerOrHumaMasterAdmin() internal view {
-        require(
-            (msg.sender == owner() || msg.sender == HumaConfig(_humaConfig).owner()),
-            "PERMISSION_DENIED_NOT_ADMIN"
-        );
+    function poolConfig() external view returns (address) {
+        return address(_poolConfig);
     }
 
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
     function protocolAndPoolOn() internal view {
-        require(HumaConfig(_humaConfig).isProtocolPaused() == false, "PROTOCOL_PAUSED");
+        require(_humaConfig.isProtocolPaused() == false, "PROTOCOL_PAUSED");
         require(_status == PoolStatus.On, "POOL_NOT_ON");
+    }
+
+    function onlyApprovedLender(address lender) internal view {
+        if (!_approvedLenders[lender]) revert Errors.permissionDeniedNotLender();
+    }
+
+    function onlyOwnerOrHumaMasterAdmin() internal view {
+        _poolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
     }
 }

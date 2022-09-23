@@ -25,6 +25,7 @@ const getInvoiceContractFromAddress = async function (address, signer) {
 // 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
 describe("Invoice Factoring", function () {
     let invoiceContract;
+    let poolConfigContract;
     let hdtContract;
     let humaConfigContract;
     // let humaCreditFactoryContract;
@@ -92,6 +93,15 @@ describe("Invoice Factoring", function () {
         hdtContract = HDT.attach(hdtProxy.address);
         await hdtContract.initialize("HumaIF HDT", "HHDT", testTokenContract.address);
 
+        const BasePoolConfig = await ethers.getContractFactory("BasePoolConfig");
+        const poolConfigContract = await BasePoolConfig.deploy(
+            "Base Credit Pool",
+            hdtContract.address,
+            humaConfigContract.address,
+            feeManagerContract.address
+        );
+        await poolConfigContract.deployed();
+
         const ReceivableFactoringPool = await ethers.getContractFactory("ReceivableFactoringPool");
         const poolImpl = await ReceivableFactoringPool.deploy();
         await poolImpl.deployed();
@@ -103,13 +113,9 @@ describe("Invoice Factoring", function () {
         await poolProxy.deployed();
 
         invoiceContract = ReceivableFactoringPool.attach(poolProxy.address);
-        await invoiceContract.initialize(
-            hdtContract.address,
-            humaConfigContract.address,
-            feeManagerContract.address,
-            "Base Credit Pool"
-        );
+        await invoiceContract.initialize(poolConfigContract.address);
 
+        await poolConfigContract.setPool(invoiceContract.address);
         await hdtContract.setPool(invoiceContract.address);
 
         await testTokenContract.approve(invoiceContract.address, 100);
@@ -134,10 +140,10 @@ describe("Invoice Factoring", function () {
             }
         }
 
-        await invoiceContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
+        await poolConfigContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
 
-        await invoiceContract.connect(owner).setAPR(0); //bps
-        await invoiceContract.setMaxCreditLine(1000);
+        await poolConfigContract.connect(owner).setAPR(0); //bps
+        await poolConfigContract.setMaxCreditLine(1000);
 
         await testTokenContract.give1000To(lender.address);
         await testTokenContract.connect(lender).approve(invoiceContract.address, 400);
@@ -152,8 +158,8 @@ describe("Invoice Factoring", function () {
 
         await humaConfigContract.setTreasuryFee(2000);
 
-        await invoiceContract.connect(owner).setPoolOwnerRewardsAndLiquidity(625, 0);
-        await invoiceContract.connect(owner).setEARewardsAndLiquidity(1875, 0);
+        await poolConfigContract.connect(owner).setPoolOwnerRewardsAndLiquidity(625, 0);
+        await poolConfigContract.connect(owner).setEARewardsAndLiquidity(1875, 0);
     });
 
     describe("Post Approved Invoice Factoring", function () {

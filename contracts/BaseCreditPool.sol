@@ -43,7 +43,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             address(0),
             0,
             0,
-            _poolConfig._poolAprInBps,
+            _poolConfig.poolAprInBps(),
             intervalInDays,
             numOfPayments
         );
@@ -73,7 +73,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             revert Errors.creditLineAlreadyExists();
 
         // Borrowing amount needs to be lower than max for the pool.
-        if (creditLimit > _poolConfig._maxCreditLine) {
+        if (creditLimit > maxCreditLine()) {
             revert Errors.greaterThanMaxCreditLine();
         }
 
@@ -131,7 +131,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             receivableAsset,
             receivableParam,
             receivableAmount,
-            _poolConfig._poolAprInBps,
+            _poolConfig.poolAprInBps(),
             intervalInDays,
             remainingPeriods
         );
@@ -149,7 +149,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         require(
-            _creditRecordStaticMapping[borrower].creditLimit <= _poolConfig._maxCreditLine,
+            _creditRecordStaticMapping[borrower].creditLimit <= maxCreditLine(),
             "GREATER_THAN_LIMIT"
         );
         cr.state = BS.CreditState.Approved;
@@ -158,7 +158,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Before the first drawdown, it is also used to set the deadline for the first
         // drawdown to happen, otherwise, the credit line expires.
         // Decided to use this field in this way to save one field for the struct
-        uint256 validPeriod = _poolConfig._creditApprovalExpirationInSeconds;
+        uint256 validPeriod = _poolConfig.creditApprovalExpirationInSeconds();
         if (validPeriod > 0) cr.dueDate = uint64(block.timestamp + validPeriod);
 
         _creditRecordMapping[borrower] = cr;
@@ -174,7 +174,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
-        if (newLine > _poolConfig._maxCreditLine) revert Errors.greaterThanMaxCreditLine();
+        if (newLine > maxCreditLine()) revert Errors.greaterThanMaxCreditLine();
 
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newLine);
     }
@@ -273,7 +273,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // this pay period is accrued in correction and be add to the next bill.
             cr.correction += int96(
                 uint96(
-                    IFeeManager(_feeManager).calcCorrection(
+                    _feeManager.calcCorrection(
                         cr.dueDate,
                         _creditRecordStaticMapping[borrower].aprInBps,
                         borrowAmount
@@ -288,8 +288,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         _creditRecordMapping[borrower] = cr;
 
-        (uint256 amtToBorrower, uint256 platformFees) = IFeeManager(_feeManager)
-            .distBorrowingAmount(borrowAmount);
+        (uint256 amtToBorrower, uint256 platformFees) = _feeManager.distBorrowingAmount(
+            borrowAmount
+        );
 
         if (platformFees > 0) distributeIncome(platformFees);
 
@@ -390,7 +391,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         if (principalPayment > 0) {
             cr.correction -= int96(
                 uint96(
-                    IFeeManager(_feeManager).calcCorrection(
+                    _feeManager.calcCorrection(
                         cr.dueDate,
                         _creditRecordStaticMapping[borrower].aprInBps,
                         principalPayment
@@ -439,7 +440,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.totalDue,
             cr.unbilledPrincipal,
             newCharges
-        ) = IFeeManager(_feeManager).getDueInfo(cr, _creditRecordStaticMapping[borrower]);
+        ) = _feeManager.getDueInfo(cr, _creditRecordStaticMapping[borrower]);
 
         // Distribute income
         if (distributeChargesForLastCycle) distributeIncome(newCharges);
@@ -585,13 +586,17 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
         return
             _creditRecordMapping[borrower].missedPeriods * intervalInDays * SECONDS_IN_A_DAY >=
-                _poolConfig._poolDefaultGracePeriodInSeconds + intervalInDays * SECONDS_IN_A_DAY
+                _poolConfig.poolDefaultGracePeriodInSeconds() + intervalInDays * SECONDS_IN_A_DAY
                 ? true
                 : false;
     }
 
     function onlyEAServiceAccount() internal view {
-        if (msg.sender != HumaConfig(_humaConfig).eaServiceAccount())
+        if (msg.sender != _humaConfig.eaServiceAccount())
             revert Errors.evaluationAgentServiceAccountRequired();
+    }
+
+    function maxCreditLine() internal view returns (uint256) {
+        return _poolConfig.maxCreditLine();
     }
 }

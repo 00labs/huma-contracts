@@ -17,4 +17,8 @@ contract Errors {
 
     error permissionDeniedNotAdmin();
     error permissionDeniedNotLender();
+
+    error callNotFromPool();
+
+    error sameValue();
 }

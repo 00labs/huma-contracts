@@ -5,10 +5,6 @@ import "../libraries/BaseStructs.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IPool {
-    function addApprovedLender(address lender) external;
-
-    function removeApprovedLender(address lender) external;
-
     function disablePool() external;
 
     function enablePool() external;
@@ -28,39 +24,6 @@ interface IPool {
     //     uint256 _liquidityCap,
     //     uint256 _lockoutPeriodInDays
     // ) external;
-
-    function setAPR(uint256 _apr) external;
-
-    function setReceivableRequiredInBps(uint256 _receivableRateInBps) external;
-
-    function setMaxCreditLine(uint256 _maxAmount) external;
-
-    function setPoolDefaultGracePeriod(uint256 _gracePeriodInDays) external;
-
-    function setPoolPayPeriod(uint256 periodInDays) external;
-
-    function setPoolLiquidityCap(uint256 _liquidityCap) external;
-
-    function setWithdrawalLockoutPeriod(uint256 _lockoutPeriodInDays) external;
-
-    function setPoolOwnerRewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external;
-
-    function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external;
-
-    function getPoolSummary()
-        external
-        view
-        returns (
-            address poolToken,
-            uint256 apr,
-            uint256 payPeriod,
-            uint256 maxCreditAmount,
-            uint256 liquiditycap,
-            string memory name,
-            string memory symbol,
-            uint8 decimal,
-            address eaNFTContractAddress
-        );
 
     function totalPoolValue() external view returns (uint256);
 }
