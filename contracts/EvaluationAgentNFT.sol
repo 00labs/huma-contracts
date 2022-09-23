@@ -24,7 +24,7 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
         _mint(recipient, newItemId);
         _setTokenURI(newItemId, tokenURI);
 
-        emit EANFTGenerated(newItemId);
+        emit NFTGenerated(newItemId);
         return newItemId;
     }
 
