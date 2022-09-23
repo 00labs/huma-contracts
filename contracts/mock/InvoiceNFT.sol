@@ -18,7 +18,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
     address immutable _tokenAddress;
 
     event Mint(address recipient, string tokenURI);
-    event TokenGenerated(uint256 tokenId);
+    event NFTGenerated(uint256 tokenId);
     event SetURI(uint256 tokenId, string tokenURI);
     event Payment(
         address sender,
