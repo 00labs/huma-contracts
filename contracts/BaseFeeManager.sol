@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IFeeManager.sol";
 import "./HumaConfig.sol";
+import "./Errors.sol";
 import {BaseStructs as BS} from "./libraries/BaseStructs.sol";
 import "hardhat/console.sol";
 
@@ -116,6 +117,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // Calculate platform fee, which includes protocol fee and pool fee
         platformFees = calcFrontLoadingFee(borrowAmount);
 
+        if (borrowAmount < platformFees) revert Errors.borrowingAmountLessThanPlatformFees();
+
         amtToBorrower = borrowAmount - platformFees;
 
         return (amtToBorrower, platformFees);
@@ -202,7 +205,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
             // step 3. computer interest
             interest =
-                (_cr.unbilledPrincipal * _crStatic.aprInBps * _crStatic.intervalInDays * SECONDS_IN_A_DAY) /
+                (_cr.unbilledPrincipal *
+                    _crStatic.aprInBps *
+                    _crStatic.intervalInDays *
+                    SECONDS_IN_A_DAY) /
                 SECONDS_IN_A_YEAR /
                 BPS_DIVIDER;
 

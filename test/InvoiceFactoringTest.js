@@ -30,6 +30,7 @@ describe("Invoice Factoring", function () {
     // let humaCreditFactoryContract;
     let testTokenContract;
     let invoiceNFTContract;
+    let eaNFTContract;
     let feeManagerContract;
     let proxyOwner;
     let owner;
@@ -73,6 +74,9 @@ describe("Invoice Factoring", function () {
 
         const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
         invoiceNFTContract = await InvoiceNFT.deploy(testTokenContract.address);
+
+        const eaNFT = await ethers.getContractFactory("EvaluationAgentNFT");
+        eaNFTContract = await eaNFT.deploy();
     });
 
     beforeEach(async function () {
@@ -296,18 +300,6 @@ describe("Invoice Factoring", function () {
         beforeEach(async function () {
             await invoiceContract.connect(lender).deposit(300);
 
-            await invoiceContract
-                .connect(eaServiceAccount)
-                .recordApprovedCredit(
-                    borrower.address,
-                    400,
-                    ethers.constants.AddressZero,
-                    0,
-                    0,
-                    30,
-                    1
-                );
-
             // Mint InvoiceNFT to the borrower
             const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
             const receipt = await tx.wait();
@@ -321,6 +313,18 @@ describe("Invoice Factoring", function () {
             await invoiceNFTContract
                 .connect(borrower)
                 .approve(invoiceContract.address, invoiceNFTTokenId);
+
+            await invoiceContract
+                .connect(eaServiceAccount)
+                .recordApprovedCredit(
+                    borrower.address,
+                    400,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    4000,
+                    30,
+                    1
+                );
         });
 
         afterEach(async function () {
@@ -342,16 +346,13 @@ describe("Invoice Factoring", function () {
         });
 
         it("Should be able to borrow amount less than approved", async function () {
-            await invoiceContract.connect(eaServiceAccount).approveCredit(borrower.address);
-
             await invoiceContract
                 .connect(borrower)
                 .drawdownWithReceivable(
                     borrower.address,
                     200,
                     invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1
+                    invoiceNFTTokenId
                 );
 
             expect(await invoiceNFTContract.ownerOf(invoiceNFTTokenId)).to.equal(
@@ -381,8 +382,7 @@ describe("Invoice Factoring", function () {
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1
+                    invoiceNFTTokenId
                 );
 
             expect(await invoiceNFTContract.ownerOf(invoiceNFTTokenId)).to.equal(
@@ -446,8 +446,7 @@ describe("Invoice Factoring", function () {
                     borrower.address,
                     400,
                     invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1
+                    invoiceNFTTokenId
                 );
 
             await testTokenContract.give1000To(payer.address);

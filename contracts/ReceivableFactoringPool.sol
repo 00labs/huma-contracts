@@ -22,6 +22,52 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     );
 
     /**
+     * @notice After the EA (EvalutionAgent) has approved a factoring, it calls this function
+     * to record the approval on chain and mark as factoring as approved, which will enable
+     * the borrower to drawdown (borrow) from the approved credit.
+     * @param borrower the borrower address
+     * @param creditLimit the limit of the credit
+     * @param receivableAsset the receivable asset used for this credit
+     * @param receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
+     * @param receivableAmount amount of the receivable asset
+     * @param intervalInDays time interval for each payback in units of days
+     * @param remainingPeriods the number of pay periods for this credit
+     * @dev Only Evaluation Agents for this contract can call this function.
+     */
+    function recordApprovedCredit(
+        address borrower,
+        uint256 creditLimit,
+        address receivableAsset,
+        uint256 receivableParam,
+        uint256 receivableAmount,
+        uint256 intervalInDays,
+        uint256 remainingPeriods
+    ) external virtual override {
+        onlyEAServiceAccount();
+
+        _receivableRequirementCheck(creditLimit, receivableAmount);
+
+        // Populates fields related to receivable
+        if (receivableAsset != address(0)) {
+            BS.ReceivableInfo memory ri;
+            ri.receivableAsset = receivableAsset;
+            ri.receivableParam = receivableParam;
+            ri.receivableAmount = uint88(receivableAmount);
+            _receivableInfoMapping[borrower] = ri;
+        }
+
+        // Pool status and data validation happens within initiate().
+        initiateCredit(
+            borrower,
+            creditLimit,
+            _poolConfig._poolAprInBps,
+            intervalInDays,
+            remainingPeriods,
+            true
+        );
+    }
+
+    /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
      * @dev "HumaIF:WRONG_ASSET" reverted when asset address does not match
