@@ -113,6 +113,62 @@ async function initHDT() {
 
     await updateInitilizedContract("HDT");
 }
+
+async function initPoolConfig() {
+    const initilized = await getInitilizedContract("ReceivableFactoringPoolConfig");
+    if (initilized) {
+        console.log("ReceivableFactoringPoolConfig is already initialized!");
+        return;
+    }
+
+    if (!deployedContracts["ReceivableFactoringPoolConfig"]) {
+        throw new Error("ReceivableFactoringPoolConfig not deployed yet!");
+    }
+
+    const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
+    const poolConfig = ReceivableFactoringPoolConfig.attach(deployedContracts["ReceivableFactoringPoolConfig"]);
+
+    if (!deployedContracts["HDT"]) {
+        throw new Error("HDT not deployed yet!");
+    }
+    if (!deployedContracts["HumaConfig"]) {
+        throw new Error("HumaConfig not deployed yet!");
+    }
+    if (!deployedContracts["ReceivableFactoringPoolFeeManager"]) {
+        throw new Error("ReceivableFactoringPoolFeeManager not deployed yet!");
+    }
+
+    const HDT = await hre.ethers.getContractFactory("HDT");
+    const hdt = HDT.attach(deployedContracts["HDT"]);
+    const decimals = await hdt.decimals();
+    const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
+    console.log("cap: " + cap);
+
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolLiquidityCap", [cap]);
+    await sendTransaction(
+        "ReceivableFactoringPoolConfig",
+        poolConfig,
+        "setPoolOwnerRewardsAndLiquidity",
+        [500, 200]
+    );
+    await sendTransaction(
+        "ReceivableFactoringPoolConfig",
+        poolConfig,
+        "setEARewardsAndLiquidity",
+        [1000, 100]
+    );
+    const maxCL = BN.from(1_000).mul(BN.from(10).pow(BN.from(decimals)));
+    console.log("maxCL: " + maxCL);
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setMaxCreditLine", [maxCL]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setAPR", [1000]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setReceivableRequiredInBps", [10000]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setPoolPayPeriod", [30]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [90]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
+
+    await updateInitilizedContract("ReceivableFactoringPoolConfig");
+}
+
 async function initPool() {
     const initilized = await getInitilizedContract("ReceivableFactoringPool");
     if (initilized) {
@@ -122,6 +178,10 @@ async function initPool() {
 
     if (!deployedContracts["ReceivableFactoringPool"]) {
         throw new Error("ReceivableFactoringPool not deployed yet!");
+    }
+
+    if (!deployedContracts["ReceivableFactoringPoolConfig"]) {
+        throw new Error("ReceivableFactoringPoolConfig not deployed yet!");
     }
 
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
@@ -136,47 +196,15 @@ async function initPool() {
     if (!deployedContracts["ReceivableFactoringPoolFeeManager"]) {
         throw new Error("ReceivableFactoringPoolFeeManager not deployed yet!");
     }
-
     await sendTransaction("ReceivableFactoringPool", pool, "initialize", [
-        deployedContracts["HDT"],
-        deployedContracts["HumaConfig"],
-        deployedContracts["ReceivableFactoringPoolFeeManager"],
-        "Receivable Factoring Pool",
+        deployedContracts["ReceivableFactoringPoolConfig"]
     ]);
-
-    const HDT = await hre.ethers.getContractFactory("HDT");
-    const hdt = HDT.attach(deployedContracts["HDT"]);
-    const decimals = await hdt.decimals();
-    const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
-    console.log("cap: " + cap);
-
-    await sendTransaction("ReceivableFactoringPool", pool, "setPoolLiquidityCap", [cap]);
-    await sendTransaction(
-        "ReceivableFactoringPool",
-        pool,
-        "setPoolOwnerRewardsAndLiquidity",
-        [500, 200]
-    );
-    await sendTransaction(
-        "ReceivableFactoringPool",
-        pool,
-        "setEARewardsAndLiquidity",
-        [1000, 100]
-    );
-    const maxCL = BN.from(1_000).mul(BN.from(10).pow(BN.from(decimals)));
-    console.log("maxCL: " + maxCL);
-    await sendTransaction("ReceivableFactoringPool", pool, "setMaxCreditLine", [maxCL]);
-    await sendTransaction("ReceivableFactoringPool", pool, "setAPR", [1000]);
-    await sendTransaction("ReceivableFactoringPool", pool, "setReceivableRequiredInBps", [10000]);
-    await sendTransaction("ReceivableFactoringPool", pool, "setPoolPayPeriod", [30]);
-    await sendTransaction("ReceivableFactoringPool", pool, "setWithdrawalLockoutPeriod", [90]);
-    await sendTransaction("ReceivableFactoringPool", pool, "setPoolDefaultGracePeriod", [60]);
 
     await updateInitilizedContract("ReceivableFactoringPool");
 }
 
 async function prepare() {
-    // prepare lender, browser accounts
+    // prepare lender, ea accounts
     // makeInitialDeposit
     // enable pool
     if (!deployedContracts["ReceivableFactoringPool"]) {
@@ -198,7 +226,10 @@ async function prepare() {
     const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
     const poolFromEA = await pool.connect(ea);
 
-    await sendTransaction("ReceivableFactoringPool", pool,
+    const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("ReceivableFactoringPoolConfig");
+    const poolConfig = ReceivableFactoringPoolConfig.attach(deployedContracts["ReceivableFactoringPoolConfig"]);
+
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig,
         "setEvaluationAgent", [1, ea.address])
 
     await sendTransaction("ReceivableFactoringPool", pool,
@@ -235,6 +266,7 @@ async function initContracts() {
     await initHumaConfig();
     await initFeeManager();
     await initHDT();
+    await initPoolConfig();
     await initPool();
 
     await prepare();
