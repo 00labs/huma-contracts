@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./HDT/interfaces/IHDT.sol";
+import "./BasePoolConfig.sol";
 
 contract BasePoolStorage {
     // Divider to convert BPS to percentage
@@ -15,6 +16,8 @@ contract BasePoolStorage {
 
     // The HDT token for this pool
     IHDT internal _poolToken;
+
+    BasePoolConfig internal _basePoolConfig;
 
     // The amount of underlying token belongs to lenders
     uint256 internal _totalPoolValue;
@@ -32,14 +35,9 @@ contract BasePoolStorage {
     // whether the pool is ON or OFF
     PoolStatus internal _status;
 
-    // Evaluation Agents (EA) are the risk underwriting agents that associated with the pool.
-    address internal _evaluationAgent;
-
     PoolConfig internal _poolConfig;
 
     AccruedIncome internal _accuredIncome;
-
-    uint256 internal _evaluationAgentId;
 
     struct AccruedIncome {
         uint256 _protocolIncome;
@@ -84,9 +82,6 @@ contract BasePoolStorage {
         Off,
         On
     }
-
-    // The addresses that are allowed to lend to this pool. Configurable only by the pool owner
-    mapping(address => bool) internal _approvedLenders;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

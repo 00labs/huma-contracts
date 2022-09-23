@@ -9,7 +9,12 @@ contract Errors {
     error creditLineExceeded();
     error creditLineAlreadyExists();
     error greaterThanMaxCreditLine();
-    error zeroAddressProvided();
     error paymentDetectionServiceAccountRequired();
     error defaultTriggeredTooEarly();
+
+    error zeroAddressProvided();
+    error zeroAmountProvided();
+
+    error permissionDeniedNotAdmin();
+    error permissionDeniedNotLender();
 }

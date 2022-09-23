@@ -11,6 +11,7 @@ import "./BasePoolStorage.sol";
 import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
 
+import "./Errors.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./EvaluationAgentNFT.sol";
@@ -26,10 +27,6 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
     event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
     event PoolInitialized(address _poolAddress);
 
-    event EvaluationAgentChanged(address oldEA, address newEA, address by);
-    event AddApprovedLender(address lender, address by);
-    event RemoveApprovedLender(address lender, address by);
-    event PoolNameChanged(string newName, address by);
     event PoolDisabled(address by);
     event PoolEnabled(address by);
     event PoolDefaultGracePeriodChanged(uint256 _gracePeriodInDays, address by);
@@ -38,7 +35,6 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
     event APRUpdated(uint256 _aprInBps);
     event PoolPayPeriodChanged(uint256 periodInDays, address by);
     event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
-    event EvaluationAgentRewardsWithdrawn(uint256 amount, address receiver, address by);
 
     /**
      * @dev This event emits when new funds are distributed
@@ -126,13 +122,13 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
      * @param amount the number of `poolToken` to be deposited
      */
     function makeInitialDeposit(uint256 amount) external virtual override {
-        onlyOwnerOrEA();
+        _basePoolConfig.onlyOwnerOrEA(msg.sender);
         return _deposit(msg.sender, amount);
     }
 
     function _deposit(address lender, uint256 amount) internal {
-        require(amount > 0, "AMOUNT_IS_ZERO");
-        onlyApprovedLender(lender);
+        if (amount == 0) revert Errors.zeroAmountProvided();
+        _basePoolConfig.onlyApprovedLender(lender);
 
         _underlyingToken.safeTransferFrom(lender, address(this), amount);
         uint256 shares = _poolToken.mintAmount(lender, amount);
@@ -167,9 +163,7 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
-        if (isOwnerOrEA()) {
-            requireMinimumPoolOwnerAndEALiquidity();
-        }
+        _basePoolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
@@ -235,55 +229,9 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
         _underlyingToken.safeTransfer(this.owner(), amount);
     }
 
-    function withdrawEAFee(uint256 amount) external virtual {
-        require(msg.sender == _evaluationAgent, "NOT_POOL_OWNER");
-        require(amount <= _accuredIncome._eaIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
-        _underlyingToken.safeTransfer(_evaluationAgent, amount);
-    }
-
     /********************************************/
     //                Settings                  //
     /********************************************/
-
-    /**
-     * @notice Adds an evaluation agent to the list who can approve loans.
-     * @param agent the evaluation agent to be added
-     */
-    function setEvaluationAgent(uint256 eaId, address agent) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        denyZeroAddress(agent);
-
-        // todo change script to make sure eaNFTContract is deployed, and the eaId is minted.
-        // if (IERC721(HumaConfig(_humaConfig).eaNFTContractAddress()).ownerOf(eaId) != agent)
-        //     revert notEvaluationAgentOwnerProvided();
-
-        // Transfer the accrued EA income to the old EA's wallet.
-        // Decided not to check if there is enough balance in the pool. If there is
-        // not enough balance, the transaction will fail. PoolOwner has to find enough
-        // liquidity to pay the EA before replacing it.
-        address oldEA = _evaluationAgent;
-        if (oldEA != address(0)) {
-            uint256 rewardsToPayout = _accuredIncome._eaIncome;
-            _accuredIncome._eaIncome = 0;
-            _underlyingToken.safeTransfer(oldEA, rewardsToPayout);
-            emit EvaluationAgentRewardsWithdrawn(rewardsToPayout, oldEA, msg.sender);
-        }
-        _evaluationAgent = agent;
-        _evaluationAgentId = eaId;
-        emit EvaluationAgentChanged(oldEA, agent, msg.sender);
-    }
-
-    function addApprovedLender(address lender) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _approvedLenders[lender] = true;
-        emit AddApprovedLender(lender, msg.sender);
-    }
-
-    function removeApprovedLender(address lender) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _approvedLenders[lender] = false;
-        emit RemoveApprovedLender(lender, msg.sender);
-    }
 
     /**
      * @notice change the default APR for the pool
@@ -331,7 +279,7 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
      */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        requireMinimumPoolOwnerAndEALiquidity();
+        _basePoolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
 
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
@@ -422,7 +370,6 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
             string memory name,
             string memory symbol,
             uint8 decimals,
-            uint256 evaluationAgentId,
             address eaNFTAddress
         )
     {
@@ -436,7 +383,6 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
             erc20Contract.name(),
             erc20Contract.symbol(),
             erc20Contract.decimals(),
-            _evaluationAgentId,
             HumaConfig(_humaConfig).eaNFTContractAddress()
         );
     }
@@ -472,10 +418,6 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
         return _feeManager;
     }
 
-    function getEvaluationAgent() external view returns (address) {
-        return _evaluationAgent;
-    }
-
     function creditApprovalExpiration() external view returns (uint256) {
         return _poolConfig._creditApprovalExpirationInSeconds;
     }
@@ -509,41 +451,10 @@ contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityProvider, IP
         );
     }
 
-    function onlyOwnerOrEA() internal view {
-        require(isOwnerOrEA(), "PERMISSION_DENIED_NOT_ADMIN");
-    }
-
-    function isOwnerOrEA() internal view returns (bool) {
-        return (msg.sender == owner() || msg.sender == _evaluationAgent);
-    }
-
-    function onlyApprovedLender(address lender) internal view {
-        require((_approvedLenders[lender] == true), "PERMISSION_DENIED_NOT_LENDER");
-    }
-
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
     function protocolAndPoolOn() internal view {
         require(HumaConfig(_humaConfig).isProtocolPaused() == false, "PROTOCOL_PAUSED");
         require(_status == PoolStatus.On, "POOL_NOT_ON");
-    }
-
-    function denyZeroAddress(address addr) internal pure {
-        require(addr != address(0), "ADDRESS_0_PROVIDED");
-    }
-
-    function requireMinimumPoolOwnerAndEALiquidity() internal view {
-        HDT poolTokenContract = HDT(address(_poolToken));
-        PoolConfig memory config = _poolConfig;
-        require(
-            poolTokenContract.convertToAssets(poolTokenContract.balanceOf(owner())) >=
-                (config._liquidityCap * config._liquidityRateInBpsByPoolOwner) / BPS_DIVIDER,
-            "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
-        );
-        require(
-            poolTokenContract.convertToAssets(poolTokenContract.balanceOf(_evaluationAgent)) >=
-                (config._liquidityCap * config._liquidityRateInBpsByEA) / BPS_DIVIDER,
-            "POOL_EA_NOT_ENOUGH_LIQUIDITY"
-        );
     }
 }

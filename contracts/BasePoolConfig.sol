@@ -6,10 +6,41 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./interfaces/IPoolConfig.sol";
+import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 
 contract BasePoolConfig is Ownable, IPoolConfig {
     using SafeERC20 for IERC20;
+
+    struct PoolConfig {
+        // The first 6 fields are IP-related, optimized for one storage slot.
+        // The max liquidity allowed for the pool.
+        uint256 _liquidityCap;
+        // How long a lender has to wait after the last deposit before they can withdraw
+        uint256 _withdrawalLockoutPeriodInSeconds;
+        // Percentage of pool income allocated to EA
+        uint256 _rewardRateInBpsForEA;
+        // Percentage of pool income allocated to Pool Owner
+        uint256 _rewardRateInBpsForPoolOwner;
+        // Percentage of the _liquidityCap to be contributed by EA
+        uint256 _liquidityRateInBpsByEA;
+        // Percentage of the _liquidityCap to be contributed by Pool Owner
+        uint256 _liquidityRateInBpsByPoolOwner;
+        // Below fields are borrowing related. Optimized for one storage slot.
+        // the maximum credit line for an address in terms of the amount of poolTokens
+        uint256 _maxCreditLine;
+        // the grace period at the pool level before a Default can be triggered
+        uint256 _poolDefaultGracePeriodInSeconds;
+        // pay period for the pool, measured in number of days
+        uint256 _payPeriodInDays;
+        // Percentage of receivable required for credits in this pool in terms of bais points
+        // For over receivableization, use more than 100%, for no receivable, use 0.
+        uint256 _receivableRequiredInBps;
+        // the default APR for the pool in terms of basis points.
+        uint256 _poolAprInBps;
+        // the duration of a credit line without an initial drawdown
+        uint256 _creditApprovalExpirationInSeconds;
+    }
 
     struct AccruedIncome {
         uint256 _protocolIncome;
@@ -18,6 +49,9 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     }
 
     address internal _humaConfig;
+
+    // The HDT token for this pool
+    HDT internal _poolToken;
 
     // The ERC20 token this pool manages
     IERC20 internal _underlyingToken;
@@ -29,15 +63,28 @@ contract BasePoolConfig is Ownable, IPoolConfig {
 
     uint256 internal _evaluationAgentId;
 
+    PoolConfig internal _poolConfig;
+
     AccruedIncome internal _accuredIncome;
+
+    // The addresses that are allowed to lend to this pool. Configurable only by the pool owner
+    mapping(address => bool) internal _approvedLenders;
 
     event PoolNameChanged(string newName, address by);
     event EvaluationAgentChanged(address oldEA, address newEA, address by);
     event EvaluationAgentRewardsWithdrawn(uint256 amount, address receiver, address by);
+    event AddApprovedLender(address lender, address by);
+    event RemoveApprovedLender(address lender, address by);
 
-    constructor(string memory poolName, address underlyingToken) {
+    constructor(
+        string memory poolName,
+        address poolToken,
+        address humaConfig
+    ) {
         _poolName = poolName;
-        _underlyingToken = IERC20(underlyingToken);
+        _poolToken = HDT(poolToken);
+        _underlyingToken = IERC20(_poolToken.assetToken());
+        _humaConfig = humaConfig;
     }
 
     /**
@@ -54,8 +101,8 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @param agent the evaluation agent to be added
      */
     function setEvaluationAgent(uint256 eaId, address agent) external virtual override {
+        if (agent == address(0)) revert Errors.zeroAddressProvided();
         onlyOwnerOrHumaMasterAdmin();
-        denyZeroAddress(agent);
 
         // todo change script to make sure eaNFTContract is deployed, and the eaId is minted.
         // if (IERC721(HumaConfig(_humaConfig).eaNFTContractAddress()).ownerOf(eaId) != agent)
@@ -83,8 +130,48 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         _underlyingToken.safeTransfer(_evaluationAgent, amount);
     }
 
+    function addApprovedLender(address lender) external virtual {
+        onlyOwnerOrHumaMasterAdmin();
+        _approvedLenders[lender] = true;
+        emit AddApprovedLender(lender, msg.sender);
+    }
+
+    function removeApprovedLender(address lender) external virtual {
+        onlyOwnerOrHumaMasterAdmin();
+        _approvedLenders[lender] = false;
+        emit RemoveApprovedLender(lender, msg.sender);
+    }
+
     function getEvaluationAgent() external view returns (address) {
         return _evaluationAgent;
+    }
+
+    function isOwnerOrEA(address account) internal view returns (bool) {
+        return (account == owner() || account == _evaluationAgent);
+    }
+
+    function onlyOwnerOrEA(address account) public view {
+        if (!isOwnerOrEA(account)) revert Errors.permissionDeniedNotAdmin();
+    }
+
+    function onlyApprovedLender(address lender) public view {
+        if (!_approvedLenders[lender]) revert Errors.permissionDeniedNotLender();
+    }
+
+    function requireMinimumPoolOwnerAndEALiquidity(address account) public view {
+        if (isOwnerOrEA(account)) {
+            PoolConfig memory config = _poolConfig;
+            require(
+                _poolToken.convertToAssets(_poolToken.balanceOf(owner())) >=
+                    (config._liquidityCap * config._liquidityRateInBpsByPoolOwner) / 10000,
+                "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
+            );
+            require(
+                _poolToken.convertToAssets(_poolToken.balanceOf(_evaluationAgent)) >=
+                    (config._liquidityCap * config._liquidityRateInBpsByEA) / 10000,
+                "POOL_EA_NOT_ENOUGH_LIQUIDITY"
+            );
+        }
     }
 
     function onlyOwnerOrHumaMasterAdmin() internal view {
@@ -92,9 +179,5 @@ contract BasePoolConfig is Ownable, IPoolConfig {
             (msg.sender == owner() || msg.sender == HumaConfig(_humaConfig).owner()),
             "PERMISSION_DENIED_NOT_ADMIN"
         );
-    }
-
-    function denyZeroAddress(address addr) internal pure {
-        require(addr != address(0), "ADDRESS_0_PROVIDED");
     }
 }

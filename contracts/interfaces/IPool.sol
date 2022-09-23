@@ -5,8 +5,6 @@ import "../libraries/BaseStructs.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IPool {
-    function setEvaluationAgent(uint256 eaId, address agent) external;
-
     function addApprovedLender(address lender) external;
 
     function removeApprovedLender(address lender) external;
@@ -61,7 +59,6 @@ interface IPool {
             string memory name,
             string memory symbol,
             uint8 decimal,
-            uint256 evaluationAgentId,
             address eaNFTContractAddress
         );
 
