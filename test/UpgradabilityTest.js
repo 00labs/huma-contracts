@@ -3,6 +3,7 @@ const {expect} = require("chai");
 
 describe("Upgradability Test", function () {
     let poolContract;
+    let poolConfigContract;
     let hdtContract;
     let humaConfigContract;
     let feeManagerContract;
@@ -76,6 +77,15 @@ describe("Upgradability Test", function () {
         hdtContract = HDT.attach(hdtProxy.address);
         await hdtContract.initialize("Base Credit HDT", "CHDT", testTokenContract.address);
 
+        const BasePoolConfig = await ethers.getContractFactory("BasePoolConfig");
+        poolConfigContract = await BasePoolConfig.deploy(
+            "Base Credit Pool",
+            hdtContract.address,
+            humaConfigContract.address,
+            feeManagerContract.address
+        );
+        await poolConfigContract.deployed();
+
         const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
         poolImpl = await BaseCreditPool.deploy();
         await poolImpl.deployed();
@@ -87,18 +97,14 @@ describe("Upgradability Test", function () {
         await poolProxy.deployed();
 
         poolContract = BaseCreditPool.attach(poolProxy.address);
-        await poolContract.initialize(
-            hdtContract.address,
-            humaConfigContract.address,
-            feeManagerContract.address,
-            "Base Credit Pool"
-        );
+        await poolContract.initialize(poolConfigContract.address);
 
+        await poolConfigContract.setPool(poolContract.address);
         await hdtContract.setPool(poolContract.address);
 
         await testTokenContract.approve(poolContract.address, 100);
 
-        await poolContract.setMaxCreditLine(1000);
+        await poolConfigContract.setMaxCreditLine(1000);
 
         let eaNFTTokenId;
         // Mint EANFT to the borrower
@@ -110,21 +116,16 @@ describe("Upgradability Test", function () {
             }
         }
 
-        await poolContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
+        await poolConfigContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
 
         await poolContract.enablePool();
     });
 
     describe("V1", async function () {
         it("Should not initialize impl", async function () {
-            await expect(
-                poolImpl.initialize(
-                    hdtContract.address,
-                    humaConfigContract.address,
-                    feeManagerContract.address,
-                    "Base Credit Pool"
-                )
-            ).to.be.revertedWith("Initializable: contract is already initialized");
+            await expect(poolImpl.initialize(poolConfigContract.address)).to.be.revertedWith(
+                "Initializable: contract is already initialized"
+            );
         });
     });
 
@@ -144,10 +145,10 @@ describe("Upgradability Test", function () {
             );
         });
 
-        it("Should call existing function successfully", async function () {
-            const r1 = await poolContract.poolDefaultGracePeriodInSeconds();
+        it.skip("Should call existing function successfully", async function () {
+            const r1 = await poolConfigContract.poolDefaultGracePeriodInSeconds();
             await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
-            const r2 = await poolContract.poolDefaultGracePeriodInSeconds();
+            const r2 = await poolConfigContract.poolDefaultGracePeriodInSeconds();
             expect(r1).equals(r2);
         });
 

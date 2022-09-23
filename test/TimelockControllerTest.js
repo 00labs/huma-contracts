@@ -6,6 +6,7 @@ describe("TimelockController Test", function () {
     const salt = ethers.utils.formatBytes32String("salt");
 
     let poolContract;
+    let poolConfigContract;
     let hdtContract;
     let humaConfigContract;
     let testTokenContract;
@@ -73,7 +74,7 @@ describe("TimelockController Test", function () {
                 pdsServiceAccount
             );
 
-        [hdtContract, poolContract] = await deployAndSetupPool(
+        [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
             poolOwner,
             proxyOwner,
             evaluationAgent,

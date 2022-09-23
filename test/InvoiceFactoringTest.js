@@ -94,7 +94,7 @@ describe("Invoice Factoring", function () {
         await hdtContract.initialize("HumaIF HDT", "HHDT", testTokenContract.address);
 
         const BasePoolConfig = await ethers.getContractFactory("BasePoolConfig");
-        const poolConfigContract = await BasePoolConfig.deploy(
+        poolConfigContract = await BasePoolConfig.deploy(
             "Base Credit Pool",
             hdtContract.address,
             humaConfigContract.address,
@@ -132,15 +132,15 @@ describe("Invoice Factoring", function () {
         expect(await invoiceContract.lastDepositTime(owner.address)).to.not.equal(0);
         expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(100);
 
-        const tx = await eaNFTContract.mint(evaluationAgent.address, "");
-        const receipt = await tx.wait();
-        for (const evt of receipt.events) {
-            if (evt.event === "EANFTGenerated") {
-                eaNFTTokenId = evt.args[0];
-            }
-        }
+        // const tx = await eaNFTContract.mint(evaluationAgent.address, "");
+        // const receipt = await tx.wait();
+        // for (const evt of receipt.events) {
+        //     if (evt.event === "EANFTGenerated") {
+        //         eaNFTTokenId = evt.args[0];
+        //     }
+        // }
 
-        await poolConfigContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
+        // await poolConfigContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
 
         await poolConfigContract.connect(owner).setAPR(0); //bps
         await poolConfigContract.setMaxCreditLine(1000);
@@ -244,7 +244,7 @@ describe("Invoice Factoring", function () {
         it("Should post approved invoice financing successfully", async function () {
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
 
-            await invoiceContract.connect(owner).setAPR(0);
+            await poolConfigContract.connect(owner).setAPR(0);
 
             await invoiceContract
                 .connect(eaServiceAccount)
@@ -268,7 +268,7 @@ describe("Invoice Factoring", function () {
 
     describe("Invalidate Approved Invoice Factoring", function () {
         it("Should allow evaluation agent to invalidate an approved invoice factoring record", async function () {
-            await invoiceContract.connect(owner).setAPR(0);
+            await poolConfigContract.connect(owner).setAPR(0);
 
             await invoiceContract
                 .connect(eaServiceAccount)
@@ -365,7 +365,7 @@ describe("Invoice Factoring", function () {
             );
 
             expect(await invoiceNFTContract.balanceOf);
-            let accruedIncome = await invoiceContract.accruedIncome();
+            let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(2);
             expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(212);
 
@@ -398,7 +398,7 @@ describe("Invoice Factoring", function () {
             // principal: 400, fees 14 {flat: 10, bps fee: 4}
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386);
 
-            let accruedIncome = await invoiceContract.accruedIncome();
+            let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(2);
             expect(accruedIncome.poolOwnerIncome).to.equal(0);
             expect(accruedIncome.eaIncome).to.equal(2);
@@ -418,7 +418,7 @@ describe("Invoice Factoring", function () {
     describe("Payback", async function () {
         beforeEach(async function () {
             await feeManagerContract.setFees(10, 100, 20, 100);
-            await invoiceContract.setAPR(0);
+            await poolConfigContract.setAPR(0);
 
             // Mint InvoiceNFT to the borrower
             const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
@@ -496,7 +496,7 @@ describe("Invoice Factoring", function () {
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
 
-            let accruedIncome = await invoiceContract.accruedIncome();
+            let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(2);
             expect(await testTokenContract.balanceOf(invoiceContract.address)).to.equal(414);
 
@@ -515,7 +515,7 @@ describe("Invoice Factoring", function () {
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(102);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(307);
 
-                let accruedIncome = await invoiceContract.accruedIncome();
+                let accruedIncome = await poolConfigContract.accruedIncome();
                 expect(accruedIncome.protocolIncome).to.equal(2);
                 expect(accruedIncome.eaIncome).to.equal(2);
                 expect(accruedIncome.poolOwnerIncome).to.equal(0);
@@ -533,7 +533,7 @@ describe("Invoice Factoring", function () {
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(105);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(420);
 
-                accruedIncome = await invoiceContract.accruedIncome();
+                accruedIncome = await poolConfigContract.accruedIncome();
                 expect(accruedIncome.protocolIncome).to.equal(6);
                 expect(accruedIncome.eaIncome).to.equal(5);
                 expect(accruedIncome.poolOwnerIncome).to.equal(1);
@@ -548,7 +548,7 @@ describe("Invoice Factoring", function () {
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(109);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(432);
 
-                accruedIncome = await invoiceContract.accruedIncome();
+                accruedIncome = await poolConfigContract.accruedIncome();
                 expect(accruedIncome.protocolIncome).to.equal(10);
                 expect(accruedIncome.eaIncome).to.equal(8);
                 expect(accruedIncome.poolOwnerIncome).to.equal(2);
@@ -571,7 +571,7 @@ describe("Invoice Factoring", function () {
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(18);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(75);
 
-                accruedIncome = await invoiceContract.accruedIncome();
+                accruedIncome = await poolConfigContract.accruedIncome();
                 expect(accruedIncome.protocolIncome).to.equal(10);
                 expect(accruedIncome.eaIncome).to.equal(8);
                 expect(accruedIncome.poolOwnerIncome).to.equal(2);
@@ -603,7 +603,7 @@ describe("Invoice Factoring", function () {
                 expect(await hdtContract.withdrawableFundsOf(owner.address)).to.equal(0);
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(0);
 
-                let accruedIncome = await invoiceContract.accruedIncome();
+                let accruedIncome = await poolConfigContract.accruedIncome();
                 expect(accruedIncome.protocolIncome).to.equal(16);
                 expect(accruedIncome.eaIncome).to.equal(12);
                 expect(accruedIncome.poolOwnerIncome).to.equal(3);
