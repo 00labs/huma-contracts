@@ -105,7 +105,7 @@ describe("Upgradability Test", function () {
         const tx = await eaNFTContract.mintNFT(evaluationAgent.address, "");
         const receipt = await tx.wait();
         for (const evt of receipt.events) {
-            if (evt.event === "EANFTGenerated") {
+            if (evt.event === "NFTGenerated") {
                 eaNFTTokenId = evt.args[0];
             }
         }
