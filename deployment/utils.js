@@ -1,3 +1,4 @@
+const {BigNumber: BN, ethers} = require("ethers");
 const fs = require("fs");
 const DEPLOYED_PATH = "./deployment/";
 
@@ -142,6 +143,15 @@ async function deploy(contractName, keyName, contractParameters, deployer) {
     return contract;
 }
 
+const toFixedDecimal = function (number, decimals) {
+    return BN.from(number).mul(BN.from(10).pow(BN.from(decimals)));
+};
+
+async function advanceClock(days) {
+    await ethers.provider.send("evm_increaseTime", [3600 * 24 * days]);
+    await ethers.provider.send("evm_mine", []);
+}
+
 module.exports = {
     getInitilizedContract,
     updateInitilizedContract,
@@ -154,4 +164,6 @@ module.exports = {
     checkReceiptOk,
     sendTransaction,
     deploy,
+    toFixedDecimal,
+    advanceClock,
 };
