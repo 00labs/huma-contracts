@@ -438,7 +438,7 @@ abstract contract BasePool is BasePoolStorage, OwnableUpgradeable, ILiquidityPro
             address eaNFTAddress
         )
     {
-        IERC20Metadata erc20Contract = IERC20Metadata(address(_poolToken));
+        IERC20Metadata erc20Contract = IERC20Metadata(address(_underlyingToken));
         return (
             address(_underlyingToken),
             _poolConfig._poolAprInBps,
