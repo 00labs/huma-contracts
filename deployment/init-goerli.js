@@ -187,30 +187,36 @@ async function prepare() {
     }
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
-    await sendTransaction("TestToken", usdc,
-        "mint", [lender.address, 1_000_000*10**6])
-    await sendTransaction("TestToken", usdc,
-        "mint", [ea.address, 2_000_000*10**6])
+    const usdcFromEA = await usdc.connect(ea);
+    const decimals = await usdc.decimals();
+    // await sendTransaction("TestToken", usdc,
+    //     "mint", [deployer.address, BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)))]);
+    // await sendTransaction("TestToken", usdc,
+    //     "mint", [ea.address, BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)))]);
 
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
     const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
-    await sendTransaction("ReceivableFactoringPool", pool,
-        "setEvaluationAgent", [1, ea.address])
+    const poolFromEA = await pool.connect(ea);
 
-    await sendTransaction("ReceivableFactoringPool", pool,
-        "addApprovedLender", [deployer.address])
-    await sendTransaction("ReceivableFactoringPool", pool,
-        "addApprovedLender", [ea.address])
-    await sendTransaction("ReceivableFactoringPool", pool,
-        "addApprovedLender", [lender.address])
+    // await sendTransaction("ReceivableFactoringPool", pool,
+    //     "setEvaluationAgent", [1, ea.address])
+    //
+    // await sendTransaction("ReceivableFactoringPool", pool,
+    //     "addApprovedLender", [deployer.address])
+    // await sendTransaction("ReceivableFactoringPool", pool,
+    //     "addApprovedLender", [ea.address])
+    // await sendTransaction("ReceivableFactoringPool", pool,
+    //     "addApprovedLender", [lender.address])
 
-    await sendTransaction("TestToken", usdc,
-        "approve", [pool.address, 20_000])
-    await sendTransaction("ReceivableFactoringPool", pool,
-        "makeInitialDeposit", [20_000])
+    // await sendTransaction("TestToken", usdc,
+    //     "approve", [pool.address, BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)))]);
+    // await sendTransaction("ReceivableFactoringPool", pool,
+    //     "makeInitialDeposit", [BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)))])
 
-    await usdc.connect(ea).approve(pool.address, 10_000);
-    await pool.connect(ea).makeInitialDeposit(10_000);
+    await sendTransaction("TestToken", usdcFromEA,
+        "approve", [pool.address, BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)))])
+    await sendTransaction("ReceivableFactoringPool", poolFromEA,
+        "makeInitialDeposit", [BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)))])
 
     await expect(pool.connect(deployer).enablePool()).to.emit(
         pool,
