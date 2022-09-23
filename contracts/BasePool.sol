@@ -18,7 +18,7 @@ import "./EvaluationAgentNFT.sol";
 
 import "hardhat/console.sol";
 
-contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider, IPool {
+abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider, IPool {
     using SafeERC20 for IERC20;
 
     error notEvaluationAgentOwnerProvided();
