@@ -408,11 +408,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             newCharges
         ) = _feeManager.getDueInfo(cr, _creditRecordStaticMapping[borrower]);
 
-        // Distribute income
-        if (distributeChargesForLastCycle) distributeIncome(newCharges);
-        else distributeIncome(newCharges - cr.feesAndInterestDue);
-
         if (periodsPassed > 0) {
+            // Distribute income
+            if (distributeChargesForLastCycle) distributeIncome(newCharges);
+            else distributeIncome(newCharges - cr.feesAndInterestDue);
             if (cr.dueDate > 0)
                 cr.dueDate = uint64(
                     cr.dueDate +
