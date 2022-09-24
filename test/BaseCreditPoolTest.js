@@ -469,7 +469,7 @@ describe("Base Credit Pool", function () {
     });
 
     // Default flow. After each pay period, simulates to LatePayMonitorService to call updateDueInfo().
-    // In "Payback".beforeEach(), make sure there is a loan funded.
+    // Test scenario available at https://tinyurl.com/yc5fks9x
     describe("Default", function () {
         beforeEach(async function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
@@ -560,7 +560,7 @@ describe("Base Credit Pool", function () {
             await testTokenContract.connect(borrower).mint(borrower.address, 200_000);
             await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
 
-            // Period 1: Late for payment, trigger default
+            // Period 1: Late for payment, trigger default. The same setup as the "default flow" test.
             advanceClock(30);
             await poolContract.updateDueInfo(borrower.address, true);
             advanceClock(30);
@@ -598,7 +598,10 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.poolOwnerIncome).to.equal(3292);
             expect(accruedIncome.eaIncome).to.equal(9876);
 
-            // Stage 2: borrower pays back after
+            // Stage 2: borrower pays back after default is triggered.
+            // the amount is unable to cover all the outstanding fees sand principals.
+            // the fees will be charged first, then the principal. The account is in default
+            // state until everything is paid off.
             advanceClock(10);
             await testTokenContract.connect(borrower).approve(poolContract.address, 1_054_850);
 
