@@ -196,15 +196,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
     /**
      * @notice Distributes income to token holders.
-     * @dev It reverts if the total supply of tokens is 0.
-     * It emits the `IncomeDistributed` event if the amount of received is greater than 0.
-     * About undistributed income:
-     *   In each distribution, there is a small amount of funds which does not get distributed,
-     *     which is `(msg.value * POINTS_MULTIPLIER) % totalSupply()`.
-     *   With a well-chosen `POINTS_MULTIPLIER`, the amount funds that are not getting distributed
-     *     in a distribution can be less than 1 (base unit).
-     *   We can actually keep track of the undistributed in a distribution
-     *     and try to distribute it in the next distribution ....... todo implement
      */
     function distributeIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.distributeIncome(value);
@@ -212,10 +203,15 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 
     /**
+     * @notice Distributes income to token holders.
+     */
+    function reverseIncome(uint256 value) internal virtual {
+        uint256 poolIncome = _poolConfig.reverseIncome(value);
+        _totalPoolValue -= poolIncome;
+    }
+
+    /**
      * @notice Distributes losses associated with the token
-     * @dev Technically, we can combine distributeIncome() and distributeLossees() by making
-     * the parameter to int256, however, we decided to use separate APIs to improve readability
-     * and reduce errors.
      * @param value the amount of losses to be distributed
      */
     function distributeLosses(uint256 value) internal virtual {

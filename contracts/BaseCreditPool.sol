@@ -376,9 +376,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
 
         if (amountToCollect == payoffAmount) {
-            // todo all the interest income has been distributed. We are reverting some
-            // income here. We need to reverse the distribution for all the corrections.
             if (isDefaulted) cr.state = BS.CreditState.GoodStanding;
+            reverseIncome(uint256(uint96(0 - cr.correction)));
             amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
             cr.correction = 0;
         }

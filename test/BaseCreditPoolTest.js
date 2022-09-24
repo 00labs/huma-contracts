@@ -552,7 +552,7 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.poolOwnerIncome).to.equal(3292);
             expect(accruedIncome.eaIncome).to.equal(9876);
         });
-        it.only("Post-default payment", async function () {
+        it("Post-default payment", async function () {
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
             let dueDate = blockBefore.timestamp + 2592000;
@@ -661,12 +661,12 @@ describe("Base Credit Pool", function () {
                 3,
                 0
             );
-            // expect(await poolContract.totalPoolValue()).to.equal(5_049_197);
-            // expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(1_009_839);
-            // expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-            //     2_019_678
-            // );
-            // expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_019_678);
+            expect(await poolContract.totalPoolValue()).to.equal(5_049_197);
+            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(1_009_839);
+            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+                2_019_678
+            );
+            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_019_678);
         });
     });
 });

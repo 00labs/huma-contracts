@@ -290,6 +290,26 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         poolIncome = (valueForPool - ownerIncome - eaIncome);
     }
 
+    function reverseIncome(uint256 value) external returns (uint256 poolIncome) {
+        if (msg.sender != pool) {
+            revert Errors.callNotFromPool();
+        }
+
+        uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / BPS_DIVIDER;
+        _accuredIncome._protocolIncome -= protocolFee;
+
+        uint256 valueForPool = value - protocolFee;
+
+        uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
+            BPS_DIVIDER;
+        _accuredIncome._poolOwnerIncome -= ownerIncome;
+
+        uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) / BPS_DIVIDER;
+        _accuredIncome._eaIncome -= eaIncome;
+
+        poolIncome = (valueForPool - ownerIncome - eaIncome);
+    }
+
     function withdrawEAFee(uint256 amount) external {
         require(msg.sender == evaluationAgent, "NOT_EA_OWNER");
         require(amount <= _accuredIncome._eaIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
