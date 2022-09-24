@@ -163,7 +163,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         )
     {
         // Directly returns if it is still within the current period
-        if (block.timestamp <= _cr.dueDate || _cr.state == BS.CreditState.Defaulted) {
+        if (block.timestamp <= _cr.dueDate) {
             return (0, _cr.feesAndInterestDue, _cr.totalDue, _cr.unbilledPrincipal, 0);
         }
 

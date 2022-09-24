@@ -319,6 +319,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // several cycles.
         BS.CreditRecord memory cr = updateDueInfo(borrower, true);
         uint96 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
+        bool isDefaulted = cr.state == BS.CreditState.Defaulted ? true : false;
 
         // How much will be applied towards principal
         uint256 principalPayment = 0;
@@ -350,11 +351,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
             cr.missedPeriods = 0;
-            cr.state = BS.CreditState.GoodStanding;
+            if (!isDefaulted) cr.state = BS.CreditState.GoodStanding;
         }
 
-        // If there is principal payment, calcuate new correction
         if (principalPayment > 0) {
+            // If there is principal payment, calcuate new correction
             cr.correction -= int96(
                 uint96(
                     _feeManager.calcCorrection(
@@ -364,9 +365,20 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                     )
                 )
             );
+            // For account in default, record the recovered principal for the pool.
+            // Note: correction only impacts interest amount, thus no impact on recovered principal
+            if (isDefaulted) {
+                _totalPoolValue += principalPayment;
+                _creditRecordStaticMapping[borrower].defaultAmount -= uint96(principalPayment);
+
+                distributeIncome(amount - principalPayment);
+            }
         }
 
         if (amountToCollect == payoffAmount) {
+            // todo all the interest income has been distributed. We are reverting some
+            // income here. We need to reverse the distribution for all the corrections.
+            if (isDefaulted) cr.state = BS.CreditState.GoodStanding;
             amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
             cr.correction = 0;
         }
@@ -437,8 +449,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             if (alreadyLate) cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed);
             else cr.missedPeriods = 0;
 
-            if (cr.missedPeriods > 0) cr.state = BS.CreditState.Delayed;
-            else cr.state = BS.CreditState.GoodStanding;
+            if (cr.missedPeriods > 0)
+                if (cr.state != BS.CreditState.Defaulted) cr.state = BS.CreditState.Delayed;
+                else cr.state = BS.CreditState.GoodStanding;
 
             // Correction is used when moving to a new payment cycle, ready for reset.
             // However, correction has not been used if it is still the same cycle, cannot reset
