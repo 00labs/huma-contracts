@@ -471,6 +471,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
 
         losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
+
+        _creditRecordMapping[borrower].state = BS.CreditState.Defaulted;
+
+        _creditRecordStaticMapping[borrower].defaultAmount = uint96(losses);
+
         distributeLosses(losses);
 
         emit DefaultTriggered(borrower, losses, msg.sender);
