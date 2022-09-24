@@ -376,7 +376,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
 
         if (amountToCollect == payoffAmount) {
-            if (isDefaulted) cr.state = BS.CreditState.GoodStanding;
+            // Set account state to GoodStanding if paid off even if it was delayed or defaulted.
+            cr.state = BS.CreditState.GoodStanding;
+
+            // the interest for the final pay period has been distributed. When the user pays off
+            // early, the interest charge for the remainder of the period will be substracted,
+            // thus the income should be reversed.
             reverseIncome(uint256(uint96(0 - cr.correction)));
             amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
             cr.correction = 0;
