@@ -27,7 +27,7 @@ library BaseStructs {
         uint96 creditLimit; // the limit of the credit line
         uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
         uint16 intervalInDays; // # of days in one billing period
-        uint96 defaultAmount; // the amount that has been defaulted. 
+        uint96 defaultAmount; // the amount that has been defaulted.
     }
 
     /**
@@ -46,7 +46,6 @@ library BaseStructs {
         Approved,
         GoodStanding,
         Delayed,
-        InDefaultGracePeriod,
         Defaulted
     }
 
