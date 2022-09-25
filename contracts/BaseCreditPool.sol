@@ -502,7 +502,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
         onlyEAServiceAccount();
-        // Brings the account current. todo research why this is needed to extend remainingPeriods.
+        // Although it is not essential to call updateDueInfo() to extend the credit line duration
+        // it is good practice to bring the account current while we update one of the fields.
+        // Also, only if we call updateDueInfo(), we can write proper tests.
         updateDueInfo(borrower, false);
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
     }

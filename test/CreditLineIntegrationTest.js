@@ -270,6 +270,7 @@ describe("Credit Line Integration Test", async function () {
         checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 0, 0, 0, 4, 1217, 30, 3, 0);
     });
 
+    // This happens slightly after day 300. Thus mis the cycle. No bill is generated until day 330
     it("Day 300: New borrow after being dormant for 4 periods", async function () {
         advanceClock(80);
         dueDate += 2592000 * 3;
