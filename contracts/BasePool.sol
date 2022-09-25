@@ -176,13 +176,16 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
             "WITHDRAW_TOO_SOON"
         );
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
-        require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
+        if (amount > withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
 
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
-        _poolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
+        if (msg.sender == _poolConfig.evaluationAgent())
+            _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
+        else if (msg.sender == _poolConfig.owner())
+            _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
@@ -246,7 +249,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
+        _poolConfig.checkLiquidityRequirement();
 
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
@@ -274,6 +277,11 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
     function poolConfig() external view returns (address) {
         return address(_poolConfig);
+    }
+
+    function isPoolOn() external view returns (bool status) {
+        if (_status == PoolStatus.On) return true;
+        else return false;
     }
 
     // In order for a pool to issue new loans, it must be turned on by an admin

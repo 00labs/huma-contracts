@@ -27,4 +27,7 @@ contract Errors {
     error insufficientReceivableAmount();
     error maxCreditLimitExceeded();
     error borrowingAmountLessThanPlatformFees();
+    error poolOwnerNotEnoughLiquidity();
+    error evaluationAgentNotEnoughLiquidity();
+    error withdrawnAmountHigherThanBalance();
 }
