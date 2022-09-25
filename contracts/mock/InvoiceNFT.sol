@@ -15,7 +15,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
     Counters.Counter private _paymentId;
 
     // ERC20 that this InvoiceNFT is paid in
-    address immutable _tokenAddress;
+    address internal immutable _tokenAddress;
 
     event Mint(address recipient, string tokenURI);
     event NFTGenerated(uint256 tokenId);
