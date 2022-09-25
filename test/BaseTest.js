@@ -9,7 +9,7 @@ async function deployContracts(
     protocolOwner,
     eaServiceAccount,
     pdsServiceAccount,
-    fees = [1000, 100, 2000, 100]
+    fees = [1000, 100, 2000, 100, 0]
 ) {
     // Deploy EvaluationAgentNFT
     const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
@@ -32,7 +32,9 @@ async function deployContracts(
     const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
     feeManagerContract = await feeManagerFactory.deploy();
     await feeManagerContract.transferOwnership(poolOwner.address);
-    await feeManagerContract.connect(poolOwner).setFees(fees[0], fees[1], fees[2], fees[3]);
+    await feeManagerContract
+        .connect(poolOwner)
+        .setFees(fees[0], fees[1], fees[2], fees[3], fees[4]);
 
     // Deploy TestToken, give initial tokens to lender
     const TestToken = await ethers.getContractFactory("TestToken");

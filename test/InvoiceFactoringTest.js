@@ -71,7 +71,7 @@ describe("Invoice Factoring", function () {
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
 
-        await feeManagerContract.setFees(10, 100, 20, 100);
+        await feeManagerContract.setFees(10, 100, 20, 100, 0);
 
         const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
         invoiceNFTContract = await InvoiceNFT.deploy(testTokenContract.address);
@@ -417,7 +417,7 @@ describe("Invoice Factoring", function () {
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", async function () {
         beforeEach(async function () {
-            await feeManagerContract.setFees(10, 100, 20, 100);
+            await feeManagerContract.setFees(10, 100, 20, 100, 0);
             await poolConfigContract.setAPR(0);
 
             // Mint InvoiceNFT to the borrower

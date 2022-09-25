@@ -72,7 +72,7 @@ describe("Credit Line Integration Test", async function () {
             eaNFTContract
         );
 
-        await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500);
+        await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500, 0);
         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
         await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
     });

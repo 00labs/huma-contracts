@@ -25,7 +25,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 // The full testing scenario is designed as:
 // m0-1: Owner contributes 100 initial liquidity
-// m0-2: Set up fees=(10, 100, 20, 100), APR=1217, protocol fee=50.
+// m0-2: Set up fees=(10, 100, 20, 100, 0), APR=1217, protocol fee=50.
 // m0-3: Lender contributes 300, together with owner's 100, the pool size is 400. PPS=1
 // m0-4. Borrower borrows 400 with interest-only. 14 fee charged (12 pool fee, 2 protocol fee). Borrower get 386
 //       PPS=1.03, withdrawable(owner, lender)=(103,309)
