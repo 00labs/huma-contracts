@@ -453,9 +453,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             if (alreadyLate) cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed);
             else cr.missedPeriods = 0;
 
-            if (cr.missedPeriods > 0)
+            if (cr.missedPeriods > 0) {
                 if (cr.state != BS.CreditState.Defaulted) cr.state = BS.CreditState.Delayed;
-                else cr.state = BS.CreditState.GoodStanding;
+            } else cr.state = BS.CreditState.GoodStanding;
 
             // Correction is used when moving to a new payment cycle, ready for reset.
             // However, correction has not been used if it is still the same cycle, cannot reset
