@@ -196,15 +196,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
     /**
      * @notice Distributes income to token holders.
-     * @dev It reverts if the total supply of tokens is 0.
-     * It emits the `IncomeDistributed` event if the amount of received is greater than 0.
-     * About undistributed income:
-     *   In each distribution, there is a small amount of funds which does not get distributed,
-     *     which is `(msg.value * POINTS_MULTIPLIER) % totalSupply()`.
-     *   With a well-chosen `POINTS_MULTIPLIER`, the amount funds that are not getting distributed
-     *     in a distribution can be less than 1 (base unit).
-     *   We can actually keep track of the undistributed in a distribution
-     *     and try to distribute it in the next distribution ....... todo implement
      */
     function distributeIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.distributeIncome(value);
@@ -212,14 +203,30 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 
     /**
-     * @notice Distributes losses associated with the token
-     * @dev Technically, we can combine distributeIncome() and distributeLossees() by making
-     * the parameter to int256, however, we decided to use separate APIs to improve readability
-     * and reduce errors.
+     * @notice Reverse income to token holders.
+     * @param value the amount of income to be reverted
+     * @dev this is needed when the user pays off early. We collect and distribute interest
+     * at the beginning of the pay period. When the user pays off early, the interest
+     * for the remainder of the period will be automatically subtraced from the payoff amount.
+     * The portion of the income will be reversed. We can change the parameter of distributeIncome
+     * to int256 to do the job. Choose to use a separate function for better readability
+     */
+    function reverseIncome(uint256 value) internal virtual {
+        uint256 poolIncome = _poolConfig.reverseIncome(value);
+        _totalPoolValue -= poolIncome;
+    }
+
+    /**
+     * @notice Distributes losses associated with the token.
+     * Note: The pool (i.e. LPs) is responsible for the losses in a default. The protocol does not
+     * participate in loss distribution. PoolOwner and EA only participate in their LP capacity.
      * @param value the amount of losses to be distributed
+     * @dev We chose not to change distributeIncome to accepted int256 to cover losses for
+     * readability consideration.
+     * @dev reserveIncome() and distributeLosses() cannot be combined since protocol, poolOwner
+     * and evaluationAgent do not participate in losses, but they participate in income reverse.
      */
     function distributeLosses(uint256 value) internal virtual {
-        // todo in extreme cases
         if (_totalPoolValue > value) _totalPoolValue -= value;
         else _totalPoolValue = 0;
     }

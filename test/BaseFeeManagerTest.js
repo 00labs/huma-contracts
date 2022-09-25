@@ -2,7 +2,13 @@
 const {ethers} = require("hardhat");
 const {use, expect} = require("chai");
 const {solidity} = require("ethereum-waffle");
-const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest");
+const {
+    deployContracts,
+    deployAndSetupPool,
+    advanceClock,
+    checkRecord,
+    checkResult,
+} = require("./BaseTest");
 
 use(solidity);
 
@@ -24,28 +30,6 @@ let pdsServiceAccount;
 
 let record;
 let recordStatic;
-
-let checkRecord = function (r, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) {
-    if (v1 != "SKIP") expect(r.creditLimit).to.equal(v1);
-    if (v2 != "SKIP") expect(r.unbilledPrincipal).to.equal(v2);
-    if (v3 != "SKIP") expect(r.dueDate).to.be.within(v3 - 60, v3 + 60);
-    if (v4 != "SKIP") expect(r.correction).to.equal(v4); //be.within(v4 - 1, v4 + 1);
-    if (v5 != "SKIP") expect(r.totalDue).to.equal(v5);
-    if (v6 != "SKIP") expect(r.feesAndInterestDue).to.equal(v6);
-    if (v7 != "SKIP") expect(r.missedPeriods).to.equal(v7);
-    if (v8 != "SKIP") expect(r.remainingPeriods).to.equal(v8);
-    if (v9 != "SKIP") expect(r.aprInBps).to.equal(v9);
-    if (v10 != "SKIP") expect(r.intervalInDays).to.equal(v10);
-    if (v11 != "SKIP") expect(r.state).to.equal(v11);
-};
-
-let checkResult = function (r, v1, v2, v3, v4, v5) {
-    expect(r.periodsPassed).to.equal(v1);
-    expect(r.feesAndInterestDue).to.equal(v2);
-    expect(r.totalDue).to.equal(v3);
-    expect(r.unbilledPrincipal).to.equal(v4);
-    expect(r.totalCharges).to.equal(v5);
-};
 
 describe("Base Fee Manager", function () {
     before(async function () {
