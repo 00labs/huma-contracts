@@ -111,7 +111,7 @@ describe("Base Fee Manager", function () {
             it("Should reject if the rate is too high", async function () {
                 await expect(
                     feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(6000)
-                ).to.be.revertedWith("RATE_TOO_HIGH");
+                ).to.be.revertedWith("minPrincipalPaymentRateSettingTooHigh()");
             });
 
             it("Should be able to set min principal payment rate", async function () {

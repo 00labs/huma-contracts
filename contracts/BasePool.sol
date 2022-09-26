@@ -168,13 +168,12 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function withdraw(uint256 amount) public virtual override {
         protocolAndPoolOn();
-        require(amount > 0, "AMOUNT_IS_ZERO");
+        if (amount == 0) revert Errors.zeroAmountProvided();
+        if (
+            block.timestamp <
+            _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds()
+        ) revert Errors.withdrawTooSoon();
 
-        require(
-            block.timestamp >=
-                _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds(),
-            "WITHDRAW_TOO_SOON"
-        );
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
         if (amount > withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
 
@@ -287,8 +286,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
     function protocolAndPoolOn() internal view {
-        require(_humaConfig.isProtocolPaused() == false, "PROTOCOL_PAUSED");
-        require(_status == PoolStatus.On, "POOL_NOT_ON");
+        if (_humaConfig.isProtocolPaused()) revert Errors.protocolIsPaused();
+        if (_status != PoolStatus.On) revert Errors.poolIsNotOn();
     }
 
     function onlyApprovedLender(address lender) internal view {

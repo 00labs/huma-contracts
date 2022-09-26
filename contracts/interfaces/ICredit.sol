@@ -19,7 +19,7 @@ interface ICredit {
         uint256 receivableParam
     ) external;
 
-    function invalidateApprovedCredit(address _borrower) external;
+    function changeCreditLine(address _borrower, uint256 newLine) external;
 
     function makePayment(
         address _borrower,
