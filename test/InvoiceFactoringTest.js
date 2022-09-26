@@ -480,7 +480,7 @@ describe("Invoice Factoring", function () {
             ).to.be.revertedWith("paymentDetectionServiceAccountRequired()");
         });
 
-        it.only("Process payback", async function () {
+        it("Process payback", async function () {
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(386);
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
 
@@ -492,7 +492,7 @@ describe("Invoice Factoring", function () {
                 .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1);
             await expect(
                 invoiceContract
-                    .connect(evaluationAgent)
+                    .connect(pdsServiceAccount)
                     .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1)
             ).to.be.revertedWith("HumaIF:ALREADY_PROCESSED");
 
