@@ -9,6 +9,7 @@ import "./interfaces/IPoolConfig.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./BasePool.sol";
+import "./Errors.sol";
 
 import "hardhat/console.sol";
 
@@ -196,7 +197,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      */
     function setAPR(uint256 aprInBps) external {
         onlyOwnerOrHumaMasterAdmin();
-        require(aprInBps <= 10000, "INVALID_APR");
+        if(aprInBps > 10000) revert Errors.invalidAPR();
         _poolConfig._poolAprInBps = aprInBps;
         emit APRUpdated(aprInBps);
     }
@@ -333,7 +334,8 @@ contract BasePoolConfig is Ownable, IPoolConfig {
 
     function withdrawPoolOwnerFee(uint256 amount) external virtual {
         require(msg.sender == this.owner(), "NOT_POOL_OWNER");
-        require(amount <= _accuredIncome._poolOwnerIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        if (amount > _accuredIncome._poolOwnerIncome)
+            revert Errors.withdrawnAmountHigherThanBalance();
         underlyingToken.safeTransferFrom(pool, this.owner(), amount);
     }
 
