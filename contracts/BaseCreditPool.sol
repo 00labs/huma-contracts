@@ -262,7 +262,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // note since we bill at the beginning of a period, cr.remainingPeriods is zero
             // in the final period.
             if (cr.remainingPeriods == 0) revert Errors.creditExpiredDueToMaturity();
-            //            require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
 
             // For non-first bill, we do not update the current bill, the interest for the rest of
             // this pay period is accrued in correction and be add to the next bill.
@@ -299,7 +298,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev "WRONG_ASSET" reverted when asset address does not match
+     * @dev "assetNotMatchWithPoolAsset()" reverted when asset address does not match
      * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
      */
     function makePayment(
@@ -309,8 +308,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     ) external virtual override {
         protocolAndPoolOn();
 
-        require(asset == address(_underlyingToken), "WRONG_ASSET");
-        require(amount > 0, "CANNOT_BE_ZERO_AMOUNT");
+        if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
+        if (amount == 0) revert Errors.zeroAmountProvided();
 
         // Bring the account current. This is necessary since the account might have been dormant for
         // several cycles.

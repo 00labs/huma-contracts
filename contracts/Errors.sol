@@ -30,4 +30,8 @@ contract Errors {
     error poolOwnerNotEnoughLiquidity();
     error evaluationAgentNotEnoughLiquidity();
     error withdrawnAmountHigherThanBalance();
+    error withdrawTooSoon();
+    error assetNotMatchWithPoolAsset();
+
+    error minPrincipalPaymentRateSettingTooHigh();
 }

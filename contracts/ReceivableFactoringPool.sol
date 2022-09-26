@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "./interfaces/IReceivable.sol";
 
 import "./BaseCreditPool.sol";
+import "./Errors.sol";
 
 /**
  * @notice Receivable Factoring is the process for the receivable owner to trade in their
@@ -70,7 +71,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev "HumaIF:WRONG_ASSET" reverted when asset address does not match
+     * @dev Reverted with assetNotMatchWithPoolAsset() when asset address does not match
      *
      */
     function onReceivedPayment(
@@ -84,7 +85,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         onlyPDSServiceAccount();
         BaseStructs.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        require(asset == address(_underlyingToken), "HumaIF:WRONG_ASSET");
+        if(asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
 
         // todo handle multiple payments.
         // todo decide what to do if the payment amount is insufficient.

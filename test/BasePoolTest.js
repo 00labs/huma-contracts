@@ -263,9 +263,15 @@ describe("Base Pool - LP and Admin functions", function () {
             // to do. HumaPool.Withdraw shall reject with a code.
         });
 
+        it("Should reject when withdraw amount is 0", async function () {
+            await expect(poolContract.connect(lender).withdraw(0)).to.be.revertedWith(
+                "zeroAmountProvided()"
+            );
+        });
+
         it("Should reject when withdraw too early", async function () {
             await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
-                "WITHDRAW_TOO_SOON"
+                "withdrawTooSoon()"
             );
         });
 

@@ -457,6 +457,22 @@ describe("Base Credit Pool", function () {
             ).to.be.revertedWith("PROTOCOL_PAUSED");
         });
 
+        it("Should reject the payback asset does not match with the underlying token asset", async function () {
+            await testTokenContract.connect(borrower).approve(poolContract.address, 1000);
+            await expect(
+                poolContract.connect(borrower).makePayment(borrower.address, lender.address, 1000)
+            ).to.be.revertedWith("assetNotMatchWithPoolAsset()");
+        });
+
+        it("Should reject if payback amount is zero", async function () {
+            await testTokenContract.connect(borrower).approve(poolContract.address, 1000);
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .makePayment(borrower.address, testTokenContract.address, 0)
+            ).to.be.revertedWith("zeroAmountProvided()");
+        });
+
         it("Process payback", async function () {
             advanceClock(29);
 

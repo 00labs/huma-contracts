@@ -168,13 +168,12 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function withdraw(uint256 amount) public virtual override {
         protocolAndPoolOn();
-        require(amount > 0, "AMOUNT_IS_ZERO");
+        if (amount == 0) revert Errors.zeroAmountProvided();
+        if (
+            block.timestamp <
+            _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds()
+        ) revert Errors.withdrawTooSoon();
 
-        require(
-            block.timestamp >=
-                _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds(),
-            "WITHDRAW_TOO_SOON"
-        );
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
         if (amount > withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
 
