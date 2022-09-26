@@ -85,11 +85,12 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         onlyPDSServiceAccount();
         BaseStructs.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        if(asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
+        if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
 
         // todo handle multiple payments.
         // todo decide what to do if the payment amount is insufficient.
-        require(amount >= cr.unbilledPrincipal, "HumaIF:AMOUNT_TOO_LOW");
+        // todo add test to cover the case when the amount is too low
+        if (amount < cr.unbilledPrincipal) revert Errors.amountTooLow();
 
         // todo For security, verify that we have indeeded received the payment.
         // If asset is not received, EA might be compromised. Emit event.

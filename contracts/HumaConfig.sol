@@ -124,7 +124,8 @@ contract HumaConfig is Ownable {
      * @dev Emits ProtocolDefaultGracePeriodChanged(uint256 newGracePeriod) event
      */
     function setProtocolDefaultGracePeriod(uint256 gracePeriod) external onlyOwner {
-        require(gracePeriod >= MIN_DEFAULT_GRACE_PERIOD, "GRACE_PERIOD_TOO_SHORT");
+        if (gracePeriod < MIN_DEFAULT_GRACE_PERIOD)
+            revert Errors.defaultGracePeriodLessThanMinAllowed();
         protocolDefaultGracePeriodInSeconds = uint32(gracePeriod);
         emit ProtocolDefaultGracePeriodChanged(gracePeriod);
     }
@@ -136,7 +137,7 @@ contract HumaConfig is Ownable {
      * @dev Emits a TreasuryFeeChanged(uint256 fee) event
      */
     function setTreasuryFee(uint256 fee) external onlyOwner {
-        require(fee <= TREASURY_FEE_UPPER_BOUND, "TREASURY_FEE_TOO_HIGH");
+        if (fee > TREASURY_FEE_UPPER_BOUND) revert Errors.treasuryFeeHighThanUpperLimit();
         uint256 oldFee = protocolFee;
         protocolFee = uint16(fee);
         emit TreasuryFeeChanged(oldFee, fee);
@@ -161,12 +162,12 @@ contract HumaConfig is Ownable {
      * @notice Adds a pauser.
      * @param _pauser Address to be added to the pauser list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
-     * @dev If the address is already a pauser, revert w/ "ALREADY_A_PAUSER"
+     * @dev If the address is already a pauser, revert w/ "alreayAPauser"
      * @dev Emits a PauserAdded event.
      */
     function addPauser(address _pauser) external onlyOwner {
         if (_pauser == address(0)) revert Errors.zeroAddressProvided();
-        require(!pausers[_pauser], "ALREADY_A_PAUSER");
+        if (pausers[_pauser]) revert Errors.alreayAPauser();
 
         pausers[_pauser] = true;
 
@@ -177,12 +178,12 @@ contract HumaConfig is Ownable {
      * @notice Removes a pauser.
      * @param _pauser Address to be removed from the pauser list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
-     * @dev If the address is not currently a pauser, revert w/ "NOT_A_PAUSER"
+     * @dev If the address is not currently a pauser, revert w/ "notPauser()"
      * @dev Emits a PauserRemoved event.
      */
     function removePauser(address _pauser) external onlyOwner {
         if (_pauser == address(0)) revert Errors.zeroAddressProvided();
-        require(pausers[_pauser], "NOT_A_PAUSER");
+        if (pausers[_pauser] == false) revert Errors.notPauser();
 
         pausers[_pauser] = false;
 
@@ -198,7 +199,7 @@ contract HumaConfig is Ownable {
      */
     function addPoolAdmin(address _poolAdmin) external onlyOwner {
         if (_poolAdmin == address(0)) revert Errors.zeroAddressProvided();
-        require(!poolAdmins[_poolAdmin], "ALREADY_A_POOL_ADMIN");
+        if (poolAdmins[_poolAdmin]) revert Errors.alreadyPoolAdmin();
 
         poolAdmins[_poolAdmin] = true;
 
@@ -209,12 +210,12 @@ contract HumaConfig is Ownable {
      * @notice Removes a poolAdmin.
      * @param _poolAdmin Address to be removed from the poolAdmin list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
-     * @dev If the address is not currently a poolAdmin, revert w/ "NOT_A_POOL_ADMIN"
+     * @dev If the address is not currently a poolAdmin, revert w/ "notPoolOwner()"
      * @dev Emits a PauserRemoved event.
      */
     function removePoolAdmin(address _poolAdmin) external onlyOwner {
         if (_poolAdmin == address(0)) revert Errors.zeroAddressProvided();
-        require(poolAdmins[_poolAdmin], "NOT_A_POOL_ADMIN");
+        if (poolAdmins[_poolAdmin] == false) revert Errors.notPoolOwner();
 
         poolAdmins[_poolAdmin] = false;
 
@@ -222,7 +223,8 @@ contract HumaConfig is Ownable {
     }
 
     function setEANFTContractAddress(address contractAddress) external onlyOwner {
-        require(contractAddress != address(0), "EA_NFT_CONTRACT_ADDRESS_ZERO");
+        // todo need to add a test against zero address
+        if (contractAddress == address(0)) revert Errors.zeroAddressProvided();
         eaNFTContractAddress = contractAddress;
     }
 
@@ -270,7 +272,7 @@ contract HumaConfig is Ownable {
 
     /// Makes sure the msg.sender is one of the pausers
     modifier onlyPausers() {
-        require(pausers[msg.sender] == true, "PAUSERS_REQUIRED");
+        if (pausers[msg.sender] == false) revert Errors.notPauser();
         _;
     }
 }

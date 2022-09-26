@@ -123,7 +123,7 @@ describe("Huma Config", function () {
         it("Should reject add-pauser request if it is already a pauser", async function () {
             await expect(
                 configContract.connect(origOwner).addPauser(pauser.address)
-            ).to.be.revertedWith("ALREADY_A_PAUSER");
+            ).to.be.revertedWith("alreayAPauser()");
         });
 
         it("Should disallow non-owner to remove a pauser", async function () {
@@ -145,7 +145,7 @@ describe("Huma Config", function () {
         it("Should reject attemp to removal a pauser who is not a pauser", async function () {
             await expect(
                 configContract.connect(origOwner).removePauser(treasury.address)
-            ).to.be.revertedWith("NOT_A_PAUSER");
+            ).to.be.revertedWith("notPauser()");
         });
 
         it("Should remove a pauser successfully", async function () {
@@ -172,10 +172,10 @@ describe("Huma Config", function () {
     describe("Pause and Unpause Protocol", function () {
         it("Should disallow non-pauser to pause the protocol", async function () {
             await expect(configContract.connect(randomUser).pauseProtocol()).to.be.revertedWith(
-                "PAUSERS_REQUIRED"
+                "notPauser()"
             );
             await expect(configContract.connect(treasury).pauseProtocol()).to.be.revertedWith(
-                "PAUSERS_REQUIRED"
+                "notPauser()"
             );
         });
 
@@ -234,7 +234,7 @@ describe("Huma Config", function () {
         it("Should reject add-pool-admin request if it is already a pool admin", async function () {
             await expect(
                 configContract.connect(origOwner).addPoolAdmin(poolAdmin.address)
-            ).to.be.revertedWith("ALREADY_A_POOL_ADMIN");
+            ).to.be.revertedWith("alreadyPoolAdmin()");
         });
 
         it("Should disallow non-owner to remove a pool admin", async function () {
@@ -256,7 +256,7 @@ describe("Huma Config", function () {
         it("Should reject attempt to remove a pool admin who is not a pool admin", async function () {
             await expect(
                 configContract.connect(origOwner).removePoolAdmin(treasury.address)
-            ).to.be.revertedWith("NOT_A_POOL_ADMIN");
+            ).to.be.revertedWith("notPoolOwner()");
         });
 
         it("Should remove a pool admin successfully", async function () {
@@ -294,10 +294,10 @@ describe("Huma Config", function () {
         it("Should disallow default grace period to be shorten than one day", async function () {
             await expect(
                 configContract.connect(origOwner).setProtocolDefaultGracePeriod(12 * 3600)
-            ).to.be.revertedWith("GRACE_PERIOD_TOO_SHORT");
+            ).to.be.revertedWith("defaultGracePeriodLessThanMinAllowed()");
             await expect(
                 configContract.connect(origOwner).setProtocolDefaultGracePeriod(0)
-            ).to.be.revertedWith("GRACE_PERIOD_TOO_SHORT");
+            ).to.be.revertedWith("defaultGracePeriodLessThanMinAllowed()");
         });
 
         it("Should be able to reset default grace period", async function () {
@@ -326,7 +326,7 @@ describe("Huma Config", function () {
         it("Should disallow treasury fee to be higher than 5000 bps, i.e. 50%", async function () {
             await expect(
                 configContract.connect(origOwner).setTreasuryFee(6000)
-            ).to.be.revertedWith("TREASURY_FEE_TOO_HIGH");
+            ).to.be.revertedWith("treasuryFeeHighThanUpperLimit()");
         });
 
         it("Should be able to change treasury fee", async function () {

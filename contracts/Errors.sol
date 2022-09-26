@@ -41,4 +41,14 @@ contract Errors {
     error notPoolOwner();
     error notProtocolOwner();
     error notEvaluationAgent();
+    error notPauser();
+
+    error alreayAPauser();
+    error alreadyPoolAdmin();
+
+    error defaultGracePeriodLessThanMinAllowed();
+    error treasuryFeeHighThanUpperLimit();
+
+    error amountTooLow();
+    error creditLineGreatThanUpperLimit();
 }
