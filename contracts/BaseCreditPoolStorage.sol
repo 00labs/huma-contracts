@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import {BaseStructs as BS} from "./libraries/BaseStructs.sol";
 
 contract BaseCreditPoolStorage {
-
     /// mapping from wallet address to the credit record
     mapping(address => BS.CreditRecord) internal _creditRecordMapping;
     /// mapping from wallet address to the receivable supplied by this wallet
@@ -17,5 +16,5 @@ contract BaseCreditPoolStorage {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[100] private __gap;
+    uint256[99] private __gap;
 }
