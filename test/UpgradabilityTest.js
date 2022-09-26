@@ -112,7 +112,7 @@ describe("Upgradability Test", function () {
         const receipt = await tx.wait();
         for (const evt of receipt.events) {
             if (evt.event === "NFTGenerated") {
-                eaNFTTokenId = evt.args[1];
+                eaNFTTokenId = evt.args.tokenId;
             }
         }
 

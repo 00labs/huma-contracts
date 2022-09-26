@@ -116,7 +116,7 @@ async function deployAndSetupPool(
     const receipt = await tx.wait();
     for (const evt of receipt.events) {
         if (evt.event === "NFTGenerated") {
-            eaNFTTokenId = evt.args[0];
+            eaNFTTokenId = evt.args.tokenId;
         }
     }
 
