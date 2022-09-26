@@ -107,7 +107,7 @@ describe("Huma Config", function () {
         it("Should reject 0 address pauser", async function () {
             await expect(
                 configContract.connect(origOwner).addPauser(ethers.constants.AddressZero)
-            ).to.be.revertedWith("PAUSER_ADDRESS_ZERO");
+            ).to.be.revertedWith("zeroAddressProvided()");
         });
 
         it("Should allow pauser to be added", async function () {
@@ -139,7 +139,7 @@ describe("Huma Config", function () {
         it("Should disallow removal of pauser using zero address", async function () {
             await expect(
                 configContract.connect(origOwner).removePauser(ethers.constants.AddressZero)
-            ).to.be.revertedWith("PAUSER_ADDRESS_ZERO");
+            ).to.be.revertedWith("zeroAddressProvided()");
         });
 
         it("Should reject attemp to removal a pauser who is not a pauser", async function () {
@@ -218,7 +218,7 @@ describe("Huma Config", function () {
         it("Should reject 0 address pool admin", async function () {
             await expect(
                 configContract.connect(origOwner).addPoolAdmin(ethers.constants.AddressZero)
-            ).to.be.revertedWith("POOL_ADMIN_ADDRESS_ZERO");
+            ).to.be.revertedWith("zeroAddressProvided()");
         });
 
         it("Should allow pool admin to be added", async function () {
@@ -250,7 +250,7 @@ describe("Huma Config", function () {
         it("Should disallow removal of pool admin using zero address", async function () {
             await expect(
                 configContract.connect(origOwner).removePoolAdmin(ethers.constants.AddressZero)
-            ).to.be.revertedWith("POOL_ADMIN_ADDRESS_ZERO");
+            ).to.be.revertedWith("zeroAddressProvided()");
         });
 
         it("Should reject attempt to remove a pool admin who is not a pool admin", async function () {

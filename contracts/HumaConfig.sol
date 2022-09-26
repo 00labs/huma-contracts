@@ -160,12 +160,12 @@ contract HumaConfig is Ownable {
     /**
      * @notice Adds a pauser.
      * @param _pauser Address to be added to the pauser list
-     * @dev If address(0) is provided, revert with "PAUSER_ADDRESS_ZERO"
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is already a pauser, revert w/ "ALREADY_A_PAUSER"
      * @dev Emits a PauserAdded event.
      */
     function addPauser(address _pauser) external onlyOwner {
-        require(_pauser != address(0), "PAUSER_ADDRESS_ZERO");
+        if (_pauser == address(0)) revert Errors.zeroAddressProvided();
         require(!pausers[_pauser], "ALREADY_A_PAUSER");
 
         pausers[_pauser] = true;
@@ -176,12 +176,12 @@ contract HumaConfig is Ownable {
     /**
      * @notice Removes a pauser.
      * @param _pauser Address to be removed from the pauser list
-     * @dev If address(0) is provided, revert with "PAUSER_ADDRESS_ZERO"
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is not currently a pauser, revert w/ "NOT_A_PAUSER"
      * @dev Emits a PauserRemoved event.
      */
     function removePauser(address _pauser) external onlyOwner {
-        require(_pauser != address(0), "PAUSER_ADDRESS_ZERO");
+        if (_pauser == address(0)) revert Errors.zeroAddressProvided();
         require(pausers[_pauser], "NOT_A_PAUSER");
 
         pausers[_pauser] = false;
@@ -192,12 +192,12 @@ contract HumaConfig is Ownable {
     /**
      * @notice Adds a pool admin.
      * @param _poolAdmin Address to be added as a pool admin
-     * @dev If address(0) is provided, revert with "POOL_ADMIN_ADDRESS_ZERO"
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is already a poolAdmin, revert w/ "ALREADY_A_POOL_ADMIN"
      * @dev Emits a PauserAdded event.
      */
     function addPoolAdmin(address _poolAdmin) external onlyOwner {
-        require(_poolAdmin != address(0), "POOL_ADMIN_ADDRESS_ZERO");
+        if (_poolAdmin == address(0)) revert Errors.zeroAddressProvided();
         require(!poolAdmins[_poolAdmin], "ALREADY_A_POOL_ADMIN");
 
         poolAdmins[_poolAdmin] = true;
@@ -208,12 +208,12 @@ contract HumaConfig is Ownable {
     /**
      * @notice Removes a poolAdmin.
      * @param _poolAdmin Address to be removed from the poolAdmin list
-     * @dev If address(0) is provided, revert with "POOL_ADMIN_ADDRESS_ZERO"
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is not currently a poolAdmin, revert w/ "NOT_A_POOL_ADMIN"
      * @dev Emits a PauserRemoved event.
      */
     function removePoolAdmin(address _poolAdmin) external onlyOwner {
-        require(_poolAdmin != address(0), "POOL_ADMIN_ADDRESS_ZERO");
+        if (_poolAdmin == address(0)) revert Errors.zeroAddressProvided();
         require(poolAdmins[_poolAdmin], "NOT_A_POOL_ADMIN");
 
         poolAdmins[_poolAdmin] = false;
