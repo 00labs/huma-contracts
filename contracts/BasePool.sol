@@ -168,21 +168,23 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function withdraw(uint256 amount) public virtual override {
         protocolAndPoolOn();
-        require(amount > 0, "AMOUNT_IS_ZERO");
+        if (amount == 0) revert Errors.zeroAmountProvided();
+        if (
+            block.timestamp <
+            _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds()
+        ) revert Errors.withdrawTooSoon();
 
-        require(
-            block.timestamp >=
-                _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds(),
-            "WITHDRAW_TOO_SOON"
-        );
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
-        require(amount <= withdrawableAmount, "WITHDRAW_AMT_TOO_GREAT");
+        if (amount > withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
 
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
-        _poolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
+        if (msg.sender == _poolConfig.evaluationAgent())
+            _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
+        else if (msg.sender == _poolConfig.owner())
+            _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
@@ -246,7 +248,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function enablePool() external virtual override {
         onlyOwnerOrHumaMasterAdmin();
-        _poolConfig.requireMinimumPoolOwnerAndEALiquidity(msg.sender);
+        _poolConfig.checkLiquidityRequirement();
 
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
@@ -276,11 +278,16 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         return address(_poolConfig);
     }
 
+    function isPoolOn() external view returns (bool status) {
+        if (_status == PoolStatus.On) return true;
+        else return false;
+    }
+
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
     function protocolAndPoolOn() internal view {
-        require(_humaConfig.isProtocolPaused() == false, "PROTOCOL_PAUSED");
-        require(_status == PoolStatus.On, "POOL_NOT_ON");
+        if (_humaConfig.isProtocolPaused()) revert Errors.protocolIsPaused();
+        if (_status != PoolStatus.On) revert Errors.poolIsNotOn();
     }
 
     function onlyApprovedLender(address lender) internal view {

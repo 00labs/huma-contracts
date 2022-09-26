@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IPoolConfig.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
+import "./BasePool.sol";
+import "./Errors.sol";
 
 import "hardhat/console.sol";
 
@@ -165,6 +167,11 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         // if (IERC721(HumaConfig(_humaConfig).eaNFTContractAddress()).ownerOf(eaId) != agent)
         //     revert notEvaluationAgentOwnerProvided();
 
+        // Make sure the new EA has met the liquidity requirements
+        if (BasePool(pool).isPoolOn()) {
+            checkLiquidityRequirementForEA(poolToken.withdrawableFundsOf(agent));
+        }
+
         // Transfer the accrued EA income to the old EA's wallet.
         // Decided not to check if there is enough balance in the pool. If there is
         // not enough balance, the transaction will fail. PoolOwner has to find enough
@@ -178,6 +185,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
                 emit EvaluationAgentRewardsWithdrawn(rewardsToPayout, oldEA, msg.sender);
             }
         }
+
         evaluationAgent = agent;
         evaluationAgentId = eaId;
         emit EvaluationAgentChanged(oldEA, agent, msg.sender);
@@ -189,7 +197,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      */
     function setAPR(uint256 aprInBps) external {
         onlyOwnerOrHumaMasterAdmin();
-        require(aprInBps <= 10000, "INVALID_APR");
+        if (aprInBps > 10000) revert Errors.invalidBasisPointHigherThan10000();
         _poolConfig._poolAprInBps = aprInBps;
         emit APRUpdated(aprInBps);
     }
@@ -200,7 +208,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      */
     function setReceivableRequiredInBps(uint256 receivableInBps) external {
         onlyOwnerOrHumaMasterAdmin();
-        require(receivableInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
+        if (receivableInBps > 10000) revert Errors.invalidBasisPointHigherThan10000();
         _poolConfig._receivableRequiredInBps = receivableInBps;
     }
 
@@ -311,22 +319,25 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     }
 
     function withdrawEAFee(uint256 amount) external {
-        require(msg.sender == evaluationAgent, "NOT_EA_OWNER");
-        require(amount <= _accuredIncome._eaIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        if (msg.sender != evaluationAgent) revert Errors.notEvaluationAgent();
+        if (amount > _accuredIncome._eaIncome) revert Errors.withdrawnAmountHigherThanBalance();
         //todo pool needs to approve max amount to poolCOnfig
         underlyingToken.safeTransferFrom(pool, evaluationAgent, amount);
     }
 
     function withdrawProtocolFee(uint256 amount) external virtual {
-        require(msg.sender == humaConfig.owner(), "NOT_PROTOCOL_OWNER");
-        require(amount <= _accuredIncome._protocolIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        if (msg.sender != humaConfig.owner()) revert Errors.notProtocolOwner();
+        if (amount > _accuredIncome._protocolIncome)
+            revert Errors.withdrawnAmountHigherThanBalance();
         address treasuryAddress = humaConfig.humaTreasury();
         underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
     }
 
     function withdrawPoolOwnerFee(uint256 amount) external virtual {
-        require(msg.sender == this.owner(), "NOT_POOL_OWNER");
-        require(amount <= _accuredIncome._poolOwnerIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        // todo need to add a test against non-pool-owner
+        if (msg.sender != this.owner()) revert Errors.notPoolOwner();
+        if (amount > _accuredIncome._poolOwnerIncome)
+            revert Errors.withdrawnAmountHigherThanBalance();
         underlyingToken.safeTransferFrom(pool, this.owner(), amount);
     }
 
@@ -451,20 +462,23 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         if (!isOwnerOrEA(account)) revert Errors.permissionDeniedNotAdmin();
     }
 
-    function requireMinimumPoolOwnerAndEALiquidity(address account) public view {
-        if (isOwnerOrEA(account)) {
-            PoolConfig memory config = _poolConfig;
-            require(
-                poolToken.withdrawableFundsOf(owner()) >=
-                    (config._liquidityCap * config._liquidityRateInBpsByPoolOwner) / BPS_DIVIDER,
-                "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
-            );
-            require(
-                poolToken.withdrawableFundsOf(evaluationAgent) >=
-                    (config._liquidityCap * config._liquidityRateInBpsByEA) / BPS_DIVIDER,
-                "POOL_EA_NOT_ENOUGH_LIQUIDITY"
-            );
-        }
+    function checkLiquidityRequirementForPoolOwner(uint256 balance) public view {
+        if (
+            balance <
+            (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByPoolOwner) / BPS_DIVIDER
+        ) revert Errors.poolOwnerNotEnoughLiquidity();
+    }
+
+    function checkLiquidityRequirementForEA(uint256 balance) public view {
+        if (
+            balance <
+            (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByEA) / BPS_DIVIDER
+        ) revert Errors.evaluationAgentNotEnoughLiquidity();
+    }
+
+    function checkLiquidityRequirement() public view {
+        checkLiquidityRequirementForPoolOwner(poolToken.withdrawableFundsOf(owner()));
+        checkLiquidityRequirementForEA(poolToken.withdrawableFundsOf(evaluationAgent));
     }
 
     function onlyOwnerOrHumaMasterAdmin() internal view {

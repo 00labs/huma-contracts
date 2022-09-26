@@ -75,7 +75,7 @@ async function initFeeManager() {
         "ReceivableFactoringPoolFeeManager",
         feeManager,
         "setFees",
-        [0, 500, 0, 500]
+        [0, 500, 0, 500, 0]
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
 

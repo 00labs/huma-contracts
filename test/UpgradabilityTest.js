@@ -51,7 +51,7 @@ describe("Upgradability Test", function () {
         const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
         feeManagerContract = await feeManagerFactory.deploy();
 
-        await feeManagerContract.setFees(10, 100, 20, 100);
+        await feeManagerContract.setFees(10, 100, 20, 100, 0);
 
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();

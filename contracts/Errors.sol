@@ -27,4 +27,28 @@ contract Errors {
     error insufficientReceivableAmount();
     error maxCreditLimitExceeded();
     error borrowingAmountLessThanPlatformFees();
+    error poolOwnerNotEnoughLiquidity();
+    error evaluationAgentNotEnoughLiquidity();
+    error withdrawnAmountHigherThanBalance();
+    error withdrawTooSoon();
+    error assetNotMatchWithPoolAsset();
+
+    error minPrincipalPaymentRateSettingTooHigh();
+    error protocolIsPaused();
+    error poolIsNotOn();
+    error invalidBasisPointHigherThan10000();
+
+    error notPoolOwner();
+    error notProtocolOwner();
+    error notEvaluationAgent();
+    error notPauser();
+
+    error alreayAPauser();
+    error alreadyPoolAdmin();
+
+    error defaultGracePeriodLessThanMinAllowed();
+    error treasuryFeeHighThanUpperLimit();
+
+    error amountTooLow();
+    error creditLineGreatThanUpperLimit();
 }

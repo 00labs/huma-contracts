@@ -34,6 +34,8 @@ let protocolOwner;
 let eaNFTContract;
 let eaServiceAccount;
 let pdsServiceAccount;
+let newNFTTokenId;
+let evaluationAgent2;
 
 describe("Base Pool - LP and Admin functions", function () {
     before(async function () {
@@ -48,6 +50,7 @@ describe("Base Pool - LP and Admin functions", function () {
             protocolOwner,
             eaServiceAccount,
             pdsServiceAccount,
+            evaluationAgent2,
         ] = await ethers.getSigners();
     });
 
@@ -140,6 +143,56 @@ describe("Base Pool - LP and Admin functions", function () {
         });
     });
 
+    describe("Change Evaluation Agent", async function () {
+        before(async function () {
+            newNFTTokenId = 2;
+            // // Mint EANFT to the borrower
+            // const tx = await eaNFTContract.mintNFT(evaluationAgent2.address, "");
+            // const receipt = await tx.wait();
+            // for (const evt of receipt.events) {
+            //     if (evt.event === "NFTGenerated") {
+            //         newNFTTokenId = evt.args[0];
+            //     }
+            // }
+        });
+        it("Should reject when non-poolOwner requests to change EA", async function () {
+            await expect(
+                poolConfigContract
+                    .connect(treasury)
+                    .setEvaluationAgent(newNFTTokenId, evaluationAgent2.address)
+            ).to.be.revertedWith("permissionDeniedNotAdmin()");
+        });
+        it("Should reject when the new evaluation agent has not met the liquidity requirements", async function () {
+            await expect(
+                poolConfigContract
+                    .connect(poolOwner)
+                    .setEvaluationAgent(newNFTTokenId, evaluationAgent2.address)
+            ).to.be.revertedWith("evaluationAgentNotEnoughLiquidity()");
+        });
+        it("Should allow evaluation agent to be replaced when the old EA has no rewards", async function () {
+            await testTokenContract.mint(evaluationAgent2.address, 2_000_000);
+
+            await testTokenContract
+                .connect(evaluationAgent2)
+                .approve(poolContract.address, 2_000_000);
+            await poolContract.connect(poolOwner).addApprovedLender(evaluationAgent2.address);
+            await expect(poolContract.connect(evaluationAgent2).deposit(2_000_000)).to.emit(
+                poolContract,
+                "LiquidityDeposited"
+            );
+            await expect(
+                poolConfigContract
+                    .connect(poolOwner)
+                    .setEvaluationAgent(newNFTTokenId, evaluationAgent2.address)
+            )
+                .to.emit(poolConfigContract, "EvaluationAgentChanged")
+                .withArgs(evaluationAgent.address, evaluationAgent2.address, poolOwner.address)
+                .to.not.emit(poolConfigContract, "EvaluationAgentRewardsWithdrawn");
+        });
+
+        // todo need to add a test case to show reward distribution for the old evaluationAgent
+    });
+
     describe("Deposit", function () {
         afterEach(async function () {
             await humaConfigContract.connect(protocolOwner).unpauseProtocol();
@@ -148,14 +201,14 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Cannot deposit while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 
         it("Cannot deposit while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
-                "POOL_NOT_ON"
+                "poolIsNotOn()"
             );
         });
 
@@ -198,7 +251,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Should not withdraw while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 
@@ -210,9 +263,15 @@ describe("Base Pool - LP and Admin functions", function () {
             // to do. HumaPool.Withdraw shall reject with a code.
         });
 
+        it("Should reject when withdraw amount is 0", async function () {
+            await expect(poolContract.connect(lender).withdraw(0)).to.be.revertedWith(
+                "zeroAmountProvided()"
+            );
+        });
+
         it("Should reject when withdraw too early", async function () {
             await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
-                "WITHDRAW_TOO_SOON"
+                "withdrawTooSoon()"
             );
         });
 
@@ -223,7 +282,7 @@ describe("Base Pool - LP and Admin functions", function () {
             await ethers.provider.send("evm_mine", []);
 
             await expect(poolContract.connect(lender).withdraw(3_000_000)).to.be.revertedWith(
-                "WITHDRAW_AMT_TOO_GREAT"
+                "withdrawnAmountHigherThanBalance()"
             );
         });
 
@@ -249,7 +308,7 @@ describe("Base Pool - LP and Admin functions", function () {
             await ethers.provider.send("evm_mine", []);
 
             await expect(poolContract.connect(poolOwner).withdraw(10)).to.be.revertedWith(
-                "POOL_OWNER_NOT_ENOUGH_LIQUIDITY"
+                "poolOwnerNotEnoughLiquidity()"
             );
 
             // Should succeed
@@ -257,7 +316,7 @@ describe("Base Pool - LP and Admin functions", function () {
             // Should fail
             await expect(
                 poolContract.connect(evaluationAgent).withdraw(1_000_000)
-            ).to.be.revertedWith("POOL_EA_NOT_ENOUGH_LIQUIDITY");
+            ).to.be.revertedWith("evaluationAgentNotEnoughLiquidity");
             // Update liquidity rate for EA to be lower
             await poolConfigContract.connect(poolOwner).setEARewardsAndLiquidity(625, 5);
             // Should succeed

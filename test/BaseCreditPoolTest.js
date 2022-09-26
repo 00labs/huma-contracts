@@ -18,35 +18,6 @@ const getLoanContractFromAddress = async function (address, signer) {
 
 // Let us limit the depth of describe to be 2.
 //
-// In before() of "Huma Pool", all the key supporting contracts are deployed.
-//
-// In beforeEach() of "Huma Pool", we deploy a new HumaPool with initial
-// liquidity 100 from the owner
-//
-// The full testing scenario is designed as:
-// m0-1: Owner contributes 100 initial liquidity
-// m0-2: Set up fees=(10, 100, 20, 100), APR=1217, protocol fee=50.
-// m0-3: Lender contributes 300, together with owner's 100, the pool size is 400. PPS=1
-// m0-4. Borrower borrows 400 with interest-only. 14 fee charged (12 pool fee, 2 protocol fee). Borrower get 386
-//       PPS=1.03, withdrawable(owner, lender)=(103,309)
-// m1.   Borrower makes a regular payment of 4 interest fee
-//       PPS=1.04, withdrawable(owner, lender)=(104,312)
-// m2.   Borrower was late to make the payment, gets charged 24 late fee, plus 4 interest, total fee 28
-//       PPS=1.11, withdrawable(owner, lender)=(111,333)
-// m3-1. Borrower pays makes a regular payment of 4 interest fee
-//       PPS=1.12, withdrawable(owner, lender)=(112,336)
-// m3-2. Owner deposits another 200
-//       FDT(owner, lender)=(300, 300)
-//       PPS=1.12, correction(owner, lender)=(-24,0), withdrawable(owner, lender)=(312,336)
-// m3-2. Lender withdraws 224, which is 200 * PPS
-//       FDT(owner, lender)=(300, 100), pool liquidity is 24
-//       PPS=1.12, correction(owner, lender)=(-24,0, 224), withdrawable(owner, lender)=(312,112)
-// m3-3. Borrower pays makes a regular payment of 4 interest fee
-//       PPS=1.12, withdrawable(owner, lender)=(312,112)
-// m4.   Borrower pays off with a fee of 38 (early payoff penalty 34, interest 4), total 438 incl. principal
-//       PPS=1.215, correction(owner, lender)=(-24,0, 224),withdrawable(owner, lender)=(340.5,121.5)
-// m5.   Lender withdraw 121.5, pool liquidity is now 340.5
-//       PPS=1.215, correction(owner, lender)=(-24,0, 345.5),withdrawable(owner, lender)=(340.5,0)
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
 describe("Base Credit Pool", function () {
@@ -117,7 +88,7 @@ describe("Base Credit Pool", function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(
                 poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000000)
-            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            ).to.be.revertedWith("protocolIsPaused()");
             await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
         it("Should not allow non-EA to change credit line", async function () {
@@ -136,6 +107,62 @@ describe("Base Credit Pool", function () {
                 .changeCreditLine(borrower.address, 1000000);
             let result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
+        });
+        it("Should reject setting APR higher than 10000", async function () {
+            await expect(poolConfigContract.connect(poolOwner).setAPR(12170)).to.revertedWith(
+                "invalidBasisPointHigherThan10000"
+            );
+        });
+        it("Should mark a credit line without balance deleted when credit limit is set to allow credit limit to be changed", async function () {
+            let record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.totalDue).to.equal(0);
+            expect(record.unbilledPrincipal).to.equal(0);
+
+            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
+
+            let result = await poolContract.creditRecordStaticMapping(borrower.address);
+            expect(result.creditLimit).to.equal(0);
+            record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.state).to.equal(0);
+        });
+        it("Should note delete a credit line when there is balance due when set credit limit to 0", async function () {
+            let record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.totalDue).to.equal(0);
+            expect(record.unbilledPrincipal).to.equal(0);
+
+            await poolContract.connect(borrower).requestCredit(4000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(4000);
+
+            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
+
+            let result = await poolContract.creditRecordStaticMapping(borrower.address);
+            expect(result.creditLimit).to.equal(0);
+            record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.state).to.equal(3);
+
+            await testTokenContract.mint(borrower.address, 1080);
+            await testTokenContract.connect(borrower).approve(poolContract.address, 4040);
+            await poolContract
+                .connect(borrower)
+                .makePayment(borrower.address, testTokenContract.address, 4040);
+            // Note since there is no time passed, the interest charged will be offset at the payoff
+            record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.totalDue).to.equal(0);
+            expect(record.unbilledPrincipal).to.equal(0);
+
+            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
+            result = await poolContract.creditRecordStaticMapping(borrower.address);
+            expect(result.creditLimit).to.equal(0);
+            record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.state).to.equal(0);
+
+            // remove the extra tokens in the borrower's account to return to clean account status
+            await testTokenContract.burn(
+                borrower.address,
+                await testTokenContract.balanceOf(borrower.address)
+            );
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
         });
         it("Should not allow non-pool-owner-or-huma-admin to change credit expiration before first drawdown", async function () {
             await expect(
@@ -160,14 +187,14 @@ describe("Base Credit Pool", function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(
                 poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
-            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            ).to.be.revertedWith("protocolIsPaused()");
         });
 
         it("Shall reject request loan while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(
                 poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
-            ).to.be.revertedWith("POOL_NOT_ON");
+            ).to.be.revertedWith("poolIsNotOn()");
         });
 
         it("Shall reject request loan greater than limit", async function () {
@@ -211,7 +238,7 @@ describe("Base Credit Pool", function () {
         it("Should not allow loan funding while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 
@@ -222,9 +249,7 @@ describe("Base Credit Pool", function () {
         });
 
         it("Should reject drawdown when account is deleted", async function () {
-            await poolContract
-                .connect(eaServiceAccount)
-                .invalidateApprovedCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
             await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
                 "creditLineNotInApprovedOrGoodStandingState()"
             );
@@ -434,7 +459,23 @@ describe("Base Credit Pool", function () {
                 poolContract
                     .connect(borrower)
                     .makePayment(borrower.address, testTokenContract.address, 5)
-            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            ).to.be.revertedWith("protocolIsPaused()");
+        });
+
+        it("Should reject the payback asset does not match with the underlying token asset", async function () {
+            await testTokenContract.connect(borrower).approve(poolContract.address, 1000);
+            await expect(
+                poolContract.connect(borrower).makePayment(borrower.address, lender.address, 1000)
+            ).to.be.revertedWith("assetNotMatchWithPoolAsset()");
+        });
+
+        it("Should reject if payback amount is zero", async function () {
+            await testTokenContract.connect(borrower).approve(poolContract.address, 1000);
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .makePayment(borrower.address, testTokenContract.address, 0)
+            ).to.be.revertedWith("zeroAmountProvided()");
         });
 
         it("Process payback", async function () {

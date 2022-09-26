@@ -34,6 +34,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
     /// Part of late fee, charged when a payment is late as % of the totaling outstanding balance
     uint256 public lateFeeBps;
 
+    // membership fee per pay period
+    uint256 public membershipFee;
+
     ///The min % of the outstanding principal to be paid in the statement for each each period
     uint256 public minPrincipalRateInBps;
 
@@ -41,7 +44,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 frontLoandingFeeFlat,
         uint256 frontLoadingFeeBps,
         uint256 lateFeeFlat,
-        uint256 lateFeeBps
+        uint256 lateFeeBps,
+        uint256 membershipFee
     );
 
     event MinPrincipalRateUpdated(uint256 minPrincipalRateInBps);
@@ -200,10 +204,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
                     _cr.unbilledPrincipal + _cr.totalDue
                 );
 
-            // step 2. adding dues to principal
+            // step 2. membership fee
+            fees += membershipFee;
+
+            // step 3. adding dues to principal
             _cr.unbilledPrincipal += _cr.totalDue;
 
-            // step 3. computer interest
+            // step 4. computer interest
             interest =
                 (_cr.unbilledPrincipal *
                     _crStatic.aprInBps *
@@ -212,7 +219,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 SECONDS_IN_A_YEAR /
                 BPS_DIVIDER;
 
-            // step 4. incorporate correction
+            // step 5. incorporate correction
             // If r.correction is negative, its absolute value is guaranteed to be
             // no more than interest. Thus, the following statement is safe.
             // No correction after the 1st period since no drawdown is allowed
@@ -258,13 +265,21 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 _frontLoadingFeeFlat,
         uint256 _frontLoadingFeeBps,
         uint256 _lateFeeFlat,
-        uint256 _lateFeeBps
+        uint256 _lateFeeBps,
+        uint256 _membershipFee
     ) external virtual override onlyOwner {
         frontLoadingFeeFlat = _frontLoadingFeeFlat;
         frontLoadingFeeBps = _frontLoadingFeeBps;
         lateFeeFlat = _lateFeeFlat;
         lateFeeBps = _lateFeeBps;
-        emit FeeChanged(_frontLoadingFeeFlat, _frontLoadingFeeBps, _lateFeeFlat, _lateFeeBps);
+        membershipFee = _membershipFee;
+        emit FeeChanged(
+            _frontLoadingFeeFlat,
+            _frontLoadingFeeBps,
+            _lateFeeFlat,
+            _lateFeeBps,
+            _membershipFee
+        );
     }
 
     /**
@@ -279,7 +294,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         override
         onlyOwner
     {
-        require(_minPrincipalRateInBps < 5000, "RATE_TOO_HIGH");
+        if (_minPrincipalRateInBps >= 5000) revert Errors.minPrincipalPaymentRateSettingTooHigh();
         minPrincipalRateInBps = _minPrincipalRateInBps;
         emit MinPrincipalRateUpdated(_minPrincipalRateInBps);
     }
@@ -300,9 +315,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 _frontLoadingFeeFlat,
             uint256 _frontLoadingFeeBps,
             uint256 _lateFeeFlat,
-            uint256 _lateFeeBps
+            uint256 _lateFeeBps,
+            uint256 _membershipFee
         )
     {
-        return (frontLoadingFeeFlat, frontLoadingFeeBps, lateFeeFlat, lateFeeBps);
+        return (frontLoadingFeeFlat, frontLoadingFeeBps, lateFeeFlat, lateFeeBps, membershipFee);
     }
 }
