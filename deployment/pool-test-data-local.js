@@ -1,13 +1,9 @@
 const {BigNumber: BN, ethers} = require("ethers");
-const {isPrefixUnaryExpression} = require("typescript");
 const {
     getInitilizedContract,
-    updateInitilizedContracts,
     getDeployedContracts,
     sendTransaction,
-    getSigner,
     toFixedDecimal,
-    advanceClock,
 } = require("./utils.js");
 
 let deployedContracts,
@@ -21,6 +17,7 @@ let deployedContracts,
     borrower5,
     borrower6;
 
+// TODO move this to the scripts folder
 async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
