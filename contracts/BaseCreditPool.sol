@@ -126,12 +126,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     }
 
     /**
-     * @notice changes the limit of the borrower's credit line
+     * @notice changes the limit of the borrower's credit line. The credit line is marked as
+     * Deleted if 1) the new credit line is 0; 2) there is no due or unbilled principals.
      * @param borrower the owner of the credit line
      * @param newLine the new limit of the line in the unit of pool token
      * @dev only Evaluation Agent can call
      */
-    function changeCreditLine(address borrower, uint256 newLine) external {
+    function changeCreditLine(address borrower, uint256 newLine) external virtual override {
         protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
@@ -145,18 +146,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
 
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newLine);
-    }
 
-    /**
-     * @notice Invalidate the credit line
-     * @dev If the credit limit is 0, we treat the line as deleted.
-     */
-    function invalidateApprovedCredit(address borrower) external virtual override {
-        protocolAndPoolOn();
-        onlyEAServiceAccount();
-        //critical todo need to make sure there is no outstanding balance
-        _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
-        _creditRecordStaticMapping[borrower].creditLimit = 0;
+        // Delete the line when there is no due or unbilled principal
+        if (newLine == 0) {
+            if (
+                _creditRecordMapping[borrower].totalDue == 0 &&
+                _creditRecordMapping[borrower].unbilledPrincipal == 0
+            ) _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
+        }
     }
 
     function isApproved(address borrower) external view virtual override returns (bool) {

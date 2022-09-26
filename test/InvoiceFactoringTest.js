@@ -270,8 +270,8 @@ describe("Invoice Factoring", function () {
         });
     });
 
-    describe("Invalidate Approved Invoice Factoring", function () {
-        it("Should allow evaluation agent to invalidate an approved invoice factoring record", async function () {
+    describe("Update Approved Invoice Factoring", function () {
+        it("Should allow evaluation agent to change an approved invoice factoring record", async function () {
             await poolConfigContract.connect(owner).setAPR(0);
 
             await invoiceContract
@@ -287,12 +287,10 @@ describe("Invoice Factoring", function () {
                 );
 
             await expect(
-                invoiceContract.connect(payer).invalidateApprovedCredit(borrower.address)
+                invoiceContract.connect(payer).changeCreditLine(borrower.address, 0)
             ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
 
-            await invoiceContract
-                .connect(eaServiceAccount)
-                .invalidateApprovedCredit(borrower.address);
+            await invoiceContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
 
             //await invoiceContract.printDetailStatus(borrower.address);
             const creditInfo = await invoiceContract.getCreditInformation(borrower.address);
