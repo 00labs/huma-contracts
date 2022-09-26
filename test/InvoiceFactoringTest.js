@@ -140,7 +140,7 @@ describe("Invoice Factoring", function () {
         const receipt = await tx.wait();
         for (const evt of receipt.events) {
             if (evt.event === "NFTGenerated") {
-                eaNFTTokenId = evt.args[0];
+                eaNFTTokenId = evt.args[1];
             }
         }
 
@@ -278,7 +278,7 @@ describe("Invoice Factoring", function () {
             const receipt = await tx.wait();
             for (const evt of receipt.events) {
                 if (evt.event === "NFTGenerated") {
-                    invoiceNFTTokenId = evt.args[0];
+                    invoiceNFTTokenId = evt.args[1];
                 }
             }
 
@@ -310,7 +310,7 @@ describe("Invoice Factoring", function () {
             const receipt = await tx.wait();
             for (const evt of receipt.events) {
                 if (evt.event === "NFTGenerated") {
-                    invoiceNFTTokenId = evt.args[0];
+                    invoiceNFTTokenId = evt.args[1];
                 }
             }
 
@@ -378,7 +378,7 @@ describe("Invoice Factoring", function () {
             // eslint-disable-next-line no-restricted-syntax
             for (const evt of receipt.events) {
                 if (evt.event === "NFTGenerated") {
-                    invoiceNFTTokenId = evt.args[0];
+                    invoiceNFTTokenId = evt.args[1];
                 }
             }
 
@@ -492,7 +492,7 @@ describe("Invoice Factoring", function () {
             // eslint-disable-next-line no-restricted-syntax
             for (const evt of receipt.events) {
                 if (evt.event === "NFTGenerated") {
-                    invoiceNFTTokenId = evt.args[0];
+                    invoiceNFTTokenId = evt.args[1];
                 }
             }
             await invoiceNFTContract

@@ -122,7 +122,7 @@ async function setupPool() {
                 "ReceivableFactoringPool",
                 poolFromBorrower,
                 "drawdownWithReceivable",
-                [borrower.address, toFixedDecimal(99, decimals), rnNft.address, tokenId]
+                [borrower.address, toFixedDecimal(100, decimals), rnNft.address, tokenId]
             );
         } catch (err) {
             console.log(err);
