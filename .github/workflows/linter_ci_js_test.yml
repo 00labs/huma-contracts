@@ -17,5 +17,3 @@ jobs:
         run: yarn lint-solidity
       - name: run tests
         run: yarn test
-      - name: deploy test
-        run: yarn deploy --network hardhat
