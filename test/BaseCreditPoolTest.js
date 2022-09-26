@@ -108,6 +108,11 @@ describe("Base Credit Pool", function () {
             let result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
         });
+        it("Should reject setting APR higher than 10000", async function () {
+            await expect(poolConfigContract.connect(poolOwner).setAPR(12170)).to.revertedWith(
+                "invalidAPR"
+            );
+        });
         it("Should mark a credit line without balance deleted when credit limit is set to allow credit limit to be changed", async function () {
             let record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.totalDue).to.equal(0);
