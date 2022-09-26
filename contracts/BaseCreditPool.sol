@@ -121,8 +121,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         internal
         view
     {
-        if (receivableAmount < creditLine * _poolConfig.receivableRequiredInBps())
-            revert Errors.insufficientReceivableAmount();
+        if (
+            receivableAmount <
+            (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
+        ) revert Errors.insufficientReceivableAmount();
     }
 
     /**
