@@ -55,7 +55,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         uint256 _eaIncome;
     }
 
-    uint256 internal constant BPS_DIVIDER = 10000;
+    uint256 internal constant HUNDRED_PERCENT_IN_BPS = 10000;
     uint256 internal constant SECONDS_IN_A_DAY = 86400;
     uint256 internal constant SECONDS_IN_180_DAYS = 15552000;
 
@@ -204,11 +204,13 @@ contract BasePoolConfig is Ownable, IPoolConfig {
 
     /**
      * @notice Set the receivable rate in terms of basis points.
+     * When the rate is higher than 10000, it means the backing is higher than the borrow amount,
+     * similar to an over-collateral situation.
      * @param receivableInBps the percentage. A percentage over 10000 means overreceivableization.
      */
     function setReceivableRequiredInBps(uint256 receivableInBps) external {
         onlyOwnerOrHumaMasterAdmin();
-        if (receivableInBps > 10000) revert Errors.invalidBasisPointHigherThan10000();
+        // note: this rate can be over 10000 when it requires more backing than the credit limit
         _poolConfig._receivableRequiredInBps = receivableInBps;
     }
 
@@ -283,16 +285,17 @@ contract BasePoolConfig is Ownable, IPoolConfig {
             revert Errors.callNotFromPool();
         }
 
-        uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / BPS_DIVIDER;
+        uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / HUNDRED_PERCENT_IN_BPS;
         _accuredIncome._protocolIncome += protocolFee;
 
         uint256 valueForPool = value - protocolFee;
 
         uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
-            BPS_DIVIDER;
+            HUNDRED_PERCENT_IN_BPS;
         _accuredIncome._poolOwnerIncome += ownerIncome;
 
-        uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) / BPS_DIVIDER;
+        uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) /
+            HUNDRED_PERCENT_IN_BPS;
         _accuredIncome._eaIncome += eaIncome;
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
@@ -303,16 +306,17 @@ contract BasePoolConfig is Ownable, IPoolConfig {
             revert Errors.callNotFromPool();
         }
 
-        uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / BPS_DIVIDER;
+        uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / HUNDRED_PERCENT_IN_BPS;
         _accuredIncome._protocolIncome -= protocolFee;
 
         uint256 valueForPool = value - protocolFee;
 
         uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
-            BPS_DIVIDER;
+            HUNDRED_PERCENT_IN_BPS;
         _accuredIncome._poolOwnerIncome -= ownerIncome;
 
-        uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) / BPS_DIVIDER;
+        uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) /
+            HUNDRED_PERCENT_IN_BPS;
         _accuredIncome._eaIncome -= eaIncome;
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
@@ -465,14 +469,16 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     function checkLiquidityRequirementForPoolOwner(uint256 balance) public view {
         if (
             balance <
-            (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByPoolOwner) / BPS_DIVIDER
+            (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByPoolOwner) /
+                HUNDRED_PERCENT_IN_BPS
         ) revert Errors.poolOwnerNotEnoughLiquidity();
     }
 
     function checkLiquidityRequirementForEA(uint256 balance) public view {
         if (
             balance <
-            (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByEA) / BPS_DIVIDER
+            (_poolConfig._liquidityCap * _poolConfig._liquidityRateInBpsByEA) /
+                HUNDRED_PERCENT_IN_BPS
         ) revert Errors.evaluationAgentNotEnoughLiquidity();
     }
 

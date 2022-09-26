@@ -16,9 +16,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
     using BS for BS.CreditRecord;
 
     // Divider to convert BPS to percentage
-    uint256 public constant BPS_DIVIDER = 10000;
+    uint256 public constant HUNDRED_PERCENT_IN_BPS = 10000;
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
-    uint256 public constant APR_BPS_DIVIDER = 120000;
     uint256 public constant SECONDS_IN_A_YEAR = 31536000;
     uint256 public constant SECONDS_IN_A_DAY = 86400;
 
@@ -101,7 +100,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     ) public view virtual override returns (uint256 fees) {
         if (block.timestamp > dueDate && totalDue > 0) {
             fees = lateFeeFlat;
-            if (lateFeeBps > 0) fees += (totalBalance * lateFeeBps) / BPS_DIVIDER;
+            if (lateFeeBps > 0) fees += (totalBalance * lateFeeBps) / HUNDRED_PERCENT_IN_BPS;
         }
     }
 
@@ -217,7 +216,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                     _crStatic.intervalInDays *
                     SECONDS_IN_A_DAY) /
                 SECONDS_IN_A_YEAR /
-                BPS_DIVIDER;
+                HUNDRED_PERCENT_IN_BPS;
 
             // step 5. incorporate correction
             // If r.correction is negative, its absolute value is guaranteed to be
