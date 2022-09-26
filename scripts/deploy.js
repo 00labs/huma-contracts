@@ -13,7 +13,7 @@ async function deployContracts() {
     const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
     let feeManager = await feeManagerFactory.deploy();
     console.log("Fee Manager deployed to:", feeManager.address);
-    await feeManager.connect(owner).setFees(10, 100, 20, 500);
+    await feeManager.connect(owner).setFees(10, 100, 20, 500, 0);
     await feeManager.connect(owner).setMinPrincipalRateInBps(500);
     console.log("Fees are set to 10, 100, 20, 500");
     console.log("PrincipalRateInBps is set to 500");
@@ -67,9 +67,7 @@ async function deployContracts() {
     console.log("poolProxy deployed to:", poolProxy.address);
 
     let poolContract = BaseCreditPool.attach(poolProxy.address);
-    await poolContract
-        .connect(owner)
-        .initialize(poolConfig.address);
+    await poolContract.connect(owner).initialize(poolConfig.address);
 
     console.log("BaseCreditPool deployed to:", poolContract.address);
     await poolConfig.setPool(poolContract.address);

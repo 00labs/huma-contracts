@@ -72,7 +72,7 @@ describe("Credit Line Integration Test", async function () {
             eaNFTContract
         );
 
-        await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500);
+        await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500, 0);
         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
         await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
     });
@@ -379,6 +379,6 @@ describe("Credit Line Integration Test", async function () {
             .withArgs(borrower.address, 955, borrower.address);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
-        checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 0, 0, 0, 0, 1217, 30, 3, 0);
+        checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 0, 0, 0, 0, 1217, 30, 0, 0);
     });
 });

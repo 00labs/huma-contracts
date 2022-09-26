@@ -90,7 +90,8 @@ interface IFeeManager {
         uint256 _frontLoadingFeeFlat,
         uint256 _frontLoadingFeeBps,
         uint256 _lateFeeFlat,
-        uint256 _lateFeeBps
+        uint256 _lateFeeBps,
+        uint256 _membershipFee
     ) external;
 
     /**
@@ -115,6 +116,7 @@ interface IFeeManager {
             uint256 _frontLoadingFeeFlat,
             uint256 _frontLoadingFeeBps,
             uint256 _lateFeeFlat,
-            uint256 _lateFeeBps
+            uint256 _lateFeeBps,
+            uint256 _membershipFee
         );
 }

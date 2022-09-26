@@ -201,14 +201,14 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Cannot deposit while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 
         it("Cannot deposit while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
-                "POOL_NOT_ON"
+                "poolIsNotOn()"
             );
         });
 
@@ -251,7 +251,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Should not withdraw while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 
@@ -263,9 +263,15 @@ describe("Base Pool - LP and Admin functions", function () {
             // to do. HumaPool.Withdraw shall reject with a code.
         });
 
+        it("Should reject when withdraw amount is 0", async function () {
+            await expect(poolContract.connect(lender).withdraw(0)).to.be.revertedWith(
+                "zeroAmountProvided()"
+            );
+        });
+
         it("Should reject when withdraw too early", async function () {
             await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
-                "WITHDRAW_TOO_SOON"
+                "withdrawTooSoon()"
             );
         });
 

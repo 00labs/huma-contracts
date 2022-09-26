@@ -126,12 +126,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     }
 
     /**
-     * @notice changes the limit of the borrower's credit line
+     * @notice changes the limit of the borrower's credit line. The credit line is marked as
+     * Deleted if 1) the new credit line is 0; 2) there is no due or unbilled principals.
      * @param borrower the owner of the credit line
      * @param newLine the new limit of the line in the unit of pool token
      * @dev only Evaluation Agent can call
      */
-    function changeCreditLine(address borrower, uint256 newLine) external {
+    function changeCreditLine(address borrower, uint256 newLine) external virtual override {
         protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
@@ -145,18 +146,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
 
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newLine);
-    }
 
-    /**
-     * @notice Invalidate the credit line
-     * @dev If the credit limit is 0, we treat the line as deleted.
-     */
-    function invalidateApprovedCredit(address borrower) external virtual override {
-        protocolAndPoolOn();
-        onlyEAServiceAccount();
-        //critical todo need to make sure there is no outstanding balance
-        _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
-        _creditRecordStaticMapping[borrower].creditLimit = 0;
+        // Delete the line when there is no due or unbilled principal
+        if (newLine == 0) {
+            if (
+                _creditRecordMapping[borrower].totalDue == 0 &&
+                _creditRecordMapping[borrower].unbilledPrincipal == 0
+            ) _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
+        }
     }
 
     function isApproved(address borrower) external view virtual override returns (bool) {
@@ -265,7 +262,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // note since we bill at the beginning of a period, cr.remainingPeriods is zero
             // in the final period.
             if (cr.remainingPeriods == 0) revert Errors.creditExpiredDueToMaturity();
-            //            require(cr.remainingPeriods > 0, "CREDIT_LINE_EXPIRED");
 
             // For non-first bill, we do not update the current bill, the interest for the rest of
             // this pay period is accrued in correction and be add to the next bill.
@@ -302,7 +298,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev "WRONG_ASSET" reverted when asset address does not match
+     * @dev "assetNotMatchWithPoolAsset()" reverted when asset address does not match
      * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
      */
     function makePayment(
@@ -312,8 +308,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     ) external virtual override {
         protocolAndPoolOn();
 
-        require(asset == address(_underlyingToken), "WRONG_ASSET");
-        require(amount > 0, "CANNOT_BE_ZERO_AMOUNT");
+        if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
+        if (amount == 0) revert Errors.zeroAmountProvided();
 
         // Bring the account current. This is necessary since the account might have been dormant for
         // several cycles.
@@ -375,7 +371,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             }
         }
 
-        if (amountToCollect == payoffAmount) {
+        if (amountToCollect >= payoffAmount) {
             // Set account state to GoodStanding if paid off even if it was delayed or defaulted.
             cr.state = BS.CreditState.GoodStanding;
 
@@ -385,6 +381,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             reverseIncome(uint256(uint96(0 - cr.correction)));
             amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
             cr.correction = 0;
+            if (cr.remainingPeriods == 0) cr.state = BS.CreditState.Deleted;
         }
 
         _creditRecordMapping[borrower] = cr;
