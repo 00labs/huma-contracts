@@ -29,13 +29,12 @@ async function deployContracts() {
         [],
     ]);
 
-    const poolConfig = await deploy("BasePoolConfig", "ReceivableFactoringPoolConfig",
-        [
-            "ReceivableFactoringPool",
-            hdt.address,
-            humaConfig.address,
-            feeManager.address,
-        ]);
+    const poolConfig = await deploy("BasePoolConfig", "ReceivableFactoringPoolConfig", [
+        "ReceivableFactoringPool",
+        hdt.address,
+        humaConfig.address,
+        feeManager.address,
+    ]);
 
     const poolImpl = await deploy("ReceivableFactoringPool", "ReceivableFactoringPoolImpl");
     const pool = await deploy("TransparentUpgradeableProxy", "ReceivableFactoringPool", [
@@ -46,8 +45,7 @@ async function deployContracts() {
 
     const evaluation_agent_NFT = await deploy("EvaluationAgentNFT", "EANFT");
 
-    const invoice_NFT = await deploy("InvoiceNFT", "RNNFT",
-        [usdc.address]);
+    const invoice_NFT = await deploy("InvoiceNFT", "RNNFT", [usdc.address]);
 }
 
 deployContracts()

@@ -61,19 +61,25 @@ async function execute() {
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
     const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
 
-    const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("ReceivableFactoringPoolConfig");
-    const poolConfig = ReceivableFactoringPoolConfig.attach(deployedContracts["ReceivableFactoringPoolConfig"]);
+    const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
+    const poolConfig = ReceivableFactoringPoolConfig.attach(
+        deployedContracts["ReceivableFactoringPoolConfig"]
+    );
 
-    const owner = await pool.owner();
+    const owner = await poolConfig.owner();
     console.log("owner: " + owner);
 
-    const res = await pool.getPoolSummary();
+    const res = await poolConfig.getPoolSummary();
     console.log("res: " + res);
 
     for (let i = 0; i < 10; i++) {
         let v = await hre.ethers.provider.getStorageAt(pool.address, i);
         console.log(`slot${i}: ${v}`);
     }
+
+    console.log("pool status: " + (await pool.isPoolOn()));
+
+    await sendTransaction("ReceivableFactoringPool", pool, "updateCoreData", []);
 
     await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setHumaConfig", [
         deployedContracts["HumaConfig"],
@@ -82,11 +88,6 @@ async function execute() {
     await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
         deployedContracts["ReceivableFactoringPoolFeeManager"],
     ]);
-
-    // await sendTransaction("ReceivableFactoringPool", pool, "setHumaConfigAndFeeManager", [
-    //     deployedContracts["HumaConfig"],
-    //     deployedContracts["ReceivableFactoringPoolFeeManager"],
-    // ]);
 
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
@@ -102,7 +103,7 @@ async function execute() {
         humaConfigTL
     );
 
-    console.log(await humaConfig.pdsServiceAccount());
+    // console.log(await humaConfig.pdsServiceAccount());
 }
 
 async function main() {
