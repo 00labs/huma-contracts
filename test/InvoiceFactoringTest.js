@@ -562,7 +562,7 @@ describe("Invoice Factoring", function () {
                 invoiceContract
                     .connect(pdsServiceAccount)
                     .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1)
-            ).to.be.revertedWith("HumaIF:ALREADY_PROCESSED");
+            ).to.be.revertedWith("paymentAlreadyProcessed()");
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
 
