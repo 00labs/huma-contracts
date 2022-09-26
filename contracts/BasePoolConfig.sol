@@ -204,11 +204,13 @@ contract BasePoolConfig is Ownable, IPoolConfig {
 
     /**
      * @notice Set the receivable rate in terms of basis points.
+     * When the rate is higher than 10000, it means the backing is higher than the borrow amount,
+     * similar to an over-collateral situation.
      * @param receivableInBps the percentage. A percentage over 10000 means overreceivableization.
      */
     function setReceivableRequiredInBps(uint256 receivableInBps) external {
         onlyOwnerOrHumaMasterAdmin();
-        if (receivableInBps > 10000) revert Errors.invalidBasisPointHigherThan10000();
+        // note: this rate can be over 10000 when it requires more backing than the credit limit
         _poolConfig._receivableRequiredInBps = receivableInBps;
     }
 
