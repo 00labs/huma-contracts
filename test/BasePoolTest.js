@@ -151,7 +151,7 @@ describe("Base Pool - LP and Admin functions", function () {
             // const receipt = await tx.wait();
             // for (const evt of receipt.events) {
             //     if (evt.event === "NFTGenerated") {
-            //         newNFTTokenId = evt.args[0];
+            // eaNFTTokenId = evt.args.tokenId;
             //     }
             // }
         });

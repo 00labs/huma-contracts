@@ -1,3 +1,4 @@
+const {BigNumber: BN, ethers} = require("ethers");
 const fs = require("fs");
 const DEPLOYED_PATH = "./deployment/";
 
@@ -142,6 +143,10 @@ async function deploy(contractName, keyName, contractParameters, deployer) {
     return contract;
 }
 
+const toFixedDecimal = function (number, decimals) {
+    return BN.from(number).mul(BN.from(10).pow(BN.from(decimals)));
+};
+
 module.exports = {
     getInitilizedContract,
     updateInitilizedContract,
@@ -154,4 +159,5 @@ module.exports = {
     checkReceiptOk,
     sendTransaction,
     deploy,
+    toFixedDecimal,
 };

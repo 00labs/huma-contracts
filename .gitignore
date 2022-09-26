@@ -5,6 +5,7 @@
 cache
 artifacts
 deployments
+deployment/localhost*
 abi
 
 # debug

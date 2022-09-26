@@ -18,7 +18,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
     address internal immutable _tokenAddress;
 
     event Mint(address recipient, string tokenURI);
-    event NFTGenerated(uint256 tokenId);
+    event NFTGenerated(address recipient, uint256 tokenId);
     event SetURI(uint256 tokenId, string tokenURI);
     event Payment(
         address sender,
@@ -30,6 +30,10 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
 
     constructor(address tokenAddress) ERC721("InvoiceNFT", "HumaNFT") {
         _tokenAddress = tokenAddress;
+    }
+
+    function getCurrentTokenId() external view returns (uint256) {
+        return _tokenIds.current();
     }
 
     function payOwner(uint256 tokenId, uint256 amount) external {
@@ -49,7 +53,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
         _mint(recipient, newItemId);
         _setTokenURI(newItemId, tokenURI);
 
-        emit NFTGenerated(newItemId);
+        emit NFTGenerated(recipient, newItemId);
         return newItemId;
     }
 
