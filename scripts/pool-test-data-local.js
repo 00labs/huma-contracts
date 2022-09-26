@@ -97,10 +97,10 @@ async function setupPool() {
                 "recordApprovedCredit",
                 [
                     borrower.address,
-                    toFixedDecimal(10, decimals),
+                    toFixedDecimal(100, decimals),
                     rnNft.address,
                     tokenId,
-                    toFixedDecimal(1_000_000_000, decimals),
+                    toFixedDecimal(100, decimals),
                     BN.from(30),
                     BN.from(12),
                 ]
@@ -122,7 +122,7 @@ async function setupPool() {
                 "ReceivableFactoringPool",
                 poolFromBorrower,
                 "drawdownWithReceivable",
-                [borrower.address, toFixedDecimal(9, decimals), rnNft.address, tokenId]
+                [borrower.address, toFixedDecimal(99, decimals), rnNft.address, tokenId]
             );
         } catch (err) {
             console.log(err);
