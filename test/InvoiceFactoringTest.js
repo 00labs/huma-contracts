@@ -558,6 +558,11 @@ describe("Invoice Factoring", function () {
             await invoiceContract
                 .connect(pdsServiceAccount)
                 .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1);
+            await expect(
+                invoiceContract
+                    .connect(pdsServiceAccount)
+                    .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1)
+            ).to.be.revertedWith("paymentAlreadyProcessed()");
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(486);
 

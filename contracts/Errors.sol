@@ -32,6 +32,7 @@ contract Errors {
     error withdrawnAmountHigherThanBalance();
     error withdrawTooSoon();
     error assetNotMatchWithPoolAsset();
+    error paymentAlreadyProcessed();
 
     error minPrincipalPaymentRateSettingTooHigh();
     error protocolIsPaused();

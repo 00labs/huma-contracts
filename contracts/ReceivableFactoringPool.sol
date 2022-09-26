@@ -92,6 +92,9 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         // todo add test to cover the case when the amount is too low
         if (amount < cr.unbilledPrincipal) revert Errors.amountTooLow();
 
+        if (_processedPaymentIds[paymentId] == true) revert Errors.paymentAlreadyProcessed();
+        _processedPaymentIds[paymentId] = true;
+
         // todo For security, verify that we have indeeded received the payment.
         // If asset is not received, EA might be compromised. Emit event.
 
