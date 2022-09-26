@@ -42,6 +42,10 @@ async function runTSOperation(contract, name, method, parameters, tsContract) {
 }
 
 async function execute() {
+    if (!deployedContracts["ReceivableFactoringPoolConfig"]) {
+        throw new Error("ReceivableFactoringPoolConfig not deployed yet!");
+    }
+
     if (!deployedContracts["ReceivableFactoringPool"]) {
         throw new Error("ReceivableFactoringPool not deployed yet!");
     }
@@ -57,10 +61,15 @@ async function execute() {
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
     const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
 
-    const owner = await pool.owner();
+    const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
+    const poolConfig = ReceivableFactoringPoolConfig.attach(
+        deployedContracts["ReceivableFactoringPoolConfig"]
+    );
+
+    const owner = await poolConfig.owner();
     console.log("owner: " + owner);
 
-    const res = await pool.getPoolSummary();
+    const res = await poolConfig.getPoolSummary();
     console.log("res: " + res);
 
     for (let i = 0; i < 10; i++) {
@@ -68,8 +77,15 @@ async function execute() {
         console.log(`slot${i}: ${v}`);
     }
 
-    await sendTransaction("ReceivableFactoringPool", pool, "setHumaConfigAndFeeManager", [
+    console.log("pool status: " + (await pool.isPoolOn()));
+
+    await sendTransaction("ReceivableFactoringPool", pool, "updateCoreData", []);
+
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setHumaConfig", [
         deployedContracts["HumaConfig"],
+    ]);
+
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
         deployedContracts["ReceivableFactoringPoolFeeManager"],
     ]);
 
@@ -79,15 +95,15 @@ async function execute() {
     const TimelockController = await hre.ethers.getContractFactory("TimelockController");
     const humaConfigTL = TimelockController.attach(deployedContracts["HumaConfigTimelock"]);
 
-    // await runTSOperation(
-    //     humaConfig,
-    //     "HumaConfig",
-    //     "setPDSServiceAccount",
-    //     [PDS_SERVICE_ACCOUNT],
-    //     humaConfigTL
-    // );
+    await runTSOperation(
+        humaConfig,
+        "HumaConfig",
+        "setPDSServiceAccount",
+        [PDS_SERVICE_ACCOUNT],
+        humaConfigTL
+    );
 
-    console.log(await humaConfig.pdsServiceAccount());
+    // console.log(await humaConfig.pdsServiceAccount());
 }
 
 async function main() {
