@@ -188,6 +188,9 @@ async function initPoolConfig() {
         [10000]
     );
     await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setPoolPayPeriod", [30]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setPoolToken", [
+        deployedContracts["HDT"],
+    ]);
     await sendTransaction(
         "ReceivableFactoringpoolConfig",
         poolConfig,
