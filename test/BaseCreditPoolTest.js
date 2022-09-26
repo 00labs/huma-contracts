@@ -189,7 +189,7 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(
                 poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
-            ).to.be.revertedWith("POOL_NOT_ON");
+            ).to.be.revertedWith("poolIsNotOn()");
         });
 
         it("Shall reject request loan greater than limit", async function () {

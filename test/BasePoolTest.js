@@ -208,7 +208,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Cannot deposit while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
-                "POOL_NOT_ON"
+                "poolIsNotOn()"
             );
         });
 

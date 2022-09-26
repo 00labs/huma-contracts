@@ -226,7 +226,7 @@ describe("Invoice Factoring", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("POOL_NOT_ON");
+            ).to.be.revertedWith("poolIsNotOn()");
         });
 
         it("Cannot post approved loan with amount greater than limit", async function () {

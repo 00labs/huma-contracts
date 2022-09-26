@@ -287,7 +287,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     // and its custom loan helper must be approved by the Huma team
     function protocolAndPoolOn() internal view {
         if (_humaConfig.isProtocolPaused()) revert Errors.protocolIsPaused();
-        require(_status == PoolStatus.On, "POOL_NOT_ON");
+        if (_status != PoolStatus.On) revert Errors.poolIsNotOn();
     }
 
     function onlyApprovedLender(address lender) internal view {
