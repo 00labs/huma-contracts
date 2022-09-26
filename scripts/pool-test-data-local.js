@@ -88,7 +88,6 @@ async function setupPool() {
         borrower6,
     ].entries()) {
         const tokenId = baseTokenId + index + 1;
-        console.log(tokenId);
         await sendTransaction("InvoiceNFT", rnNft, "mintNFT", [borrower.address, "testURI"]);
 
         try {
