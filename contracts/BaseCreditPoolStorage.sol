@@ -11,6 +11,7 @@ contract BaseCreditPoolStorage {
     mapping(address => BS.ReceivableInfo) internal _receivableInfoMapping;
     mapping(address => BS.CreditRecordStatic) internal _creditRecordStaticMapping;
 
+    mapping(uint256 => bool) internal _processedPaymentIds;
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
