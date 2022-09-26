@@ -110,7 +110,7 @@ describe("Base Credit Pool", function () {
         });
         it("Should reject setting APR higher than 10000", async function () {
             await expect(poolConfigContract.connect(poolOwner).setAPR(12170)).to.revertedWith(
-                "invalidAPR"
+                "invalidBasisPointHigherThan10000"
             );
         });
         it("Should mark a credit line without balance deleted when credit limit is set to allow credit limit to be changed", async function () {

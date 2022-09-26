@@ -78,7 +78,7 @@ describe("Huma Config", function () {
         it("Should disallow non-owner to change huma treasury", async function () {
             await expect(
                 configContract.connect(origOwner).setHumaTreasury(ethers.constants.AddressZero)
-            ).to.be.revertedWith("TREASURY_ADDRESS_ZERO");
+            ).to.be.revertedWith("zeroAddressProvided()");
         });
 
         it("Should not change treasury if try to set it to the current treasury", async function () {

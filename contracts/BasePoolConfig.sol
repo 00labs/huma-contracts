@@ -197,7 +197,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      */
     function setAPR(uint256 aprInBps) external {
         onlyOwnerOrHumaMasterAdmin();
-        if(aprInBps > 10000) revert Errors.invalidAPR();
+        if (aprInBps > 10000) revert Errors.invalidBasisPointHigherThan10000();
         _poolConfig._poolAprInBps = aprInBps;
         emit APRUpdated(aprInBps);
     }
@@ -208,7 +208,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      */
     function setReceivableRequiredInBps(uint256 receivableInBps) external {
         onlyOwnerOrHumaMasterAdmin();
-        require(receivableInBps <= 10000, "INVALID_COLLATERAL_IN_BPS");
+        if (receivableInBps > 10000) revert Errors.invalidBasisPointHigherThan10000();
         _poolConfig._receivableRequiredInBps = receivableInBps;
     }
 
@@ -319,21 +319,23 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     }
 
     function withdrawEAFee(uint256 amount) external {
-        require(msg.sender == evaluationAgent, "NOT_EA_OWNER");
-        require(amount <= _accuredIncome._eaIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        if (msg.sender != evaluationAgent) revert Errors.notEvaluationAgent();
+        if (amount > _accuredIncome._eaIncome) revert Errors.withdrawnAmountHigherThanBalance();
         //todo pool needs to approve max amount to poolCOnfig
         underlyingToken.safeTransferFrom(pool, evaluationAgent, amount);
     }
 
     function withdrawProtocolFee(uint256 amount) external virtual {
-        require(msg.sender == humaConfig.owner(), "NOT_PROTOCOL_OWNER");
-        require(amount <= _accuredIncome._protocolIncome, "WITHDRAWAL_AMOUNT_TOO_HIGH");
+        if (msg.sender != humaConfig.owner()) revert Errors.notProtocolOwner();
+        if (amount > _accuredIncome._protocolIncome)
+            revert Errors.withdrawnAmountHigherThanBalance();
         address treasuryAddress = humaConfig.humaTreasury();
         underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
     }
 
     function withdrawPoolOwnerFee(uint256 amount) external virtual {
-        require(msg.sender == this.owner(), "NOT_POOL_OWNER");
+        // todo need to add a test against non-pool-owner
+        if (msg.sender != this.owner()) revert Errors.notPoolOwner();
         if (amount > _accuredIncome._poolOwnerIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
         underlyingToken.safeTransferFrom(pool, this.owner(), amount);

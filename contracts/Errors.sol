@@ -36,6 +36,9 @@ contract Errors {
     error minPrincipalPaymentRateSettingTooHigh();
     error protocolIsPaused();
     error poolIsNotOn();
-    error invalidAPR();
+    error invalidBasisPointHigherThan10000();
 
+    error notPoolOwner();
+    error notProtocolOwner();
+    error notEvaluationAgent();
 }

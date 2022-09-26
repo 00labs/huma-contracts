@@ -84,7 +84,7 @@ contract HumaConfig is Ownable {
      * @dev Emits an ProtocolInitialized event.
      */
     constructor(address treasury) {
-        require(treasury != address(0), "TREASURY_ADDRESS_ZERO");
+        if (treasury == address(0)) revert Errors.zeroAddressProvided();
         humaTreasury = treasury;
 
         // Add protocol owner as a pauser.
@@ -145,12 +145,12 @@ contract HumaConfig is Ownable {
     /**
      * @notice Sets the address of Huma Treasury. Only superAdmin can make the change.
      * @param treasury the new Huma Treasury address
-     * @dev If address(0) is provided, revert with "TREASURY_ADDRESS_ZERO"
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the current treasury address is provided, revert w/ "TREASURY_ADDRESS_UNCHANGED"
      * @dev emit HumaTreasuryChanged(address newTreasury) event
      */
     function setHumaTreasury(address treasury) external onlyOwner {
-        require(treasury != address(0), "TREASURY_ADDRESS_ZERO");
+        if (treasury == address(0)) revert Errors.zeroAddressProvided();
         if (treasury != humaTreasury) {
             humaTreasury = treasury;
             emit HumaTreasuryChanged(treasury);
