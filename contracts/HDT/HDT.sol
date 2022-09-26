@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/IHDT.sol";
 
 import "./HDTStorage.sol";
+import "../Errors.sol";
 
 /**
  * @title Huma Distribution Token
@@ -26,7 +27,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         string memory symbol,
         address underlyingToken
     ) external initializer {
-        require(underlyingToken != address(0), "TOKEN_ADDRESS_ZERO");
+        if (underlyingToken == address(0)) revert Errors.zeroAddressProvided();
         _assetToken = underlyingToken;
 
         __ERC20_init(name, symbol);
@@ -54,7 +55,8 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         returns (uint256 shares)
     {
         shares = convertToShares(amount);
-        require(shares > 0, "HDT:SHARE_IS_ZERO");
+        // todo add test for zero share case
+        if (shares == 0) revert Errors.zeroAmountProvided();
         _mint(account, shares);
     }
 
@@ -65,7 +67,8 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         returns (uint256 shares)
     {
         shares = convertToShares(amount);
-        require(shares > 0, "HDT:SHARE_IS_ZERO");
+        // todo add test for zero test case
+        if (shares == 0) revert Errors.zeroAmountProvided();
         _burn(account, shares);
     }
 
@@ -117,7 +120,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     }
 
     modifier onlyPool() {
-        require(msg.sender == address(_pool), "HDT:INVALID_CALLER");
+        if (msg.sender != address(_pool)) revert Errors.notPoolOwner();
         _;
     }
 }

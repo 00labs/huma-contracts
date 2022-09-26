@@ -88,7 +88,7 @@ describe("Base Credit Pool", function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(
                 poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000000)
-            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            ).to.be.revertedWith("protocolIsPaused()");
             await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
         it("Should not allow non-EA to change credit line", async function () {
@@ -107,6 +107,11 @@ describe("Base Credit Pool", function () {
                 .changeCreditLine(borrower.address, 1000000);
             let result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
+        });
+        it("Should reject setting APR higher than 10000", async function () {
+            await expect(poolConfigContract.connect(poolOwner).setAPR(12170)).to.revertedWith(
+                "invalidBasisPointHigherThan10000"
+            );
         });
         it("Should mark a credit line without balance deleted when credit limit is set to allow credit limit to be changed", async function () {
             let record = await poolContract.creditRecordMapping(borrower.address);
@@ -182,14 +187,14 @@ describe("Base Credit Pool", function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(
                 poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
-            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            ).to.be.revertedWith("protocolIsPaused()");
         });
 
         it("Shall reject request loan while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(
                 poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
-            ).to.be.revertedWith("POOL_NOT_ON");
+            ).to.be.revertedWith("poolIsNotOn()");
         });
 
         it("Shall reject request loan greater than limit", async function () {
@@ -233,7 +238,7 @@ describe("Base Credit Pool", function () {
         it("Should not allow loan funding while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 
@@ -454,7 +459,23 @@ describe("Base Credit Pool", function () {
                 poolContract
                     .connect(borrower)
                     .makePayment(borrower.address, testTokenContract.address, 5)
-            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            ).to.be.revertedWith("protocolIsPaused()");
+        });
+
+        it("Should reject the payback asset does not match with the underlying token asset", async function () {
+            await testTokenContract.connect(borrower).approve(poolContract.address, 1000);
+            await expect(
+                poolContract.connect(borrower).makePayment(borrower.address, lender.address, 1000)
+            ).to.be.revertedWith("assetNotMatchWithPoolAsset()");
+        });
+
+        it("Should reject if payback amount is zero", async function () {
+            await testTokenContract.connect(borrower).approve(poolContract.address, 1000);
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .makePayment(borrower.address, testTokenContract.address, 0)
+            ).to.be.revertedWith("zeroAmountProvided()");
         });
 
         it("Process payback", async function () {

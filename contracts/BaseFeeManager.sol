@@ -294,7 +294,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         override
         onlyOwner
     {
-        require(_minPrincipalRateInBps < 5000, "RATE_TOO_HIGH");
+        if (_minPrincipalRateInBps >= 5000) revert Errors.minPrincipalPaymentRateSettingTooHigh();
         minPrincipalRateInBps = _minPrincipalRateInBps;
         emit MinPrincipalRateUpdated(_minPrincipalRateInBps);
     }

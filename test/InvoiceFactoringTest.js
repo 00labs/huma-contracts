@@ -208,7 +208,7 @@ describe("Invoice Factoring", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            ).to.be.revertedWith("protocolIsPaused()");
         });
 
         it("Should not allow posting approved laons while pool is off", async function () {
@@ -226,7 +226,7 @@ describe("Invoice Factoring", function () {
                         30,
                         1
                     )
-            ).to.be.revertedWith("POOL_NOT_ON");
+            ).to.be.revertedWith("poolIsNotOn()");
         });
 
         it("Cannot post approved loan with amount greater than limit", async function () {
@@ -338,7 +338,7 @@ describe("Invoice Factoring", function () {
         it("Should not allow loan funding while protocol is paused", async function () {
             await humaConfigContract.connect(owner).pauseProtocol();
             await expect(invoiceContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 
@@ -466,7 +466,7 @@ describe("Invoice Factoring", function () {
                 invoiceContract
                     .connect(borrower)
                     .makePayment(borrower.address, testTokenContract.address, 5)
-            ).to.be.revertedWith("PROTOCOL_PAUSED");
+            ).to.be.revertedWith("protocolIsPaused()");
         });
 
         // todo if the pool is stopped, shall we accept payback?

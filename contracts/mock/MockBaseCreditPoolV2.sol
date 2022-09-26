@@ -10,7 +10,7 @@ contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
         protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
-        require(_poolConfig.maxCreditLine() >= newLine, "GREATER_THAN_LIMIT");
+        if (newLine > _poolConfig.maxCreditLine()) revert Errors.creditLineGreatThanUpperLimit();
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newLine * 2);
     }
 
