@@ -201,7 +201,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Cannot deposit while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 
@@ -251,7 +251,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Should not withdraw while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
-                "PROTOCOL_PAUSED"
+                "protocolIsPaused()"
             );
         });
 

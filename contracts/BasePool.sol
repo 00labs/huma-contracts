@@ -286,7 +286,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     // In order for a pool to issue new loans, it must be turned on by an admin
     // and its custom loan helper must be approved by the Huma team
     function protocolAndPoolOn() internal view {
-        require(_humaConfig.isProtocolPaused() == false, "PROTOCOL_PAUSED");
+        if (_humaConfig.isProtocolPaused()) revert Errors.protocolIsPaused();
         require(_status == PoolStatus.On, "POOL_NOT_ON");
     }
 

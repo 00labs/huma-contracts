@@ -34,4 +34,7 @@ contract Errors {
     error assetNotMatchWithPoolAsset();
 
     error minPrincipalPaymentRateSettingTooHigh();
+    error protocolIsPaused();
+    error poolIsNotOn();
+
 }
