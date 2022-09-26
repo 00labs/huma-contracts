@@ -372,7 +372,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             }
         }
 
-        if (amountToCollect == payoffAmount) {
+        if (amountToCollect >= payoffAmount) {
             // Set account state to GoodStanding if paid off even if it was delayed or defaulted.
             cr.state = BS.CreditState.GoodStanding;
 
@@ -382,6 +382,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             reverseIncome(uint256(uint96(0 - cr.correction)));
             amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
             cr.correction = 0;
+            if (cr.remainingPeriods == 0) cr.state = BS.CreditState.Deleted;
         }
 
         _creditRecordMapping[borrower] = cr;
