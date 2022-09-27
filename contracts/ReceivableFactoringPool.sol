@@ -90,7 +90,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         if (_processedPaymentIds[paymentId] == true) revert Errors.paymentAlreadyProcessed();
         _processedPaymentIds[paymentId] = true;
 
-        uint256 amountPaid = makePayment(borrower, asset, amount, true);
+        uint256 amountPaid = _makePayment(borrower, asset, amount, true);
 
         // // todo handle multiple payments.
         // // todo decide what to do if the payment amount is insufficient.

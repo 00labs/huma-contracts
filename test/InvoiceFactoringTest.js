@@ -463,7 +463,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .makePayment(borrower.address, testTokenContract.address, 5, false)
+                    .makePayment(borrower.address, testTokenContract.address, 5)
             ).to.be.revertedWith("protocolIsPaused()");
         });
 
