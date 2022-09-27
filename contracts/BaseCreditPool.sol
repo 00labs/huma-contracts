@@ -300,6 +300,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
 
+        // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
+        // for lookup by off-chain payment processers
+        _receivableOwnershipMapping[
+            keccak256(abi.encodePacked(receivableAsset, receivableParam))
+        ] = borrower;
+
         emit DrawdownWithReceivable(
             borrower,
             amtToBorrower,
@@ -575,6 +581,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function creditRecordMapping(address account) external view returns (BS.CreditRecord memory) {
         return _creditRecordMapping[account];
+    }
+
+    function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
+        return _receivableOwnershipMapping[receivableHash];
     }
 
     function creditRecordStaticMapping(address account)
