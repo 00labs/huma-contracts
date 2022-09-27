@@ -533,7 +533,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 invoiceContract
                     .connect(borrower)
-                    .makePayment(borrower.address, testTokenContract.address, 5)
+                    .makePayment(borrower.address, testTokenContract.address, 5, false)
             ).to.be.revertedWith("protocolIsPaused()");
         });
 

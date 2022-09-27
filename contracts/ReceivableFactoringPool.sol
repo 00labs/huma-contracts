@@ -83,35 +83,37 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
         onlyPDSServiceAccount();
-        BaseStructs.CreditRecord memory cr = _creditRecordMapping[borrower];
+        //BaseStructs.CreditRecord memory cr = _creditRecordMapping[borrower];
 
         if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
-
-        // todo handle multiple payments.
-        // todo decide what to do if the payment amount is insufficient.
-        // todo add test to cover the case when the amount is too low
-        if (amount < cr.unbilledPrincipal) revert Errors.amountTooLow();
 
         if (_processedPaymentIds[paymentId] == true) revert Errors.paymentAlreadyProcessed();
         _processedPaymentIds[paymentId] = true;
 
-        // todo For security, verify that we have indeeded received the payment.
-        // If asset is not received, EA might be compromised. Emit event.
+        uint256 amountPaid = makePayment(borrower, asset, amount, true);
 
-        uint256 lateFee = IFeeManager(_feeManager).calcLateFee(
-            cr.dueDate,
-            cr.totalDue,
-            cr.unbilledPrincipal
-        );
-        uint256 refundAmount = amount - cr.totalDue - lateFee;
+        // // todo handle multiple payments.
+        // // todo decide what to do if the payment amount is insufficient.
+        // // todo add test to cover the case when the amount is too low
+        // if (amount < cr.unbilledPrincipal) revert Errors.amountTooLow();
 
-        // Sends the remainder to the borrower
-        cr.unbilledPrincipal = 0;
-        cr.remainingPeriods = 0;
+        // // todo For security, verify that we have indeeded received the payment.
+        // // If asset is not received, EA might be compromised. Emit event.
 
-        _creditRecordMapping[borrower] = cr;
+        // uint256 lateFee = IFeeManager(_feeManager).calcLateFee(
+        //     cr.dueDate,
+        //     cr.totalDue,
+        //     cr.unbilledPrincipal
+        // );
+        // uint256 refundAmount = amount - cr.totalDue - lateFee;
 
-        disperseRemainingFunds(borrower, refundAmount);
+        // // Sends the remainder to the borrower
+        // cr.unbilledPrincipal = 0;
+        // cr.remainingPeriods = 0;
+
+        // _creditRecordMapping[borrower] = cr;
+
+        if (amount > amountPaid) disperseRemainingFunds(borrower, amount - amountPaid);
 
         emit ReceivedPayment(msg.sender, borrower, asset, amount, paymentId);
     }
