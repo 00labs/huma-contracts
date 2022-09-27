@@ -165,9 +165,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint256 totalCharges
         )
     {
-        console.log("At the top of getDueInfo()");
-        console.log(block.timestamp);
-        console.log(_cr.dueDate);
         // Directly returns if it is still within the current period
         if (block.timestamp <= _cr.dueDate) {
             return (0, _cr.feesAndInterestDue, _cr.totalDue, _cr.unbilledPrincipal, 0);
