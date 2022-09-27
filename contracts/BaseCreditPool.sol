@@ -161,6 +161,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                 _creditRecordMapping[borrower].totalDue == 0 &&
                 _creditRecordMapping[borrower].unbilledPrincipal == 0
             ) _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
+            _creditRecordMapping[borrower].remainingPeriods = 0;
         }
     }
 
@@ -208,6 +209,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         _checkAccountState(cr.state);
 
+        console.log("In drawdownWithReceivable");
+        console.log(borrowAmount);
+        console.log(_creditRecordStaticMapping[borrower].creditLimit);
+        console.log(cr.unbilledPrincipal);
+        console.log(cr.totalDue);
+        console.log(cr.feesAndInterestDue);
+        console.log(cr.dueDate);
+
         if (
             borrowAmount >
             (_creditRecordStaticMapping[borrower].creditLimit -
@@ -216,6 +225,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         ) revert Errors.creditLineExceeded();
 
         bool isFirstDrawdown = cr.state == BS.CreditState.Approved ? true : false;
+        console.log(isFirstDrawdown);
 
         if (isFirstDrawdown) {
             // After the credit approval, if the pool has credit expiration for first drawdown,
@@ -290,6 +300,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         cr.state = BS.CreditState.GoodStanding;
 
         _creditRecordMapping[borrower] = cr;
+
+        console.log("After account state changes");
+        console.log(borrowAmount);
+        console.log(_creditRecordStaticMapping[borrower].creditLimit);
+        console.log(cr.unbilledPrincipal);
+        console.log(cr.totalDue);
+        console.log(cr.feesAndInterestDue);
+        console.log(cr.dueDate);
 
         (uint256 amtToBorrower, uint256 platformFees) = _feeManager.distBorrowingAmount(
             borrowAmount
