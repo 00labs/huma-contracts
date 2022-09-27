@@ -386,7 +386,7 @@ describe("Invoice Factoring", function () {
 
             // Keccack hash is properly computed
             expect(
-                await invoiceContract.receivableOwnershipMapping(
+                await poolContract.receivableOwnershipMapping(
                     ethers.utils.solidityKeccak256(
                         ["address", "uint256"],
                         [invoiceNFTContract.address, invoiceNFTTokenId]
