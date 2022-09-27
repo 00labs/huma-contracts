@@ -83,7 +83,8 @@ describe("TimelockController Test", function () {
             feeManagerContract,
             testTokenContract,
             0,
-            eaNFTContract
+            eaNFTContract,
+            true // ReceivableFacotringPool
         );
 
         const TimelockController = await ethers.getContractFactory("TimelockController");

@@ -8,6 +8,7 @@ const {
     advanceClock,
     checkRecord,
     checkResult,
+    checkArruedIncome,
 } = require("./BaseTest");
 
 use(solidity);
@@ -69,7 +70,8 @@ describe("Credit Line Integration Test", async function () {
             feeManagerContract,
             testTokenContract,
             500,
-            eaNFTContract
+            eaNFTContract,
+            false
         );
 
         await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500, 0);

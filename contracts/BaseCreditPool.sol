@@ -161,6 +161,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                 _creditRecordMapping[borrower].totalDue == 0 &&
                 _creditRecordMapping[borrower].unbilledPrincipal == 0
             ) _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
+            _creditRecordMapping[borrower].remainingPeriods = 0;
         }
     }
 
@@ -325,7 +326,22 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         address borrower,
         address asset,
         uint256 amount
-    ) external virtual override {
+    ) public virtual override returns (uint256 amountPaid) {
+        return _makePayment(borrower, asset, amount, false);
+    }
+
+    /**
+     * @notice Borrower makes one payment. If this is the final payment,
+     * it automatically triggers the payoff process.
+     * @dev "assetNotMatchWithPoolAsset()" reverted when asset address does not match
+     * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
+     */
+    function _makePayment(
+        address borrower,
+        address asset,
+        uint256 amount,
+        bool isPaymentReceived
+    ) internal returns (uint256 amountPaid) {
         protocolAndPoolOn();
 
         if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
@@ -406,12 +422,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         _creditRecordMapping[borrower] = cr;
 
-        if (amountToCollect > 0) {
+        if (amountToCollect > 0 && isPaymentReceived == false) {
             // Transfer assets from the _borrower to pool locker
             _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
+            emit PaymentMade(borrower, amountToCollect, msg.sender);
         }
 
-        emit PaymentMade(borrower, amountToCollect, msg.sender);
+        return (amountToCollect);
     }
 
     function refreshAccount(address borrower) external returns (BS.CreditRecord memory cr) {

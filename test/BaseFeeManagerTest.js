@@ -8,6 +8,7 @@ const {
     advanceClock,
     checkRecord,
     checkResult,
+    checkArruedIncome,
 } = require("./BaseTest");
 
 use(solidity);
@@ -65,7 +66,8 @@ describe("Base Fee Manager", function () {
             feeManagerContract,
             testTokenContract,
             0,
-            eaNFTContract
+            eaNFTContract,
+            false
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
@@ -134,7 +136,8 @@ describe("Base Fee Manager", function () {
                 feeManagerContract,
                 testTokenContract,
                 0,
-                eaNFTContract
+                eaNFTContract,
+                false
             );
 
             await poolContract.connect(borrower).requestCredit(400, 30, 12);
@@ -203,7 +206,8 @@ describe("Base Fee Manager", function () {
                 feeManagerContract,
                 testTokenContract,
                 500,
-                eaNFTContract
+                eaNFTContract,
+                false
             );
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100, 0);
@@ -276,7 +280,8 @@ describe("Base Fee Manager", function () {
                 feeManagerContract,
                 testTokenContract,
                 0,
-                eaNFTContract
+                eaNFTContract,
+                false
             );
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500, 10);
@@ -346,7 +351,8 @@ describe("Base Fee Manager", function () {
                 feeManagerContract,
                 testTokenContract,
                 500,
-                eaNFTContract
+                eaNFTContract,
+                false
             );
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100, 10);

@@ -52,7 +52,8 @@ async function deployAndSetupPool(
     feeManagerContract,
     testTokenContract,
     principalRateInBps,
-    eaNFTContract
+    eaNFTContract,
+    isReceivableContractFlag
 ) {
     await testTokenContract.give1000To(lender.address);
     await testTokenContract.give1000To(poolOwner.address);
@@ -85,9 +86,15 @@ async function deployAndSetupPool(
     );
     await poolConfig.deployed();
 
-    // Deploy BaseCreditPool
-    const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-    const poolImpl = await BaseCreditPool.deploy();
+    // Deploy pool contract
+    let poolContractFactory;
+    if (isReceivableContractFlag)
+        poolContractFactory = await ethers.getContractFactory("ReceivableFactoringPool");
+    else poolContractFactory = await ethers.getContractFactory("BaseCreditPool");
+
+    const poolImpl = await poolContractFactory.deploy();
+    //const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
+    //const poolImpl = await BaseCreditPool.deploy();
     await poolImpl.deployed();
     const poolProxy = await TransparentUpgradeableProxy.deploy(
         poolImpl.address,
@@ -96,7 +103,7 @@ async function deployAndSetupPool(
     );
     await poolProxy.deployed();
 
-    poolContract = BaseCreditPool.attach(poolProxy.address);
+    poolContract = poolContractFactory.attach(poolProxy.address);
     await poolContract.initialize(poolConfig.address);
     await poolContract.deployed();
 
@@ -177,10 +184,17 @@ async function checkResult(r, v1, v2, v3, v4, v5) {
     expect(r.totalCharges).to.equal(v5);
 }
 
+async function checkArruedIncome(r, v1, v2, v3) {
+    expect(r.protocolIncome).to.equal(v1);
+    expect(r.eaIncome).to.equal(v2);
+    expect(r.poolOwnerIncome).to.equal(v3);
+}
+
 module.exports = {
     deployContracts,
     deployAndSetupPool,
     advanceClock,
     checkRecord,
     checkResult,
+    checkArruedIncome,
 };
