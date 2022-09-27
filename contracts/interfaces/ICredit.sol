@@ -24,8 +24,9 @@ interface ICredit {
     function makePayment(
         address _borrower,
         address _asset,
-        uint256 _amount
-    ) external;
+        uint256 _amount,
+        bool prepaid
+    ) external returns (uint256 amountPaid);
 
     function triggerDefault(address borrower) external returns (uint256 losses);
 

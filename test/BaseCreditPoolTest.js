@@ -145,7 +145,7 @@ describe("Base Credit Pool", function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, 4040);
             await poolContract
                 .connect(borrower)
-                .makePayment(borrower.address, testTokenContract.address, 4040);
+                .makePayment(borrower.address, testTokenContract.address, 4040, false);
             // Note since there is no time passed, the interest charged will be offset at the payoff
             record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.totalDue).to.equal(0);
@@ -266,7 +266,7 @@ describe("Base Credit Pool", function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, 1_000_000);
             await poolContract
                 .connect(borrower)
-                .makePayment(borrower.address, testTokenContract.address, 1_000_000);
+                .makePayment(borrower.address, testTokenContract.address, 1_000_000, false);
         });
 
         it("Should reject if the borrowing amount is less than platform fees", async function () {
@@ -303,7 +303,7 @@ describe("Base Credit Pool", function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, 100000);
             await poolContract
                 .connect(borrower)
-                .makePayment(borrower.address, testTokenContract.address, 100000);
+                .makePayment(borrower.address, testTokenContract.address, 100000, false);
         });
 
         it("Borrow full amount that has been approved", async function () {
@@ -331,7 +331,7 @@ describe("Base Credit Pool", function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, 1_000_000);
             await poolContract
                 .connect(borrower)
-                .makePayment(borrower.address, testTokenContract.address, 1_000_000);
+                .makePayment(borrower.address, testTokenContract.address, 1_000_000, false);
         });
 
         it("Should reject drawdown in the final pay period of the credit line", async function () {
@@ -341,7 +341,7 @@ describe("Base Credit Pool", function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, 1_010_002);
             await poolContract
                 .connect(borrower)
-                .makePayment(borrower.address, testTokenContract.address, 1_010_002);
+                .makePayment(borrower.address, testTokenContract.address, 1_010_002, false);
 
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(0);
@@ -456,14 +456,16 @@ describe("Base Credit Pool", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .makePayment(borrower.address, testTokenContract.address, 5)
+                    .makePayment(borrower.address, testTokenContract.address, 5, false)
             ).to.be.revertedWith("protocolIsPaused()");
         });
 
         it("Should reject the payback asset does not match with the underlying token asset", async function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, 1000);
             await expect(
-                poolContract.connect(borrower).makePayment(borrower.address, lender.address, 1000)
+                poolContract
+                    .connect(borrower)
+                    .makePayment(borrower.address, lender.address, 1000, false)
             ).to.be.revertedWith("assetNotMatchWithPoolAsset()");
         });
 
@@ -472,7 +474,7 @@ describe("Base Credit Pool", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .makePayment(borrower.address, testTokenContract.address, 0)
+                    .makePayment(borrower.address, testTokenContract.address, 0, false)
             ).to.be.revertedWith("zeroAmountProvided()");
         });
 
@@ -484,7 +486,7 @@ describe("Base Credit Pool", function () {
 
             await poolContract
                 .connect(borrower)
-                .makePayment(borrower.address, testTokenContract.address, 11002);
+                .makePayment(borrower.address, testTokenContract.address, 11002, false);
 
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
 
@@ -646,7 +648,7 @@ describe("Base Credit Pool", function () {
 
             await poolContract
                 .connect(borrower)
-                .makePayment(borrower.address, testTokenContract.address, 1_054_850);
+                .makePayment(borrower.address, testTokenContract.address, 1_054_850, false);
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -680,7 +682,7 @@ describe("Base Credit Pool", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .makePayment(borrower.address, testTokenContract.address, 23_099)
+                    .makePayment(borrower.address, testTokenContract.address, 23_099, false)
             )
                 .to.emit(poolContract, "PaymentMade")
                 .withArgs(borrower.address, 16_142, borrower.address);

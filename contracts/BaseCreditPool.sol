@@ -318,8 +318,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     function makePayment(
         address borrower,
         address asset,
-        uint256 amount
-    ) external virtual override {
+        uint256 amount,
+        bool prepaid
+    ) public virtual override returns (uint256 amountPaid) {
         protocolAndPoolOn();
 
         if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
@@ -400,12 +401,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         _creditRecordMapping[borrower] = cr;
 
-        if (amountToCollect > 0) {
+        if (amountToCollect > 0 && prepaid == false) {
             // Transfer assets from the _borrower to pool locker
             _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
+            emit PaymentMade(borrower, amountToCollect, msg.sender);
         }
 
-        emit PaymentMade(borrower, amountToCollect, msg.sender);
+        return (amountToCollect);
     }
 
     function refreshAccount(address borrower) external returns (BS.CreditRecord memory cr) {
