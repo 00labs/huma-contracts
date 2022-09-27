@@ -12,7 +12,8 @@ contract BaseCreditPoolStorage {
 
     mapping(uint256 => bool) internal _processedPaymentIds;
     /// mapping from the keccak256 hash of the receivableAddress and receivableParam to
-    /// the borrower address
+    /// the borrower address. This is needed for us to locate the borrower using
+    /// the received receivable asset.
     mapping(bytes32 => address) internal _receivableOwnershipMapping;
 
     /**
@@ -20,5 +21,5 @@ contract BaseCreditPoolStorage {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[100] private __gap;
+    uint256[99] private __gap;
 }
