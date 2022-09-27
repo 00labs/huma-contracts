@@ -558,6 +558,7 @@ describe("Invoice Factoring", function () {
             await invoiceContract
                 .connect(pdsServiceAccount)
                 .onReceivedPayment(borrower.address, testTokenContract.address, 500, 1);
+
             await expect(
                 invoiceContract
                     .connect(pdsServiceAccount)
