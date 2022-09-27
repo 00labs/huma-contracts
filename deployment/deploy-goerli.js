@@ -12,6 +12,9 @@ async function deployContracts() {
     const deployer = await accounts[0];
     console.log("deployer address: " + deployer.address);
 
+    const eaService = await accounts[4];
+    console.log("ea service address: " + eaService.address);
+
     const usdc = await deploy("TestToken", "USDC");
 
     const humaConfig = await deploy("HumaConfig", "HumaConfig", [deployer.address]);
@@ -43,7 +46,7 @@ async function deployContracts() {
         [],
     ]);
 
-    const evaluation_agent_NFT = await deploy("EvaluationAgentNFT", "EANFT");
+    const evaluation_agent_NFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
 
     const invoice_NFT = await deploy("InvoiceNFT", "RNNFT", [usdc.address]);
 }
