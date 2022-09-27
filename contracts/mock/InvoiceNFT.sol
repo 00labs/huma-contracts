@@ -23,6 +23,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
     event Payment(
         address sender,
         address recipient,
+        address assetAddress,
         uint256 amount,
         uint256 tokenId,
         uint256 paymentId
@@ -42,7 +43,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
 
         IERC20(_tokenAddress).safeTransferFrom(msg.sender, payee, amount);
 
-        emit Payment(msg.sender, payee, amount, tokenId, _paymentId.current());
+        emit Payment(msg.sender, payee, _tokenAddress, amount, tokenId, _paymentId.current());
     }
 
     function mintNFT(address recipient, string memory tokenURI) external returns (uint256) {
