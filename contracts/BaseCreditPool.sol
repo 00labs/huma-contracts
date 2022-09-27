@@ -19,7 +19,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     event DefaultTriggered(address indexed borrower, uint256 losses, address by);
     event PaymentMade(address indexed borrower, uint256 amount, address by);
-    event DrawdownWithReceivable(address indexed borrower, uint256 amount, address by);
+    event DrawdownWithReceivable(
+        address indexed borrower,
+        uint256 amount,
+        address by,
+        address receivableAddress,
+        uint256 receivableParam
+    );
     event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
 
     /**
@@ -294,7 +300,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
 
-        emit DrawdownWithReceivable(borrower, amtToBorrower, msg.sender);
+        emit DrawdownWithReceivable(
+            borrower,
+            amtToBorrower,
+            msg.sender,
+            receivableAsset,
+            receivableParam
+        );
     }
 
     /**
