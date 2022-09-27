@@ -237,6 +237,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             if (ri.receivableAsset != address(0)) {
                 if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
                 if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
+                    // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
+                    // for lookup by off-chain payment processers
+                    _receivableOwnershipMapping[
+                        keccak256(abi.encodePacked(receivableAsset, receivableParam))
+                    ] = borrower;
+
                     // For ERC721, receivableParam is the tokenId
                     if (ri.receivableParam != receivableParam)
                         revert Errors.receivableAssetParamMismatch();
@@ -299,12 +305,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
-
-        // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
-        // for lookup by off-chain payment processers
-        _receivableOwnershipMapping[
-            keccak256(abi.encodePacked(receivableAsset, receivableParam))
-        ] = borrower;
 
         emit DrawdownWithReceivable(
             borrower,
