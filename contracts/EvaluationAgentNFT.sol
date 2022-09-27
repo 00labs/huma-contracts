@@ -58,7 +58,7 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
         // Internally disable transfer by doing nothing.
     }
 
-    function setTokenURI(uint256 tokenId, string memory uri) external {
+    function setTokenURI(uint256 tokenId, string memory uri) external onlyOwner {
         emit SetURI(tokenId, uri);
         _setTokenURI(tokenId, uri);
     }
