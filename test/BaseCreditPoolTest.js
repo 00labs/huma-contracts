@@ -410,7 +410,7 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(1_000_000);
             await expect(
-                poolContract.connect(pdsServiceAccount).updateDueInfo(borrower.address, true)
+                poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address)
             ).to.not.emit(poolContract, "BillRefreshed");
         });
 
@@ -429,9 +429,7 @@ describe("Base Credit Pool", function () {
 
             let expectedDueDate = +previousDueDate + 2592000;
 
-            await expect(
-                poolContract.connect(pdsServiceAccount).updateDueInfo(borrower.address, true)
-            )
+            await expect(poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address))
                 .to.emit(poolContract, "BillRefreshed")
                 .withArgs(borrower.address, expectedDueDate, pdsServiceAccount.address);
         });
@@ -528,7 +526,7 @@ describe("Base Credit Pool", function () {
             // Period 1: Late for payment
             advanceClock(30);
 
-            await poolContract.updateDueInfo(borrower.address, true);
+            await poolContract.refreshAccount(borrower.address);
             let creditInfo = await poolContract.getCreditInformation(borrower.address);
             await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                 "defaultTriggeredTooEarly()"
@@ -544,7 +542,7 @@ describe("Base Credit Pool", function () {
             //Period 2: Two periods lates
             advanceClock(30);
 
-            await poolContract.updateDueInfo(borrower.address, true);
+            await poolContract.refreshAccount(borrower.address);
             creditInfo = await poolContract.getCreditInformation(borrower.address);
             await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                 "defaultTriggeredTooEarly()"
@@ -603,9 +601,9 @@ describe("Base Credit Pool", function () {
 
             // Period 1: Late for payment, trigger default. The same setup as the "default flow" test.
             advanceClock(30);
-            await poolContract.updateDueInfo(borrower.address, true);
+            await poolContract.refreshAccount(borrower.address);
             advanceClock(30);
-            await poolContract.updateDueInfo(borrower.address, true);
+            await poolContract.refreshAccount(borrower.address);
             advanceClock(30);
 
             dueDate += 2592000 * 3;

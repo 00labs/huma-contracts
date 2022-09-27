@@ -595,7 +595,7 @@ describe("Invoice Factoring", function () {
                 // pay period 1
                 advanceClock(30);
                 await ethers.provider.send("evm_mine", []);
-                await invoiceContract.updateDueInfo(borrower.address, true);
+                await invoiceContract.refreshAccount(borrower.address);
 
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
                     "defaultTriggeredTooEarly()"
@@ -610,7 +610,7 @@ describe("Invoice Factoring", function () {
 
                 // pay period 2
                 advanceClock(30);
-                await invoiceContract.updateDueInfo(borrower.address, true);
+                await invoiceContract.refreshAccount(borrower.address);
 
                 await expect(invoiceContract.triggerDefault(borrower.address)).to.be.revertedWith(
                     "defaultTriggeredTooEarly()"
