@@ -11,10 +11,14 @@ contract BaseCreditPoolStorage {
     mapping(address => BS.CreditRecordStatic) internal _creditRecordStaticMapping;
 
     mapping(uint256 => bool) internal _processedPaymentIds;
+    /// mapping from the keccak256 hash of the receivableAddress and receivableParam to
+    /// the borrower address
+    mapping(bytes32 => address) internal _receivableOwnershipMapping;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[99] private __gap;
+    uint256[100] private __gap;
 }
