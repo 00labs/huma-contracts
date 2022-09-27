@@ -74,7 +74,8 @@ describe("Base Pool - LP and Admin functions", function () {
             feeManagerContract,
             testTokenContract,
             0,
-            eaNFTContract
+            eaNFTContract,
+            false
         );
     });
 

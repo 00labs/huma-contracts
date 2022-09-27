@@ -28,6 +28,7 @@ describe("Base Credit Pool", function () {
     let feeManagerContract;
     let testTokenContract;
     let proxyOwner;
+    let poolOwner;
     let lender;
     let borrower;
     let treasury;
@@ -74,7 +75,8 @@ describe("Base Credit Pool", function () {
             feeManagerContract,
             testTokenContract,
             0,
-            eaNFTContract
+            eaNFTContract,
+            false // BaseCreditPool
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
