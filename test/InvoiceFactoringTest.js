@@ -607,6 +607,9 @@ describe("Invoice Factoring", function () {
                     4_011_000
                 );
             });
+
+            // todo Add test case for multi payments.
+
             // it("Writeoff more than pool value", async function () {
             //     await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
             //         "defaultTriggeredTooEarly()"
