@@ -396,6 +396,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         emit PaymentMade(borrower, amountToCollect, msg.sender);
     }
 
+    function refreshAccount(address borrower) external returns (BS.CreditRecord memory cr) {
+        if (isDefaultReady(borrower)) return updateDueInfo(borrower, false);
+        else return updateDueInfo(borrower, true);
+    }
+
     /**
      * @notice updates CreditRecord for `_borrower` using the most up to date information.
      * @dev this is used in both makePayment() and drawdown() to bring the account current
@@ -403,7 +408,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * updates the record in creditRecordMapping for `_borrower`
      */
     function updateDueInfo(address borrower, bool distributeChargesForLastCycle)
-        public
+        internal
         virtual
         returns (BS.CreditRecord memory cr)
     {
