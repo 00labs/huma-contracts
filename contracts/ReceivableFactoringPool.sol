@@ -83,10 +83,10 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
         onlyPDSServiceAccount();
-        //BaseStructs.CreditRecord memory cr = _creditRecordMapping[borrower];
 
         if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
 
+        // Makes sure no repeated processing of a payment.
         if (_processedPaymentIds[paymentId] == true) revert Errors.paymentAlreadyProcessed();
         _processedPaymentIds[paymentId] = true;
 
