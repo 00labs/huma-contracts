@@ -18,7 +18,7 @@ async function deployContracts(
     // Deploy HumaConfig
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     humaConfigContract = await HumaConfig.deploy(treasury.address);
-    await humaConfigContract.setHumaTreasury(treasury.address);
+    // await humaConfigContract.setHumaTreasury(treasury.address);
     await humaConfigContract.setTreasuryFee(2000);
     await humaConfigContract.addPauser(poolOwner.address);
     await humaConfigContract.setEANFTContractAddress(eaNFTContract.address);
