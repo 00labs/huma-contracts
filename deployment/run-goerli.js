@@ -1,5 +1,6 @@
 const {getDeployedContracts, sendTransaction} = require("./utils.js");
 
+const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const salt = ethers.utils.formatBytes32String("salt");
 const PDS_SERVICE_ACCOUNT = "0x6d748Fd98464EC03b7202C0A3fE9a28ADD0a1e70";
 
@@ -15,12 +16,12 @@ function genTSOperation(target, value, data, predecessor, salt) {
     return {id, target, value, data, predecessor, salt};
 }
 
-async function runTSOperation(contract, name, method, parameters, tsContract) {
+async function runTLOperation(contract, name, method, parameters, tlContract) {
     const data = contract.interface.encodeFunctionData(method, parameters);
     console.log(`${name}.${method}(${parameters.toString()}) data: ${data}`);
     const operation = genTSOperation(contract.address, 0, data, ethers.constants.HashZero, salt);
 
-    await sendTransaction(`${name}Timelock`, tsContract, "schedule", [
+    await sendTransaction(`${name}Timelock`, tlContract, "schedule", [
         operation.target,
         operation.value,
         operation.data,
@@ -54,8 +55,8 @@ async function execute() {
         throw new Error("HumaConfig not deployed yet!");
     }
 
-    if (!deployedContracts["ReceivableFactoringPoolFeeManager"]) {
-        throw new Error("ReceivableFactoringPoolFeeManager not deployed yet!");
+    if (!deployedContracts["EANFT"]) {
+        throw new Error("EANFT not deployed yet!");
     }
 
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
@@ -72,22 +73,26 @@ async function execute() {
     const res = await poolConfig.getPoolSummary();
     console.log("res: " + res);
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 1; i++) {
         let v = await hre.ethers.provider.getStorageAt(pool.address, i);
         console.log(`slot${i}: ${v}`);
     }
 
     console.log("pool status: " + (await pool.isPoolOn()));
 
-    await sendTransaction("ReceivableFactoringPool", pool, "updateCoreData", []);
+    console.log(
+        "receivableOwnershipMapping: " + (await pool.receivableOwnershipMapping(ZERO_BYTES32))
+    );
 
-    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setHumaConfig", [
-        deployedContracts["HumaConfig"],
-    ]);
+    // await sendTransaction("ReceivableFactoringPool", pool, "updateCoreData", []);
 
-    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
-        deployedContracts["ReceivableFactoringPoolFeeManager"],
-    ]);
+    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setHumaConfig", [
+    //     deployedContracts["HumaConfig"],
+    // ]);
+
+    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
+    //     deployedContracts["ReceivableFactoringPoolFeeManager"],
+    // ]);
 
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
@@ -95,11 +100,11 @@ async function execute() {
     const TimelockController = await hre.ethers.getContractFactory("TimelockController");
     const humaConfigTL = TimelockController.attach(deployedContracts["HumaConfigTimelock"]);
 
-    await runTSOperation(
+    await runTLOperation(
         humaConfig,
         "HumaConfig",
-        "setPDSServiceAccount",
-        [PDS_SERVICE_ACCOUNT],
+        "setEANFTContractAddress",
+        [deployedContracts["EANFT"]],
         humaConfigTL
     );
 
