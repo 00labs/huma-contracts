@@ -33,7 +33,7 @@ async function runTLOperation(contract, name, method, parameters, tlContract) {
     // const ready = await tsContract.isOperationReady(operation.id);
     // console.log("ready: " + ready);
 
-    await sendTransaction(`${name}Timelock`, tsContract, "execute", [
+    await sendTransaction(`${name}Timelock`, tlContract, "execute", [
         operation.target,
         operation.value,
         operation.data,
