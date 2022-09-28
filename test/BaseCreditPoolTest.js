@@ -93,16 +93,19 @@ describe("Base Credit Pool", function () {
             ).to.be.revertedWith("protocolIsPaused()");
             await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
+
         it("Should not allow non-EA to change credit line", async function () {
             await expect(
                 poolContract.connect(borrower).changeCreditLine(borrower.address, 1000000)
             ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
         });
+
         it("Should not allow credit line to be changed to above maximal credit line", async function () {
             await expect(
                 poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 50000000)
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
+
         it("Should allow credit limit to be changed", async function () {
             await poolContract
                 .connect(eaServiceAccount)
@@ -110,11 +113,7 @@ describe("Base Credit Pool", function () {
             let result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
         });
-        it("Should reject setting APR higher than 10000", async function () {
-            await expect(poolConfigContract.connect(poolOwner).setAPR(12170)).to.revertedWith(
-                "invalidBasisPointHigherThan10000"
-            );
-        });
+
         it("Should mark a credit line without balance deleted when credit limit is set to allow credit limit to be changed", async function () {
             let record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.totalDue).to.equal(0);
@@ -127,6 +126,7 @@ describe("Base Credit Pool", function () {
             record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.state).to.equal(0);
         });
+
         it("Should note delete a credit line when there is balance due when set credit limit to 0", async function () {
             let record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.totalDue).to.equal(0);
@@ -165,16 +165,6 @@ describe("Base Credit Pool", function () {
                 await testTokenContract.balanceOf(borrower.address)
             );
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
-        });
-        it("Should not allow non-pool-owner-or-huma-admin to change credit expiration before first drawdown", async function () {
-            await expect(
-                poolConfigContract.connect(lender).setCreditApprovalExpiration(5)
-            ).to.be.revertedWith("permissionDeniedNotAdmin");
-        });
-        it("Should allow pool owner to change credit expiration before first drawdown", async function () {
-            await expect(poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5))
-                .to.emit(poolConfigContract, "CreditApprovalExpirationChanged")
-                .withArgs(432000, poolOwner.address);
         });
     });
 
@@ -593,6 +583,7 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.poolOwnerIncome).to.equal(3292);
             expect(accruedIncome.eaIncome).to.equal(9876);
         });
+
         it("Post-default payment", async function () {
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
