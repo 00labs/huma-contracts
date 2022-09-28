@@ -18,7 +18,7 @@ async function deployContracts(
     // Deploy HumaConfig
     const HumaConfig = await ethers.getContractFactory("HumaConfig");
     humaConfigContract = await HumaConfig.deploy(treasury.address);
-    await humaConfigContract.setHumaTreasury(treasury.address);
+    // await humaConfigContract.setHumaTreasury(treasury.address);
     await humaConfigContract.setTreasuryFee(2000);
     await humaConfigContract.addPauser(poolOwner.address);
     await humaConfigContract.setEANFTContractAddress(eaNFTContract.address);
@@ -103,7 +103,7 @@ async function deployAndSetupPool(
     );
     await poolProxy.deployed();
 
-    poolContract = poolContractFactory.attach(poolProxy.address);
+    const poolContract = poolContractFactory.attach(poolProxy.address);
     await poolContract.initialize(poolConfig.address);
     await poolContract.deployed();
 
@@ -153,7 +153,7 @@ async function deployAndSetupPool(
     await testTokenContract.connect(lender).approve(poolContract.address, 2_000_000);
     await poolContract.connect(lender).deposit(2_000_000);
 
-    return [hdtContract, poolConfig, poolContract];
+    return [hdtContract, poolConfig, poolContract, poolImpl, poolProxy];
 }
 
 async function advanceClock(days) {
