@@ -706,19 +706,19 @@ describe("Base Credit Pool", function () {
     });
 
     describe("Protocol/Pool Owner/EA fee", function () {
-        it("Should not withdraw protocol fee without protocol owner", async function () {
+        it("Should not allow non-protocol-owner to withdraw protocol", async function () {
             await expect(poolConfigContract.withdrawProtocolFee(1)).to.be.revertedWith(
                 "notProtocolOwner"
             );
         });
 
-        it("Should not withdraw pool owner fee without pool owner", async function () {
+        it("Should not allow non-pool-owner to withdraw pool owner fee", async function () {
             await expect(poolConfigContract.withdrawPoolOwnerFee(1)).to.be.revertedWith(
                 "notPoolOwner"
             );
         });
 
-        it("Should not withdraw ea fee without ea", async function () {
+        it("Should not allow non-ea withdraw ea fee", async function () {
             await expect(poolConfigContract.withdrawEAFee(1)).to.be.revertedWith(
                 "notEvaluationAgent"
             );

@@ -346,12 +346,12 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     }
 
     function withdrawPoolOwnerFee(uint256 amount) external {
-        address owner = owner();
-        if (msg.sender != owner) revert Errors.notPoolOwner();
+        address poolOwner = owner();
+        if (msg.sender != poolOwner) revert Errors.notPoolOwner();
         if (amount + _accuredIncome._poolOwnerIncomeWithdrawn > _accuredIncome._poolOwnerIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
         _accuredIncome._poolOwnerIncomeWithdrawn += amount;
-        underlyingToken.safeTransferFrom(pool, owner, amount);
+        underlyingToken.safeTransferFrom(pool, poolOwner, amount);
     }
 
     function poolDefaultGracePeriodInSeconds() external view returns (uint256) {
