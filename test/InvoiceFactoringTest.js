@@ -484,7 +484,12 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(pdsServiceAccount)
-                    .onReceivedPayment(borrower.address, testTokenContract.address, 1_500_000, 1)
+                    .onReceivedPayment(
+                        borrower.address,
+                        testTokenContract.address,
+                        1_500_000,
+                        ethers.utils.formatBytes32String("1")
+                    )
             ).to.be.revertedWith("poolIsNotOn()");
         });
 
@@ -493,7 +498,12 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .onReceivedPayment(borrower.address, testTokenContract.address, 1_500_000, 1)
+                    .onReceivedPayment(
+                        borrower.address,
+                        testTokenContract.address,
+                        1_500_000,
+                        ethers.utils.formatBytes32String("1")
+                    )
             ).to.be.revertedWith("paymentDetectionServiceAccountRequired()");
         });
 
@@ -508,12 +518,22 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(pdsServiceAccount)
-                .onReceivedPayment(borrower.address, testTokenContract.address, 1_500_000, 1);
+                .onReceivedPayment(
+                    borrower.address,
+                    testTokenContract.address,
+                    1_500_000,
+                    ethers.utils.formatBytes32String("1")
+                );
 
             await expect(
                 poolContract
                     .connect(pdsServiceAccount)
-                    .onReceivedPayment(borrower.address, testTokenContract.address, 1_500_000, 1)
+                    .onReceivedPayment(
+                        borrower.address,
+                        testTokenContract.address,
+                        1_500_000,
+                        ethers.utils.formatBytes32String("1")
+                    )
             ).to.be.revertedWith("paymentAlreadyProcessed()");
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(1_390_000);
