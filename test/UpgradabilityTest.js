@@ -1,5 +1,6 @@
 const {ethers} = require("hardhat");
 const {expect} = require("chai");
+const {deployContracts, deployAndSetupPool} = require("./BaseTest");
 
 describe("Upgradability Test", function () {
     let poolContract;
@@ -9,10 +10,8 @@ describe("Upgradability Test", function () {
     let feeManagerContract;
     let testTokenContract;
     let proxyOwner;
-    let owner;
     let lender;
     let borrower;
-    let borrower2;
     let treasury;
     let evaluationAgent;
     let poolImpl;
@@ -30,95 +29,51 @@ describe("Upgradability Test", function () {
             borrower,
             treasury,
             evaluationAgent,
-            owner,
+            poolOwner,
             protocolOwner,
             eaServiceAccount,
             pdsServiceAccount,
         ] = await ethers.getSigners();
-
-        // Deploy EvaluationAgentNFT
-        const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
-        eaNFTContract = await EvaluationAgentNFT.deploy();
-
-        const HumaConfig = await ethers.getContractFactory("HumaConfig");
-        humaConfigContract = await HumaConfig.deploy(treasury.address);
-        await humaConfigContract.setHumaTreasury(treasury.address);
-        await humaConfigContract.setEANFTContractAddress(eaNFTContract.address);
-        await humaConfigContract.setEAServiceAccount(eaServiceAccount.address);
-        await humaConfigContract.setPDSServiceAccount(pdsServiceAccount.address);
-        await humaConfigContract.transferOwnership(protocolOwner.address);
-
-        const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");
-        feeManagerContract = await feeManagerFactory.deploy();
-
-        await feeManagerContract.setFees(10, 100, 20, 100, 0);
-
-        const TestToken = await ethers.getContractFactory("TestToken");
-        testTokenContract = await TestToken.deploy();
-
-        const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
-        invoiceNFTContract = await InvoiceNFT.deploy(testTokenContract.address);
     });
 
     beforeEach(async function () {
-        const TransparentUpgradeableProxy = await ethers.getContractFactory(
-            "TransparentUpgradeableProxy"
+        [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
+            await deployContracts(
+                poolOwner,
+                treasury,
+                lender,
+                protocolOwner,
+                eaServiceAccount,
+                pdsServiceAccount
+            );
+
+        [hdtContract, poolConfigContract, poolContract, poolImpl, poolProxy] =
+            await deployAndSetupPool(
+                poolOwner,
+                proxyOwner,
+                evaluationAgent,
+                lender,
+                humaConfigContract,
+                feeManagerContract,
+                testTokenContract,
+                0,
+                eaNFTContract
+            );
+
+        const TimelockController = await ethers.getContractFactory("TimelockController");
+        timelockContract = await TimelockController.deploy(
+            0,
+            [protocolOwner.address],
+            [protocolOwner.address]
         );
+        await timelockContract.deployed();
 
-        const HDT = await ethers.getContractFactory("HDT");
-        const hdtImpl = await HDT.deploy();
-        await hdtImpl.deployed();
-        const hdtProxy = await TransparentUpgradeableProxy.deploy(
-            hdtImpl.address,
-            proxyOwner.address,
-            []
-        );
-        await hdtProxy.deployed();
-        hdtContract = HDT.attach(hdtProxy.address);
-        await hdtContract.initialize("Base Credit HDT", "CHDT", testTokenContract.address);
+        // set timelock as HDT's owner
+        await hdtContract.transferOwnership(timelockContract.address);
 
-        const BasePoolConfig = await ethers.getContractFactory("BasePoolConfig");
-        poolConfigContract = await BasePoolConfig.deploy(
-            "Base Credit Pool",
-            hdtContract.address,
-            humaConfigContract.address,
-            feeManagerContract.address
-        );
-        await poolConfigContract.deployed();
-
-        const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
-        poolImpl = await BaseCreditPool.deploy();
-        await poolImpl.deployed();
-        poolProxy = await TransparentUpgradeableProxy.deploy(
-            poolImpl.address,
-            proxyOwner.address,
-            []
-        );
-        await poolProxy.deployed();
-
-        poolContract = BaseCreditPool.attach(poolProxy.address);
-        await poolContract.initialize(poolConfigContract.address);
-
-        await poolConfigContract.setPool(poolContract.address);
-        await hdtContract.setPool(poolContract.address);
-
-        await testTokenContract.approve(poolContract.address, 100);
-
-        await poolConfigContract.setMaxCreditLine(1000);
-
-        let eaNFTTokenId;
-        // Mint EANFT to the borrower
-        const tx = await eaNFTContract.mintNFT(evaluationAgent.address, "");
-        const receipt = await tx.wait();
-        for (const evt of receipt.events) {
-            if (evt.event === "NFTGenerated") {
-                eaNFTTokenId = evt.args.tokenId;
-            }
-        }
-
-        await poolConfigContract.setEvaluationAgent(eaNFTTokenId, evaluationAgent.address);
-
-        await poolContract.enablePool();
+        // deployer renounces admin role
+        const adminRole = await timelockContract.TIMELOCK_ADMIN_ROLE();
+        await timelockContract.renounceRole(adminRole, defaultDeployer.address);
     });
 
     describe("V1", async function () {
@@ -139,7 +94,7 @@ describe("Upgradability Test", function () {
 
         it("Should not upgrade without pool owner", async function () {
             await expect(
-                poolProxy.connect(owner).upgradeTo(newPoolImpl.address)
+                poolProxy.connect(protocolOwner).upgradeTo(newPoolImpl.address)
             ).to.be.revertedWith(
                 "function selector was not recognized and there's no fallback function"
             );
@@ -154,16 +109,18 @@ describe("Upgradability Test", function () {
 
         it("Should call deleted function failed", async function () {
             await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
-            await expect(poolContract.approveCredit(owner.address)).to.be.revertedWith(
+            await expect(poolContract.approveCredit(protocolOwner.address)).to.be.revertedWith(
                 "function selector was not recognized and there's no fallback function"
             );
         });
 
         it("Should call changed function and new function successfully", async function () {
             await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
-            await poolContract.connect(eaServiceAccount).changeCreditLine(owner.address, 100);
+            await poolContract
+                .connect(eaServiceAccount)
+                .changeCreditLine(protocolOwner.address, 100);
             poolContract = MockBaseCreditPoolV2.attach(poolContract.address);
-            const cl = await poolContract.getCreditLine(owner.address);
+            const cl = await poolContract.getCreditLine(protocolOwner.address);
             expect(cl).equals(200);
         });
     });

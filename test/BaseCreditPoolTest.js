@@ -93,16 +93,19 @@ describe("Base Credit Pool", function () {
             ).to.be.revertedWith("protocolIsPaused()");
             await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
+
         it("Should not allow non-EA to change credit line", async function () {
             await expect(
                 poolContract.connect(borrower).changeCreditLine(borrower.address, 1000000)
             ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
         });
+
         it("Should not allow credit line to be changed to above maximal credit line", async function () {
             await expect(
                 poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 50000000)
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
+
         it("Should allow credit limit to be changed", async function () {
             await poolContract
                 .connect(eaServiceAccount)
@@ -110,11 +113,7 @@ describe("Base Credit Pool", function () {
             let result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(1000000);
         });
-        it("Should reject setting APR higher than 10000", async function () {
-            await expect(poolConfigContract.connect(poolOwner).setAPR(12170)).to.revertedWith(
-                "invalidBasisPointHigherThan10000"
-            );
-        });
+
         it("Should mark a credit line without balance deleted when credit limit is set to allow credit limit to be changed", async function () {
             let record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.totalDue).to.equal(0);
@@ -127,6 +126,7 @@ describe("Base Credit Pool", function () {
             record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.state).to.equal(0);
         });
+
         it("Should note delete a credit line when there is balance due when set credit limit to 0", async function () {
             let record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.totalDue).to.equal(0);
@@ -165,16 +165,6 @@ describe("Base Credit Pool", function () {
                 await testTokenContract.balanceOf(borrower.address)
             );
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
-        });
-        it("Should not allow non-pool-owner-or-huma-admin to change credit expiration before first drawdown", async function () {
-            await expect(
-                poolConfigContract.connect(lender).setCreditApprovalExpiration(5)
-            ).to.be.revertedWith("permissionDeniedNotAdmin");
-        });
-        it("Should allow pool owner to change credit expiration before first drawdown", async function () {
-            await expect(poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5))
-                .to.emit(poolConfigContract, "CreditApprovalExpirationChanged")
-                .withArgs(432000, poolOwner.address);
         });
     });
 
@@ -593,6 +583,7 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.poolOwnerIncome).to.equal(3292);
             expect(accruedIncome.eaIncome).to.equal(9876);
         });
+
         it("Post-default payment", async function () {
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
@@ -711,6 +702,110 @@ describe("Base Credit Pool", function () {
                 2_019_678
             );
             expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_019_678);
+        });
+    });
+
+    describe("Protocol/Pool Owner/EA fee", function () {
+        it("Should not allow non-protocol-owner to withdraw protocol", async function () {
+            await expect(poolConfigContract.withdrawProtocolFee(1)).to.be.revertedWith(
+                "notProtocolOwner"
+            );
+        });
+
+        it("Should not allow non-pool-owner to withdraw pool owner fee", async function () {
+            await expect(poolConfigContract.withdrawPoolOwnerFee(1)).to.be.revertedWith(
+                "notPoolOwner"
+            );
+        });
+
+        it("Should not allow non-ea withdraw ea fee", async function () {
+            await expect(poolConfigContract.withdrawEAFee(1)).to.be.revertedWith(
+                "notEvaluationAgent"
+            );
+        });
+
+        it("Should not withdraw protocol fee while amount > withdrawable", async function () {
+            const poolConfigFromProtocolOwner = await poolConfigContract.connect(protocolOwner);
+            await expect(poolConfigFromProtocolOwner.withdrawProtocolFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should not withdraw pool owner fee while amount > withdrawable", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwner);
+            await expect(poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should not withdraw ea fee while amount > withdrawable", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(evaluationAgent);
+            await expect(poolConfigFromPoolOwner.withdrawEAFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should withdraw protocol fee", async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(100_000);
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            const amount = accruedIncome.protocolIncome;
+            const poolConfigFromProtocolOwner = await poolConfigContract.connect(protocolOwner);
+            const beforeBalance = await testTokenContract.balanceOf(treasury.address);
+
+            await poolConfigFromProtocolOwner.withdrawProtocolFee(amount);
+            accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.protocolIncomeWithdrawn).equals(amount);
+            const afterBalance = await testTokenContract.balanceOf(treasury.address);
+            expect(amount).equals(afterBalance.sub(beforeBalance));
+
+            await expect(poolConfigFromProtocolOwner.withdrawProtocolFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should withdraw pool owner fee", async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(100_000);
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            const amount = accruedIncome.poolOwnerIncome;
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwner);
+            const beforeBalance = await testTokenContract.balanceOf(poolOwner.address);
+
+            await poolConfigFromPoolOwner.withdrawPoolOwnerFee(amount);
+            accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.poolOwnerIncomeWithdrawn).equals(amount);
+            const afterBalance = await testTokenContract.balanceOf(poolOwner.address);
+            expect(amount).equals(afterBalance.sub(beforeBalance));
+
+            await expect(poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should withdraw ea fee", async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(100_000);
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            const amount = accruedIncome.eaIncome;
+            const poolConfigFromEA = await poolConfigContract.connect(evaluationAgent);
+            const beforeBalance = await testTokenContract.balanceOf(evaluationAgent.address);
+
+            await poolConfigFromEA.withdrawEAFee(amount);
+            accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.eaIncomeWithdrawn).equals(amount);
+            const afterBalance = await testTokenContract.balanceOf(evaluationAgent.address);
+            expect(amount).equals(afterBalance.sub(beforeBalance));
+
+            await expect(poolConfigFromEA.withdrawEAFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
         });
     });
 });
