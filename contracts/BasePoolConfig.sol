@@ -51,8 +51,11 @@ contract BasePoolConfig is Ownable, IPoolConfig {
 
     struct AccruedIncome {
         uint256 _protocolIncome;
+        uint256 _protocolIncomeWithdrawn;
         uint256 _poolOwnerIncome;
+        uint256 _poolOwnerIncomeWithdrawn;
         uint256 _eaIncome;
+        uint256 _eaIncomeWithdrawn;
     }
 
     uint256 internal constant HUNDRED_PERCENT_IN_BPS = 10000;
@@ -323,26 +326,32 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     }
 
     function withdrawEAFee(uint256 amount) external {
-        if (msg.sender != evaluationAgent) revert Errors.notEvaluationAgent();
-        if (amount > _accuredIncome._eaIncome) revert Errors.withdrawnAmountHigherThanBalance();
-        //todo pool needs to approve max amount to poolCOnfig
-        underlyingToken.safeTransferFrom(pool, evaluationAgent, amount);
+        address ea = evaluationAgent;
+        if (msg.sender != ea) revert Errors.notEvaluationAgent();
+        if (amount + _accuredIncome._eaIncomeWithdrawn > _accuredIncome._eaIncome)
+            revert Errors.withdrawnAmountHigherThanBalance();
+        _accuredIncome._eaIncomeWithdrawn += amount;
+        underlyingToken.safeTransferFrom(pool, ea, amount);
     }
 
-    function withdrawProtocolFee(uint256 amount) external virtual {
+    function withdrawProtocolFee(uint256 amount) external {
         if (msg.sender != humaConfig.owner()) revert Errors.notProtocolOwner();
-        if (amount > _accuredIncome._protocolIncome)
+        if (amount + _accuredIncome._protocolIncomeWithdrawn > _accuredIncome._protocolIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
+        _accuredIncome._protocolIncomeWithdrawn += amount;
         address treasuryAddress = humaConfig.humaTreasury();
-        underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
+        if (treasuryAddress != address(0)) {
+            underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
+        }
     }
 
-    function withdrawPoolOwnerFee(uint256 amount) external virtual {
-        // todo need to add a test against non-pool-owner
-        if (msg.sender != this.owner()) revert Errors.notPoolOwner();
-        if (amount > _accuredIncome._poolOwnerIncome)
+    function withdrawPoolOwnerFee(uint256 amount) external {
+        address poolOwner = owner();
+        if (msg.sender != poolOwner) revert Errors.notPoolOwner();
+        if (amount + _accuredIncome._poolOwnerIncomeWithdrawn > _accuredIncome._poolOwnerIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
-        underlyingToken.safeTransferFrom(pool, this.owner(), amount);
+        _accuredIncome._poolOwnerIncomeWithdrawn += amount;
+        underlyingToken.safeTransferFrom(pool, poolOwner, amount);
     }
 
     function poolDefaultGracePeriodInSeconds() external view returns (uint256) {
@@ -444,13 +453,19 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         returns (
             uint256 protocolIncome,
             uint256 poolOwnerIncome,
-            uint256 eaIncome
+            uint256 eaIncome,
+            uint256 protocolIncomeWithdrawn,
+            uint256 poolOwnerIncomeWithdrawn,
+            uint256 eaIncomeWithdrawn
         )
     {
         return (
             _accuredIncome._protocolIncome,
             _accuredIncome._poolOwnerIncome,
-            _accuredIncome._eaIncome
+            _accuredIncome._eaIncome,
+            _accuredIncome._protocolIncomeWithdrawn,
+            _accuredIncome._poolOwnerIncomeWithdrawn,
+            _accuredIncome._eaIncomeWithdrawn
         );
     }
 
