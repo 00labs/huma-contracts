@@ -19,7 +19,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         address indexed borrower,
         address asset,
         uint256 amount,
-        uint256 paymentId
+        bytes32 paymentId
     );
 
     /**
@@ -78,7 +78,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         address borrower,
         address asset,
         uint256 amount,
-        uint256 paymentId
+        bytes32 paymentIdHash
     ) external virtual override {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
@@ -87,14 +87,14 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
 
         // Makes sure no repeated processing of a payment.
-        if (_processedPaymentIds[paymentId] == true) revert Errors.paymentAlreadyProcessed();
-        _processedPaymentIds[paymentId] = true;
+        if (_processedPaymentIds[paymentIdHash] == true) revert Errors.paymentAlreadyProcessed();
+        _processedPaymentIds[paymentIdHash] = true;
 
         uint256 amountPaid = _makePayment(borrower, asset, amount, true);
 
         if (amount > amountPaid) disperseRemainingFunds(borrower, amount - amountPaid);
 
-        emit ReceivedPayment(msg.sender, borrower, asset, amount, paymentId);
+        emit ReceivedPayment(msg.sender, borrower, asset, amount, paymentIdHash);
     }
 
     /**
