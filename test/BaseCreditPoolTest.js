@@ -731,14 +731,14 @@ describe("Base Credit Pool", function () {
             );
         });
 
-        it("Should not withdraw pool owner fee without pool owner", async function () {
+        it("Should not withdraw pool owner fee while amount > withdrawable", async function () {
             const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwner);
             await expect(poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)).to.be.revertedWith(
                 "withdrawnAmountHigherThanBalance"
             );
         });
 
-        it("Should not withdraw ea fee without ea", async function () {
+        it("Should not withdraw ea fee while amount > withdrawable", async function () {
             const poolConfigFromPoolOwner = await poolConfigContract.connect(evaluationAgent);
             await expect(poolConfigFromPoolOwner.withdrawEAFee(1)).to.be.revertedWith(
                 "withdrawnAmountHigherThanBalance"
