@@ -32,6 +32,6 @@ interface IReceivable {
         address borrower,
         address asset,
         uint256 amount,
-        uint256 paymentId
+        bytes32 paymentIdHash
     ) external;
 }
