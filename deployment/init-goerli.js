@@ -185,7 +185,7 @@ async function initPoolConfig() {
         "ReceivableFactoringpoolConfig",
         poolConfig,
         "setReceivableRequiredInBps",
-        [10000]
+        [12500]
     );
     await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setPoolPayPeriod", [30]);
     await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setPoolToken", [
