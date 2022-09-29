@@ -14,12 +14,13 @@ import "./Errors.sol";
 contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     using SafeERC20 for IERC20;
 
-    event ReceivedPayment(
+    event ReceivedPaymentProcessed(
         address indexed sender,
         address indexed borrower,
         uint256 amount,
         bytes32 paymentIdHash
     );
+    event ExtraFundsDispersed(address indexed receiver, uint256 amount);
 
     /**
      * @notice After the EA (EvalutionAgent) has approved a factoring, it calls this function
@@ -90,7 +91,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
 
         if (amount > amountPaid) disperseRemainingFunds(borrower, amount - amountPaid);
 
-        emit ReceivedPayment(msg.sender, borrower, amount, paymentIdHash);
+        emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
     }
 
     /**
@@ -100,5 +101,6 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
      */
     function disperseRemainingFunds(address receiver, uint256 amount) internal {
         _underlyingToken.safeTransfer(receiver, amount);
+        emit ExtraFundsDispersed(receiver, amount);
     }
 }
