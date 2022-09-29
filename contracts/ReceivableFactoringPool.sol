@@ -90,7 +90,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
 
         if (amount > amountPaid) disperseRemainingFunds(borrower, amount - amountPaid);
 
-        emit ReceivedPayment(msg.sender, borrower, amount, paymentId);
+        emit ReceivedPayment(msg.sender, borrower, amount, paymentIdHash);
     }
 
     /**
