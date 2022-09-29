@@ -41,7 +41,11 @@ if (!ea) {
 }
 let eaService = process.env["EA_SERVICE"];
 if (!eaService) {
-    eaService = EMPTY_PRIVATE_KEY;
+    eaService, (pdsService = EMPTY_PRIVATE_KEY);
+}
+let pdsService = process.env["PDS_SERVICE"];
+if (!pdsService) {
+    pdsService = EMPTY_PRIVATE_KEY;
 }
 //
 // Select the network you want to deploy to here:
@@ -122,7 +126,7 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [deployer, proxyOwner, lender, ea, eaService],
+            accounts: [deployer, proxyOwner, lender, ea, eaService, pdsService],
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",

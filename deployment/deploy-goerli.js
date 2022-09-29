@@ -1,7 +1,5 @@
 const {deploy} = require("./utils.js");
 
-const PROXY_OWNER_ADDRESS = "0x5Baca8ED2dC6f4410755F619B3A4DFB3eA4cA9F0";
-
 async function deployContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
@@ -11,6 +9,7 @@ async function deployContracts() {
     }
     const deployer = await accounts[0];
     console.log("deployer address: " + deployer.address);
+    const proxyOwner = await accounts[1];
 
     const eaService = await accounts[4];
     console.log("ea service address: " + eaService.address);
@@ -28,7 +27,7 @@ async function deployContracts() {
     const hdtImpl = await deploy("HDT", "HDTImpl");
     const hdt = await deploy("TransparentUpgradeableProxy", "HDT", [
         hdtImpl.address,
-        PROXY_OWNER_ADDRESS,
+        proxyOwner.address,
         [],
     ]);
 
@@ -42,7 +41,7 @@ async function deployContracts() {
     const poolImpl = await deploy("ReceivableFactoringPool", "ReceivableFactoringPoolImpl");
     const pool = await deploy("TransparentUpgradeableProxy", "ReceivableFactoringPool", [
         poolImpl.address,
-        PROXY_OWNER_ADDRESS,
+        proxyOwner.address,
         [],
     ]);
 
