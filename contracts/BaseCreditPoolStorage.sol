@@ -10,7 +10,9 @@ contract BaseCreditPoolStorage {
     mapping(address => BS.ReceivableInfo) internal _receivableInfoMapping;
     mapping(address => BS.CreditRecordStatic) internal _creditRecordStaticMapping;
 
-    mapping(uint256 => bool) internal _processedPaymentIds;
+    /// mapping from the keccak256 hash of the payment event emitting address and its unique
+    /// payment ID to a boolean. Used for preventing duplicate payment processing calls.
+    mapping(bytes32 => bool) internal _processedPaymentIds;
     /// mapping from the keccak256 hash of the receivableAddress and receivableParam to
     /// the borrower address. This is needed for us to locate the borrower using
     /// the received receivable asset.
