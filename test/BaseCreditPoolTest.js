@@ -8,6 +8,7 @@ const {
     advanceClock,
     checkRecord,
     checkResult,
+    getCreditInfo,
 } = require("./BaseTest");
 
 use(solidity);
@@ -200,7 +201,7 @@ describe("Base Credit Pool", function () {
 
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
-            const loanInformation = await poolContract.getCreditInformation(borrower.address);
+            const loanInformation = await getCreditInfo(poolContract, borrower.address);
             expect(loanInformation.creditLimit).to.equal(1_000_000);
             expect(loanInformation.intervalInDays).to.equal(30);
             expect(loanInformation.aprInBps).to.equal(1217);
@@ -325,7 +326,7 @@ describe("Base Credit Pool", function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, 1_010_002);
             await poolContract.connect(borrower).makePayment(borrower.address, 1_010_002);
 
-            let creditInfo = await poolContract.getCreditInformation(borrower.address);
+            let creditInfo = await poolContract.creditRecordMapping(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.totalDue).to.equal(0);
 
@@ -366,7 +367,7 @@ describe("Base Credit Pool", function () {
             advanceClock(6);
 
             await expect(poolContract.connect(borrower).drawdown(1_000_000));
-            let creditInfo = await poolContract.getCreditInformation(borrower.address);
+            let creditInfo = await poolContract.creditRecordMapping(borrower.address);
             expect(creditInfo.remainingPeriods).to.equal(11);
         });
 
@@ -375,13 +376,13 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await expect(poolContract.connect(borrower).drawdown(500_000));
-            let creditInfo = await poolContract.getCreditInformation(borrower.address);
+            let creditInfo = await poolContract.creditRecordMapping(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(500_000);
 
             advanceClock(6);
 
             await poolContract.connect(borrower).drawdown(500_000);
-            creditInfo = await poolContract.getCreditInformation(borrower.address);
+            creditInfo = await poolContract.creditRecordMapping(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(1_000_000);
         });
     });
@@ -404,7 +405,7 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(1_000_000);
 
-            let record = await poolContract.getCreditInformation(borrower.address);
+            let record = await poolContract.creditRecordMapping(borrower.address);
             let previousDueDate = record.dueDate;
 
             advanceClock(40);
@@ -455,7 +456,7 @@ describe("Base Credit Pool", function () {
 
             await poolContract.connect(borrower).makePayment(borrower.address, 11002);
 
-            let creditInfo = await poolContract.getCreditInformation(borrower.address);
+            let creditInfo = await poolContract.creditRecordMapping(borrower.address);
 
             expect(creditInfo.unbilledPrincipal).to.equal(999_000);
             expect(creditInfo.remainingPeriods).to.equal(11);
@@ -496,7 +497,7 @@ describe("Base Credit Pool", function () {
             advanceClock(30);
 
             await poolContract.refreshAccount(borrower.address);
-            let creditInfo = await poolContract.getCreditInformation(borrower.address);
+            let creditInfo = await poolContract.creditRecordMapping(borrower.address);
             await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                 "defaultTriggeredTooEarly()"
             );
@@ -512,7 +513,7 @@ describe("Base Credit Pool", function () {
             advanceClock(30);
 
             await poolContract.refreshAccount(borrower.address);
-            creditInfo = await poolContract.getCreditInformation(borrower.address);
+            creditInfo = await poolContract.creditRecordMapping(borrower.address);
             await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                 "defaultTriggeredTooEarly()"
             );
@@ -529,14 +530,14 @@ describe("Base Credit Pool", function () {
 
             // Intertionally bypass calling updateDueInfo(), and expects triggerDefault() to call it
             // await poolContract.updateDueInfo(borrower.address);
-            // creditInfo = await poolContract.getCreditInformation(borrower.address);
+            // creditInfo = await poolContract.creditRecordMapping(borrower.address);
 
             // Triggers default and makes sure the event is emitted
             await expect(poolContract.connect(eaServiceAccount).triggerDefault(borrower.address))
                 .to.emit(poolContract, "DefaultTriggered")
                 .withArgs(borrower.address, 1_054_850, eaServiceAccount.address);
 
-            creditInfo = await poolContract.getCreditInformation(borrower.address);
+            creditInfo = await poolContract.creditRecordMapping(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(1_054_850);
             expect(creditInfo.feesAndInterestDue).to.equal(23099);
             expect(creditInfo.totalDue).to.equal(23099);
@@ -596,7 +597,7 @@ describe("Base Credit Pool", function () {
                 .to.emit(poolContract, "DefaultTriggered")
                 .withArgs(borrower.address, 1_054_850, eaServiceAccount.address);
 
-            creditInfo = await poolContract.getCreditInformation(borrower.address);
+            creditInfo = await poolContract.creditRecordMapping(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(1_054_850);
             expect(creditInfo.feesAndInterestDue).to.equal(23099);
             expect(creditInfo.totalDue).to.equal(23099);

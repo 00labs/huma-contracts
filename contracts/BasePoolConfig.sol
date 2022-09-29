@@ -58,9 +58,9 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         uint256 _eaIncomeWithdrawn;
     }
 
-    uint256 internal constant HUNDRED_PERCENT_IN_BPS = 10000;
-    uint256 internal constant SECONDS_IN_A_DAY = 86400;
-    uint256 internal constant SECONDS_IN_180_DAYS = 15552000;
+    uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
+    uint256 private constant SECONDS_IN_A_DAY = 86400;
+    uint256 private constant SECONDS_IN_180_DAYS = 15552000;
 
     string public poolName;
 
@@ -132,28 +132,28 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @notice Change pool name
      */
     function setPoolName(string memory newName) external override {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         poolName = newName;
         emit PoolNameChanged(newName, msg.sender);
     }
 
     function setPool(address _pool) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         pool = _pool;
     }
 
     function setHumaConfig(address _humaConfig) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         humaConfig = HumaConfig(_humaConfig);
     }
 
     function setFeeManager(address _feeManager) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         feeManager = _feeManager;
     }
 
     function setPoolToken(address _poolToken) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         poolToken = HDT(_poolToken);
         underlyingToken = IERC20(poolToken.assetToken());
     }
@@ -164,7 +164,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      */
     function setEvaluationAgent(uint256 eaId, address agent) external override {
         if (agent == address(0)) revert Errors.zeroAddressProvided();
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
 
         // todo change script to make sure eaNFTContract is deployed, and the eaId is minted.
         // if (IERC721(HumaConfig(_humaConfig).eaNFTContractAddress()).ownerOf(eaId) != agent)
@@ -199,8 +199,8 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @param aprInBps APR in basis points, use 500 for 5%
      */
     function setAPR(uint256 aprInBps) external {
-        onlyOwnerOrHumaMasterAdmin();
-        if (aprInBps > 10000) revert Errors.invalidBasisPointHigherThan10000();
+        _onlyOwnerOrHumaMasterAdmin();
+        if (aprInBps > HUNDRED_PERCENT_IN_BPS) revert Errors.invalidBasisPointHigherThan10000();
         _poolConfig._poolAprInBps = aprInBps;
         emit APRUpdated(aprInBps);
     }
@@ -212,7 +212,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @param receivableInBps the percentage. A percentage over 10000 means overreceivableization.
      */
     function setReceivableRequiredInBps(uint256 receivableInBps) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         // note: this rate can be over 10000 when it requires more backing than the credit limit
         _poolConfig._receivableRequiredInBps = receivableInBps;
     }
@@ -222,7 +222,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @param creditLine the max amount of a credit line
      */
     function setMaxCreditLine(uint256 creditLine) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         if (creditLine == 0) revert Errors.zeroAmountProvided();
         _poolConfig._maxCreditLine = creditLine;
     }
@@ -232,13 +232,13 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @param gracePeriodInDays the desired grace period in days.
      */
     function setPoolDefaultGracePeriod(uint256 gracePeriodInDays) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._poolDefaultGracePeriodInSeconds = gracePeriodInDays * SECONDS_IN_A_DAY;
         emit PoolDefaultGracePeriodChanged(gracePeriodInDays, msg.sender);
     }
 
     function setPoolPayPeriod(uint256 periodInDays) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._payPeriodInDays = periodInDays;
         emit PoolPayPeriodChanged(periodInDays, msg.sender);
     }
@@ -248,7 +248,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @param lockoutPeriodInDays the lockout period in terms of days
      */
     function setWithdrawalLockoutPeriod(uint256 lockoutPeriodInDays) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._withdrawalLockoutPeriodInSeconds = lockoutPeriodInDays * SECONDS_IN_A_DAY;
         emit WithdrawalLockoutPeriodUpdated(lockoutPeriodInDays, msg.sender);
     }
@@ -258,27 +258,27 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @param liquidityCap the upper bound that the pool accepts liquidity from the depositers
      */
     function setPoolLiquidityCap(uint256 liquidityCap) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._liquidityCap = liquidityCap;
         emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
     }
 
     function setPoolOwnerRewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._rewardRateInBpsForPoolOwner = rewardsRate;
         _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
         emit PoolOwnerCommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
     function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._rewardRateInBpsForEA = rewardsRate;
         _poolConfig._liquidityRateInBpsByEA = liquidityRate;
         emit EACommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
     function setCreditApprovalExpiration(uint256 durationInDays) external {
-        onlyOwnerOrHumaMasterAdmin();
+        _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._creditApprovalExpirationInSeconds = durationInDays * SECONDS_IN_A_DAY;
         emit CreditApprovalExpirationChanged(durationInDays * SECONDS_IN_A_DAY, msg.sender);
     }
@@ -502,11 +502,11 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         checkLiquidityRequirementForEA(poolToken.withdrawableFundsOf(evaluationAgent));
     }
 
-    function onlyOwnerOrHumaMasterAdmin() internal view {
-        onlyOwnerOrHumaMasterAdmin(msg.sender);
-    }
-
     function isOwnerOrEA(address account) public view returns (bool) {
         return (account == owner() || account == evaluationAgent);
+    }
+
+    function _onlyOwnerOrHumaMasterAdmin() internal view {
+        onlyOwnerOrHumaMasterAdmin(msg.sender);
     }
 }

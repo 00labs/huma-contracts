@@ -9,6 +9,7 @@ const {
     checkRecord,
     checkResult,
     checkArruedIncome,
+    getCreditInfo,
 } = require("./BaseTest");
 
 use(solidity);
@@ -212,7 +213,7 @@ describe("Invoice Factoring", function () {
                     1
                 );
 
-            const creditInfo = await poolContract.getCreditInformation(borrower.address);
+            const creditInfo = await getCreditInfo(poolContract, borrower.address);
 
             expect(creditInfo.creditLimit).to.equal(1_000_000);
             expect(creditInfo.unbilledPrincipal).to.equal(0);
@@ -254,7 +255,7 @@ describe("Invoice Factoring", function () {
                     1
                 );
 
-            const creditInfo = await poolContract.getCreditInformation(borrower.address);
+            const creditInfo = await getCreditInfo(poolContract, borrower.address);
 
             expect(creditInfo.creditLimit).to.equal(1_000_000);
             expect(creditInfo.unbilledPrincipal).to.equal(0);
@@ -284,7 +285,7 @@ describe("Invoice Factoring", function () {
             await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
 
             //await poolContract.printDetailStatus(borrower.address);
-            const creditInfo = await poolContract.getCreditInformation(borrower.address);
+            const creditInfo = await getCreditInfo(poolContract, borrower.address);
 
             expect(creditInfo.creditLimit).to.equal(0); // Means "Deleted"
             expect(creditInfo.state).to.equal(0); // Means "Deleted"

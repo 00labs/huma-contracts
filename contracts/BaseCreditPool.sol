@@ -40,7 +40,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 numOfPayments
     ) external virtual override {
         // Open access to the borrower. Data validation happens in initiateCredit()
-        initiateCredit(
+        _initiateCredit(
             msg.sender,
             creditLimit,
             _poolConfig.poolAprInBps(),
@@ -55,7 +55,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @param borrower the address of the borrower
      * @param creditLimit the amount of the liquidity asset that the borrower obtains
      */
-    function initiateCredit(
+    function _initiateCredit(
         address borrower,
         uint256 creditLimit,
         uint256 aprInBps,
@@ -563,51 +563,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return this.onERC721Received.selector;
     }
 
-    /**
-     * @notice Gets high-level information about the loan.
-     */
-    // review remove it to use default getter creditRecordMapping(address)
-    function getCreditInformation(address borrower)
-        external
-        view
-        returns (
-            uint96 unbilledPrincipal,
-            uint64 dueDate,
-            int96 correction,
-            uint96 totalDue,
-            uint96 feesAndInterestDue,
-            uint16 missedPeriods,
-            uint16 remainingPeriods,
-            BS.CreditState state,
-            uint96 creditLimit,
-            uint16 aprInBps,
-            uint16 intervalInDays
-        )
-    {
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-        BS.CreditRecordStatic memory crStatic = _creditRecordStaticMapping[borrower];
-
-        return (
-            cr.unbilledPrincipal,
-            cr.dueDate,
-            cr.correction,
-            cr.totalDue,
-            cr.feesAndInterestDue,
-            cr.missedPeriods,
-            cr.remainingPeriods,
-            cr.state,
-            crStatic.creditLimit,
-            crStatic.aprInBps,
-            crStatic.intervalInDays
-        );
-    }
-
     function creditRecordMapping(address account) external view returns (BS.CreditRecord memory) {
         return _creditRecordMapping[account];
-    }
-
-    function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
-        return _receivableOwnershipMapping[receivableHash];
     }
 
     function creditRecordStaticMapping(address account)
@@ -631,13 +588,25 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                 : false;
     }
 
+    function receivableInfoMapping(address account)
+        external
+        view
+        returns (BS.ReceivableInfo memory)
+    {
+        return _receivableInfoMapping[account];
+    }
+
+    function isProcessedPayment(bytes32 paymentIdHash) external view returns (bool) {
+        return _processedPaymentIds[paymentIdHash];
+    }
+
+    function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
+        return _receivableOwnershipMapping[receivableHash];
+    }
+
     function onlyEAServiceAccount() internal view {
         if (msg.sender != _humaConfig.eaServiceAccount())
             revert Errors.evaluationAgentServiceAccountRequired();
-    }
-
-    function maxCreditLine() internal view returns (uint256) {
-        return _poolConfig.maxCreditLine();
     }
 
     function onlyPDSServiceAccount() internal view {

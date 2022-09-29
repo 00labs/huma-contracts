@@ -16,10 +16,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
     using BS for BS.CreditRecord;
 
     // Divider to convert BPS to percentage
-    uint256 public constant HUNDRED_PERCENT_IN_BPS = 10000;
+    uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
-    uint256 public constant SECONDS_IN_A_YEAR = 31536000;
-    uint256 public constant SECONDS_IN_A_DAY = 86400;
+    uint256 private constant SECONDS_IN_A_YEAR = 31536000;
+    uint256 private constant SECONDS_IN_A_DAY = 86400;
 
     /// Part of platform fee, charged when a borrow happens as a flat amount of the pool token
     uint256 public frontLoadingFeeFlat;
@@ -66,7 +66,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // rounding to days
         uint256 remainingTime = dueDate - block.timestamp;
 
-        return (amount * aprInBps * remainingTime) / SECONDS_IN_A_YEAR / 10000;
+        return (amount * aprInBps * remainingTime) / SECONDS_IN_A_YEAR / HUNDRED_PERCENT_IN_BPS;
     }
 
     /**
@@ -82,7 +82,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
         returns (uint256 fees)
     {
         fees = frontLoadingFeeFlat;
-        if (frontLoadingFeeBps > 0) fees += (_amount * frontLoadingFeeBps) / 10000;
+        if (frontLoadingFeeBps > 0)
+            fees += (_amount * frontLoadingFeeBps) / HUNDRED_PERCENT_IN_BPS;
     }
 
     /**
@@ -230,7 +231,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
             }
 
             // step 5. compute principal due and adjust unbilled principal
-            uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) / 10000;
+            uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) /
+                HUNDRED_PERCENT_IN_BPS;
             _cr.feesAndInterestDue = uint96(fees + interest);
             totalCharges += (fees + interest);
             _cr.totalDue = uint96(fees + interest + principalToBill);
