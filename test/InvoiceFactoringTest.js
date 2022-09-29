@@ -471,9 +471,7 @@ describe("Invoice Factoring", function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
 
             await expect(
-                poolContract
-                    .connect(borrower)
-                    .makePayment(borrower.address, testTokenContract.address, 5)
+                poolContract.connect(borrower).makePayment(borrower.address, 5)
             ).to.be.revertedWith("protocolIsPaused()");
         });
 
@@ -486,7 +484,6 @@ describe("Invoice Factoring", function () {
                     .connect(pdsServiceAccount)
                     .onReceivedPayment(
                         borrower.address,
-                        testTokenContract.address,
                         1_500_000,
                         ethers.utils.formatBytes32String("1")
                     )
@@ -500,7 +497,6 @@ describe("Invoice Factoring", function () {
                     .connect(borrower)
                     .onReceivedPayment(
                         borrower.address,
-                        testTokenContract.address,
                         1_500_000,
                         ethers.utils.formatBytes32String("1")
                     )
@@ -520,7 +516,6 @@ describe("Invoice Factoring", function () {
                 .connect(pdsServiceAccount)
                 .onReceivedPayment(
                     borrower.address,
-                    testTokenContract.address,
                     1_500_000,
                     ethers.utils.formatBytes32String("1")
                 );
@@ -530,7 +525,6 @@ describe("Invoice Factoring", function () {
                     .connect(pdsServiceAccount)
                     .onReceivedPayment(
                         borrower.address,
-                        testTokenContract.address,
                         1_500_000,
                         ethers.utils.formatBytes32String("1")
                     )
