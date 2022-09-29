@@ -96,7 +96,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
             address humaConfigAddr,
             address feeManagerAddr
         ) = _poolConfig.getCoreData();
-        // note Can underlyingToken be changed?
         _underlyingToken = IERC20(underlyingTokenAddr);
         _poolToken = IHDT(poolTokenAddr);
         _humaConfig = HumaConfig(humaConfigAddr);
@@ -281,6 +280,26 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function isPoolOn() external view returns (bool status) {
         if (_status == PoolStatus.On) return true;
         else return false;
+    }
+
+    function getCoreData()
+        external
+        view
+        returns (
+            address underlyingToken_,
+            address poolToken_,
+            address humaConfig_,
+            address feeManager_
+        )
+    {
+        underlyingToken_ = address(_underlyingToken);
+        poolToken_ = address(_poolToken);
+        humaConfig_ = address(_humaConfig);
+        feeManager_ = address(_feeManager);
+    }
+
+    function isApprovedLender(address account) external view returns (bool) {
+        return _approvedLenders[account];
     }
 
     // In order for a pool to issue new loans, it must be turned on by an admin
