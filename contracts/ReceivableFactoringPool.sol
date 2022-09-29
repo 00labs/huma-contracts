@@ -18,7 +18,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         address indexed sender,
         address indexed borrower,
         uint256 amount,
-        uint256 paymentId
+        bytes32 paymentId
     );
 
     /**
@@ -76,15 +76,15 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     function onReceivedPayment(
         address borrower,
         uint256 amount,
-        uint256 paymentId
+        bytes32 paymentIdHash
     ) external virtual override {
         // todo Need to  discuss whether to accept payments when the protocol is paused.
         protocolAndPoolOn();
         onlyPDSServiceAccount();
 
         // Makes sure no repeated processing of a payment.
-        if (_processedPaymentIds[paymentId] == true) revert Errors.paymentAlreadyProcessed();
-        _processedPaymentIds[paymentId] = true;
+        if (_processedPaymentIds[paymentIdHash] == true) revert Errors.paymentAlreadyProcessed();
+        _processedPaymentIds[paymentIdHash] = true;
 
         uint256 amountPaid = _makePayment(borrower, amount, true);
 

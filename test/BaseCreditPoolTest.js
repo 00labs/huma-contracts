@@ -688,4 +688,108 @@ describe("Base Credit Pool", function () {
             expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_019_678);
         });
     });
+
+    describe("Protocol/Pool Owner/EA fee", function () {
+        it("Should not allow non-protocol-owner to withdraw protocol", async function () {
+            await expect(poolConfigContract.withdrawProtocolFee(1)).to.be.revertedWith(
+                "notProtocolOwner"
+            );
+        });
+
+        it("Should not allow non-pool-owner to withdraw pool owner fee", async function () {
+            await expect(poolConfigContract.withdrawPoolOwnerFee(1)).to.be.revertedWith(
+                "notPoolOwner"
+            );
+        });
+
+        it("Should not allow non-ea withdraw ea fee", async function () {
+            await expect(poolConfigContract.withdrawEAFee(1)).to.be.revertedWith(
+                "notEvaluationAgent"
+            );
+        });
+
+        it("Should not withdraw protocol fee while amount > withdrawable", async function () {
+            const poolConfigFromProtocolOwner = await poolConfigContract.connect(protocolOwner);
+            await expect(poolConfigFromProtocolOwner.withdrawProtocolFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should not withdraw pool owner fee while amount > withdrawable", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwner);
+            await expect(poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should not withdraw ea fee while amount > withdrawable", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(evaluationAgent);
+            await expect(poolConfigFromPoolOwner.withdrawEAFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should withdraw protocol fee", async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(100_000);
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            const amount = accruedIncome.protocolIncome;
+            const poolConfigFromProtocolOwner = await poolConfigContract.connect(protocolOwner);
+            const beforeBalance = await testTokenContract.balanceOf(treasury.address);
+
+            await poolConfigFromProtocolOwner.withdrawProtocolFee(amount);
+            accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.protocolIncomeWithdrawn).equals(amount);
+            const afterBalance = await testTokenContract.balanceOf(treasury.address);
+            expect(amount).equals(afterBalance.sub(beforeBalance));
+
+            await expect(poolConfigFromProtocolOwner.withdrawProtocolFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should withdraw pool owner fee", async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(100_000);
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            const amount = accruedIncome.poolOwnerIncome;
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwner);
+            const beforeBalance = await testTokenContract.balanceOf(poolOwner.address);
+
+            await poolConfigFromPoolOwner.withdrawPoolOwnerFee(amount);
+            accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.poolOwnerIncomeWithdrawn).equals(amount);
+            const afterBalance = await testTokenContract.balanceOf(poolOwner.address);
+            expect(amount).equals(afterBalance.sub(beforeBalance));
+
+            await expect(poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should withdraw ea fee", async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(100_000);
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            const amount = accruedIncome.eaIncome;
+            const poolConfigFromEA = await poolConfigContract.connect(evaluationAgent);
+            const beforeBalance = await testTokenContract.balanceOf(evaluationAgent.address);
+
+            await poolConfigFromEA.withdrawEAFee(amount);
+            accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.eaIncomeWithdrawn).equals(amount);
+            const afterBalance = await testTokenContract.balanceOf(evaluationAgent.address);
+            expect(amount).equals(afterBalance.sub(beforeBalance));
+
+            await expect(poolConfigFromEA.withdrawEAFee(1)).to.be.revertedWith(
+                "withdrawnAmountHigherThanBalance"
+            );
+        });
+    });
 });
