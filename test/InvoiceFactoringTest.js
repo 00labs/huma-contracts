@@ -482,14 +482,24 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(pdsServiceAccount)
-                    .onReceivedPayment(borrower.address, 1_500_000, 1)
+                    .onReceivedPayment(
+                        borrower.address,
+                        1_500_000,
+                        ethers.utils.formatBytes32String("1")
+                    )
             ).to.be.revertedWith("poolIsNotOn()");
         });
 
         it("Should reject if non-PDS calls to report payments received", async function () {
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
             await expect(
-                poolContract.connect(borrower).onReceivedPayment(borrower.address, 1_500_000, 1)
+                poolContract
+                    .connect(borrower)
+                    .onReceivedPayment(
+                        borrower.address,
+                        1_500_000,
+                        ethers.utils.formatBytes32String("1")
+                    )
             ).to.be.revertedWith("paymentDetectionServiceAccountRequired()");
         });
 
@@ -504,12 +514,20 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(pdsServiceAccount)
-                .onReceivedPayment(borrower.address, 1_500_000, 1);
+                .onReceivedPayment(
+                    borrower.address,
+                    1_500_000,
+                    ethers.utils.formatBytes32String("1")
+                );
 
             await expect(
                 poolContract
                     .connect(pdsServiceAccount)
-                    .onReceivedPayment(borrower.address, 1_500_000, 1)
+                    .onReceivedPayment(
+                        borrower.address,
+                        1_500_000,
+                        ethers.utils.formatBytes32String("1")
+                    )
             ).to.be.revertedWith("paymentAlreadyProcessed()");
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(1_390_000);
