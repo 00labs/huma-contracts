@@ -156,6 +156,13 @@ async function deployAndSetupPool(
     return [hdtContract, poolConfig, poolContract, poolImpl, poolProxy];
 }
 
+async function getCreditInfo(poolContract, account) {
+    const cr = await poolContract.creditRecordMapping(account);
+    const crs = await poolContract.creditRecordStaticMapping(account);
+
+    return {...cr, ...crs};
+}
+
 async function advanceClock(days) {
     await ethers.provider.send("evm_increaseTime", [3600 * 24 * days]);
     await ethers.provider.send("evm_mine", []);
@@ -197,4 +204,5 @@ module.exports = {
     checkRecord,
     checkResult,
     checkArruedIncome,
+    getCreditInfo,
 };

@@ -57,7 +57,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         }
 
         // Pool status and data validation happens within initiate().
-        initiateCredit(
+        _initiateCredit(
             borrower,
             creditLimit,
             _poolConfig.poolAprInBps(),
