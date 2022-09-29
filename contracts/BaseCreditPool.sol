@@ -396,27 +396,27 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                     )
                 )
             );
-            // For account in default, record the recovered principal for the pool.
-            // Note: correction only impacts interest amount, thus no impact on recovered principal
-            if (isDefaulted) {
-                _totalPoolValue += principalPayment;
-                _creditRecordStaticMapping[borrower].defaultAmount -= uint96(principalPayment);
+        }
 
-                distributeIncome(amount - principalPayment);
-            }
+        // For account in default, record the recovered principal for the pool.
+        // Note: correction only impacts interest amount, thus no impact on recovered principal
+        if (isDefaulted) {
+            _totalPoolValue += principalPayment;
+            _creditRecordStaticMapping[borrower].defaultAmount -= uint96(principalPayment);
+
+            distributeIncome(amountToCollect - principalPayment);
         }
 
         if (amountToCollect >= payoffAmount) {
-            // Set account state to GoodStanding if paid off even if it was delayed or defaulted.
-            cr.state = BS.CreditState.GoodStanding;
-
             // the interest for the final pay period has been distributed. When the user pays off
             // early, the interest charge for the remainder of the period will be substracted,
             // thus the income should be reversed.
             reverseIncome(uint256(uint96(0 - cr.correction)));
             amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
             cr.correction = 0;
+
             if (cr.remainingPeriods == 0) cr.state = BS.CreditState.Deleted;
+            else cr.state = BS.CreditState.GoodStanding;
         }
 
         _creditRecordMapping[borrower] = cr;
