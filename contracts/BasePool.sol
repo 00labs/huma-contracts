@@ -43,17 +43,17 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
     /**
      * @dev This event emits when new funds are distributed
-     * @param by the address of the sender who distributed funds
      * @param fundsDistributed the amount of funds received for distribution
      */
-    event IncomeDistributed(address indexed by, uint256 fundsDistributed);
+    event IncomeDistributed(uint256 fundsDistributed, uint256 updatedPoolValue);
+
+    event IncomeReversed(uint256 fundsDistributed, uint256 updatedPoolValue);
 
     /**
      * @dev This event emits when new losses are distributed
-     * @param by the address of the sender who distributed the loss
      * @param lossesDistributed the amount of losses received for distribution
      */
-    event LossesDistributed(address indexed by, uint256 lossesDistributed);
+    event LossesDistributed(uint256 lossesDistributed, uint256 updatedPoolValue);
 
     constructor() {
         _disableInitializers();
@@ -201,6 +201,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function distributeIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.distributeIncome(value);
         _totalPoolValue += poolIncome;
+        emit IncomeDistributed(value, _totalPoolValue);
     }
 
     /**
@@ -215,6 +216,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function reverseIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.reverseIncome(value);
         _totalPoolValue -= poolIncome;
+        emit IncomeReversed(value, _totalPoolValue);
     }
 
     /**
@@ -230,6 +232,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function distributeLosses(uint256 value) internal virtual {
         if (_totalPoolValue > value) _totalPoolValue -= value;
         else _totalPoolValue = 0;
+        emit LossesDistributed(value, _totalPoolValue);
     }
 
     /**
