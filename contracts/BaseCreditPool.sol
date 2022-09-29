@@ -17,9 +17,18 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     using ERC165Checker for address;
     using BS for BS.CreditRecord;
 
+    event CreditInitiated(
+        address indexed borrower,
+        uint256 creditLimit,
+        uint256 aprInBps,
+        uint256 payPeriodInDays,
+        uint256 remainingPeriods,
+        bool approved
+    );
+    event CreditApproved(address indexed borrower, address by);
     event DefaultTriggered(address indexed borrower, uint256 losses, address by);
     event PaymentMade(address indexed borrower, uint256 amount, address by);
-    event DrawdownWithReceivable(
+    event DrawdownMade(
         address indexed borrower,
         uint256 amount,
         address by,
@@ -27,6 +36,18 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 receivableParam
     );
     event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
+    event CreditLineChanged(
+        address indexed borrower,
+        uint256 oldCreditLimit,
+        uint256 newCreditLimit
+    );
+    event CreditLineClosed(address indexed borrower, address by);
+    event CreditLineExtended(
+        address indexed borrower,
+        uint256 numOfPeriods,
+        uint256 remainingPeriods,
+        address by
+    );
 
     /**
      * @notice accepts a credit request from msg.sender
@@ -83,10 +104,20 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         cr.remainingPeriods = uint16(remainingPeriods);
 
-        if (preApproved) cr = _approveCredit(cr);
-        else cr.state = BS.CreditState.Requested;
+        if (preApproved) {
+            cr = _approveCredit(cr);
+            emit CreditApproved(borrower, msg.sender);
+        } else cr.state = BS.CreditState.Requested;
 
         _creditRecordMapping[borrower] = cr;
+        emit CreditInitiated(
+            borrower,
+            creditLimit,
+            aprInBps,
+            intervalInDays,
+            remainingPeriods,
+            preApproved
+        );
     }
 
     /**
@@ -98,6 +129,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         onlyEAServiceAccount();
 
         _creditRecordMapping[borrower] = _approveCredit(_creditRecordMapping[borrower]);
+
+        emit CreditApproved(borrower, msg.sender);
     }
 
     function _approveCredit(BS.CreditRecord memory cr)
@@ -137,32 +170,37 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @notice changes the limit of the borrower's credit line. The credit line is marked as
      * Deleted if 1) the new credit line is 0; 2) there is no due or unbilled principals.
      * @param borrower the owner of the credit line
-     * @param newLine the new limit of the line in the unit of pool token
+     * @param newCreditLimit the new limit of the line in the unit of pool token
      * @dev only Evaluation Agent can call
      */
-    function changeCreditLine(address borrower, uint256 newLine) external virtual override {
+    function changeCreditLine(address borrower, uint256 newCreditLimit) external virtual override {
         protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
-        _maxCreditLineCheck(newLine);
+        _maxCreditLineCheck(newCreditLimit);
 
         if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
             _receivableRequirementCheck(
-                newLine,
+                newCreditLimit,
                 _receivableInfoMapping[borrower].receivableAmount
             );
         }
 
-        _creditRecordStaticMapping[borrower].creditLimit = uint96(newLine);
+        uint256 oldCreditLimit = _creditRecordStaticMapping[borrower].creditLimit;
+        _creditRecordStaticMapping[borrower].creditLimit = uint96(newCreditLimit);
 
         // Delete the line when there is no due or unbilled principal
-        if (newLine == 0) {
+        if (newCreditLimit == 0) {
             if (
                 _creditRecordMapping[borrower].totalDue == 0 &&
                 _creditRecordMapping[borrower].unbilledPrincipal == 0
-            ) _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
+            ) {
+                _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
+                emit CreditLineClosed(borrower, msg.sender);
+            }
             _creditRecordMapping[borrower].remainingPeriods = 0;
         }
+        emit CreditLineChanged(borrower, oldCreditLimit, newCreditLimit);
     }
 
     function isApproved(address borrower) external view virtual override returns (bool) {
@@ -307,13 +345,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
 
-        emit DrawdownWithReceivable(
-            borrower,
-            amtToBorrower,
-            msg.sender,
-            receivableAsset,
-            receivableParam
-        );
+        emit DrawdownMade(borrower, amtToBorrower, msg.sender, receivableAsset, receivableParam);
     }
 
     /**
@@ -552,6 +584,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Also, only if we call updateDueInfo(), we can write proper tests.
         updateDueInfo(borrower, false);
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
+        emit CreditLineExtended(
+            borrower,
+            numOfPeriods,
+            _creditRecordMapping[borrower].remainingPeriods,
+            msg.sender
+        );
     }
 
     function onERC721Received(
