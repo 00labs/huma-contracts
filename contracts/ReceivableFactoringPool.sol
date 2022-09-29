@@ -17,7 +17,6 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     event ReceivedPayment(
         address indexed sender,
         address indexed borrower,
-        address asset,
         uint256 amount,
         bytes32 paymentId
     );
@@ -76,7 +75,6 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
      */
     function onReceivedPayment(
         address borrower,
-        address asset,
         uint256 amount,
         bytes32 paymentIdHash
     ) external virtual override {
@@ -84,17 +82,15 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         protocolAndPoolOn();
         onlyPDSServiceAccount();
 
-        if (asset != address(_underlyingToken)) revert Errors.assetNotMatchWithPoolAsset();
-
         // Makes sure no repeated processing of a payment.
         if (_processedPaymentIds[paymentIdHash] == true) revert Errors.paymentAlreadyProcessed();
         _processedPaymentIds[paymentIdHash] = true;
 
-        uint256 amountPaid = _makePayment(borrower, asset, amount, true);
+        uint256 amountPaid = _makePayment(borrower, amount, true);
 
         if (amount > amountPaid) disperseRemainingFunds(borrower, amount - amountPaid);
 
-        emit ReceivedPayment(msg.sender, borrower, asset, amount, paymentIdHash);
+        emit ReceivedPayment(msg.sender, borrower, amount, paymentIdHash);
     }
 
     /**

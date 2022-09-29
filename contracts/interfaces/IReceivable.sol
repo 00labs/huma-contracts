@@ -30,7 +30,6 @@ interface IReceivable {
      */
     function onReceivedPayment(
         address borrower,
-        address asset,
         uint256 amount,
         bytes32 paymentIdHash
     ) external;
