@@ -18,7 +18,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         address indexed sender,
         address indexed borrower,
         uint256 amount,
-        bytes32 paymentId
+        bytes32 paymentIdHash
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
 

@@ -27,6 +27,7 @@ async function initContracts() {
         _proxyOwner,
         _lender,
         ea,
+        _eaService,
         borrower1,
         borrower2,
         borrower3,
