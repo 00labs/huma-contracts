@@ -432,8 +432,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     }
 
     function refreshAccount(address borrower) external returns (BS.CreditRecord memory cr) {
-        if (isDefaultReady(borrower)) return updateDueInfo(borrower, false);
-        else return updateDueInfo(borrower, true);
+        // If the account is defaulted, no need to update the account anymore
+        // If the account is ready to be defaulted but not yet, update the account without
+        // distributing the income for the upcoming period. Otherwise, update and distribute income
+        if (_creditRecordMapping[borrower].state != BS.CreditState.Defaulted) {
+            if (isDefaultReady(borrower)) return updateDueInfo(borrower, false);
+            else return updateDueInfo(borrower, true);
+        }
     }
 
     /**
@@ -525,6 +530,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // before the account is considered to be late. The time passed should be one pay period
         // plus the grace period.
         if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
+
+        if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
 
         losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
 

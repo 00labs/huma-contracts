@@ -582,6 +582,19 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.protocolIncome).to.equal(13169);
             expect(accruedIncome.poolOwnerIncome).to.equal(3292);
             expect(accruedIncome.eaIncome).to.equal(9876);
+
+            // RefreshAccount should do nothing for defaulted account.
+            advanceClock(30);
+            await poolContract.refreshAccount(borrower.address);
+            accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(13169);
+            expect(accruedIncome.poolOwnerIncome).to.equal(3292);
+            expect(accruedIncome.eaIncome).to.equal(9876);
+
+            // Should not call triggerDefault() again after an account is defaulted
+            await expect(
+                poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
+            ).to.be.revertedWith("defaultHasAlreadyBeenTriggered()");
         });
 
         it("Post-default payment", async function () {
