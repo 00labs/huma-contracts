@@ -102,7 +102,7 @@ async function setupPool() {
                     toFixedDecimal(100, decimals),
                     rnNft.address,
                     tokenId,
-                    toFixedDecimal(100, decimals),
+                    toFixedDecimal(150, decimals),
                     BN.from(30),
                     BN.from(12),
                 ]

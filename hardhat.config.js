@@ -41,7 +41,7 @@ if (!ea) {
 }
 let eaService = process.env["EA_SERVICE"];
 if (!eaService) {
-    eaService, (pdsService = EMPTY_PRIVATE_KEY);
+    eaService = EMPTY_PRIVATE_KEY;
 }
 let pdsService = process.env["PDS_SERVICE"];
 if (!pdsService) {
@@ -126,7 +126,7 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [deployer, proxyOwner, lender, ea, eaService, pdsService],
+            accounts: [deployer, proxyOwner, lender, ea,
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",

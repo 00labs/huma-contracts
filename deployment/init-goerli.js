@@ -6,8 +6,7 @@ const {
     sendTransaction,
 } = require("./utils.js");
 
-let deployer, deployedContracts;
-let lender, ea;
+let deployer, deployedContracts, lender, ea, eaService, pdsService;
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
