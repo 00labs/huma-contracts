@@ -85,26 +85,47 @@ contract BasePoolConfig is Ownable, IPoolConfig {
 
     AccruedIncome internal _accuredIncome;
 
-    event PoolNameChanged(string newName, address by);
-    event EvaluationAgentChanged(address oldEA, address newEA, address by);
-    event EvaluationAgentRewardsWithdrawn(uint256 amount, address receiver, address by);
-    event APRUpdated(uint256 _aprInBps);
-    event PoolDefaultGracePeriodChanged(uint256 _gracePeriodInDays, address by);
+    event PoolNameChanged(string name, address by);
+    event PoolChanged(address pool, address by);
+    event HumaConfigChanged(address humaConfig, address by);
+    event FeeManagerChanged(address feeManager, address by);
+    event HDTChanged(address hdt, address udnerlyingToken, address by);
+    event EvaluationAgentChanged(address oldEA, address newEA, uint256 newEAId, address by);
+    event APRChanged(uint256 aprInBps, address by);
+    event ReceivableRequiredInBpsChanged(uint256 receivableInBps, address by);
+    event MaxCreditLineChanged(uint256 maxCreditLine, address by);
+    event PoolDefaultGracePeriodChanged(uint256 gracePeriodInDays, address by);
     event PoolPayPeriodChanged(uint256 periodInDays, address by);
-    event WithdrawalLockoutPeriodUpdated(uint256 _lockoutPeriodInDays, address by);
-    event PoolLiquidityCapChanged(uint256 _liquidityCap, address by);
-    event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
-
-    event PoolOwnerCommisionAndLiquidityChanged(
+    event WithdrawalLockoutPeriodChanged(uint256 lockoutPeriodInDays, address by);
+    event PoolLiquidityCapChanged(uint256 liquidityCap, address by);
+    event PoolOwnerRewardsAndLiquidityChanged(
         uint256 rewardsRate,
         uint256 liquidityRate,
         address indexed by
     );
-
-    event EACommisionAndLiquidityChanged(
+    event EARewardsAndLiquidityChanged(
         uint256 rewardsRate,
         uint256 liquidityRate,
         address indexed by
+    );
+    event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
+
+    event EvaluationAgentRewardsWithdrawn(address receiver, uint256 amount, address by);
+    event ProtocolRewardsWithdrawn(address receiver, uint256 amount, address by);
+    event PoolRewardsWithdrawn(address receiver, uint256 amount, address by);
+
+    event DistributeIncome(
+        uint256 protocolFee,
+        uint256 ownerIncome,
+        uint256 eaIncome,
+        uint256 poolIncome
+    );
+
+    event ReverseIncome(
+        uint256 protocolFee,
+        uint256 ownerIncome,
+        uint256 eaIncome,
+        uint256 poolIncome
     );
 
     constructor(
@@ -140,22 +161,27 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     function setPool(address _pool) external {
         _onlyOwnerOrHumaMasterAdmin();
         pool = _pool;
+        emit PoolChanged(_pool, msg.sender);
     }
 
     function setHumaConfig(address _humaConfig) external {
         _onlyOwnerOrHumaMasterAdmin();
         humaConfig = HumaConfig(_humaConfig);
+        emit HumaConfigChanged(_humaConfig, msg.sender);
     }
 
     function setFeeManager(address _feeManager) external {
         _onlyOwnerOrHumaMasterAdmin();
         feeManager = _feeManager;
+        emit FeeManagerChanged(_feeManager, msg.sender);
     }
 
     function setPoolToken(address _poolToken) external {
         _onlyOwnerOrHumaMasterAdmin();
         poolToken = HDT(_poolToken);
+        address assetToken = poolToken.assetToken();
         underlyingToken = IERC20(poolToken.assetToken());
+        emit HDTChanged(_poolToken, assetToken, msg.sender);
     }
 
     /**
@@ -181,17 +207,15 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         // liquidity to pay the EA before replacing it.
         address oldEA = evaluationAgent;
         if (oldEA != address(0)) {
-            uint256 rewardsToPayout = _accuredIncome._eaIncome;
+            uint256 rewardsToPayout = _accuredIncome._eaIncome - _accuredIncome._eaIncomeWithdrawn;
             if (rewardsToPayout > 0) {
-                _accuredIncome._eaIncome = 0;
-                underlyingToken.safeTransfer(oldEA, rewardsToPayout);
-                emit EvaluationAgentRewardsWithdrawn(rewardsToPayout, oldEA, msg.sender);
+                _withdrawEAFee(msg.sender, oldEA, rewardsToPayout);
             }
         }
 
         evaluationAgent = agent;
         evaluationAgentId = eaId;
-        emit EvaluationAgentChanged(oldEA, agent, msg.sender);
+        emit EvaluationAgentChanged(oldEA, agent, eaId, msg.sender);
     }
 
     /**
@@ -202,7 +226,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         _onlyOwnerOrHumaMasterAdmin();
         if (aprInBps > HUNDRED_PERCENT_IN_BPS) revert Errors.invalidBasisPointHigherThan10000();
         _poolConfig._poolAprInBps = aprInBps;
-        emit APRUpdated(aprInBps);
+        emit APRChanged(aprInBps, msg.sender);
     }
 
     /**
@@ -215,6 +239,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         _onlyOwnerOrHumaMasterAdmin();
         // note: this rate can be over 10000 when it requires more backing than the credit limit
         _poolConfig._receivableRequiredInBps = receivableInBps;
+        emit ReceivableRequiredInBpsChanged(receivableInBps, msg.sender);
     }
 
     /**
@@ -225,6 +250,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         _onlyOwnerOrHumaMasterAdmin();
         if (creditLine == 0) revert Errors.zeroAmountProvided();
         _poolConfig._maxCreditLine = creditLine;
+        emit MaxCreditLineChanged(creditLine, msg.sender);
     }
 
     /**
@@ -250,7 +276,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     function setWithdrawalLockoutPeriod(uint256 lockoutPeriodInDays) external {
         _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._withdrawalLockoutPeriodInSeconds = lockoutPeriodInDays * SECONDS_IN_A_DAY;
-        emit WithdrawalLockoutPeriodUpdated(lockoutPeriodInDays, msg.sender);
+        emit WithdrawalLockoutPeriodChanged(lockoutPeriodInDays, msg.sender);
     }
 
     /**
@@ -267,14 +293,14 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._rewardRateInBpsForPoolOwner = rewardsRate;
         _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
-        emit PoolOwnerCommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
+        emit PoolOwnerRewardsAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
     function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external {
         _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._rewardRateInBpsForEA = rewardsRate;
         _poolConfig._liquidityRateInBpsByEA = liquidityRate;
-        emit EACommisionAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
+        emit EARewardsAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
     }
 
     function setCreditApprovalExpiration(uint256 durationInDays) external {
@@ -302,6 +328,8 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         _accuredIncome._eaIncome += eaIncome;
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
+
+        emit DistributeIncome(protocolFee, ownerIncome, eaIncome, poolIncome);
     }
 
     function reverseIncome(uint256 value) external returns (uint256 poolIncome) {
@@ -323,6 +351,8 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         _accuredIncome._eaIncome -= eaIncome;
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
+
+        emit ReverseIncome(protocolFee, ownerIncome, eaIncome, poolIncome);
     }
 
     function withdrawEAFee(uint256 amount) external {
@@ -330,8 +360,18 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         if (msg.sender != ea) revert Errors.notEvaluationAgent();
         if (amount + _accuredIncome._eaIncomeWithdrawn > _accuredIncome._eaIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
+        _withdrawEAFee(ea, ea, amount);
+    }
+
+    function _withdrawEAFee(
+        address caller,
+        address receiver,
+        uint256 amount
+    ) internal {
         _accuredIncome._eaIncomeWithdrawn += amount;
-        underlyingToken.safeTransferFrom(pool, ea, amount);
+        underlyingToken.safeTransferFrom(pool, receiver, amount);
+
+        emit EvaluationAgentRewardsWithdrawn(receiver, amount, caller);
     }
 
     function withdrawProtocolFee(uint256 amount) external {
@@ -342,6 +382,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
         address treasuryAddress = humaConfig.humaTreasury();
         if (treasuryAddress != address(0)) {
             underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
+            emit ProtocolRewardsWithdrawn(treasuryAddress, amount, msg.sender);
         }
     }
 
@@ -352,6 +393,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
             revert Errors.withdrawnAmountHigherThanBalance();
         _accuredIncome._poolOwnerIncomeWithdrawn += amount;
         underlyingToken.safeTransferFrom(pool, poolOwner, amount);
+        emit PoolRewardsWithdrawn(poolOwner, amount, msg.sender);
     }
 
     function poolDefaultGracePeriodInSeconds() external view returns (uint256) {

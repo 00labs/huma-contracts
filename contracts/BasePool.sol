@@ -21,11 +21,6 @@ import "hardhat/console.sol";
 abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider, IPool {
     using SafeERC20 for IERC20;
 
-    error notEvaluationAgentOwnerProvided();
-
-    event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
-    event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
-    event PoolInitialized(address _poolAddress);
     event PoolCoreDataChanged(
         address indexed sender,
         address underlyingToken,
@@ -35,11 +30,14 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     );
     event PoolConfigChanged(address indexed sender, address newPoolConfig);
 
-    event PoolDisabled(address by);
-    event PoolEnabled(address by);
+    event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
+    event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
 
-    event AddApprovedLender(address lender, address by);
-    event RemoveApprovedLender(address lender, address by);
+    event PoolDisabled(address indexed by);
+    event PoolEnabled(address indexed by);
+
+    event AddApprovedLender(address indexed lender, address by);
+    event RemoveApprovedLender(address indexed lender, address by);
 
     /**
      * @dev This event emits when new funds are distributed
@@ -65,8 +63,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         safeApproveMax(poolConfigAddr, false);
 
         _status = PoolStatus.Off;
-
-        emit PoolInitialized(address(this));
     }
 
     function updateCoreData() external {

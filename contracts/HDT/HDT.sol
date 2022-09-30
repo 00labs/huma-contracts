@@ -14,6 +14,8 @@ import "../Errors.sol";
  * @notice HDT tracks the principal, earnings and losses associated with a token.
  */
 contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
+    event PoolChanged(address pool);
+
     constructor() {
         _disableInitializers();
     }
@@ -38,6 +40,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
 
     function setPool(address poolAddress) external onlyOwner {
         _pool = IPool(poolAddress);
+        emit PoolChanged(poolAddress);
     }
 
     function decimals() public view override returns (uint8) {

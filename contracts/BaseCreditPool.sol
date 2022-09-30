@@ -30,7 +30,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     event PaymentMade(address indexed borrower, uint256 amount, address by);
     event DrawdownMade(
         address indexed borrower,
-        uint256 amount,
+        uint256 borrowAmount,
+        uint256 amtToBorrower,
         address by,
         address receivableAddress,
         uint256 receivableParam
@@ -347,7 +348,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
 
-        emit DrawdownMade(borrower, amtToBorrower, msg.sender, receivableAsset, receivableParam);
+        emit DrawdownMade(
+            borrower,
+            borrowAmount,
+            amtToBorrower,
+            msg.sender,
+            receivableAsset,
+            receivableParam
+        );
     }
 
     /**
