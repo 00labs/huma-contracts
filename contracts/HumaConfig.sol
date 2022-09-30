@@ -58,23 +58,21 @@ contract HumaConfig is Ownable {
     address public pdsServiceAccount;
 
     event ProtocolInitialized(address by);
-
+    event HumaTreasuryChanged(address indexed newTreasuryAddress);
     event ProtocolPaused(address by);
     event ProtocolUnpaused(address by);
-
+    event ProtocolDefaultGracePeriodChanged(uint256 gracePeriod);
+    event TreasuryFeeChanged(uint256 oldFee, uint256 newFee);
     event PauserAdded(address indexed pauser, address by);
     event PauserRemoved(address indexed pauser, address by);
-
-    event PoolAdminAdded(address indexed pauser, address by);
-    event PoolAdminRemoved(address indexed pauser, address by);
+    event PoolAdminAdded(address indexed poolAdmin, address by);
+    event PoolAdminRemoved(address indexed poolAdmin, address by);
+    event EANFTContractAddressChanged(address eaNFT);
+    event EAServiceAccount(address eaService);
+    event PDSServiceAccount(address pdsService);
 
     event LiquidityAssetAdded(address asset, address by);
     event LiquidityAssetRemoved(address asset, address by);
-
-    event HumaTreasuryChanged(address indexed newTreasuryAddress);
-    event TreasuryFeeChanged(uint256 oldFee, uint256 newFee);
-
-    event ProtocolDefaultGracePeriodChanged(uint256 gracePeriod);
 
     /**
      * @notice Initiates the config. Only owner can appoint set the treasury
@@ -171,7 +169,7 @@ contract HumaConfig is Ownable {
 
         pausers[_pauser] = true;
 
-        emit PauserAdded(_pauser, owner());
+        emit PauserAdded(_pauser, msg.sender);
     }
 
     /**
@@ -187,7 +185,7 @@ contract HumaConfig is Ownable {
 
         pausers[_pauser] = false;
 
-        emit PauserRemoved(_pauser, owner());
+        emit PauserRemoved(_pauser, msg.sender);
     }
 
     /**
@@ -203,7 +201,7 @@ contract HumaConfig is Ownable {
 
         poolAdmins[_poolAdmin] = true;
 
-        emit PoolAdminAdded(_poolAdmin, owner());
+        emit PoolAdminAdded(_poolAdmin, msg.sender);
     }
 
     /**
@@ -219,23 +217,26 @@ contract HumaConfig is Ownable {
 
         poolAdmins[_poolAdmin] = false;
 
-        emit PoolAdminRemoved(_poolAdmin, owner());
+        emit PoolAdminRemoved(_poolAdmin, msg.sender);
     }
 
     function setEANFTContractAddress(address contractAddress) external onlyOwner {
         // todo need to add a test against zero address
         if (contractAddress == address(0)) revert Errors.zeroAddressProvided();
         eaNFTContractAddress = contractAddress;
+        emit EANFTContractAddressChanged(contractAddress);
     }
 
     function setEAServiceAccount(address accountAddress) external onlyOwner {
         if (accountAddress == address(0)) revert Errors.zeroAddressProvided();
         eaServiceAccount = accountAddress;
+        emit EAServiceAccount(accountAddress);
     }
 
     function setPDSServiceAccount(address accountAddress) external onlyOwner {
         if (accountAddress == address(0)) revert Errors.zeroAddressProvided();
         pdsServiceAccount = accountAddress;
+        emit PDSServiceAccount(accountAddress);
     }
 
     /**
@@ -247,10 +248,10 @@ contract HumaConfig is Ownable {
     function setLiquidityAsset(address asset, bool valid) external onlyOwner {
         if (valid) {
             validLiquidityAssets[asset] = true;
-            emit LiquidityAssetAdded(asset, owner());
+            emit LiquidityAssetAdded(asset, msg.sender);
         } else {
             validLiquidityAssets[asset] = false;
-            emit LiquidityAssetRemoved(asset, owner());
+            emit LiquidityAssetRemoved(asset, msg.sender);
         }
     }
 

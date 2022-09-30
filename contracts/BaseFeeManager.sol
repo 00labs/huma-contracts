@@ -47,7 +47,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 membershipFee
     );
 
-    event MinPrincipalRateUpdated(uint256 minPrincipalRateInBps);
+    event MinPrincipalRateChanged(uint256 minPrincipalRateInBps);
 
     /**
      * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
@@ -297,7 +297,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     {
         if (_minPrincipalRateInBps >= 5000) revert Errors.minPrincipalPaymentRateSettingTooHigh();
         minPrincipalRateInBps = _minPrincipalRateInBps;
-        emit MinPrincipalRateUpdated(_minPrincipalRateInBps);
+        emit MinPrincipalRateChanged(_minPrincipalRateInBps);
     }
 
     /**
