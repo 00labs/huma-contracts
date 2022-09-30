@@ -126,7 +126,7 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [deployer, proxyOwner, lender, ea,
+            accounts: [deployer, proxyOwner, lender, ea, eaService, pdsService],
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",
