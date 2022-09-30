@@ -192,7 +192,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // Delete the line when there is no due or unbilled principal
         if (newCreditLimit == 0) {
+            // Bring the account current
             BS.CreditRecord memory cr = _updateDueInfo(borrower, true);
+            // Note: updated .state and .remainingPeriods directly instead of the entire cr
+            // for contract size consideration
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
                 emit CreditLineClosed(borrower, msg.sender);
