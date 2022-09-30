@@ -114,14 +114,14 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     event ProtocolRewardsWithdrawn(address receiver, uint256 amount, address by);
     event PoolRewardsWithdrawn(address receiver, uint256 amount, address by);
 
-    event DistributeIncome(
+    event IncomeDistributed(
         uint256 protocolFee,
         uint256 ownerIncome,
         uint256 eaIncome,
         uint256 poolIncome
     );
 
-    event ReverseIncome(
+    event IncomeReversed(
         uint256 protocolFee,
         uint256 ownerIncome,
         uint256 eaIncome,
@@ -329,7 +329,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
 
-        emit DistributeIncome(protocolFee, ownerIncome, eaIncome, poolIncome);
+        emit IncomeDistributed(protocolFee, ownerIncome, eaIncome, poolIncome);
     }
 
     function reverseIncome(uint256 value) external returns (uint256 poolIncome) {
@@ -352,7 +352,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
 
-        emit ReverseIncome(protocolFee, ownerIncome, eaIncome, poolIncome);
+        emit IncomeReversed(protocolFee, ownerIncome, eaIncome, poolIncome);
     }
 
     function withdrawEAFee(uint256 amount) external {

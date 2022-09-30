@@ -40,14 +40,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     event RemoveApprovedLender(address indexed lender, address by);
 
     /**
-     * @dev This event emits when new funds are distributed
-     * @param fundsDistributed the amount of funds received for distribution
-     */
-    event IncomeDistributed(uint256 fundsDistributed, uint256 updatedPoolValue);
-
-    event IncomeReversed(uint256 fundsDistributed, uint256 updatedPoolValue);
-
-    /**
      * @dev This event emits when new losses are distributed
      * @param lossesDistributed the amount of losses received for distribution
      */
@@ -197,7 +189,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function distributeIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.distributeIncome(value);
         _totalPoolValue += poolIncome;
-        emit IncomeDistributed(value, _totalPoolValue);
     }
 
     /**
@@ -212,7 +203,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function reverseIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.reverseIncome(value);
         _totalPoolValue -= poolIncome;
-        emit IncomeReversed(value, _totalPoolValue);
     }
 
     /**

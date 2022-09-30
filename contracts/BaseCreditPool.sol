@@ -31,7 +31,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     event DrawdownMade(
         address indexed borrower,
         uint256 borrowAmount,
-        uint256 amtToBorrower,
+        uint256 netAmountToBorrower,
         address by,
         address receivableAddress,
         uint256 receivableParam
