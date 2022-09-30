@@ -5,7 +5,8 @@ contract Errors {
     error creditExpiredDueToFirstDrawdownTooLate();
     error creditExpiredDueToMaturity();
     error evaluationAgentServiceAccountRequired();
-    error creditLineNotInApprovedOrGoodStandingState();
+    error creditLineNotInGoodStandingState();
+    error creditLineNotInStateForMakingPayment();
     error creditLineExceeded();
     error creditLineAlreadyExists();
     error greaterThanMaxCreditLine();

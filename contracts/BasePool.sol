@@ -52,7 +52,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function initialize(address poolConfigAddr) external initializer {
         _poolConfig = BasePoolConfig(poolConfigAddr);
         _updateCoreData();
-        safeApproveMax(poolConfigAddr, false);
+        // note approve max amount to pool config for admin withdraw functions
+        safeApproveForPoolConfig(type(uint256).max);
 
         _status = PoolStatus.Off;
     }
@@ -70,9 +71,11 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         BasePoolConfig newPoolConfig = BasePoolConfig(poolConfigAddr);
         newPoolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
 
-        safeApproveMax(oldConfig, true);
+        // note set old pool config allowance to 0
+        safeApproveForPoolConfig(0);
         _poolConfig = newPoolConfig;
-        safeApproveMax(poolConfigAddr, false);
+        // note approve max amount to pool config for admin withdraw functions
+        safeApproveForPoolConfig(type(uint256).max);
 
         emit PoolConfigChanged(msg.sender, poolConfigAddr);
     }
@@ -98,14 +101,12 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         );
     }
 
-    function safeApproveMax(address account, bool cancel) internal {
-        uint256 amount = 0;
-        if (!cancel) {
-            amount = type(uint256).max;
-        }
+    function safeApproveForPoolConfig(uint256 amount) internal {
+        address config = address(_poolConfig);
+        uint256 allowance = _underlyingToken.allowance(address(this), config);
 
-        if (amount == 0 || _underlyingToken.allowance(address(this), account) == 0) {
-            _underlyingToken.safeApprove(account, amount);
+        if ((amount == 0 && allowance > 0) || (amount > 0 && allowance == 0)) {
+            _underlyingToken.safeApprove(config, amount);
         }
     }
 
