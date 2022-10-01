@@ -7,11 +7,12 @@ interface IFeeManager {
     /**
      * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
      * @dev Correction is used when there is change to the principal in the middle of the cycle
-     * due to drawdown or principal payment. For a drawdown, principal goes up, the interest at
-     * the end of cycle will be higher than the actual interest that should have been generated
-     * since the balance was lower for a portion of the cycle. For drawdown, the correction is
-     * negative to offset the over-count at the end of the cycle. It will be positive for
-     * principal payment.
+     * due to drawdown or principal payment. Since Huma computes the interest at the beginning 
+     * of each cycle, if there is a drawdown, the interest for this extra borrowing is not 
+     * billed, there will be a positive correction to be added in the next bill. Conversely,
+     * since the interest has been computed for the entire cycle, if there is principal payment
+     * in the middle, some of the interest should be refunded. It will be marked as negative
+     * correction and be subtracted in the next bill. 
      */
     function calcCorrection(
         uint256 dueDate,
@@ -20,7 +21,7 @@ interface IFeeManager {
     ) external view returns (uint256 correction);
 
     /**
-     * @notice Computes the front loading fee including both the flat fee and percentage fee
+     * @notice Computes the front loading fee, which is also known as origination fee.
      * @param _amount the borrowing amount
      * @return fees the amount of fees to be charged for this borrowing
      */
@@ -39,17 +40,6 @@ interface IFeeManager {
         uint256 totalDue,
         uint256 balance
     ) external view returns (uint256 fees);
-
-    /**
-     * @notice Apply front loading fee, distribute the total amount to borrower, pool, & protocol
-     * @param borrowAmount the amount of the borrowing
-     * @return amtToBorrower the amount that the borrower can take
-     * @return platformFees the platform fees charged
-     * @dev the protocol always takes a percentage of the total fee generated
-     */
-    function distBorrowingAmount(uint256 borrowAmount)
-        external
-        returns (uint256 amtToBorrower, uint256 platformFees);
 
     /**
      * @notice Gets the current total due, fees and interest due, and payoff amount.
