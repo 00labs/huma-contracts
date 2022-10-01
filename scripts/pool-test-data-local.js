@@ -28,6 +28,7 @@ async function initContracts() {
         _lender,
         ea,
         _eaService,
+        _pdsService,
         borrower1,
         borrower2,
         borrower3,
@@ -35,7 +36,7 @@ async function initContracts() {
         borrower5,
         borrower6,
     ] = await accounts;
-    eaServiceAccount = new ethers.Wallet(process.env.EA_SERVICE_ACCOUNT, deployer.provider);
+    eaServiceAccount = new ethers.Wallet(process.env.EA_SERVICE, deployer.provider);
     console.log("deployer address: " + deployer.address);
 
     deployedContracts = await getDeployedContracts();
@@ -101,7 +102,7 @@ async function setupPool() {
                     toFixedDecimal(100, decimals),
                     rnNft.address,
                     tokenId,
-                    toFixedDecimal(100, decimals),
+                    toFixedDecimal(150, decimals),
                     BN.from(30),
                     BN.from(12),
                 ]
