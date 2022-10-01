@@ -103,4 +103,8 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         _underlyingToken.safeTransfer(receiver, amount);
         emit ExtraFundsDispersed(receiver, amount);
     }
+
+    function isProcessedPayment(bytes32 paymentIdHash) external view returns (bool) {
+        return _processedPaymentIds[paymentIdHash];
+    }
 }

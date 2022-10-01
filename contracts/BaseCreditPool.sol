@@ -658,10 +658,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return _receivableInfoMapping[account];
     }
 
-    function isProcessedPayment(bytes32 paymentIdHash) external view returns (bool) {
-        return _processedPaymentIds[paymentIdHash];
-    }
-
     function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
         return _receivableOwnershipMapping[receivableHash];
     }
