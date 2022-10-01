@@ -78,6 +78,12 @@ async function setupPool() {
     const token = TestToken.attach(deployedContracts["USDC"]);
     const decimals = await token.decimals();
 
+    await sendTransaction("TestToken", token, "give1000To", [deployer.address]);
+    await sendTransaction("TestToken", token, "approve", [
+        rnNft.address,
+        toFixedDecimal(1000, decimals),
+    ]);
+
     let baseTokenId = await rnNft.getCurrentTokenId();
     baseTokenId = BN.from(baseTokenId).toNumber();
 
@@ -126,6 +132,16 @@ async function setupPool() {
                 "drawdownWithReceivable",
                 [borrower.address, toFixedDecimal(100, decimals), rnNft.address, tokenId]
             );
+
+            // Send some payments
+            await sendTransaction("InvoiceNFT", rnNft, "payOwner", [
+                tokenId,
+                toFixedDecimal(20, decimals),
+            ]);
+            await sendTransaction("InvoiceNFT", rnNft, "payOwner", [
+                tokenId,
+                toFixedDecimal(25, decimals),
+            ]);
         } catch (err) {
             console.log(err);
         }
