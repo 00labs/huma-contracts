@@ -5,7 +5,6 @@ import {IERC20MetadataUpgradeable, ERC20Upgradeable} from "@openzeppelin/contrac
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./interfaces/IHDT.sol";
-
 import "./HDTStorage.sol";
 import "../Errors.sol";
 
@@ -23,6 +22,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     /**
      * @param name the name of the token
      * @param symbol the symbol of the token
+     * @param underlyingToken the address of the underlying token used for the pool
      */
     function initialize(
         string memory name,
@@ -33,11 +33,16 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         _assetToken = underlyingToken;
 
         __ERC20_init(name, symbol);
+        // HDT uses the same decimal as the underlyingToken
         _decimals = IERC20MetadataUpgradeable(underlyingToken).decimals();
 
         __Ownable_init();
     }
 
+    /**
+     * @notice Associates the HDT with the pool
+     * @dev Pool and HDT references each other. This call is expected to be called once at setup.
+     */
     function setPool(address poolAddress) external onlyOwner {
         _pool = IPool(poolAddress);
         emit PoolChanged(poolAddress);
@@ -47,10 +52,18 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         return _decimals;
     }
 
+    /**
+     * @notice Returns the toal value of the pool, in the units of underlyingToken
+     */
     function totalAssets() public view returns (uint256) {
         return _pool.totalPoolValue();
     }
 
+    /**
+     * @notice Mints HDTs when LPs contribute capital to the pool
+     * @param account the address of the account to mint
+     * @param amount the number of underlyingTokens used to mint HDTs
+     */
     function mintAmount(address account, uint256 amount)
         external
         override
@@ -63,6 +76,11 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         _mint(account, shares);
     }
 
+    /**
+     * @notice Burns HDTs when LPs withdraw from the pool
+     * @param account the address of the account to burn
+     * @param amount the amount of underlyingTokens used to brun HDTs with equivalent value
+     */
     function burnAmount(address account, uint256 amount)
         external
         override
@@ -75,24 +93,14 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         _burn(account, shares);
     }
 
-    function burn(address account, uint256 shares)
-        external
-        override
-        onlyPool
-        returns (uint256 amount)
-    {
-        amount = convertToAssets(shares);
-        _burn(account, shares);
-    }
-
-    function convertToShares(uint256 assets) public view virtual returns (uint256) {
+    function convertToShares(uint256 assets) internal view virtual returns (uint256) {
         uint256 ts = totalSupply();
         uint256 ta = totalAssets();
 
-        return ts == 0 ? assets : (assets * ts) / ta;
+        return ta == 0 ? assets : (assets * ts) / ta;
     }
 
-    function convertToAssets(uint256 shares) public view virtual returns (uint256) {
+    function convertToAssets(uint256 shares) internal view virtual returns (uint256) {
         uint256 ts = totalSupply();
         uint256 ta = totalAssets();
 
@@ -100,7 +108,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     }
 
     /**
-     * @notice Views the amount of funds that an address can withdraw.
+     * @notice Gets the amount of funds (in units of underlyingToken) that an address can withdraw
      * @param account The address of a token holder.
      * @return The amount funds that `_owner` can withdraw.
      */
@@ -114,16 +122,25 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         return convertToAssets(balanceOf(account));
     }
 
+    /**
+     * @notice the underlying token used in the associated pool
+     */
     function assetToken() external view override returns (address) {
         return _assetToken;
     }
 
+    /**
+     * @notice the associated pool
+     */
     function pool() external view returns (address) {
         return address(_pool);
     }
 
+    /**
+     * @notice Only the pool contract itself can call the functions.
+     */
     modifier onlyPool() {
-        if (msg.sender != address(_pool)) revert Errors.notPoolOwner();
+        if (msg.sender != address(_pool)) revert Errors.notPool();
         _;
     }
 }

@@ -45,6 +45,7 @@ contract Errors {
     error notProtocolOwner();
     error notEvaluationAgent();
     error notPauser();
+    error notPool();
 
     error alreayAPauser();
     error alreadyPoolAdmin();
