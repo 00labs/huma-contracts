@@ -104,7 +104,13 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         emit ExtraFundsDispersed(receiver, amount);
     }
 
-    function isProcessedPayment(bytes32 paymentIdHash) external view returns (bool) {
+    function isProcessedPayment(bytes32 paymentIdHash)
+        external
+        view
+        virtual
+        override
+        returns (bool)
+    {
         return _processedPaymentIds[paymentIdHash];
     }
 }
