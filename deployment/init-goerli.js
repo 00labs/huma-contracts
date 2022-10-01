@@ -6,11 +6,7 @@ const {
     sendTransaction,
 } = require("./utils.js");
 
-const EA_SERVICE_ACCOUNT = "0xDE5Db91B5F82f8b8c085fA9C5F290B00A0101D81";
-const PDS_SERVICE_ACCOUNT = "0x6d748Fd98464EC03b7202C0A3fE9a28ADD0a1e70";
-
-let deployer, deployedContracts;
-let lender, ea;
+let deployer, deployedContracts, lender, ea, eaService, pdsService;
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -44,8 +40,9 @@ async function initHumaConfig() {
     await sendTransaction("HumaConfig", humaConfig, "setEANFTContractAddress", [
         deployedContracts["EANFT"],
     ]);
-    await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [EA_SERVICE_ACCOUNT]);
-    await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [PDS_SERVICE_ACCOUNT]);
+
+    await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [eaService.address]);
+    await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [pdsService.address]);
 
     await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
     const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
@@ -274,7 +271,7 @@ async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    [deployer, proxyOwner, lender, ea, eaService] = await accounts;
+    [deployer, proxyOwner, lender, ea, eaService, pdsService] = await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);
     console.log("ea address: " + ea.address);

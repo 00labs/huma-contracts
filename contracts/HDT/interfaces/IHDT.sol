@@ -1,10 +1,8 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 /**
  * @notice A token that tracks the gains and losses that the token owner can claim.
- * It is inspired by EIP-2222, which hanldes the gains only. The enhancement allows
- * the handling of the principle, gains, and losses.
  */
 interface IHDT {
     /**

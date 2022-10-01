@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import {IERC721, IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -269,7 +269,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                     // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
                     // for lookup by off-chain payment processers
                     _receivableOwnershipMapping[
-                        keccak256(abi.encodePacked(receivableAsset, receivableParam))
+                        keccak256(abi.encode(receivableAsset, receivableParam))
                     ] = borrower;
 
                     // For ERC721, receivableParam is the tokenId

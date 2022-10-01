@@ -28,6 +28,7 @@ async function initContracts() {
         _lender,
         ea,
         _eaService,
+        _pdsService,
         borrower1,
         borrower2,
         borrower3,
@@ -35,7 +36,7 @@ async function initContracts() {
         borrower5,
         borrower6,
     ] = await accounts;
-    eaServiceAccount = new ethers.Wallet(process.env.EA_SERVICE_ACCOUNT, deployer.provider);
+    eaServiceAccount = new ethers.Wallet(process.env.EA_SERVICE, deployer.provider);
     console.log("deployer address: " + deployer.address);
 
     deployedContracts = await getDeployedContracts();
@@ -77,6 +78,12 @@ async function setupPool() {
     const token = TestToken.attach(deployedContracts["USDC"]);
     const decimals = await token.decimals();
 
+    await sendTransaction("TestToken", token, "give1000To", [deployer.address]);
+    await sendTransaction("TestToken", token, "approve", [
+        rnNft.address,
+        toFixedDecimal(1000, decimals),
+    ]);
+
     let baseTokenId = await rnNft.getCurrentTokenId();
     baseTokenId = BN.from(baseTokenId).toNumber();
 
@@ -101,7 +108,7 @@ async function setupPool() {
                     toFixedDecimal(100, decimals),
                     rnNft.address,
                     tokenId,
-                    toFixedDecimal(100, decimals),
+                    toFixedDecimal(150, decimals),
                     BN.from(30),
                     BN.from(12),
                 ]
@@ -125,6 +132,16 @@ async function setupPool() {
                 "drawdownWithReceivable",
                 [borrower.address, toFixedDecimal(100, decimals), rnNft.address, tokenId]
             );
+
+            // Send some payments
+            await sendTransaction("InvoiceNFT", rnNft, "payOwner", [
+                tokenId,
+                toFixedDecimal(20, decimals),
+            ]);
+            await sendTransaction("InvoiceNFT", rnNft, "payOwner", [
+                tokenId,
+                toFixedDecimal(25, decimals),
+            ]);
         } catch (err) {
             console.log(err);
         }
