@@ -133,7 +133,7 @@ describe("Base Credit Pool", function () {
             expect(record.totalDue).to.equal(0);
             expect(record.unbilledPrincipal).to.equal(0);
 
-            await poolContract.connect(borrower).requestCredit(4000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(4000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(4000);
 
@@ -177,20 +177,20 @@ describe("Base Credit Pool", function () {
         it("Should reject loan requests while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(
-                poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
+                poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12)
             ).to.be.revertedWith("protocolIsPaused()");
         });
 
         it("Shall reject request loan while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(
-                poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
+                poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12)
             ).to.be.revertedWith("poolIsNotOn()");
         });
 
         it("Shall reject request loan greater than limit", async function () {
             await expect(
-                poolContract.connect(borrower).requestCredit(10_000_001, 30, 12)
+                poolContract.connect(borrower).requestCredit(10_000_001, 30 * 86400, 12)
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
 
@@ -199,27 +199,27 @@ describe("Base Credit Pool", function () {
 
             await poolConfigContract.connect(poolOwner).setAPR(1217);
 
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
 
             const loanInformation = await getCreditInfo(poolContract, borrower.address);
             expect(loanInformation.creditLimit).to.equal(1_000_000);
-            expect(loanInformation.intervalInDays).to.equal(30);
+            expect(loanInformation.intervalInSeconds).to.equal(30 * 86400);
             expect(loanInformation.aprInBps).to.equal(1217);
             expect(loanInformation.state).to.equal(1);
         });
 
         it("Shall reject loan requests if there is an outstanding laon", async function () {
-            await poolContract.connect(borrower).requestCredit(1_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000, 30 * 86400, 12);
 
             await expect(
-                poolContract.connect(borrower).requestCredit(1_000, 30, 12)
+                poolContract.connect(borrower).requestCredit(1_000, 30 * 86400, 12)
             ).to.be.revertedWith("creditLineAlreadyExists()");
         });
     });
 
     describe("Drawdown", function () {
         beforeEach(async function () {
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
         });
 
         afterEach(async function () {
@@ -349,7 +349,7 @@ describe("Base Credit Pool", function () {
     describe("Credit expiration without a timely first drawdown", function () {
         it("Cannot borrow after credit expiration window", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
 
             advanceClock(6);
@@ -361,7 +361,7 @@ describe("Base Credit Pool", function () {
 
         it("Can borrow if no credit expiration has been setup for the pool", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(0);
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
 
             advanceClock(6);
@@ -373,7 +373,7 @@ describe("Base Credit Pool", function () {
 
         it("Expiration window does not apply after initial drawdown", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await expect(poolContract.connect(borrower).drawdown(500_000));
             let creditInfo = await poolContract.creditRecordMapping(borrower.address);
@@ -389,7 +389,7 @@ describe("Base Credit Pool", function () {
 
     describe("Account update by service account", function () {
         it("Shall not emit BillRefreshed event when the bill should not be refreshed", async function () {
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(1_000_000);
             await expect(
@@ -401,7 +401,7 @@ describe("Base Credit Pool", function () {
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
 
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(1_000_000);
 
@@ -424,7 +424,7 @@ describe("Base Credit Pool", function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
             await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
 
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(1_000_000);
@@ -484,7 +484,7 @@ describe("Base Credit Pool", function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
             await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
 
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(1_000_000);
@@ -644,7 +644,7 @@ describe("Base Credit Pool", function () {
                 0,
                 8,
                 1217,
-                30,
+                30 * 86400,
                 5,
                 1_054_850
             );
@@ -683,7 +683,7 @@ describe("Base Credit Pool", function () {
                 0,
                 8,
                 1217,
-                30,
+                30 * 86400,
                 3,
                 0
             );
@@ -742,7 +742,7 @@ describe("Base Credit Pool", function () {
         });
 
         it("Should withdraw protocol fee", async function () {
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(100_000);
 
@@ -763,7 +763,7 @@ describe("Base Credit Pool", function () {
         });
 
         it("Should withdraw pool owner fee", async function () {
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(100_000);
 
@@ -784,7 +784,7 @@ describe("Base Credit Pool", function () {
         });
 
         it("Should withdraw ea fee", async function () {
-            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await poolContract.connect(borrower).drawdown(100_000);
 
