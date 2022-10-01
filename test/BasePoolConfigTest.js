@@ -194,7 +194,12 @@ describe("Base Pool Config", function () {
                     .setEvaluationAgent(newNFTTokenId, evaluationAgent2.address)
             )
                 .to.emit(poolConfigContract, "EvaluationAgentChanged")
-                .withArgs(evaluationAgent.address, evaluationAgent2.address, poolOwner.address)
+                .withArgs(
+                    evaluationAgent.address,
+                    evaluationAgent2.address,
+                    newNFTTokenId,
+                    poolOwner.address
+                )
                 .to.not.emit(poolConfigContract, "EvaluationAgentRewardsWithdrawn");
         });
 

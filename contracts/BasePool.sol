@@ -21,11 +21,6 @@ import "hardhat/console.sol";
 abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider, IPool {
     using SafeERC20 for IERC20;
 
-    error notEvaluationAgentOwnerProvided();
-
-    event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
-    event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
-    event PoolInitialized(address _poolAddress);
     event PoolCoreDataChanged(
         address indexed sender,
         address underlyingToken,
@@ -35,19 +30,14 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     );
     event PoolConfigChanged(address indexed sender, address newPoolConfig);
 
-    event PoolDisabled(address by);
-    event PoolEnabled(address by);
+    event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
+    event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
 
-    event AddApprovedLender(address lender, address by);
-    event RemoveApprovedLender(address lender, address by);
+    event PoolDisabled(address indexed by);
+    event PoolEnabled(address indexed by);
 
-    /**
-     * @dev This event emits when new funds are distributed
-     * @param fundsDistributed the amount of funds received for distribution
-     */
-    event IncomeDistributed(uint256 fundsDistributed, uint256 updatedPoolValue);
-
-    event IncomeReversed(uint256 fundsDistributed, uint256 updatedPoolValue);
+    event AddApprovedLender(address indexed lender, address by);
+    event RemoveApprovedLender(address indexed lender, address by);
 
     /**
      * @dev This event emits when new losses are distributed
@@ -62,11 +52,10 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function initialize(address poolConfigAddr) external initializer {
         _poolConfig = BasePoolConfig(poolConfigAddr);
         _updateCoreData();
-        safeApproveMax(poolConfigAddr, false);
+        // note approve max amount to pool config for admin withdraw functions
+        safeApproveForPoolConfig(type(uint256).max);
 
         _status = PoolStatus.Off;
-
-        emit PoolInitialized(address(this));
     }
 
     function updateCoreData() external {
@@ -82,9 +71,11 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         BasePoolConfig newPoolConfig = BasePoolConfig(poolConfigAddr);
         newPoolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
 
-        safeApproveMax(oldConfig, true);
+        // note set old pool config allowance to 0
+        safeApproveForPoolConfig(0);
         _poolConfig = newPoolConfig;
-        safeApproveMax(poolConfigAddr, false);
+        // note approve max amount to pool config for admin withdraw functions
+        safeApproveForPoolConfig(type(uint256).max);
 
         emit PoolConfigChanged(msg.sender, poolConfigAddr);
     }
@@ -110,14 +101,12 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         );
     }
 
-    function safeApproveMax(address account, bool cancel) internal {
-        uint256 amount = 0;
-        if (!cancel) {
-            amount = type(uint256).max;
-        }
+    function safeApproveForPoolConfig(uint256 amount) internal {
+        address config = address(_poolConfig);
+        uint256 allowance = _underlyingToken.allowance(address(this), config);
 
-        if (amount == 0 || _underlyingToken.allowance(address(this), account) == 0) {
-            _underlyingToken.safeApprove(account, amount);
+        if ((amount == 0 && allowance > 0) || (amount > 0 && allowance == 0)) {
+            _underlyingToken.safeApprove(config, amount);
         }
     }
 
@@ -201,7 +190,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function distributeIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.distributeIncome(value);
         _totalPoolValue += poolIncome;
-        emit IncomeDistributed(value, _totalPoolValue);
     }
 
     /**
@@ -216,7 +204,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function reverseIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.reverseIncome(value);
         _totalPoolValue -= poolIncome;
-        emit IncomeReversed(value, _totalPoolValue);
     }
 
     /**

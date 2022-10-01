@@ -30,7 +30,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     event PaymentMade(address indexed borrower, uint256 amount, address by);
     event DrawdownMade(
         address indexed borrower,
-        uint256 amount,
+        uint256 borrowAmount,
+        uint256 netAmountToBorrower,
         address by,
         address receivableAddress,
         uint256 receivableParam
@@ -127,9 +128,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     function approveCredit(address borrower) public virtual override {
         protocolAndPoolOn();
         onlyEAServiceAccount();
-
         _creditRecordMapping[borrower] = _approveCredit(_creditRecordMapping[borrower]);
-
         emit CreditApproved(borrower, msg.sender);
     }
 
@@ -187,14 +186,16 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
 
         uint256 oldCreditLimit = _creditRecordStaticMapping[borrower].creditLimit;
+
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newCreditLimit);
 
         // Delete the line when there is no due or unbilled principal
         if (newCreditLimit == 0) {
-            if (
-                _creditRecordMapping[borrower].totalDue == 0 &&
-                _creditRecordMapping[borrower].unbilledPrincipal == 0
-            ) {
+            // Bring the account current
+            BS.CreditRecord memory cr = _updateDueInfo(borrower, true);
+            // Note: updated .state and .remainingPeriods directly instead of the entire cr
+            // for contract size consideration
+            if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
                 emit CreditLineClosed(borrower, msg.sender);
             }
@@ -206,11 +207,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     function isApproved(address borrower) external view virtual override returns (bool) {
         if ((_creditRecordMapping[borrower].state >= BS.CreditState.Approved)) return true;
         else return false;
-    }
-
-    function _checkAccountState(BS.CreditState state) internal pure {
-        if (state != BS.CreditState.Approved && state != BS.CreditState.GoodStanding)
-            revert Errors.creditLineNotInApprovedOrGoodStandingState();
     }
 
     /**
@@ -245,15 +241,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        _checkAccountState(cr.state);
-
-        if (
-            borrowAmount >
-            (_creditRecordStaticMapping[borrower].creditLimit -
-                cr.unbilledPrincipal -
-                (cr.totalDue - cr.feesAndInterestDue))
-        ) revert Errors.creditLineExceeded();
-
         bool isFirstDrawdown = cr.state == BS.CreditState.Approved ? true : false;
 
         if (isFirstDrawdown) {
@@ -265,11 +252,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             if (cr.dueDate > 0 && block.timestamp > cr.dueDate)
                 revert Errors.creditExpiredDueToFirstDrawdownTooLate();
 
+            if (borrowAmount > _creditRecordStaticMapping[borrower].creditLimit)
+                revert Errors.creditLineExceeded();
+
             // Update total principal
             _creditRecordMapping[borrower].unbilledPrincipal = uint96(borrowAmount);
 
             // Generates the first bill
-            cr = updateDueInfo(borrower, true);
+            cr = _updateDueInfo(borrower, true);
 
             // Transfer receivable assset.
             BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
@@ -304,11 +294,27 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                     revert Errors.unsupportedReceivableAsset();
                 }
             }
-        } else {
-            // Bring the account current.
-            if (block.timestamp > cr.dueDate) cr = updateDueInfo(borrower, true);
 
-            _checkAccountState(cr.state);
+            // Set account status in good standing
+            cr.state = BS.CreditState.GoodStanding;
+        } else {
+            if (cr.state != BS.CreditState.GoodStanding)
+                revert Errors.creditLineNotInGoodStandingState();
+
+            // Bring the account current.
+            if (block.timestamp > cr.dueDate) {
+                cr = _updateDueInfo(borrower, true);
+                // note check state again
+                if (cr.state != BS.CreditState.GoodStanding)
+                    revert Errors.creditLineNotInGoodStandingState();
+            }
+
+            if (
+                borrowAmount >
+                (_creditRecordStaticMapping[borrower].creditLimit -
+                    cr.unbilledPrincipal -
+                    (cr.totalDue - cr.feesAndInterestDue))
+            ) revert Errors.creditLineExceeded();
 
             // note Drawdown is not allowed in the final pay period since the payment due for
             // such drawdown will fall outside of the window of the credit line.
@@ -331,9 +337,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.unbilledPrincipal = uint96(cr.unbilledPrincipal + borrowAmount);
         }
 
-        // Set account status in good standing
-        cr.state = BS.CreditState.GoodStanding;
-
         _creditRecordMapping[borrower] = cr;
 
         (uint256 amtToBorrower, uint256 platformFees) = _feeManager.distBorrowingAmount(
@@ -345,7 +348,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Transfer funds to the _borrower
         _underlyingToken.safeTransfer(borrower, amtToBorrower);
 
-        emit DrawdownMade(borrower, amtToBorrower, msg.sender, receivableAsset, receivableParam);
+        emit DrawdownMade(
+            borrower,
+            borrowAmount,
+            amtToBorrower,
+            msg.sender,
+            receivableAsset,
+            receivableParam
+        );
     }
 
     /**
@@ -378,11 +388,23 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         if (amount == 0) revert Errors.zeroAmountProvided();
 
-        // Bring the account current. This is necessary since the account might have been dormant for
-        // several cycles.
-        BS.CreditRecord memory cr = updateDueInfo(borrower, true);
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+
+        if (
+            cr.state == BS.CreditState.Requested ||
+            cr.state == BS.CreditState.Approved ||
+            cr.state == BS.CreditState.Deleted
+        ) {
+            // todo add tests
+            revert Errors.creditLineNotInStateForMakingPayment();
+        }
+
+        if (block.timestamp > cr.dueDate) {
+            // Bring the account current. This is necessary since the account might have been dormant for
+            // several cycles.
+            cr = _updateDueInfo(borrower, true);
+        }
         uint96 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
-        bool isDefaulted = cr.state == BS.CreditState.Defaulted ? true : false;
 
         // How much will be applied towards principal
         uint256 principalPayment = 0;
@@ -414,7 +436,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
             cr.missedPeriods = 0;
-            if (!isDefaulted) cr.state = BS.CreditState.GoodStanding;
+            if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
         }
 
         if (principalPayment > 0) {
@@ -432,7 +454,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         // For account in default, record the recovered principal for the pool.
         // Note: correction only impacts interest amount, thus no impact on recovered principal
-        if (isDefaulted) {
+        if (cr.state == BS.CreditState.Defaulted) {
             _totalPoolValue += principalPayment;
             _creditRecordStaticMapping[borrower].defaultAmount -= uint96(principalPayment);
 
@@ -467,8 +489,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // If the account is ready to be defaulted but not yet, update the account without
         // distributing the income for the upcoming period. Otherwise, update and distribute income
         if (_creditRecordMapping[borrower].state != BS.CreditState.Defaulted) {
-            if (isDefaultReady(borrower)) return updateDueInfo(borrower, false);
-            else return updateDueInfo(borrower, true);
+            if (isDefaultReady(borrower)) return _updateDueInfo(borrower, false);
+            else return _updateDueInfo(borrower, true);
         }
     }
 
@@ -478,7 +500,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @dev getDueInfo() gets the due information of the most current cycle. This function
      * updates the record in creditRecordMapping for `_borrower`
      */
-    function updateDueInfo(address borrower, bool distributeChargesForLastCycle)
+    function _updateDueInfo(address borrower, bool distributeChargesForLastCycle)
         internal
         virtual
         returns (BS.CreditRecord memory cr)
@@ -554,7 +576,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
         if (block.timestamp > cr.dueDate) {
-            cr = updateDueInfo(borrower, false);
+            cr = _updateDueInfo(borrower, false);
         }
 
         // Check if grace period has exceeded. Please note it takes a full pay period
@@ -579,10 +601,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
         onlyEAServiceAccount();
-        // Although it is not essential to call updateDueInfo() to extend the credit line duration
+        // Although it is not essential to call _updateDueInfo() to extend the credit line duration
         // it is good practice to bring the account current while we update one of the fields.
-        // Also, only if we call updateDueInfo(), we can write proper tests.
-        updateDueInfo(borrower, false);
+        // Also, only if we call _updateDueInfo(), we can write proper tests.
+        _updateDueInfo(borrower, true);
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
         emit CreditLineExtended(
             borrower,
