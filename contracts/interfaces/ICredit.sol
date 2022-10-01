@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 interface ICredit {
     function requestCredit(
         uint256 _borrowAmount,
-        uint256 _intervalInDays,
+        uint256 _intervalInSeconds,
         uint256 _numOfPayments
     ) external;
 

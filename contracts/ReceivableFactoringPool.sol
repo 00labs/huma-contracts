@@ -31,7 +31,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
      * @param receivableAsset the receivable asset used for this credit
      * @param receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
      * @param receivableAmount amount of the receivable asset
-     * @param intervalInDays time interval for each payback in units of days
+     * @param intervalInSeconds time interval for each payback in units of days
      * @param remainingPeriods the number of pay periods for this credit
      * @dev Only Evaluation Agents for this contract can call this function.
      */
@@ -41,7 +41,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         address receivableAsset,
         uint256 receivableParam,
         uint256 receivableAmount,
-        uint256 intervalInDays,
+        uint256 intervalInSeconds,
         uint256 remainingPeriods
     ) external virtual override {
         onlyEAServiceAccount();
@@ -62,7 +62,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
             borrower,
             creditLimit,
             _poolConfig.poolAprInBps(),
-            intervalInDays,
+            intervalInSeconds,
             remainingPeriods,
             true
         );

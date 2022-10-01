@@ -21,7 +21,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         address indexed borrower,
         uint256 creditLimit,
         uint256 aprInBps,
-        uint256 payPeriodInDays,
+        uint256 payPeriodInSeconds,
         uint256 remainingPeriods,
         bool approved
     );
@@ -53,12 +53,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     /**
      * @notice accepts a credit request from msg.sender
      * @param creditLimit the credit line (number of pool token)
-     * @param intervalInDays duration of a payment cycle, typically 30 days
+     * @param intervalInSeconds duration of a payment cycle, typically 30 days
      * @param numOfPayments number of cycles for the credit line to be valid.
      */
     function requestCredit(
         uint256 creditLimit,
-        uint256 intervalInDays,
+        uint256 intervalInSeconds,
         uint256 numOfPayments
     ) external virtual override {
         // Open access to the borrower. Data validation happens in initiateCredit()
@@ -66,7 +66,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             msg.sender,
             creditLimit,
             _poolConfig.poolAprInBps(),
-            intervalInDays,
+            intervalInSeconds,
             numOfPayments,
             false
         );
@@ -81,7 +81,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         address borrower,
         uint256 creditLimit,
         uint256 aprInBps,
-        uint256 intervalInDays,
+        uint256 intervalInSeconds,
         uint256 remainingPeriods,
         bool preApproved
     ) internal virtual {
@@ -97,7 +97,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         _creditRecordStaticMapping[borrower] = BS.CreditRecordStatic({
             creditLimit: uint96(creditLimit),
             aprInBps: uint16(aprInBps),
-            intervalInDays: uint16(intervalInDays),
+            intervalInSeconds: uint32(intervalInSeconds),
             defaultAmount: uint96(0)
         });
 
@@ -115,7 +115,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             borrower,
             creditLimit,
             aprInBps,
-            intervalInDays,
+            intervalInSeconds,
             remainingPeriods,
             preApproved
         );
@@ -529,14 +529,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
                 cr.dueDate = uint64(
                     cr.dueDate +
                         periodsPassed *
-                        _creditRecordStaticMapping[borrower].intervalInDays *
-                        SECONDS_IN_A_DAY
+                        _creditRecordStaticMapping[borrower].intervalInSeconds
                 );
             else
                 cr.dueDate = uint64(
-                    block.timestamp +
-                        _creditRecordStaticMapping[borrower].intervalInDays *
-                        SECONDS_IN_A_DAY
+                    block.timestamp + _creditRecordStaticMapping[borrower].intervalInSeconds
                 );
 
             // Adjusts remainingPeriods, special handling when reached the maturity of the credit line
@@ -640,10 +637,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     }
 
     function isDefaultReady(address borrower) public view returns (bool) {
-        uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
+        uint32 intervalInSeconds = _creditRecordStaticMapping[borrower].intervalInSeconds;
         return
-            _creditRecordMapping[borrower].missedPeriods * intervalInDays * SECONDS_IN_A_DAY >=
-                _poolConfig.poolDefaultGracePeriodInSeconds() + intervalInDays * SECONDS_IN_A_DAY
+            _creditRecordMapping[borrower].missedPeriods * intervalInSeconds >=
+                _poolConfig.poolDefaultGracePeriodInSeconds() + intervalInSeconds
                 ? true
                 : false;
     }
