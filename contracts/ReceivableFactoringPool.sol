@@ -103,4 +103,10 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         _underlyingToken.safeTransfer(receiver, amount);
         emit ExtraFundsDispersed(receiver, amount);
     }
+
+    /// "Modifier" function that limits access to pdsServiceAccount only.
+    function onlyPDSServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
+            revert Errors.paymentDetectionServiceAccountRequired();
+    }
 }

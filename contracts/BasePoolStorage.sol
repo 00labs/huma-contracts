@@ -22,17 +22,17 @@ contract BasePoolStorage {
 
     BasePoolConfig internal _poolConfig;
 
-    // HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
+    // Reference to HumaConfig. Removed immutable since Solidity disallow reference it in the constructor,
     // but we need to retrieve the poolDefaultGracePeriod in the constructor.
     HumaConfig internal _humaConfig;
 
-    // Address for the fee manager contract
+    // Reference to the fee manager contract
     BaseFeeManager internal _feeManager;
 
     // The amount of underlying token belongs to lenders
     uint256 internal _totalPoolValue;
 
-    // Tracks the amount of liquidity in poolTokens provided to this pool by an address
+    // Tracks the last deposit time for each lender in this pool
     mapping(address => uint256) internal _lastDepositTime;
 
     // whether the pool is ON or OFF
