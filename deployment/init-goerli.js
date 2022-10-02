@@ -44,6 +44,9 @@ async function initHumaConfig() {
     await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [eaService.address]);
     await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [pdsService.address]);
 
+    // Add usdc as an asset supported by the protocol
+    await sendTransaction("HumaConfig", humaConfig, "setLiquidityAsset", [usdc.address, true]);
+
     await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
     const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
     await sendTransaction("HumaConfigTimelock", humaConfigTL, "renounceRole", [
