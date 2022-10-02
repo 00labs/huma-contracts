@@ -109,7 +109,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
             revert Errors.paymentDetectionServiceAccountRequired();
     }
 
-    function isProcessedPayment(bytes32 paymentIdHash)
+    function isPaymentProcessed(bytes32 paymentIdHash)
         external
         view
         virtual
