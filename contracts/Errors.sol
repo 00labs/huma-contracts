@@ -16,6 +16,8 @@ contract Errors {
 
     error zeroAddressProvided();
     error zeroAmountProvided();
+    error amountTooLow();
+    error creditLineGreatThanUpperLimit();
 
     error permissionDeniedNotAdmin();
     error permissionDeniedNotLender();
@@ -52,7 +54,4 @@ contract Errors {
 
     error defaultGracePeriodLessThanMinAllowed();
     error treasuryFeeHighThanUpperLimit();
-
-    error amountTooLow();
-    error creditLineGreatThanUpperLimit();
 }
