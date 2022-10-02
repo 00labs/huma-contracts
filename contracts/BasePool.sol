@@ -63,7 +63,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         _updateCoreData();
     }
 
-    function setPoolConfig(address poolConfigAddr) external {
+    function setPoolConfig(address poolConfigAddr) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         address oldConfig = address(_poolConfig);
         if (poolConfigAddr == oldConfig) revert Errors.sameValue();
@@ -243,13 +243,13 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         emit PoolEnabled(msg.sender);
     }
 
-    function addApprovedLender(address lender) external virtual {
+    function addApprovedLender(address lender) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         _approvedLenders[lender] = true;
         emit AddApprovedLender(lender, msg.sender);
     }
 
-    function removeApprovedLender(address lender) external virtual {
+    function removeApprovedLender(address lender) external virtual override {
         onlyOwnerOrHumaMasterAdmin();
         _approvedLenders[lender] = false;
         emit RemoveApprovedLender(lender, msg.sender);
@@ -259,15 +259,15 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         return _totalPoolValue;
     }
 
-    function lastDepositTime(address account) external view returns (uint256) {
+    function lastDepositTime(address account) external view virtual override returns (uint256) {
         return _lastDepositTime[account];
     }
 
-    function poolConfig() external view returns (address) {
+    function poolConfig() external view virtual override returns (address) {
         return address(_poolConfig);
     }
 
-    function isPoolOn() external view returns (bool status) {
+    function isPoolOn() external view virtual override returns (bool status) {
         if (_status == PoolStatus.On) return true;
         else return false;
     }
@@ -288,7 +288,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         feeManager_ = address(_feeManager);
     }
 
-    function isApprovedLender(address account) external view returns (bool) {
+    function isApprovedLender(address account) external view virtual override returns (bool) {
         return _approvedLenders[account];
     }
 

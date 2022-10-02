@@ -484,7 +484,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return (amountToCollect);
     }
 
-    function refreshAccount(address borrower) external returns (BS.CreditRecord memory cr) {
+    function refreshAccount(address borrower)
+        external
+        virtual
+        override
+        returns (BS.CreditRecord memory cr)
+    {
         // If the account is defaulted, no need to update the account anymore
         // If the account is ready to be defaulted but not yet, update the account without
         // distributing the income for the upcoming period. Otherwise, update and distribute income
@@ -596,7 +601,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return losses;
     }
 
-    function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external {
+    function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external virtual override {
         onlyEAServiceAccount();
         // Although it is not essential to call _updateDueInfo() to extend the credit line duration
         // it is good practice to bring the account current while we update one of the fields.
@@ -632,11 +637,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return _creditRecordStaticMapping[account];
     }
 
-    function isLate(address borrower) external view returns (bool) {
+    function isLate(address borrower) external view virtual override returns (bool) {
         return block.timestamp > _creditRecordMapping[borrower].dueDate ? true : false;
     }
 
-    function isDefaultReady(address borrower) public view returns (bool) {
+    function isDefaultReady(address borrower) public view virtual override returns (bool) {
         uint32 intervalInSeconds = _creditRecordStaticMapping[borrower].intervalInSeconds;
         return
             _creditRecordMapping[borrower].missedPeriods * intervalInSeconds >=
@@ -651,10 +656,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         returns (BS.ReceivableInfo memory)
     {
         return _receivableInfoMapping[account];
-    }
-
-    function isProcessedPayment(bytes32 paymentIdHash) external view returns (bool) {
-        return _processedPaymentIds[paymentIdHash];
     }
 
     function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
