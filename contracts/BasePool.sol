@@ -124,6 +124,9 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         _onlyApprovedLender(lender);
 
         //todo check if the pool liquidity cap has reached
+        if (_totalPoolValue + amount > _poolConfig.poolLiquidityCap())
+            revert Errors.exceededPoolLiquidityCap();
+            
         _underlyingToken.safeTransferFrom(lender, address(this), amount);
         uint256 shares = _poolToken.mintAmount(lender, amount);
         _lastDepositTime[lender] = block.timestamp;

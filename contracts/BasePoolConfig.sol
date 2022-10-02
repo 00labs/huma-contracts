@@ -499,6 +499,10 @@ contract BasePoolConfig is Ownable {
         return _poolConfig._poolDefaultGracePeriodInSeconds;
     }
 
+    function poolLiquidityCap() external view returns (uint256) {
+        return _poolConfig._liquidityCap;
+    }
+
     function receivableRequiredInBps() external view returns (uint256) {
         return _poolConfig._receivableRequiredInBps;
     }

@@ -99,7 +99,13 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Cannot deposit when pool max liquidity has been reached", async function () {
-            // todo implement it
+            let poolLiquidityCap = await poolConfigContract.poolLiquidityCap();
+            let poolValue = await poolContract.totalPoolValue();
+            let additionalCap = poolLiquidityCap - poolValue + 1;
+            await testTokenContract.connect(lender).approve(poolContract.address, additionalCap);
+            await expect(poolContract.connect(lender).deposit(additionalCap)).to.be.revertedWith(
+                "exceededPoolLiquidityCap"
+            );
         });
 
         it("Pool deposit works correctly", async function () {
