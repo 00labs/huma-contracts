@@ -27,18 +27,19 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 remainingPeriods,
         bool approved
     );
-    event CreditLineExtended(
-        address indexed borrower,
-        uint256 numOfPeriods,
-        uint256 remainingPeriods,
-        address by
-    );
     event CreditLineChanged(
         address indexed borrower,
         uint256 oldCreditLimit,
         uint256 newCreditLimit
     );
     event CreditLineClosed(address indexed borrower, address by);
+    event CreditLineExtended(
+        address indexed borrower,
+        uint256 numOfPeriods,
+        uint256 remainingPeriods,
+        address by
+    );
+    event DefaultTriggered(address indexed borrower, uint256 losses, address by);
     event DrawdownMade(
         address indexed borrower,
         uint256 borrowAmount,
@@ -47,7 +48,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         address receivableAddress,
         uint256 receivableParam
     );
-    event DefaultTriggered(address indexed borrower, uint256 losses, address by);
     event PaymentMade(address indexed borrower, uint256 amount, address by);
 
     /**
