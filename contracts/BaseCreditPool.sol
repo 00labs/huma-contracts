@@ -17,6 +17,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     using ERC165Checker for address;
     using BS for BS.CreditRecord;
 
+    event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
+    event CreditApproved(address indexed borrower, address by);
     event CreditInitiated(
         address indexed borrower,
         uint256 creditLimit,
@@ -25,18 +27,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 remainingPeriods,
         bool approved
     );
-    event CreditApproved(address indexed borrower, address by);
-    event DefaultTriggered(address indexed borrower, uint256 losses, address by);
-    event PaymentMade(address indexed borrower, uint256 amount, address by);
-    event DrawdownMade(
-        address indexed borrower,
-        uint256 borrowAmount,
-        uint256 netAmountToBorrower,
-        address by,
-        address receivableAddress,
-        uint256 receivableParam
-    );
-    event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
     event CreditLineChanged(
         address indexed borrower,
         uint256 oldCreditLimit,
@@ -49,135 +39,43 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 remainingPeriods,
         address by
     );
-
-    /**
-     * @notice accepts a credit request from msg.sender
-     * @param creditLimit the credit line (number of pool token)
-     * @param intervalInSeconds duration of a payment cycle, typically 30 days
-     * @param numOfPayments number of cycles for the credit line to be valid.
-     */
-    function requestCredit(
-        uint256 creditLimit,
-        uint256 intervalInSeconds,
-        uint256 numOfPayments
-    ) external virtual override {
-        // Open access to the borrower. Data validation happens in initiateCredit()
-        _initiateCredit(
-            msg.sender,
-            creditLimit,
-            _poolConfig.poolAprInBps(),
-            intervalInSeconds,
-            numOfPayments,
-            false
-        );
-    }
-
-    /**
-     * @notice initiation of a credit line
-     * @param borrower the address of the borrower
-     * @param creditLimit the amount of the liquidity asset that the borrower obtains
-     */
-    function _initiateCredit(
-        address borrower,
-        uint256 creditLimit,
-        uint256 aprInBps,
-        uint256 intervalInSeconds,
-        uint256 remainingPeriods,
-        bool preApproved
-    ) internal virtual {
-        protocolAndPoolOn();
-        // Borrowers cannot have two credit lines in one pool. They can request to increase line.
-        // todo add a test for this check
-        if (_creditRecordMapping[borrower].state != BS.CreditState.Deleted)
-            revert Errors.creditLineAlreadyExists();
-
-        // Borrowing amount needs to be lower than max for the pool.
-        _maxCreditLineCheck(creditLimit);
-
-        _creditRecordStaticMapping[borrower] = BS.CreditRecordStatic({
-            creditLimit: uint96(creditLimit),
-            aprInBps: uint16(aprInBps),
-            intervalInSeconds: uint32(intervalInSeconds),
-            defaultAmount: uint96(0)
-        });
-
-        BS.CreditRecord memory cr;
-
-        cr.remainingPeriods = uint16(remainingPeriods);
-
-        if (preApproved) {
-            cr = _approveCredit(cr);
-            emit CreditApproved(borrower, msg.sender);
-        } else cr.state = BS.CreditState.Requested;
-
-        _creditRecordMapping[borrower] = cr;
-        emit CreditInitiated(
-            borrower,
-            creditLimit,
-            aprInBps,
-            intervalInSeconds,
-            remainingPeriods,
-            preApproved
-        );
-    }
+    event DefaultTriggered(address indexed borrower, uint256 losses, address by);
+    event DrawdownMade(
+        address indexed borrower,
+        uint256 borrowAmount,
+        uint256 netAmountToBorrower,
+        address by,
+        address receivableAddress,
+        uint256 receivableParam
+    );
+    event PaymentMade(address indexed borrower, uint256 amount, address by);
 
     /**
      * Approves the credit request with the terms on record.
      * @dev only Evaluation Agent can call
      */
     function approveCredit(address borrower) public virtual override {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
         onlyEAServiceAccount();
         _creditRecordMapping[borrower] = _approveCredit(_creditRecordMapping[borrower]);
         emit CreditApproved(borrower, msg.sender);
     }
 
-    function _approveCredit(BS.CreditRecord memory cr)
-        internal
-        view
-        returns (BS.CreditRecord memory)
-    {
-        // Note: Special logic. dueDate is normally used to track the next bill due.
-        // Before the first drawdown, it is also used to set the deadline for the first
-        // drawdown to happen, otherwise, the credit line expires.
-        // Decided to use this field in this way to save one field for the struct
-        uint256 validPeriod = _poolConfig.creditApprovalExpirationInSeconds();
-        if (validPeriod > 0) cr.dueDate = uint64(block.timestamp + validPeriod);
-
-        cr.state = BS.CreditState.Approved;
-
-        return cr;
-    }
-
-    function _maxCreditLineCheck(uint256 amount) internal view {
-        if (amount > _poolConfig.maxCreditLine()) {
-            revert Errors.greaterThanMaxCreditLine();
-        }
-    }
-
-    function _receivableRequirementCheck(uint256 creditLine, uint256 receivableAmount)
-        internal
-        view
-    {
-        if (
-            receivableAmount <
-            (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
-        ) revert Errors.insufficientReceivableAmount();
-    }
-
     /**
-     * @notice changes the limit of the borrower's credit line. The credit line is marked as
-     * Deleted if 1) the new credit line is 0; 2) there is no due or unbilled principals.
+     * @notice changes the limit of the borrower's credit line.
+     * @dev The credit line is marked as Deleted if 1) the new credit line is 0 and
+     * 2) there is no due or unbilled principals.
      * @param borrower the owner of the credit line
      * @param newCreditLimit the new limit of the line in the unit of pool token
      * @dev only Evaluation Agent can call
      */
     function changeCreditLine(address borrower, uint256 newCreditLimit) external virtual override {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
         _maxCreditLineCheck(newCreditLimit);
 
+        // Checks to make sure the receivable value satisfies the requirement
         if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
             _receivableRequirementCheck(
                 newCreditLimit,
@@ -193,7 +91,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         if (newCreditLimit == 0) {
             // Bring the account current
             BS.CreditRecord memory cr = _updateDueInfo(borrower, true);
-            // Note: updated .state and .remainingPeriods directly instead of the entire cr
+            // Note: updated state and remainingPeriods directly instead of the entire cr
             // for contract size consideration
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
@@ -202,11 +100,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             _creditRecordMapping[borrower].remainingPeriods = 0;
         }
         emit CreditLineChanged(borrower, oldCreditLimit, newCreditLimit);
-    }
-
-    function isApproved(address borrower) external view virtual override returns (bool) {
-        if ((_creditRecordMapping[borrower].state >= BS.CreditState.Approved)) return true;
-        else return false;
     }
 
     /**
@@ -234,7 +127,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         address receivableAsset,
         uint256 receivableParam
     ) public virtual override {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
 
         ///msg.sender needs to be the borrower themselvers or the EA.
         if (msg.sender != borrower) onlyEAServiceAccount();
@@ -248,7 +141,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // the borrower must complete the first drawdown before the expiration date, which
             // is set in cr.dueDate in approveCredit().
             // note For pools without credit expiration for first drawdown, cr.dueDate is 0
-            // before the first drawdown, thus the cr.dueDate > 0 check
+            // before the first drawdown, thus the cr.dueDate > 0 condition in the check
             if (cr.dueDate > 0 && block.timestamp > cr.dueDate)
                 revert Errors.creditExpiredDueToFirstDrawdownTooLate();
 
@@ -259,6 +152,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             _creditRecordMapping[borrower].unbilledPrincipal = uint96(borrowAmount);
 
             // Generates the first bill
+            // Note: the interest is calcuated at the beginning of each pay period
             cr = _updateDueInfo(borrower, true);
 
             // Transfer receivable assset.
@@ -358,6 +252,25 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         );
     }
 
+    function extendCreditLineDuration(address borrower, uint256 numOfPeriods)
+        external
+        virtual
+        override
+    {
+        onlyEAServiceAccount();
+        // Although it is not essential to call _updateDueInfo() to extend the credit line duration
+        // it is good practice to bring the account current while we update one of the fields.
+        // Also, only if we call _updateDueInfo(), we can write proper tests.
+        _updateDueInfo(borrower, true);
+        _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
+        emit CreditLineExtended(
+            borrower,
+            numOfPeriods,
+            _creditRecordMapping[borrower].remainingPeriods,
+            msg.sender
+        );
+    }
+
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
@@ -373,6 +286,196 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return _makePayment(borrower, amount, false);
     }
 
+    function onERC721Received(
+        address, /*operator*/
+        address, /*from*/
+        uint256, /*tokenId*/
+        bytes calldata /*data*/
+    ) external virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
+    /// Brings the account status current.
+    function refreshAccount(address borrower)
+        external
+        virtual
+        override
+        returns (BS.CreditRecord memory cr)
+    {
+        // If the account is defaulted, no need to update the account anymore
+        // If the account is ready to be defaulted but not yet, update the account without
+        // distributing the income for the upcoming period. Otherwise, update and distribute income
+        if (_creditRecordMapping[borrower].state != BS.CreditState.Defaulted) {
+            if (isDefaultReady(borrower)) return _updateDueInfo(borrower, false);
+            else return _updateDueInfo(borrower, true);
+        }
+    }
+
+    /**
+     * @notice accepts a credit request from msg.sender
+     * @param creditLimit the credit line (number of pool token)
+     * @param intervalInSeconds duration of a payment cycle, typically 30 days
+     * @param numOfPayments number of cycles for the credit line to be valid.
+     */
+    function requestCredit(
+        uint256 creditLimit,
+        uint256 intervalInSeconds,
+        uint256 numOfPayments
+    ) external virtual override {
+        // Open access to the borrower. Data validation happens in initiateCredit()
+        _initiateCredit(
+            msg.sender,
+            creditLimit,
+            _poolConfig.poolAprInBps(),
+            intervalInSeconds,
+            numOfPayments,
+            false
+        );
+    }
+
+    /**
+     * @notice Triggers the default process
+     * @return losses the amount of remaining losses to the pool after receivable
+     * liquidation, pool cover, and staking.
+     */
+    function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
+        _protocolAndPoolOn();
+
+        // check to make sure the default grace period has passed.
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+
+        if (block.timestamp > cr.dueDate) {
+            cr = _updateDueInfo(borrower, false);
+        }
+
+        // Check if grace period has exceeded. Please note it takes a full pay period
+        // before the account is considered to be late. The time passed should be one pay period
+        // plus the grace period.
+        if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
+
+        if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
+
+        losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
+
+        _creditRecordMapping[borrower].state = BS.CreditState.Defaulted;
+
+        _creditRecordStaticMapping[borrower].defaultAmount = uint96(losses);
+
+        distributeLosses(losses);
+
+        emit DefaultTriggered(borrower, losses, msg.sender);
+
+        return losses;
+    }
+
+    function creditRecordMapping(address account) external view returns (BS.CreditRecord memory) {
+        return _creditRecordMapping[account];
+    }
+
+    function creditRecordStaticMapping(address account)
+        external
+        view
+        returns (BS.CreditRecordStatic memory)
+    {
+        return _creditRecordStaticMapping[account];
+    }
+
+    function isApproved(address borrower) external view virtual override returns (bool) {
+        if ((_creditRecordMapping[borrower].state >= BS.CreditState.Approved)) return true;
+        else return false;
+    }
+
+    function isDefaultReady(address borrower) public view virtual override returns (bool) {
+        uint32 intervalInSeconds = _creditRecordStaticMapping[borrower].intervalInSeconds;
+        return
+            _creditRecordMapping[borrower].missedPeriods * intervalInSeconds >=
+                _poolConfig.poolDefaultGracePeriodInSeconds() + intervalInSeconds
+                ? true
+                : false;
+    }
+
+    function isLate(address borrower) external view virtual override returns (bool) {
+        return block.timestamp > _creditRecordMapping[borrower].dueDate ? true : false;
+    }
+
+    function receivableInfoMapping(address account)
+        external
+        view
+        returns (BS.ReceivableInfo memory)
+    {
+        return _receivableInfoMapping[account];
+    }
+
+    function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
+        return _receivableOwnershipMapping[receivableHash];
+    }
+
+    function _approveCredit(BS.CreditRecord memory cr)
+        internal
+        view
+        returns (BS.CreditRecord memory)
+    {
+        // Note: Special logic. dueDate is normally used to track the next bill due.
+        // Before the first drawdown, it is also used to set the deadline for the first
+        // drawdown to happen, otherwise, the credit line expires.
+        // Decided to use this field in this way to save one field for the struct
+        uint256 validPeriod = _poolConfig.creditApprovalExpirationInSeconds();
+        if (validPeriod > 0) cr.dueDate = uint64(block.timestamp + validPeriod);
+
+        cr.state = BS.CreditState.Approved;
+
+        return cr;
+    }
+
+    /**
+     * @notice initiation of a credit line
+     * @param borrower the address of the borrower
+     * @param creditLimit the amount of the liquidity asset that the borrower obtains
+     */
+    function _initiateCredit(
+        address borrower,
+        uint256 creditLimit,
+        uint256 aprInBps,
+        uint256 intervalInSeconds,
+        uint256 remainingPeriods,
+        bool preApproved
+    ) internal virtual {
+        _protocolAndPoolOn();
+        // Borrowers cannot have two credit lines in one pool. They can request to increase line.
+        // todo add a test for this check
+        if (_creditRecordMapping[borrower].state != BS.CreditState.Deleted)
+            revert Errors.creditLineAlreadyExists();
+
+        // Borrowing amount needs to be lower than max for the pool.
+        _maxCreditLineCheck(creditLimit);
+
+        _creditRecordStaticMapping[borrower] = BS.CreditRecordStatic({
+            creditLimit: uint96(creditLimit),
+            aprInBps: uint16(aprInBps),
+            intervalInSeconds: uint32(intervalInSeconds),
+            defaultAmount: uint96(0)
+        });
+
+        BS.CreditRecord memory cr;
+
+        cr.remainingPeriods = uint16(remainingPeriods);
+
+        if (preApproved) {
+            cr = _approveCredit(cr);
+            emit CreditApproved(borrower, msg.sender);
+        } else cr.state = BS.CreditState.Requested;
+
+        _creditRecordMapping[borrower] = cr;
+        emit CreditInitiated(
+            borrower,
+            creditLimit,
+            aprInBps,
+            intervalInSeconds,
+            remainingPeriods,
+            preApproved
+        );
+    }
+
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
@@ -384,7 +487,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 amount,
         bool isPaymentReceived
     ) internal returns (uint256 amountPaid) {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
 
         if (amount == 0) revert Errors.zeroAmountProvided();
 
@@ -484,19 +587,20 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return (amountToCollect);
     }
 
-    function refreshAccount(address borrower)
-        external
-        virtual
-        override
-        returns (BS.CreditRecord memory cr)
-    {
-        // If the account is defaulted, no need to update the account anymore
-        // If the account is ready to be defaulted but not yet, update the account without
-        // distributing the income for the upcoming period. Otherwise, update and distribute income
-        if (_creditRecordMapping[borrower].state != BS.CreditState.Defaulted) {
-            if (isDefaultReady(borrower)) return _updateDueInfo(borrower, false);
-            else return _updateDueInfo(borrower, true);
+    function _maxCreditLineCheck(uint256 amount) internal view {
+        if (amount > _poolConfig.maxCreditLine()) {
+            revert Errors.greaterThanMaxCreditLine();
         }
+    }
+
+    function _receivableRequirementCheck(uint256 creditLine, uint256 receivableAmount)
+        internal
+        view
+    {
+        if (
+            receivableAmount <
+            (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
+        ) revert Errors.insufficientReceivableAmount();
     }
 
     /**
@@ -566,109 +670,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
     }
 
-    /**
-     * @notice Triggers the default process
-     * @return losses the amount of remaining losses to the pool after receivable
-     * liquidation, pool cover, and staking.
-     */
-    function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
-        protocolAndPoolOn();
-
-        // check to make sure the default grace period has passed.
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
-
-        if (block.timestamp > cr.dueDate) {
-            cr = _updateDueInfo(borrower, false);
-        }
-
-        // Check if grace period has exceeded. Please note it takes a full pay period
-        // before the account is considered to be late. The time passed should be one pay period
-        // plus the grace period.
-        if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
-
-        if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
-
-        losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
-
-        _creditRecordMapping[borrower].state = BS.CreditState.Defaulted;
-
-        _creditRecordStaticMapping[borrower].defaultAmount = uint96(losses);
-
-        distributeLosses(losses);
-
-        emit DefaultTriggered(borrower, losses, msg.sender);
-
-        return losses;
-    }
-
-    function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external virtual override {
-        onlyEAServiceAccount();
-        // Although it is not essential to call _updateDueInfo() to extend the credit line duration
-        // it is good practice to bring the account current while we update one of the fields.
-        // Also, only if we call _updateDueInfo(), we can write proper tests.
-        _updateDueInfo(borrower, true);
-        _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
-        emit CreditLineExtended(
-            borrower,
-            numOfPeriods,
-            _creditRecordMapping[borrower].remainingPeriods,
-            msg.sender
-        );
-    }
-
-    function onERC721Received(
-        address, /*operator*/
-        address, /*from*/
-        uint256, /*tokenId*/
-        bytes calldata /*data*/
-    ) external virtual override returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
-    function creditRecordMapping(address account) external view returns (BS.CreditRecord memory) {
-        return _creditRecordMapping[account];
-    }
-
-    function creditRecordStaticMapping(address account)
-        external
-        view
-        returns (BS.CreditRecordStatic memory)
-    {
-        return _creditRecordStaticMapping[account];
-    }
-
-    function isLate(address borrower) external view virtual override returns (bool) {
-        return block.timestamp > _creditRecordMapping[borrower].dueDate ? true : false;
-    }
-
-    function isDefaultReady(address borrower) public view virtual override returns (bool) {
-        uint32 intervalInSeconds = _creditRecordStaticMapping[borrower].intervalInSeconds;
-        return
-            _creditRecordMapping[borrower].missedPeriods * intervalInSeconds >=
-                _poolConfig.poolDefaultGracePeriodInSeconds() + intervalInSeconds
-                ? true
-                : false;
-    }
-
-    function receivableInfoMapping(address account)
-        external
-        view
-        returns (BS.ReceivableInfo memory)
-    {
-        return _receivableInfoMapping[account];
-    }
-
-    function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
-        return _receivableOwnershipMapping[receivableHash];
-    }
-
+    /// "Modifier" function that limits access to eaServiceAccount only
     function onlyEAServiceAccount() internal view {
         if (msg.sender != _humaConfig.eaServiceAccount())
             revert Errors.evaluationAgentServiceAccountRequired();
-    }
-
-    function onlyPDSServiceAccount() internal view {
-        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
-            revert Errors.paymentDetectionServiceAccountRequired();
     }
 }

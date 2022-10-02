@@ -16,6 +16,8 @@ contract Errors {
 
     error zeroAddressProvided();
     error zeroAmountProvided();
+    error amountTooLow();
+    error creditLineGreatThanUpperLimit();
 
     error permissionDeniedNotAdmin();
     error permissionDeniedNotLender();
@@ -35,6 +37,7 @@ contract Errors {
     error withdrawTooSoon();
     error assetNotMatchWithPoolAsset();
     error paymentAlreadyProcessed();
+    error exceededPoolLiquidityCap();
 
     error minPrincipalPaymentRateSettingTooHigh();
     error protocolIsPaused();
@@ -52,7 +55,4 @@ contract Errors {
 
     error defaultGracePeriodLessThanMinAllowed();
     error treasuryFeeHighThanUpperLimit();
-
-    error amountTooLow();
-    error creditLineGreatThanUpperLimit();
 }

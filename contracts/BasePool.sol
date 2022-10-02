@@ -6,21 +6,24 @@ import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-import "./BasePoolStorage.sol";
-
 import "./interfaces/ILiquidityProvider.sol";
 import "./interfaces/IPool.sol";
 
+import "./BasePoolStorage.sol";
 import "./Errors.sol";
+import "./EvaluationAgentNFT.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
-import "./EvaluationAgentNFT.sol";
 
 import "hardhat/console.sol";
 
 abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider, IPool {
     using SafeERC20 for IERC20;
 
+    event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
+    event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
+
+    event PoolConfigChanged(address indexed sender, address newPoolConfig);
     event PoolCoreDataChanged(
         address indexed sender,
         address underlyingToken,
@@ -28,10 +31,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         address humaConfig,
         address feeManager
     );
-    event PoolConfigChanged(address indexed sender, address newPoolConfig);
-
-    event LiquidityDeposited(address indexed account, uint256 assetAmount, uint256 shareAmount);
-    event LiquidityWithdrawn(address indexed account, uint256 assetAmount, uint256 shareAmount);
 
     event PoolDisabled(address indexed by);
     event PoolEnabled(address indexed by);
@@ -41,7 +40,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
     /**
      * @dev This event emits when new losses are distributed
-     * @param lossesDistributed the amount of losses received for distribution
+     * @param lossesDistributed the amount of losses by the pool
      */
     event LossesDistributed(uint256 lossesDistributed, uint256 updatedPoolValue);
 
@@ -52,19 +51,179 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     function initialize(address poolConfigAddr) external initializer {
         _poolConfig = BasePoolConfig(poolConfigAddr);
         _updateCoreData();
-        // note approve max amount to pool config for admin withdraw functions
-        safeApproveForPoolConfig(type(uint256).max);
 
+        // note approve max amount to pool config for admins to withdraw their rewards
+        _safeApproveForPoolConfig(type(uint256).max);
+
+        // All pools are off when initiated, will turn on after admins' initial deposits
         _status = PoolStatus.Off;
     }
 
-    function updateCoreData() external {
-        onlyOwnerOrHumaMasterAdmin();
-        _updateCoreData();
+    //********************************************/
+    //               LP Functions                //
+    //********************************************/
+    /**
+     * @notice LP deposits to the pool to earn interest, and share losses
+     * @param amount the number of underlyingToken to be deposited
+     */
+    function deposit(uint256 amount) external virtual override {
+        _protocolAndPoolOn();
+        return _deposit(msg.sender, amount);
     }
 
-    function setPoolConfig(address poolConfigAddr) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
+    /**
+     * @notice Allows the pool owner and EA to make initial deposit before the pool goes live
+     * @param amount the number of `poolToken` to be deposited
+     */
+    function makeInitialDeposit(uint256 amount) external virtual override {
+        _poolConfig.onlyOwnerOrEA(msg.sender);
+        return _deposit(msg.sender, amount);
+    }
+
+    /**
+     * @notice Withdraw capital from the pool in the unit of underlyingToken
+     * @dev Withdrawals are not allowed when 1) the pool withdraw is paused or
+     *      2) the LP has not reached lockout period since their last depisit
+     *      3) the requested amount is higher than the LP's remaining principal
+     * @dev the `amount` is total amount to withdraw, not the number of HDT shares,
+     * which will be computed based on the current price per share
+     */
+    function withdraw(uint256 amount) public virtual override {
+        _protocolAndPoolOn();
+        if (amount == 0) revert Errors.zeroAmountProvided();
+        if (
+            block.timestamp <
+            _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds()
+        ) revert Errors.withdrawTooSoon();
+
+        uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
+        if (amount > withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
+
+        uint256 shares = _poolToken.burnAmount(msg.sender, amount);
+        _totalPoolValue -= amount;
+        _underlyingToken.safeTransfer(msg.sender, amount);
+
+        // todo check if this block of code can be further optimized
+        if (msg.sender == _poolConfig.evaluationAgent())
+            _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
+        else if (msg.sender == _poolConfig.owner())
+            _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
+
+        emit LiquidityWithdrawn(msg.sender, amount, shares);
+    }
+
+    /**
+     * @notice Withdraw all balance from the pool.
+     */
+    function withdrawAll() external virtual override {
+        withdraw(_poolToken.withdrawableFundsOf(msg.sender));
+    }
+
+    function _deposit(address lender, uint256 amount) internal {
+        if (amount == 0) revert Errors.zeroAmountProvided();
+        _onlyApprovedLender(lender);
+
+        //todo check if the pool liquidity cap has reached
+        if (_totalPoolValue + amount > _poolConfig.poolLiquidityCap())
+            revert Errors.exceededPoolLiquidityCap();
+            
+        _underlyingToken.safeTransferFrom(lender, address(this), amount);
+        uint256 shares = _poolToken.mintAmount(lender, amount);
+        _lastDepositTime[lender] = block.timestamp;
+        _totalPoolValue += amount;
+
+        emit LiquidityDeposited(lender, amount, shares);
+    }
+
+    /**
+     * @notice Distributes income to token holders.
+     */
+    function distributeIncome(uint256 value) internal virtual {
+        uint256 poolIncome = _poolConfig.distributeIncome(value);
+        _totalPoolValue += poolIncome;
+    }
+
+    /**
+     * @notice Distributes losses associated with the token.
+     * Note: The pool (i.e. LPs) is responsible for the losses in a default. The protocol does not
+     * participate in loss distribution. PoolOwner and EA only participate in their LP capacity.
+     * @param value the amount of losses to be distributed
+     * @dev We chose not to change distributeIncome to accepted int256 to cover losses for
+     * readability consideration.
+     * @dev It does not make sense to combine reserveIncome() and distributeLosses() since protocol,
+     * poolOwner and EA do not participate in losses, but they participate in income reverse.
+     */
+    function distributeLosses(uint256 value) internal virtual {
+        if (_totalPoolValue > value) _totalPoolValue -= value;
+        else _totalPoolValue = 0;
+        emit LossesDistributed(value, _totalPoolValue);
+    }
+
+    /**
+     * @notice Reverse income to token holders.
+     * @param value the amount of income to be reverted
+     * @dev this is needed when the user pays off early. We collect and distribute interest
+     * at the beginning of the pay period. When the user pays off early, the interest
+     * for the remainder of the period will be automatically subtraced from the payoff amount.
+     * The portion of the income will be reversed. We can also change the parameter of
+     * distributeIncome to int256. Choose to use a separate function for better readability.
+     */
+    function reverseIncome(uint256 value) internal virtual {
+        uint256 poolIncome = _poolConfig.reverseIncome(value);
+        _totalPoolValue -= poolIncome;
+    }
+
+    //********************************************/
+    //            Admin Functions                //
+    //********************************************/
+
+    /**
+     * @notice Lenders need to pass compliance reqirements. Pool owner will administer off-chain
+     * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
+     * call this function to mark a lender as approved.
+     */
+    function addApprovedLender(address lender) external virtual override {
+        _onlyOwnerOrHumaMasterAdmin();
+        _approvedLenders[lender] = true;
+        emit AddApprovedLender(lender, msg.sender);
+    }
+
+    /**
+     * @notice turns off the pool
+     */
+    function disablePool() external virtual override {
+        _onlyOwnerOrHumaMasterAdmin();
+        _status = PoolStatus.Off;
+        emit PoolDisabled(msg.sender);
+    }
+
+    /**
+     * @notice turns on the pool
+     */
+    function enablePool() external virtual override {
+        _onlyOwnerOrHumaMasterAdmin();
+
+        _poolConfig.checkLiquidityRequirement();
+
+        _status = PoolStatus.On;
+        emit PoolEnabled(msg.sender);
+    }
+
+    /**
+     * @notice Disables a lender. This prevents the lender from making more deposits.
+     * The capital that the lender has contributed can continue to work as normal.
+     */
+    function removeApprovedLender(address lender) external virtual override {
+        _onlyOwnerOrHumaMasterAdmin();
+        _approvedLenders[lender] = false;
+        emit RemoveApprovedLender(lender, msg.sender);
+    }
+
+    /**
+     * @notice Points the pool configuration to PoolConfig contract
+     */
+    function setPoolConfig(address poolConfigAddr) external override {
+        _onlyOwnerOrHumaMasterAdmin();
         address oldConfig = address(_poolConfig);
         if (poolConfigAddr == oldConfig) revert Errors.sameValue();
 
@@ -72,14 +231,84 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         newPoolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
 
         // note set old pool config allowance to 0
-        safeApproveForPoolConfig(0);
+        _safeApproveForPoolConfig(0);
         _poolConfig = newPoolConfig;
         // note approve max amount to pool config for admin withdraw functions
-        safeApproveForPoolConfig(type(uint256).max);
+        _safeApproveForPoolConfig(type(uint256).max);
 
         emit PoolConfigChanged(msg.sender, poolConfigAddr);
     }
 
+    /**
+     * @notice Updates references to core supporting contracts: underlying token, pool token,
+     * Huma Config, and Fee Manager.
+     */
+    function updateCoreData() external {
+        _onlyOwnerOrHumaMasterAdmin();
+        _updateCoreData();
+    }
+
+    /**
+     * @notice Gets the address of core supporting contracts: underlying token, pool token,
+     * Huma Config, and Fee Manager.
+     */
+    function getCoreData()
+        external
+        view
+        returns (
+            address underlyingToken_,
+            address poolToken_,
+            address humaConfig_,
+            address feeManager_
+        )
+    {
+        underlyingToken_ = address(_underlyingToken);
+        poolToken_ = address(_poolToken);
+        humaConfig_ = address(_humaConfig);
+        feeManager_ = address(_feeManager);
+    }
+
+    /// Reports if the given account has been approved as a lender for this pool
+    function isApprovedLender(address account) external view virtual override returns (bool) {
+        return _approvedLenders[account];
+    }
+
+    /// Gets the on/off status of the pool
+    function isPoolOn() external view virtual override returns (bool status) {
+        if (_status == PoolStatus.On) return true;
+        else return false;
+    }
+
+    /// Gets the last deposit time of the given lender
+    function lastDepositTime(address account) external view virtual override returns (uint256) {
+        return _lastDepositTime[account];
+    }
+
+    /// Gets the address of poolConfig
+    function poolConfig() external view virtual override returns (address) {
+        return address(_poolConfig);
+    }
+
+    /// Gets the total value of the pool, measured by the units of underlying token
+    function totalPoolValue() external view override returns (uint256) {
+        return _totalPoolValue;
+    }
+
+    /**
+     * @notice In PoolConfig, the admins (protocol, pool owner, EA) can withdraw the rewards
+     * that they have earned so far. This gives allowance for PoolConfig to enable such withdraw.
+     */
+    function _safeApproveForPoolConfig(uint256 amount) internal {
+        address config = address(_poolConfig);
+        uint256 allowance = _underlyingToken.allowance(address(this), config);
+
+        // todo the logic is hard to follow. Look for ways to simplify it.
+        if ((amount == 0 && allowance > 0) || (amount > 0 && allowance == 0)) {
+            _underlyingToken.safeApprove(config, amount);
+        }
+    }
+
+    /// Refreshes the cache of addresses for key contracts using the current data in PoolConfig
     function _updateCoreData() private {
         (
             address underlyingTokenAddr,
@@ -101,209 +330,20 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         );
     }
 
-    function safeApproveForPoolConfig(uint256 amount) internal {
-        address config = address(_poolConfig);
-        uint256 allowance = _underlyingToken.allowance(address(this), config);
-
-        if ((amount == 0 && allowance > 0) || (amount > 0 && allowance == 0)) {
-            _underlyingToken.safeApprove(config, amount);
-        }
-    }
-
-    //********************************************/
-    //               LP Functions                //
-    //********************************************/
-
-    /**
-     * @notice LP deposits to the pool to earn interest, and share losses
-     * @param amount the number of `poolToken` to be deposited
-     */
-    function deposit(uint256 amount) external virtual override {
-        protocolAndPoolOn();
-        // todo (by RL) Need to add maximal pool size support and check if it has reached the size
-        return _deposit(msg.sender, amount);
-    }
-
-    /**
-     * @notice Allows the pool owner to make initial deposit before the pool goes live
-     * @param amount the number of `poolToken` to be deposited
-     */
-    function makeInitialDeposit(uint256 amount) external virtual override {
-        _poolConfig.onlyOwnerOrEA(msg.sender);
-        return _deposit(msg.sender, amount);
-    }
-
-    function _deposit(address lender, uint256 amount) internal {
-        if (amount == 0) revert Errors.zeroAmountProvided();
-        onlyApprovedLender(lender);
-
-        _underlyingToken.safeTransferFrom(lender, address(this), amount);
-        uint256 shares = _poolToken.mintAmount(lender, amount);
-        _lastDepositTime[lender] = block.timestamp;
-        _totalPoolValue += amount;
-
-        emit LiquidityDeposited(lender, amount, shares);
-    }
-
-    /**
-     * @notice Withdraw capital from the pool in the unit of `poolTokens`
-     * @dev Withdrawals are not allowed when 1) the pool withdraw is paused or
-     *      2) the LP has not reached lockout period since their last depisit
-     *      3) the requested amount is higher than the LP's remaining principal
-     * @dev the `amount` is total amount to withdraw. It will deivided by pointsPerShare to get
-     *      the number of HDTs to reduct from msg.sender's account.
-     * @dev Error checking sequence: 1) is the pool on 2) is the amount right 3)
-     */
-    function withdraw(uint256 amount) public virtual override {
-        protocolAndPoolOn();
-        if (amount == 0) revert Errors.zeroAmountProvided();
-        if (
-            block.timestamp <
-            _lastDepositTime[msg.sender] + _poolConfig.withdrawalLockoutPeriodInSeconds()
-        ) revert Errors.withdrawTooSoon();
-
-        uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
-        if (amount > withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
-
-        uint256 shares = _poolToken.burnAmount(msg.sender, amount);
-        _totalPoolValue -= amount;
-        _underlyingToken.safeTransfer(msg.sender, amount);
-
-        if (msg.sender == _poolConfig.evaluationAgent())
-            _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
-        else if (msg.sender == _poolConfig.owner())
-            _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
-
-        emit LiquidityWithdrawn(msg.sender, amount, shares);
-    }
-
-    /**
-     * @notice Withdraw all balance from the pool.
-     */
-    function withdrawAll() external virtual override {
-        withdraw(_poolToken.withdrawableFundsOf(msg.sender));
-    }
-
-    /**
-     * @notice Distributes income to token holders.
-     */
-    function distributeIncome(uint256 value) internal virtual {
-        uint256 poolIncome = _poolConfig.distributeIncome(value);
-        _totalPoolValue += poolIncome;
-    }
-
-    /**
-     * @notice Reverse income to token holders.
-     * @param value the amount of income to be reverted
-     * @dev this is needed when the user pays off early. We collect and distribute interest
-     * at the beginning of the pay period. When the user pays off early, the interest
-     * for the remainder of the period will be automatically subtraced from the payoff amount.
-     * The portion of the income will be reversed. We can change the parameter of distributeIncome
-     * to int256 to do the job. Choose to use a separate function for better readability
-     */
-    function reverseIncome(uint256 value) internal virtual {
-        uint256 poolIncome = _poolConfig.reverseIncome(value);
-        _totalPoolValue -= poolIncome;
-    }
-
-    /**
-     * @notice Distributes losses associated with the token.
-     * Note: The pool (i.e. LPs) is responsible for the losses in a default. The protocol does not
-     * participate in loss distribution. PoolOwner and EA only participate in their LP capacity.
-     * @param value the amount of losses to be distributed
-     * @dev We chose not to change distributeIncome to accepted int256 to cover losses for
-     * readability consideration.
-     * @dev reserveIncome() and distributeLosses() cannot be combined since protocol, poolOwner
-     * and evaluationAgent do not participate in losses, but they participate in income reverse.
-     */
-    function distributeLosses(uint256 value) internal virtual {
-        if (_totalPoolValue > value) _totalPoolValue -= value;
-        else _totalPoolValue = 0;
-        emit LossesDistributed(value, _totalPoolValue);
-    }
-
-    /**
-     * @notice turns off the pool
-     * Note that existing loans will still be processed as expected.
-     */
-    function disablePool() external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _status = PoolStatus.Off;
-        emit PoolDisabled(msg.sender);
-    }
-
-    /**
-     * @notice turns on the pool
-     */
-    function enablePool() external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _poolConfig.checkLiquidityRequirement();
-
-        _status = PoolStatus.On;
-        emit PoolEnabled(msg.sender);
-    }
-
-    function addApprovedLender(address lender) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _approvedLenders[lender] = true;
-        emit AddApprovedLender(lender, msg.sender);
-    }
-
-    function removeApprovedLender(address lender) external virtual override {
-        onlyOwnerOrHumaMasterAdmin();
-        _approvedLenders[lender] = false;
-        emit RemoveApprovedLender(lender, msg.sender);
-    }
-
-    function totalPoolValue() external view override returns (uint256) {
-        return _totalPoolValue;
-    }
-
-    function lastDepositTime(address account) external view virtual override returns (uint256) {
-        return _lastDepositTime[account];
-    }
-
-    function poolConfig() external view virtual override returns (address) {
-        return address(_poolConfig);
-    }
-
-    function isPoolOn() external view virtual override returns (bool status) {
-        if (_status == PoolStatus.On) return true;
-        else return false;
-    }
-
-    function getCoreData()
-        external
-        view
-        returns (
-            address underlyingToken_,
-            address poolToken_,
-            address humaConfig_,
-            address feeManager_
-        )
-    {
-        underlyingToken_ = address(_underlyingToken);
-        poolToken_ = address(_poolToken);
-        humaConfig_ = address(_humaConfig);
-        feeManager_ = address(_feeManager);
-    }
-
-    function isApprovedLender(address account) external view virtual override returns (bool) {
-        return _approvedLenders[account];
-    }
-
-    // In order for a pool to issue new loans, it must be turned on by an admin
-    // and its custom loan helper must be approved by the Huma team
-    function protocolAndPoolOn() internal view {
+    /// "Modifier" function that limits access only when both protocol and pool are on.
+    /// Did not use modifier for contract size consideration.
+    function _protocolAndPoolOn() internal view {
         if (_humaConfig.isProtocolPaused()) revert Errors.protocolIsPaused();
         if (_status != PoolStatus.On) revert Errors.poolIsNotOn();
     }
 
-    function onlyApprovedLender(address lender) internal view {
+    /// "Modifier" function that limits access to approved lenders only.
+    function _onlyApprovedLender(address lender) internal view {
         if (!_approvedLenders[lender]) revert Errors.permissionDeniedNotLender();
     }
 
-    function onlyOwnerOrHumaMasterAdmin() internal view {
+    /// "Modifier" function that limits access to pool owner or protocol owner
+    function _onlyOwnerOrHumaMasterAdmin() internal view {
         _poolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
     }
 }

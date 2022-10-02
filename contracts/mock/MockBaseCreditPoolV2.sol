@@ -7,7 +7,7 @@ import "../Errors.sol";
 
 contract MockBaseCreditPoolV2 is BasePool, BaseCreditPoolStorage {
     function changeCreditLine(address borrower, uint256 newLine) external {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
         if (newLine > _poolConfig.maxCreditLine()) revert Errors.creditLineGreatThanUpperLimit();
