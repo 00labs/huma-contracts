@@ -235,14 +235,14 @@ describe("Base Credit Pool", function () {
 
         it("Should reject drawdown before approval", async function () {
             await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
-                "creditLineNotInGoodStandingState()"
+                "creditLineNotInStateForDrawdown()"
             );
         });
 
         it("Should reject drawdown when account is deleted", async function () {
             await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
             await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-                "creditLineNotInGoodStandingState()"
+                "creditLineNotInStateForDrawdown()"
             );
         });
 

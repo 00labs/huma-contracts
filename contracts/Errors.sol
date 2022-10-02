@@ -7,6 +7,7 @@ contract Errors {
     error evaluationAgentServiceAccountRequired();
     error creditLineNotInGoodStandingState();
     error creditLineNotInStateForMakingPayment();
+    error creditLineNotInStateForDrawdown();
     error creditLineExceeded();
     error creditLineAlreadyExists();
     error greaterThanMaxCreditLine();
