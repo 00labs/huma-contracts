@@ -179,7 +179,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
      * call this function to mark a lender as approved.
      */
-    function addApprovedLender(address lender) external virtual {
+    function addApprovedLender(address lender) external virtual override {
         _onlyOwnerOrHumaMasterAdmin();
         _approvedLenders[lender] = true;
         emit AddApprovedLender(lender, msg.sender);
@@ -210,7 +210,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * @notice Disables a lender. This prevents the lender from making more deposits.
      * The capital that the lender has contributed can continue to work as normal.
      */
-    function removeApprovedLender(address lender) external virtual {
+    function removeApprovedLender(address lender) external virtual override {
         _onlyOwnerOrHumaMasterAdmin();
         _approvedLenders[lender] = false;
         emit RemoveApprovedLender(lender, msg.sender);
@@ -219,7 +219,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     /**
      * @notice Points the pool configuration to PoolConfig contract
      */
-    function setPoolConfig(address poolConfigAddr) external {
+    function setPoolConfig(address poolConfigAddr) external override {
         _onlyOwnerOrHumaMasterAdmin();
         address oldConfig = address(_poolConfig);
         if (poolConfigAddr == oldConfig) revert Errors.sameValue();
@@ -266,23 +266,23 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 
     /// Reports if the given account has been approved as a lender for this pool
-    function isApprovedLender(address account) external view returns (bool) {
+    function isApprovedLender(address account) external view virtual override returns (bool) {
         return _approvedLenders[account];
     }
 
     /// Gets the on/off status of the pool
-    function isPoolOn() external view returns (bool status) {
+    function isPoolOn() external view virtual override returns (bool status) {
         if (_status == PoolStatus.On) return true;
         else return false;
     }
 
     /// Gets the last deposit time of the given lender
-    function lastDepositTime(address account) external view returns (uint256) {
+    function lastDepositTime(address account) external view virtual override returns (uint256) {
         return _lastDepositTime[account];
     }
 
     /// Gets the address of poolConfig
-    function poolConfig() external view returns (address) {
+    function poolConfig() external view virtual override returns (address) {
         return address(_poolConfig);
     }
 

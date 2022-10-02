@@ -159,8 +159,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
      */
     function distBorrowingAmount(uint256 borrowAmount)
         external
-        virtual
-        override
+        view
         returns (uint256 amtToBorrower, uint256 platformFees)
     {
         // Calculate platform fee, which includes protocol fee and pool fee

@@ -109,4 +109,14 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
             revert Errors.paymentDetectionServiceAccountRequired();
     }
+
+    function isProcessedPayment(bytes32 paymentIdHash)
+        external
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return _processedPaymentIds[paymentIdHash];
+    }
 }

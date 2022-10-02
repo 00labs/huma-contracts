@@ -33,4 +33,10 @@ interface IReceivable {
         uint256 amount,
         bytes32 paymentIdHash
     ) external;
+
+    /**
+     * @notice Reports if a payment has been processed
+     * @param paymentIdHash the hash of the payment id
+     */
+    function isProcessedPayment(bytes32 paymentIdHash) external view returns (bool);
 }

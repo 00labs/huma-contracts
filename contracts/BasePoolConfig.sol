@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./interfaces/IPoolConfig.sol";
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
 import "./BasePool.sol";
@@ -13,7 +12,7 @@ import "./Errors.sol";
 
 import "hardhat/console.sol";
 
-contract BasePoolConfig is Ownable, IPoolConfig {
+contract BasePoolConfig is Ownable {
     using SafeERC20 for IERC20;
 
     /**
@@ -217,7 +216,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
      * @notice Adds an evaluation agent to the list who can approve loans.
      * @param agent the evaluation agent to be added
      */
-    function setEvaluationAgent(uint256 eaId, address agent) external override {
+    function setEvaluationAgent(uint256 eaId, address agent) external {
         if (agent == address(0)) revert Errors.zeroAddressProvided();
         _onlyOwnerOrHumaMasterAdmin();
 
@@ -312,7 +311,7 @@ contract BasePoolConfig is Ownable, IPoolConfig {
     /**
      * @notice Change pool name
      */
-    function setPoolName(string memory newName) external override {
+    function setPoolName(string memory newName) external {
         _onlyOwnerOrHumaMasterAdmin();
         poolName = newName;
         emit PoolNameChanged(newName, msg.sender);

@@ -6,15 +6,36 @@ const {solidity} = require("ethereum-waffle");
 use(solidity);
 
 describe("Huma Config", function () {
-    let configContract;
-    let origOwner, pauser, poolAdmin, treasury, newOwner, newTreasury, randomUser;
+    let configContract, testTokenContract;
+    let origOwner,
+        pauser,
+        poolAdmin,
+        treasury,
+        newOwner,
+        newTreasury,
+        pdsServiceAccount,
+        eaServiceAccount,
+        randomUser;
 
     before(async function () {
-        [origOwner, pauser, poolAdmin, treasury, newOwner, newTreasury, randomUser] =
-            await ethers.getSigners();
+        [
+            origOwner,
+            pauser,
+            poolAdmin,
+            treasury,
+            newOwner,
+            newTreasury,
+            pdsServiceAccount,
+            eaServiceAccount,
+            randomUser,
+        ] = await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         configContract = await HumaConfig.deploy(treasury.address);
+
+        // Deploy TestToken, give initial tokens to lender
+        const TestToken = await ethers.getContractFactory("TestToken");
+        testTokenContract = await TestToken.deploy();
     });
 
     describe("Initial Value", function () {
@@ -75,7 +96,7 @@ describe("Huma Config", function () {
             ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
-        it("Should disallow non-owner to change huma treasury", async function () {
+        it("Should disallow previous protocol owner to change huma treasury", async function () {
             await expect(
                 configContract.connect(origOwner).setHumaTreasury(ethers.constants.AddressZero)
             ).to.be.revertedWith("zeroAddressProvided()");
@@ -131,9 +152,13 @@ describe("Huma Config", function () {
                 configContract.connect(randomUser).removePauser(pauser.address)
             ).to.be.revertedWith("Ownable: caller is not the owner");
 
+            expect(await configContract.isPauser(pauser.address)).to.equal(true);
+
             await expect(
                 configContract.connect(pauser).removePauser(pauser.address)
             ).to.be.revertedWith("Ownable: caller is not the owner");
+
+            expect(await configContract.isPauser(pauser.address)).to.equal(true);
         });
 
         it("Should disallow removal of pauser using zero address", async function () {
@@ -186,13 +211,6 @@ describe("Huma Config", function () {
             expect(await configContract.isProtocolPaused()).to.equal(true);
         });
 
-        it("Should allow owner to pause", async function () {
-            await expect(configContract.connect(origOwner).pauseProtocol())
-                .to.emit(configContract, "ProtocolPaused")
-                .withArgs(origOwner.address);
-            expect(await configContract.isProtocolPaused()).to.equal(true);
-        });
-
         it("Should disallow non-owner to unpause", async function () {
             await expect(configContract.connect(pauser).unpauseProtocol()).to.be.revertedWith(
                 "Ownable: caller is not the owner"
@@ -200,6 +218,19 @@ describe("Huma Config", function () {
         });
 
         it("Should allow owner to unpause", async function () {
+            expect(await configContract.connect(origOwner).unpauseProtocol())
+                .to.emit(configContract, "ProtocolUnpaused")
+                .withArgs(origOwner.address);
+
+            expect(await configContract.isProtocolPaused()).to.equal(false);
+        });
+
+        it("Should allow owner to pause", async function () {
+            await expect(configContract.connect(origOwner).pauseProtocol())
+                .to.emit(configContract, "ProtocolPaused")
+                .withArgs(origOwner.address);
+            expect(await configContract.isProtocolPaused()).to.equal(true);
+
             expect(await configContract.connect(origOwner).unpauseProtocol())
                 .to.emit(configContract, "ProtocolUnpaused")
                 .withArgs(origOwner.address);
@@ -337,22 +368,94 @@ describe("Huma Config", function () {
         });
     });
 
+    // Test suite for pdsServiceAccount
+    describe("Update pdsServiceAccount", function () {
+        it("Should disallow non-owner to change pdsServiceAccount", async function () {
+            await expect(
+                configContract.connect(randomUser).setPDSServiceAccount(pdsServiceAccount.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should reject 0 address pdsServiceAccount", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .setPDSServiceAccount(ethers.constants.AddressZero)
+            ).to.be.revertedWith("zeroAddressProvided()");
+        });
+
+        it("Should allow pdsServiceAccount to be changed", async function () {
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .setPDSServiceAccount(pdsServiceAccount.address)
+            )
+                .to.emit(configContract, "PDSServiceAccountChanged")
+                .withArgs(pdsServiceAccount.address);
+            expect(await configContract.connect(origOwner).pdsServiceAccount()).to.equal(
+                pdsServiceAccount.address
+            );
+        });
+    });
+
+    // Test suite for eaServiceAccount
+    describe("Update eaServiceAccount", function () {
+        it("Should disallow non-owner to change eaServiceAccount", async function () {
+            await expect(
+                configContract.connect(randomUser).setEAServiceAccount(eaServiceAccount.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should reject 0 address eaServiceAccount", async function () {
+            await expect(
+                configContract.connect(origOwner).setEAServiceAccount(ethers.constants.AddressZero)
+            ).to.be.revertedWith("zeroAddressProvided()");
+        });
+
+        it("Should allow eaServiceAccount to be changed", async function () {
+            expect(
+                await configContract
+                    .connect(origOwner)
+                    .setEAServiceAccount(eaServiceAccount.address)
+            )
+                .to.emit(configContract, "EAServiceAccountChanged")
+                .withArgs(eaServiceAccount.address);
+            expect(await configContract.connect(origOwner).eaServiceAccount()).to.equal(
+                eaServiceAccount.address
+            );
+        });
+    });
+
     // Test suites for valid liquidity assets
-    // TODO Figure out how to pass legit address and re-enable this test.
-    // describe("Change Liquidity Assets", function () {
-    //   it("Should disallow non-proto-admin to change liquidity asset", async function () {
-    //     await expect(configContract.connect(origOwner).setLiquidityAsset(0x1, false)).to.be.revertedWith('PROTO_ADMIN_REQUIRED');
-    //     await expect(configContract.connect(treasury).setLiquidityAsset(0x1, false)).to.be.revertedWith('PROTO_ADMIN_REQUIRED');
-    //   });
+    describe("Change Liquidity Assets", function () {
+        it("Should disallow non-proto-admin to change liquidity asset", async function () {
+            await expect(
+                configContract
+                    .connect(randomUser)
+                    .setLiquidityAsset(testTokenContract.address, true)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
 
-    //   it("Should be able to add valid liquidity assets", async function () {
-    //     await expect(configContract.connect(newAdmin).setLiquidityAsset(0x1, true)).to.emit(configContract, 'TreasuryFeeChanged').withArgs(0x1, true);
-    //     expect(await configContract.isAssetValid('0x1')).to.equal(true);
-    //   });
-    // });
+        it("Should be able to add valid liquidity assets", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .setLiquidityAsset(testTokenContract.address, true)
+            )
+                .to.emit(configContract, "LiquidityAssetAdded")
+                .withArgs(testTokenContract.address, origOwner.address);
+            expect(await configContract.isAssetValid(testTokenContract.address)).to.equal(true);
+        });
 
-    // it("Should be able to remove valid liquidity assets", async function () {
-    //   await expect(configContract.connect(newAdmin).setLiquidityAsset(0x1, false)).to.emit(configContract, 'TreasuryFeeChanged').withArgs(0x1, false);
-    //   expect(await configContract.isAssetValid('0x1')).to.equal(false);
-    // });
+        it("Should be able to remove valid liquidity assets", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .setLiquidityAsset(testTokenContract.address, false)
+            )
+                .to.emit(configContract, "LiquidityAssetRemoved")
+                .withArgs(testTokenContract.address, origOwner.address);
+            expect(await configContract.isAssetValid(testTokenContract.address)).to.equal(false);
+        });
+    });
 });
