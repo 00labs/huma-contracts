@@ -49,6 +49,52 @@ contract BaseFeeManager is IFeeManager, Ownable {
     event MinPrincipalRateChanged(uint256 minPrincipalRateInBps);
 
     /**
+     * @notice Sets the standard front loading and late fee policy for the fee manager
+     * @param _frontLoadingFeeFlat flat fee portion of the front loading fee
+     * @param _frontLoadingFeeBps a fee in the percentage of a new borrowing
+     * @param _lateFeeFlat flat fee portion of the late
+     * @param _lateFeeBps a fee in the percentage of the outstanding balance
+     * @dev Only owner can make this setting
+     */
+    function setFees(
+        uint256 _frontLoadingFeeFlat,
+        uint256 _frontLoadingFeeBps,
+        uint256 _lateFeeFlat,
+        uint256 _lateFeeBps,
+        uint256 _membershipFee
+    ) external virtual override onlyOwner {
+        frontLoadingFeeFlat = _frontLoadingFeeFlat;
+        frontLoadingFeeBps = _frontLoadingFeeBps;
+        lateFeeFlat = _lateFeeFlat;
+        lateFeeBps = _lateFeeBps;
+        membershipFee = _membershipFee;
+        emit FeeChanged(
+            _frontLoadingFeeFlat,
+            _frontLoadingFeeBps,
+            _lateFeeFlat,
+            _lateFeeBps,
+            _membershipFee
+        );
+    }
+
+    /**
+     * @notice Sets the min percentage of principal to be paid in each billing period
+     * @param _minPrincipalRateInBps the min % in unit of bps. For example, 5% will be 500
+     * @dev Only owner can make this setting
+     * @dev This is a global limit of 5000 bps (50%).
+     */
+    function setMinPrincipalRateInBps(uint256 _minPrincipalRateInBps)
+        external
+        virtual
+        override
+        onlyOwner
+    {
+        if (_minPrincipalRateInBps >= 5000) revert Errors.minPrincipalPaymentRateSettingTooHigh();
+        minPrincipalRateInBps = _minPrincipalRateInBps;
+        emit MinPrincipalRateChanged(_minPrincipalRateInBps);
+    }
+
+    /**
      * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
      * @dev Correction is used when there is change to the principal in the middle of the cycle
      * due to drawdown or principal payment. For a drawdown, principal goes up, the interest at
@@ -245,52 +291,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
             _cr.unbilledPrincipal,
             totalCharges
         );
-    }
-
-    /**
-     * @notice Sets the standard front loading and late fee policy for the fee manager
-     * @param _frontLoadingFeeFlat flat fee portion of the front loading fee
-     * @param _frontLoadingFeeBps a fee in the percentage of a new borrowing
-     * @param _lateFeeFlat flat fee portion of the late
-     * @param _lateFeeBps a fee in the percentage of the outstanding balance
-     * @dev Only owner can make this setting
-     */
-    function setFees(
-        uint256 _frontLoadingFeeFlat,
-        uint256 _frontLoadingFeeBps,
-        uint256 _lateFeeFlat,
-        uint256 _lateFeeBps,
-        uint256 _membershipFee
-    ) external virtual override onlyOwner {
-        frontLoadingFeeFlat = _frontLoadingFeeFlat;
-        frontLoadingFeeBps = _frontLoadingFeeBps;
-        lateFeeFlat = _lateFeeFlat;
-        lateFeeBps = _lateFeeBps;
-        membershipFee = _membershipFee;
-        emit FeeChanged(
-            _frontLoadingFeeFlat,
-            _frontLoadingFeeBps,
-            _lateFeeFlat,
-            _lateFeeBps,
-            _membershipFee
-        );
-    }
-
-    /**
-     * @notice Sets the min percentage of principal to be paid in each billing period
-     * @param _minPrincipalRateInBps the min % in unit of bps. For example, 5% will be 500
-     * @dev Only owner can make this setting
-     * @dev This is a global limit of 5000 bps (50%).
-     */
-    function setMinPrincipalRateInBps(uint256 _minPrincipalRateInBps)
-        external
-        virtual
-        override
-        onlyOwner
-    {
-        if (_minPrincipalRateInBps >= 5000) revert Errors.minPrincipalPaymentRateSettingTooHigh();
-        minPrincipalRateInBps = _minPrincipalRateInBps;
-        emit MinPrincipalRateChanged(_minPrincipalRateInBps);
     }
 
     /**
