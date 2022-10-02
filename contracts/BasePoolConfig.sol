@@ -135,8 +135,16 @@ contract BasePoolConfig is Ownable {
     ) {
         poolName = _poolName;
         poolToken = HDT(_poolToken);
-        underlyingToken = IERC20(poolToken.assetToken());
+
         humaConfig = HumaConfig(_humaConfig);
+
+        address assetTokenAddress = poolToken.assetToken();
+
+        if (!humaConfig.isAssetValid(assetTokenAddress))
+            revert Errors.underlyingTokenNotApprovedForHumaProtocol();
+
+        underlyingToken = IERC20(assetTokenAddress);
+
         feeManager = _feeManager;
 
         _poolConfig._withdrawalLockoutPeriodInSeconds = WITHDRAWAL_LOCKOUT_PERIOD_IN_SECONDS;

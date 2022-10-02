@@ -40,6 +40,10 @@ async function deployContracts(
     const TestToken = await ethers.getContractFactory("TestToken");
     testTokenContract = await TestToken.deploy();
 
+    await humaConfigContract
+        .connect(protocolOwner)
+        .setLiquidityAsset(testTokenContract.address, true);
+
     return [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract];
 }
 

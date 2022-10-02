@@ -58,4 +58,5 @@ contract Errors {
     error treasuryFeeHighThanUpperLimit();
 
     error proposedEADoesNotOwnProvidedEANFT();
+    error underlyingTokenNotApprovedForHumaProtocol();
 }
