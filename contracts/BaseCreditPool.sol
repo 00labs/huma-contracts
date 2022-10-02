@@ -85,7 +85,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 remainingPeriods,
         bool preApproved
     ) internal virtual {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
         // todo add a test for this check
         if (_creditRecordMapping[borrower].state != BS.CreditState.Deleted)
@@ -126,7 +126,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @dev only Evaluation Agent can call
      */
     function approveCredit(address borrower) public virtual override {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
         onlyEAServiceAccount();
         _creditRecordMapping[borrower] = _approveCredit(_creditRecordMapping[borrower]);
         emit CreditApproved(borrower, msg.sender);
@@ -173,7 +173,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * @dev only Evaluation Agent can call
      */
     function changeCreditLine(address borrower, uint256 newCreditLimit) external virtual override {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
         onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
         _maxCreditLineCheck(newCreditLimit);
@@ -234,7 +234,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         address receivableAsset,
         uint256 receivableParam
     ) public virtual override {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
 
         ///msg.sender needs to be the borrower themselvers or the EA.
         if (msg.sender != borrower) onlyEAServiceAccount();
@@ -384,7 +384,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         uint256 amount,
         bool isPaymentReceived
     ) internal returns (uint256 amountPaid) {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
 
         if (amount == 0) revert Errors.zeroAmountProvided();
 
@@ -567,7 +567,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
      * liquidation, pool cover, and staking.
      */
     function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
-        protocolAndPoolOn();
+        _protocolAndPoolOn();
 
         // check to make sure the default grace period has passed.
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
