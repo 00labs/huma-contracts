@@ -31,7 +31,7 @@ describe("Huma Config", function () {
         ] = await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
-        configContract = await HumaConfig.deploy(treasury.address);
+        configContract = await HumaConfig.deploy();
 
         // Deploy TestToken, give initial tokens to lender
         const TestToken = await ethers.getContractFactory("TestToken");
@@ -41,10 +41,6 @@ describe("Huma Config", function () {
     describe("Initial Value", function () {
         it("Should have the right initial owner", async function () {
             expect(await configContract.owner()).to.equal(origOwner.address);
-        });
-
-        it("Should have the right initial treasury", async function () {
-            expect(await configContract.humaTreasury()).to.equal(treasury.address);
         });
 
         it("Should have the right treasury fee", async function () {
@@ -92,12 +88,6 @@ describe("Huma Config", function () {
             await expect(
                 configContract.connect(origOwner).setHumaTreasury(ethers.constants.AddressZero)
             ).to.be.revertedWith("zeroAddressProvided()");
-        });
-
-        it("Should not change treasury if try to set it to the current treasury", async function () {
-            await expect(
-                configContract.connect(origOwner).setHumaTreasury(treasury.address)
-            ).not.emit(configContract, "HumaTreasuryChanged");
         });
 
         it("Should allow treasury to be changed", async function () {
