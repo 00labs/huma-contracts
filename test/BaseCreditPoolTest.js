@@ -88,7 +88,7 @@ describe("Base Credit Pool", function () {
 
     describe("BaseCreditPool settings", function () {
         it("Should not allow credit line to be changed when protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(protocolOwner).pauseProtocol();
             await expect(
                 poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000000)
             ).to.be.revertedWith("protocolIsPaused()");

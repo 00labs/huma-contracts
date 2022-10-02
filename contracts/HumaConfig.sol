@@ -101,10 +101,6 @@ contract HumaConfig is Ownable {
         if (treasury == address(0)) revert Errors.zeroAddressProvided();
         humaTreasury = treasury;
 
-        // Add protocol owner as a pauser and as a pool admin.
-        pausers[msg.sender] = true;
-        poolAdmins[msg.sender] = true;
-
         protocolDefaultGracePeriodInSeconds = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
         protocolFee = DEFAULT_TREASURY_FEE;

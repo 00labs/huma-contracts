@@ -56,14 +56,6 @@ describe("Huma Config", function () {
                 60 * 3600 * 24
             );
         });
-
-        it("Should have set owner as a pauser", async function () {
-            expect(await configContract.isPauser(origOwner.address)).to.equal(true);
-        });
-
-        it("Should have set owner as a pool admin", async function () {
-            expect(await configContract.isPoolAdmin(origOwner.address)).to.equal(true);
-        });
     });
 
     describe("Update owner", function () {
@@ -218,19 +210,6 @@ describe("Huma Config", function () {
         });
 
         it("Should allow owner to unpause", async function () {
-            expect(await configContract.connect(origOwner).unpauseProtocol())
-                .to.emit(configContract, "ProtocolUnpaused")
-                .withArgs(origOwner.address);
-
-            expect(await configContract.isProtocolPaused()).to.equal(false);
-        });
-
-        it("Should allow owner to pause", async function () {
-            await expect(configContract.connect(origOwner).pauseProtocol())
-                .to.emit(configContract, "ProtocolPaused")
-                .withArgs(origOwner.address);
-            expect(await configContract.isProtocolPaused()).to.equal(true);
-
             expect(await configContract.connect(origOwner).unpauseProtocol())
                 .to.emit(configContract, "ProtocolUnpaused")
                 .withArgs(origOwner.address);

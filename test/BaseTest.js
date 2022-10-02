@@ -26,6 +26,7 @@ async function deployContracts(
     await humaConfigContract.setPDSServiceAccount(pdsServiceAccount.address);
 
     await humaConfigContract.transferOwnership(protocolOwner.address);
+    await humaConfigContract.connect(protocolOwner).addPauser(protocolOwner.address);
     await humaConfigContract.connect(protocolOwner).unpauseProtocol();
 
     // Deploy Fee Manager
