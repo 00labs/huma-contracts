@@ -144,7 +144,6 @@ describe("Invoice Factoring", function () {
         });
 
         it("Should not allow posting approved loans while protocol is paused", async function () {
-            // 9/26 todo check why needs to connect as poolOwner to pause.
             await humaConfigContract.connect(poolOwner).pauseProtocol();
 
             await expect(
@@ -290,7 +289,6 @@ describe("Invoice Factoring", function () {
             expect(creditInfo.creditLimit).to.equal(0); // Means "Deleted"
             expect(creditInfo.state).to.equal(0); // Means "Deleted"
         });
-        // todo add a test to show creditInfo.state != Deleted when there is outstanding balance.
     });
 
     describe("Invoice Factoring Funding", function () {
@@ -478,7 +476,6 @@ describe("Invoice Factoring", function () {
             ).to.be.revertedWith("protocolIsPaused()");
         });
 
-        // todo if the pool is stopped, shall we accept payback?
         it("Should reject payback when pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
 
@@ -542,8 +539,6 @@ describe("Invoice Factoring", function () {
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(5_011_000);
 
             expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(1_001_320);
-            // todo check why this is 2_000_000
-            // expect(await hdtContract.balanceOf(lender.address)).to.equal(2_002_640);
             expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
                 2_002_640
             );
@@ -634,8 +629,6 @@ describe("Invoice Factoring", function () {
                     4_011_000
                 );
             });
-
-            // todo Add test case for multi payments.
 
             // it("Writeoff more than pool value", async function () {
             //     await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(

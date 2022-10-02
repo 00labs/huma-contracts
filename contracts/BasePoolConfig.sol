@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import "./HDT/HDT.sol";
 import "./HumaConfig.sol";
@@ -60,6 +61,7 @@ contract BasePoolConfig is Ownable {
     uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
     uint256 private constant SECONDS_IN_A_DAY = 86400;
     uint256 private constant SECONDS_IN_180_DAYS = 15552000;
+    uint256 private constant WITHDRAWAL_LOCKOUT_PERIOD_IN_SECONDS = SECONDS_IN_180_DAYS;
 
     string public poolName;
 
@@ -137,7 +139,7 @@ contract BasePoolConfig is Ownable {
         humaConfig = HumaConfig(_humaConfig);
         feeManager = _feeManager;
 
-        _poolConfig._withdrawalLockoutPeriodInSeconds = SECONDS_IN_180_DAYS; // todo need to make this configurable
+        _poolConfig._withdrawalLockoutPeriodInSeconds = WITHDRAWAL_LOCKOUT_PERIOD_IN_SECONDS;
         _poolConfig._poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
             .protocolDefaultGracePeriodInSeconds();
     }
@@ -220,9 +222,8 @@ contract BasePoolConfig is Ownable {
         if (agent == address(0)) revert Errors.zeroAddressProvided();
         _onlyOwnerOrHumaMasterAdmin();
 
-        // todo change script to make sure eaNFTContract is deployed, and the eaId is minted.
-        // if (IERC721(HumaConfig(_humaConfig).eaNFTContractAddress()).ownerOf(eaId) != agent)
-        //     revert notEvaluationAgentOwnerProvided();
+        if (IERC721(HumaConfig(humaConfig).eaNFTContractAddress()).ownerOf(eaId) != agent)
+            revert Errors.proposedEADoesNotOwnProvidedEANFT();
 
         // Make sure the new EA has met the liquidity requirements
         if (BasePool(pool).isPoolOn()) {

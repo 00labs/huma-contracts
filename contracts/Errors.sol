@@ -55,4 +55,6 @@ contract Errors {
 
     error defaultGracePeriodLessThanMinAllowed();
     error treasuryFeeHighThanUpperLimit();
+
+    error proposedEADoesNotOwnProvidedEANFT();
 }

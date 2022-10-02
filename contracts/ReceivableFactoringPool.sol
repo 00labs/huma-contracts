@@ -33,7 +33,6 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         uint256 amount,
         bytes32 paymentIdHash
     ) external virtual override {
-        // todo Need to  discuss whether to accept payments when the protocol is paused.
         _protocolAndPoolOn();
         onlyPDSServiceAccount();
 

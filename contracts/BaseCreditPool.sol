@@ -442,7 +442,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     ) internal virtual {
         _protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
-        // todo add a test for this check
         if (_creditRecordMapping[borrower].state != BS.CreditState.Deleted)
             revert Errors.creditLineAlreadyExists();
 
@@ -498,7 +497,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.state == BS.CreditState.Approved ||
             cr.state == BS.CreditState.Deleted
         ) {
-            // todo add tests
             revert Errors.creditLineNotInStateForMakingPayment();
         }
 
