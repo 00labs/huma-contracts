@@ -127,14 +127,12 @@ contract BasePoolConfig is Ownable {
     event ReceivableRequiredInBpsChanged(uint256 receivableInBps, address by);
     event WithdrawalLockoutPeriodChanged(uint256 lockoutPeriodInDays, address by);
 
-    constructor() {}
-
     function initialize(
         string memory _poolName,
         address _poolToken,
         address _humaConfig,
         address _feeManager
-    ) external {
+    ) external onlyOwner {
         poolName = _poolName;
         poolToken = HDT(_poolToken);
 
