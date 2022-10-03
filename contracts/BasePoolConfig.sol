@@ -127,22 +127,20 @@ contract BasePoolConfig is Ownable {
     event ReceivableRequiredInBpsChanged(uint256 receivableInBps, address by);
     event WithdrawalLockoutPeriodChanged(uint256 lockoutPeriodInDays, address by);
 
-    constructor(
+    function initialize(
         string memory _poolName,
         address _poolToken,
         address _humaConfig,
         address _feeManager
-    ) {
+    ) external onlyOwner {
         poolName = _poolName;
         poolToken = HDT(_poolToken);
 
         humaConfig = HumaConfig(_humaConfig);
 
         address assetTokenAddress = poolToken.assetToken();
-
         if (!humaConfig.isAssetValid(assetTokenAddress))
             revert Errors.underlyingTokenNotApprovedForHumaProtocol();
-
         underlyingToken = IERC20(assetTokenAddress);
 
         feeManager = _feeManager;

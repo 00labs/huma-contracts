@@ -84,13 +84,14 @@ async function deployAndSetupPool(
     await hdtContract.initialize("Base Credit HDT", "CHDT", testTokenContract.address);
 
     const BasePoolConfig = await ethers.getContractFactory("BasePoolConfig");
-    const poolConfig = await BasePoolConfig.deploy(
+    const poolConfig = await BasePoolConfig.deploy();
+    await poolConfig.deployed();
+    await poolConfig.initialize(
         "Base Credit Pool",
         hdtContract.address,
         humaConfigContract.address,
         feeManagerContract.address
     );
-    await poolConfig.deployed();
 
     // Deploy pool contract
     let poolContractFactory;
