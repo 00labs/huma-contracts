@@ -88,7 +88,7 @@ describe("Base Credit Pool", function () {
 
     describe("BaseCreditPool settings", function () {
         it("Should not allow credit line to be changed when protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(protocolOwner).pauseProtocol();
             await expect(
                 poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000000)
             ).to.be.revertedWith("protocolIsPaused()");
@@ -235,14 +235,14 @@ describe("Base Credit Pool", function () {
 
         it("Should reject drawdown before approval", async function () {
             await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
-                "creditLineNotInGoodStandingState()"
+                "creditLineNotInStateForDrawdown()"
             );
         });
 
         it("Should reject drawdown when account is deleted", async function () {
             await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
             await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
-                "creditLineNotInGoodStandingState()"
+                "creditLineNotInStateForDrawdown()"
             );
         });
 

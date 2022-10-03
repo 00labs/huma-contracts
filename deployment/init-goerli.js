@@ -6,7 +6,7 @@ const {
     sendTransaction,
 } = require("./utils.js");
 
-let deployer, deployedContracts, lender, ea, eaService, pdsService;
+let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury;
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -43,6 +43,12 @@ async function initHumaConfig() {
 
     await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [eaService.address]);
     await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [pdsService.address]);
+
+    // Add usdc as an asset supported by the protocol
+    await sendTransaction("HumaConfig", humaConfig, "setLiquidityAsset", [usdc.address, true]);
+
+    // Set treasury for the protocol
+    await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasury.address]);
 
     await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
     const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
@@ -271,7 +277,7 @@ async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    [deployer, proxyOwner, lender, ea, eaService, pdsService] = await accounts;
+    [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury] = await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);
     console.log("ea address: " + ea.address);

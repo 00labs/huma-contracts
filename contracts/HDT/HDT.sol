@@ -71,7 +71,6 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         returns (uint256 shares)
     {
         shares = convertToShares(amount);
-        // todo add test for zero share case
         if (shares == 0) revert Errors.zeroAmountProvided();
         _mint(account, shares);
     }
@@ -88,7 +87,6 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         returns (uint256 shares)
     {
         shares = convertToShares(amount);
-        // todo add test for zero test case
         if (shares == 0) revert Errors.zeroAmountProvided();
         _burn(account, shares);
     }

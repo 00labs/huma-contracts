@@ -16,7 +16,7 @@ async function deployContracts() {
 
     const usdc = await deploy("TestToken", "USDC");
 
-    const humaConfig = await deploy("HumaConfig", "HumaConfig", [deployer.address]);
+    const humaConfig = await deploy("HumaConfig", "HumaConfig");
     const humaConfigTL = await deploy("TimelockController", "HumaConfigTimelock", [
         0,
         [deployer.address],

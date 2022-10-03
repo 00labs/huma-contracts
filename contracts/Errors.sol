@@ -7,6 +7,7 @@ contract Errors {
     error evaluationAgentServiceAccountRequired();
     error creditLineNotInGoodStandingState();
     error creditLineNotInStateForMakingPayment();
+    error creditLineNotInStateForDrawdown();
     error creditLineExceeded();
     error creditLineAlreadyExists();
     error greaterThanMaxCreditLine();
@@ -55,4 +56,7 @@ contract Errors {
 
     error defaultGracePeriodLessThanMinAllowed();
     error treasuryFeeHighThanUpperLimit();
+
+    error proposedEADoesNotOwnProvidedEANFT();
+    error underlyingTokenNotApprovedForHumaProtocol();
 }

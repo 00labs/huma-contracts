@@ -31,7 +31,7 @@ describe("Huma Config", function () {
         ] = await ethers.getSigners();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
-        configContract = await HumaConfig.deploy(treasury.address);
+        configContract = await HumaConfig.deploy();
 
         // Deploy TestToken, give initial tokens to lender
         const TestToken = await ethers.getContractFactory("TestToken");
@@ -43,10 +43,6 @@ describe("Huma Config", function () {
             expect(await configContract.owner()).to.equal(origOwner.address);
         });
 
-        it("Should have the right initial treasury", async function () {
-            expect(await configContract.humaTreasury()).to.equal(treasury.address);
-        });
-
         it("Should have the right treasury fee", async function () {
             expect(await configContract.protocolFee()).to.equal(1000);
         });
@@ -55,14 +51,6 @@ describe("Huma Config", function () {
             expect(await configContract.protocolDefaultGracePeriodInSeconds()).to.equal(
                 60 * 3600 * 24
             );
-        });
-
-        it("Should have set owner as a pauser", async function () {
-            expect(await configContract.isPauser(origOwner.address)).to.equal(true);
-        });
-
-        it("Should have set owner as a pool admin", async function () {
-            expect(await configContract.isPoolAdmin(origOwner.address)).to.equal(true);
         });
     });
 
@@ -100,12 +88,6 @@ describe("Huma Config", function () {
             await expect(
                 configContract.connect(origOwner).setHumaTreasury(ethers.constants.AddressZero)
             ).to.be.revertedWith("zeroAddressProvided()");
-        });
-
-        it("Should not change treasury if try to set it to the current treasury", async function () {
-            await expect(
-                configContract.connect(origOwner).setHumaTreasury(treasury.address)
-            ).not.emit(configContract, "HumaTreasuryChanged");
         });
 
         it("Should allow treasury to be changed", async function () {
@@ -218,19 +200,6 @@ describe("Huma Config", function () {
         });
 
         it("Should allow owner to unpause", async function () {
-            expect(await configContract.connect(origOwner).unpauseProtocol())
-                .to.emit(configContract, "ProtocolUnpaused")
-                .withArgs(origOwner.address);
-
-            expect(await configContract.isProtocolPaused()).to.equal(false);
-        });
-
-        it("Should allow owner to pause", async function () {
-            await expect(configContract.connect(origOwner).pauseProtocol())
-                .to.emit(configContract, "ProtocolPaused")
-                .withArgs(origOwner.address);
-            expect(await configContract.isProtocolPaused()).to.equal(true);
-
             expect(await configContract.connect(origOwner).unpauseProtocol())
                 .to.emit(configContract, "ProtocolUnpaused")
                 .withArgs(origOwner.address);

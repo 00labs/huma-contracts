@@ -134,9 +134,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        bool isFirstDrawdown = cr.state == BS.CreditState.Approved ? true : false;
+        if (cr.state != BS.CreditState.GoodStanding && cr.state != BS.CreditState.Approved)
+            revert Errors.creditLineNotInStateForDrawdown();
 
-        if (isFirstDrawdown) {
+        if (cr.state == BS.CreditState.Approved) {
+            // Flow for first drawdown
+
             // After the credit approval, if the pool has credit expiration for first drawdown,
             // the borrower must complete the first drawdown before the expiration date, which
             // is set in cr.dueDate in approveCredit().
@@ -192,9 +195,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // Set account status in good standing
             cr.state = BS.CreditState.GoodStanding;
         } else {
-            if (cr.state != BS.CreditState.GoodStanding)
-                revert Errors.creditLineNotInGoodStandingState();
-
+            // Not first drawdown flow
             // Bring the account current.
             if (block.timestamp > cr.dueDate) {
                 cr = _updateDueInfo(borrower, true);
@@ -442,7 +443,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
     ) internal virtual {
         _protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
-        // todo add a test for this check
         if (_creditRecordMapping[borrower].state != BS.CreditState.Deleted)
             revert Errors.creditLineAlreadyExists();
 
@@ -498,7 +498,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             cr.state == BS.CreditState.Approved ||
             cr.state == BS.CreditState.Deleted
         ) {
-            // todo add tests
             revert Errors.creditLineNotInStateForMakingPayment();
         }
 

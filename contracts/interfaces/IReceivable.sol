@@ -38,5 +38,5 @@ interface IReceivable {
      * @notice Reports if a payment has been processed
      * @param paymentIdHash the hash of the payment id
      */
-    function isProcessedPayment(bytes32 paymentIdHash) external view returns (bool);
+    function isPaymentProcessed(bytes32 paymentIdHash) external view returns (bool);
 }

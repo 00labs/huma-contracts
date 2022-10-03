@@ -39,9 +39,7 @@ describe("Base Pool Config", function () {
             pdsServiceAccount,
             evaluationAgent2,
         ] = await ethers.getSigners();
-    });
 
-    beforeEach(async function () {
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
             await deployContracts(
                 poolOwner,
@@ -66,8 +64,6 @@ describe("Base Pool Config", function () {
     });
 
     describe("Huma Pool Config Settings", function () {
-        // todo Verify only pool admins can deployNewPool
-
         it("Should have correct liquidity post beforeEach() run", async function () {
             expect(await poolContract.lastDepositTime(poolOwner.address)).to.not.equal(0);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(5_000_000);
@@ -150,15 +146,14 @@ describe("Base Pool Config", function () {
 
     describe("Change Evaluation Agent", async function () {
         before(async function () {
-            newNFTTokenId = 2;
-            // // Mint EANFT to the borrower
-            // const tx = await eaNFTContract.mintNFT(evaluationAgent2.address, "");
-            // const receipt = await tx.wait();
-            // for (const evt of receipt.events) {
-            //     if (evt.event === "NFTGenerated") {
-            // eaNFTTokenId = evt.args.tokenId;
-            //     }
-            // }
+            // Mint EANFT to the borrower
+            const tx = await eaNFTContract.mintNFT(evaluationAgent2.address);
+            const receipt = await tx.wait();
+            for (const evt of receipt.events) {
+                if (evt.event === "NFTGenerated") {
+                    newNFTTokenId = evt.args.tokenId;
+                }
+            }
         });
 
         it("Should reject when non-poolOwner requests to change EA", async function () {
@@ -202,7 +197,5 @@ describe("Base Pool Config", function () {
                 )
                 .to.not.emit(poolConfigContract, "EvaluationAgentRewardsWithdrawn");
         });
-
-        // todo need to add a test case to show reward distribution for the old evaluationAgent
     });
 });

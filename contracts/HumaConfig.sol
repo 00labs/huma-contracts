@@ -94,23 +94,14 @@ contract HumaConfig is Ownable {
      * @notice Initiates the config. Only the protocol owner can set the treasury
      * address, add pausers and pool admins, change the default grace period,
      * treasury fee, add or remove assets to be supported by the protocol.
-     * @param treasury the address to be used as Huma treasury
      * @dev Emit ProtocolInitialized event and HumaTreasuryChanged event
      */
-    constructor(address treasury) {
-        if (treasury == address(0)) revert Errors.zeroAddressProvided();
-        humaTreasury = treasury;
-
-        // Add protocol owner as a pauser and as a pool admin.
-        pausers[msg.sender] = true;
-        poolAdmins[msg.sender] = true;
-
+    constructor() {
         protocolDefaultGracePeriodInSeconds = PROTOCOL_DEFAULT_GRACE_PERIOD;
 
         protocolFee = DEFAULT_TREASURY_FEE;
 
         emit ProtocolInitialized(msg.sender);
-        emit HumaTreasuryChanged(treasury);
     }
 
     /**

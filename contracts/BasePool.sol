@@ -103,7 +103,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
-        // todo check if this block of code can be further optimized
         if (msg.sender == _poolConfig.evaluationAgent())
             _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
         else if (msg.sender == _poolConfig.owner())
@@ -123,10 +122,9 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         if (amount == 0) revert Errors.zeroAmountProvided();
         _onlyApprovedLender(lender);
 
-        //todo check if the pool liquidity cap has reached
         if (_totalPoolValue + amount > _poolConfig.poolLiquidityCap())
             revert Errors.exceededPoolLiquidityCap();
-            
+
         _underlyingToken.safeTransferFrom(lender, address(this), amount);
         uint256 shares = _poolToken.mintAmount(lender, amount);
         _lastDepositTime[lender] = block.timestamp;
@@ -302,7 +300,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         address config = address(_poolConfig);
         uint256 allowance = _underlyingToken.allowance(address(this), config);
 
-        // todo the logic is hard to follow. Look for ways to simplify it.
+        // Call safeApprove when the allowance is changed from >0 to 0, or from 0 to >0.
         if ((amount == 0 && allowance > 0) || (amount > 0 && allowance == 0)) {
             _underlyingToken.safeApprove(config, amount);
         }
