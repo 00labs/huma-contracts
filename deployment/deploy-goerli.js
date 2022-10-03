@@ -14,6 +14,7 @@ async function deployContracts() {
     const eaService = await accounts[4];
     console.log("ea service address: " + eaService.address);
 
+    // Deploying Receivable factoring pool
     const usdc = await deploy("TestToken", "USDC");
 
     const humaConfig = await deploy("HumaConfig", "HumaConfig");
@@ -43,6 +44,33 @@ async function deployContracts() {
     const evaluation_agent_NFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
 
     const invoice_NFT = await deploy("InvoiceNFT", "RNNFT", [usdc.address]);
+    // End of deploying receivable factoring pool
+
+    // Deploying base credit pool
+    const bc_humaConfig = await deploy("HumaConfig", "BaseCreditPoolHumaConfig");
+    const bc_humaConfigTLBC = await deploy("TimelockController", "BaseCreditPoolHumaConfigTimelock", [
+        0,
+        [deployer.address],
+        [deployer.address],
+    ]);
+
+    const bc_feeManager = await deploy("BaseFeeManager", "BaseCreditPoolFeeManager");
+    const bc_hdtImpl = await deploy("HDT", "BaseCreditHDTImpl");
+    const bc_hdt = await deploy("TransparentUpgradeableProxy", "BaseCreditHDT", [
+        bc_hdtImpl.address,
+        proxyOwner.address,
+        [],
+    ]);
+    const bc_poolConfig = await deploy("BasePoolConfig", "BaseCreditPoolConfig");
+
+    const bc_poolImpl = await deploy("BaseCreditPool", "BaseCreditPoolImpl");
+    const bc_pool = await deploy("TransparentUpgradeableProxy", "BaseCreditPool", [
+        bc_poolImpl.address,
+        proxyOwner.address,
+        [],
+    ]);
+    // End of deploying base credit pool
+
 }
 
 deployContracts()
