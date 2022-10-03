@@ -628,7 +628,7 @@ async function initContracts() {
     await initPoolConfig();
     await initPool();
 
-    // await prepare();
+    await prepare();
 
     await initBaseCreditPoolHumaConfig();
     await initBaseCreditPoolFeeManager();
