@@ -31,12 +31,7 @@ async function deployContracts() {
         [],
     ]);
 
-    const poolConfig = await deploy("BasePoolConfig", "ReceivableFactoringPoolConfig", [
-        "ReceivableFactoringPool",
-        hdt.address,
-        humaConfig.address,
-        feeManager.address,
-    ]);
+    const poolConfig = await deploy("BasePoolConfig", "ReceivableFactoringPoolConfig");
 
     const poolImpl = await deploy("ReceivableFactoringPool", "ReceivableFactoringPoolImpl");
     const pool = await deploy("TransparentUpgradeableProxy", "ReceivableFactoringPool", [

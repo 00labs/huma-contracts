@@ -27,6 +27,10 @@ async function initHumaConfig() {
         throw new Error("EANFT not deployed yet!");
     }
 
+    if (!deployedContracts["USDC"]) {
+        throw new Error("USDC not deployed yet!");
+    }
+
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
 
@@ -43,6 +47,9 @@ async function initHumaConfig() {
 
     await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [eaService.address]);
     await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [pdsService.address]);
+
+    const USDC = await hre.ethers.getContractFactory("TestToken");
+    const usdc = USDC.attach(deployedContracts["USDC"]);
 
     // Add usdc as an asset supported by the protocol
     await sendTransaction("HumaConfig", humaConfig, "setLiquidityAsset", [usdc.address, true]);
@@ -119,6 +126,26 @@ async function initHDT() {
     await updateInitilizedContract("HDT");
 }
 
+async function initEA() {
+    const initilized = await getInitilizedContract("EANFT");
+    if (initilized) {
+        console.log("EANFT is already initialized!");
+        return;
+    }
+
+    if (!deployedContracts["EANFT"]) {
+        throw new Error("EANFT not deployed yet!");
+    }
+
+    const EANFT = await hre.ethers.getContractFactory("EvaluationAgentNFT");
+    const eaNFT = EANFT.attach(deployedContracts["EANFT"]);
+
+    const eaNFTFromEA = eaNFT.connect(ea);
+    await sendTransaction("EvaluationAgentNFT", eaNFTFromEA, "mintNFT", [ea.address]);
+
+    await updateInitilizedContract("EANFT");
+}
+
 async function initPoolConfig() {
     const initilized = await getInitilizedContract("ReceivableFactoringPoolConfig");
     if (initilized) {
@@ -139,6 +166,43 @@ async function initPoolConfig() {
         throw new Error("ReceivableFactoringPool not deployed yet!");
     }
 
+    if (!deployedContracts["HDT"]) {
+        throw new Error("HDT not deployed yet!");
+    }
+
+    if (!deployedContracts["HumaConfig"]) {
+        throw new Error("HumaConfig not deployed yet!");
+    }
+
+    if (!deployedContracts["ReceivableFactoringPoolFeeManager"]) {
+        throw new Error("ReceivableFactoringPoolFeeManager not deployed yet!");
+    }
+
+    const HDT = await hre.ethers.getContractFactory("HDT");
+    const hdt = HDT.attach(deployedContracts["HDT"]);
+
+    const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
+    const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
+
+    const BaseFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
+    const feeManager = BaseFeeManager.attach(
+        deployedContracts["ReceivableFactoringPoolFeeManager"]
+    );
+
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "initialize", [
+        "ReceivableFactoringPool",
+        hdt.address,
+        humaConfig.address,
+        feeManager.address,
+    ]);
+
+    const decimals = await hdt.decimals();
+    const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
+    console.log("cap: " + cap);
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolLiquidityCap", [
+        cap,
+    ]);
+
     await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPool", [
         deployedContracts["ReceivableFactoringPool"],
     ]);
@@ -147,25 +211,6 @@ async function initPoolConfig() {
         ea.address,
     ]);
 
-    if (!deployedContracts["HDT"]) {
-        throw new Error("HDT not deployed yet!");
-    }
-    if (!deployedContracts["HumaConfig"]) {
-        throw new Error("HumaConfig not deployed yet!");
-    }
-    if (!deployedContracts["ReceivableFactoringPoolFeeManager"]) {
-        throw new Error("ReceivableFactoringPoolFeeManager not deployed yet!");
-    }
-
-    const HDT = await hre.ethers.getContractFactory("HDT");
-    const hdt = HDT.attach(deployedContracts["HDT"]);
-    const decimals = await hdt.decimals();
-    const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
-    console.log("cap: " + cap);
-
-    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolLiquidityCap", [
-        cap,
-    ]);
     await sendTransaction(
         "ReceivableFactoringPoolConfig",
         poolConfig,
@@ -287,6 +332,7 @@ async function initContracts() {
     await initHumaConfig();
     await initFeeManager();
     await initHDT();
+    await initEA();
     await initPoolConfig();
     await initPool();
 
