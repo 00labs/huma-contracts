@@ -83,7 +83,8 @@ async function initEA() {
 
     const eaNFTFromEA = eaNFT.connect(ea);
     await sendTransaction("EvaluationAgentNFT", eaNFTFromEA, "mintNFT", [ea.address]);
-    await sendTransaction("EvaluationAgentNFT", eaNFTFromEA, "mintNFT", [ea_bcp.address]);
+    const eaNFTFromEA_bcp = eaNFT.connect(ea);
+    await sendTransaction("EvaluationAgentNFT", eaNFTFromEA_bcp, "mintNFT", [ea_bcp.address]);
     await updateInitilizedContract("EANFT");
 }
 
