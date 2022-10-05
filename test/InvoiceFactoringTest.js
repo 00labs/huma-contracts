@@ -138,7 +138,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_500_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
         });
@@ -156,7 +157,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_500_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("protocolIsPaused()");
         });
@@ -174,7 +176,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_500_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("poolIsNotOn()");
         });
@@ -190,7 +193,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_500_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
@@ -209,7 +213,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_000,
                     30 * 86400,
-                    1
+                    1,
+                    1000
                 );
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
@@ -217,6 +222,7 @@ describe("Invoice Factoring", function () {
             expect(creditInfo.creditLimit).to.equal(1_000_000);
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
+            expect(creditInfo.aprInBps).to.equal(1000);
         });
 
         it("Should reject approved invoice with invoice amount lower than the receivable requirement", async function () {
@@ -234,7 +240,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_000_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("insufficientReceivableAmount()");
         });
@@ -251,7 +258,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_000,
                     30 * 86400,
-                    1
+                    1,
+                    0
                 );
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
@@ -273,7 +281,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_000,
                     30 * 86400,
-                    1
+                    1,
+                    0
                 );
         });
         it("Should allow evaluation agent to change an approved invoice factoring record", async function () {
@@ -316,7 +325,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_0000,
                     30 * 86400,
-                    1
+                    1,
+                    0
                 );
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -447,7 +457,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_000,
                     30 * 86400,
-                    1
+                    1,
+                    0
                 );
 
             await poolContract

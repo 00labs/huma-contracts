@@ -67,7 +67,8 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         uint256 receivableParam,
         uint256 receivableAmount,
         uint256 intervalInSeconds,
-        uint256 remainingPeriods
+        uint256 remainingPeriods,
+        uint256 aprInBps
     ) external virtual override {
         onlyEAServiceAccount();
 
@@ -86,7 +87,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         _initiateCredit(
             borrower,
             creditLimit,
-            _poolConfig.poolAprInBps(),
+            aprInBps,
             intervalInSeconds,
             remainingPeriods,
             true
