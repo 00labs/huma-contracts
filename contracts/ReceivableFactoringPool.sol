@@ -15,7 +15,12 @@ import "./Errors.sol";
  * receivable for immediate access to portion of the fund tied with the receivable, and
  * receive the remainder minus fees after the receivable is paid in full.
  */
-contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStorage, IReceivable {
+contract ReceivableFactoringPool is
+    BaseCreditPool,
+    ReceivableFactoringPoolStorage,
+    IReceivable,
+    IERC721Receiver
+{
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
 
@@ -27,19 +32,13 @@ contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStora
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
 
-    function _checkBackingAsset(address borrower, uint256 newCreditLimit)
-        internal
-        view
-        virtual
-        override
-    {
-        // Checks to make sure the receivable value satisfies the requirement
-        if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
-            _receivableRequirementCheck(
-                newCreditLimit,
-                _receivableInfoMapping[borrower].receivableAmount
-            );
-        }
+    function onERC721Received(
+        address, /*operator*/
+        address, /*from*/
+        uint256, /*tokenId*/
+        bytes calldata /*data*/
+    ) external virtual override returns (bytes4) {
+        return this.onERC721Received.selector;
     }
 
     /**
@@ -62,7 +61,7 @@ contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStora
 
         uint256 amountPaid = _makePayment(borrower, amount, true);
 
-        if (amount > amountPaid) disperseRemainingFunds(borrower, amount - amountPaid);
+        if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
 
         emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
     }
@@ -92,7 +91,7 @@ contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStora
     ) external virtual override {
         onlyEAServiceAccount();
 
-        _receivableRequirementCheck(creditLimit, receivableAmount);
+        _checkReceivableRequirement(creditLimit, receivableAmount);
 
         // Populates fields related to receivable
         if (receivableAsset != address(0)) {
@@ -112,22 +111,6 @@ contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStora
             remainingPeriods,
             true
         );
-    }
-
-    /**
-     * @notice disperse the remaining funds associated with the factoring to the borrower
-     * @param receiver receiver of the funds, namely, the borrower
-     * @param amount the amount of the dispersement
-     */
-    function disperseRemainingFunds(address receiver, uint256 amount) internal {
-        _underlyingToken.safeTransfer(receiver, amount);
-        emit ExtraFundsDispersed(receiver, amount);
-    }
-
-    /// "Modifier" function that limits access to pdsServiceAccount only.
-    function onlyPDSServiceAccount() internal view {
-        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
-            revert Errors.paymentDetectionServiceAccountRequired();
     }
 
     function isPaymentProcessed(bytes32 paymentIdHash)
@@ -152,7 +135,32 @@ contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStora
         return _receivableOwnershipMapping[receivableHash];
     }
 
-    function _receivableRequirementCheck(uint256 creditLine, uint256 receivableAmount)
+    function _checkReceivableFor(address borrower, uint256 newCreditLimit)
+        internal
+        view
+        virtual
+        override
+    {
+        // Checks to make sure the receivable value satisfies the requirement
+        if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
+            _checkReceivableRequirement(
+                newCreditLimit,
+                _receivableInfoMapping[borrower].receivableAmount
+            );
+        }
+    }
+
+    /**
+     * @notice disperse the remaining funds associated with the factoring to the borrower
+     * @param receiver receiver of the funds, namely, the borrower
+     * @param amount the amount of the dispersement
+     */
+    function _disperseRemainingFunds(address receiver, uint256 amount) internal {
+        _underlyingToken.safeTransfer(receiver, amount);
+        emit ExtraFundsDispersed(receiver, amount);
+    }
+
+    function _checkReceivableRequirement(uint256 creditLine, uint256 receivableAmount)
         internal
         view
     {
@@ -162,7 +170,7 @@ contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStora
         ) revert Errors.insufficientReceivableAmount();
     }
 
-    function _transferBackingAsset(
+    function _transferReceivableAsset(
         address borrower,
         address receivableAsset,
         uint256 receivableParam
@@ -196,5 +204,11 @@ contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStora
                 revert Errors.unsupportedReceivableAsset();
             }
         }
+    }
+
+    /// "Modifier" function that limits access to pdsServiceAccount only.
+    function onlyPDSServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
+            revert Errors.paymentDetectionServiceAccountRequired();
     }
 }

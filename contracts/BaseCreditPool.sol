@@ -9,7 +9,7 @@ import "./Errors.sol";
 
 import "hardhat/console.sol";
 
-contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Receiver {
+contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     using SafeERC20 for IERC20;
     using BS for BS.CreditRecord;
 
@@ -71,7 +71,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Borrowing amount needs to be lower than max for the pool.
         _maxCreditLineCheck(newCreditLimit);
 
-        _checkBackingAsset(borrower, newCreditLimit);
+        _checkReceivableFor(borrower, newCreditLimit);
 
         uint256 oldCreditLimit = _creditRecordStaticMapping[borrower].creditLimit;
 
@@ -148,7 +148,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // Note: the interest is calcuated at the beginning of each pay period
             cr = _updateDueInfo(borrower, true);
 
-            _transferBackingAsset(borrower, receivableAsset, receivableParam);
+            _transferReceivableAsset(borrower, receivableAsset, receivableParam);
 
             // Set account status in good standing
             cr.state = BS.CreditState.GoodStanding;
@@ -243,15 +243,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         returns (uint256 amountPaid)
     {
         return _makePayment(borrower, amount, false);
-    }
-
-    function onERC721Received(
-        address, /*operator*/
-        address, /*from*/
-        uint256, /*tokenId*/
-        bytes calldata /*data*/
-    ) external virtual override returns (bytes4) {
-        return this.onERC721Received.selector;
     }
 
     /// Brings the account status current.
@@ -374,7 +365,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return cr;
     }
 
-    function _checkBackingAsset(address borrower, uint256 newCreditLimit) internal view virtual {}
+    /// Placeholder for sub-contracts to override
+    function _checkReceivableFor(address borrower, uint256 newCreditLimit) internal view virtual {}
 
     /**
      * @notice initiation of a credit line
@@ -540,7 +532,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
     }
 
-    function _transferBackingAsset(
+    function _transferReceivableAsset(
         address borrower,
         address receivableAsset,
         uint256 receivableParam
