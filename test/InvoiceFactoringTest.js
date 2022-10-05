@@ -339,15 +339,29 @@ describe("Invoice Factoring", function () {
 
         it("Should not allow loan funding while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
-            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
-                "protocolIsPaused()"
-            );
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(
+                        borrower.address,
+                        1_000_000,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId
+                    )
+            ).to.be.revertedWith("protocolIsPaused()");
         });
 
         it("Shall reject drawdown without receivable", async function () {
-            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
-                "receivableAssetMismatch()"
-            );
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(
+                        borrower.address,
+                        1_000_000,
+                        ethers.constants.AddressZero,
+                        invoiceNFTTokenId
+                    )
+            ).to.be.revertedWith("receivableAssetMismatch()");
         });
 
         it("Should be able to borrow amount less than approved", async function () {
