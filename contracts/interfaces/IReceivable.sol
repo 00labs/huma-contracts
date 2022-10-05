@@ -40,4 +40,12 @@ interface IReceivable {
      * @param paymentIdHash the hash of the payment id
      */
     function isPaymentProcessed(bytes32 paymentIdHash) external view returns (bool);
+
+    /// Makes drawdown using receivables included in the approval of the credit line
+    function drawdownWithReceivable(
+        address _borrower,
+        uint256 borrowAmount,
+        address receivableAsset,
+        uint256 receivableParam
+    ) external;
 }

@@ -31,6 +31,62 @@ contract ReceivableFactoringPool is
         bytes32 paymentIdHash
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
+    event DrawdownMadeWithReceivable(
+        address indexed borrower,
+        uint256 borrowAmount,
+        uint256 netAmountToBorrower,
+        address by,
+        address receivableAsset,
+        uint256 receivableParam
+    );
+
+    /**
+     * @notice changes the limit of the borrower's credit line.
+     * @dev The credit line is marked as Deleted if 1) the new credit line is 0 and
+     * 2) there is no due or unbilled principals.
+     * @param borrower the owner of the credit line
+     * @param newCreditLimit the new limit of the line in the unit of pool token
+     * @dev only Evaluation Agent can call
+     */
+    function changeCreditLine(address borrower, uint256 newCreditLimit) public virtual override {
+        _checkReceivableAssetFor(borrower, newCreditLimit);
+        super.changeCreditLine(borrower, newCreditLimit);
+    }
+
+    /**
+     * @notice Drawdown function is disabled for this contract intentionally.
+     * drawdownWithReceivable() should be used instead.
+     */
+    function drawdown(address borrower, uint256 borrowAmount) external virtual override {
+        /// Intentional empty implementation to disable this function.
+    }
+
+    //      * @param receivableAsset the contract address of the receivable
+    //  * @param receivableParam is additional parameter of the receivable asset. For ERC721,
+    //  * it is tokenId; for ERC20, it is the quantity of the asset
+
+    function drawdownWithReceivable(
+        address borrower,
+        uint256 borrowAmount,
+        address receivableAsset,
+        uint256 receivableParam
+    ) external virtual override {
+        BS.CreditRecord memory cr = _creditRecordMapping[msg.sender];
+        super._checkDrawdownEligibility(borrower, cr, borrowAmount);
+
+        if (cr.state == BS.CreditState.Approved)
+            _transferReceivableAsset(borrower, receivableAsset, receivableParam);
+
+        uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
+        emit DrawdownMadeWithReceivable(
+            borrower,
+            borrowAmount,
+            netAmountToBorrower,
+            msg.sender,
+            receivableAsset,
+            receivableParam
+        );
+    }
 
     function onERC721Received(
         address, /*operator*/
@@ -135,11 +191,15 @@ contract ReceivableFactoringPool is
         return _receivableOwnershipMapping[receivableHash];
     }
 
-    function _checkReceivableFor(address borrower, uint256 newCreditLimit)
+    /**
+     * @notice Checks if the borrower has enough receivable to back the requested credit line.
+     * @param borrower the borrower addrescredit limit requested
+     * @param newCreditLimit the credit limit requested
+     */
+    function _checkReceivableAssetFor(address borrower, uint256 newCreditLimit)
         internal
         view
         virtual
-        override
     {
         // Checks to make sure the receivable value satisfies the requirement
         if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
@@ -160,6 +220,12 @@ contract ReceivableFactoringPool is
         emit ExtraFundsDispersed(receiver, amount);
     }
 
+    /**
+     * @notice Checks if the receivable provided is able fulfill the receivable requirement
+     * for the requested credit line.
+     * @param creditLine the credit limit requested
+     * @param receivableAmount the value of the receivable
+     */
     function _checkReceivableRequirement(uint256 creditLine, uint256 receivableAmount)
         internal
         view
@@ -170,11 +236,19 @@ contract ReceivableFactoringPool is
         ) revert Errors.insufficientReceivableAmount();
     }
 
+    /**
+     * @notice Transfers the backing asset for the credit line. The BaseCreditPool does not
+     * require backing asset, thus empty implementation. The extended contracts can
+     * support various backing assets, such as receivables, ERC721, and ERC20.
+     * @param borrower the borrower
+     * @param receivableAsset the contract address of the receivable asset.
+     * @param receivableParam parameter of the receivable asset.
+     */
     function _transferReceivableAsset(
         address borrower,
         address receivableAsset,
         uint256 receivableParam
-    ) internal virtual override {
+    ) internal virtual {
         // Transfer receivable assset.
         BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
         if (ri.receivableAsset != address(0)) {
