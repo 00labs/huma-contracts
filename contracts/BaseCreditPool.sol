@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {IERC721, IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
-
 import "./interfaces/ICredit.sol";
 
 import "./BasePool.sol";
@@ -14,7 +11,6 @@ import "hardhat/console.sol";
 
 contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Receiver {
     using SafeERC20 for IERC20;
-    using ERC165Checker for address;
     using BS for BS.CreditRecord;
 
     event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
@@ -75,13 +71,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         // Borrowing amount needs to be lower than max for the pool.
         _maxCreditLineCheck(newCreditLimit);
 
-        // Checks to make sure the receivable value satisfies the requirement
-        if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
-            _receivableRequirementCheck(
-                newCreditLimit,
-                _receivableInfoMapping[borrower].receivableAmount
-            );
-        }
+        _checkBackingAsset(borrower, newCreditLimit);
 
         uint256 oldCreditLimit = _creditRecordStaticMapping[borrower].creditLimit;
 
@@ -158,39 +148,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
             // Note: the interest is calcuated at the beginning of each pay period
             cr = _updateDueInfo(borrower, true);
 
-            // Transfer receivable assset.
-            BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
-            if (ri.receivableAsset != address(0)) {
-                if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
-                if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
-                    // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
-                    // for lookup by off-chain payment processers
-                    _receivableOwnershipMapping[
-                        keccak256(abi.encode(receivableAsset, receivableParam))
-                    ] = borrower;
-
-                    // For ERC721, receivableParam is the tokenId
-                    if (ri.receivableParam != receivableParam)
-                        revert Errors.receivableAssetParamMismatch();
-
-                    IERC721(receivableAsset).safeTransferFrom(
-                        borrower,
-                        address(this),
-                        receivableParam
-                    );
-                } else if (receivableAsset.supportsInterface(type(IERC20).interfaceId)) {
-                    if (receivableParam < ri.receivableParam)
-                        revert Errors.insufficientReceivableAmount();
-
-                    IERC20(receivableAsset).safeTransferFrom(
-                        borrower,
-                        address(this),
-                        receivableParam
-                    );
-                } else {
-                    revert Errors.unsupportedReceivableAsset();
-                }
-            }
+            _transferBackingAsset(borrower, receivableAsset, receivableParam);
 
             // Set account status in good standing
             cr.state = BS.CreditState.GoodStanding;
@@ -399,18 +357,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         return block.timestamp > _creditRecordMapping[borrower].dueDate ? true : false;
     }
 
-    function receivableInfoMapping(address account)
-        external
-        view
-        returns (BS.ReceivableInfo memory)
-    {
-        return _receivableInfoMapping[account];
-    }
-
-    function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
-        return _receivableOwnershipMapping[receivableHash];
-    }
-
     function _approveCredit(BS.CreditRecord memory cr)
         internal
         view
@@ -427,6 +373,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
 
         return cr;
     }
+
+    function _checkBackingAsset(address borrower, uint256 newCreditLimit) internal view virtual {}
 
     /**
      * @notice initiation of a credit line
@@ -592,15 +540,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit, IERC721Rece
         }
     }
 
-    function _receivableRequirementCheck(uint256 creditLine, uint256 receivableAmount)
-        internal
-        view
-    {
-        if (
-            receivableAmount <
-            (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
-        ) revert Errors.insufficientReceivableAmount();
-    }
+    function _transferBackingAsset(
+        address borrower,
+        address receivableAsset,
+        uint256 receivableParam
+    ) internal virtual {}
 
     /**
      * @notice updates CreditRecord for `_borrower` using the most up to date information.

@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./interfaces/IReceivable.sol";
+import {IERC721, IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
+import "./interfaces/IReceivable.sol";
 import "./BaseCreditPool.sol";
+import "./ReceivableFactoringPoolStorage.sol";
+
 import "./Errors.sol";
 
 /**
@@ -11,8 +15,9 @@ import "./Errors.sol";
  * receivable for immediate access to portion of the fund tied with the receivable, and
  * receive the remainder minus fees after the receivable is paid in full.
  */
-contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
+contract ReceivableFactoringPool is BaseCreditPool, ReceivableFactoringPoolStorage, IReceivable {
     using SafeERC20 for IERC20;
+    using ERC165Checker for address;
 
     event ReceivedPaymentProcessed(
         address indexed sender,
@@ -21,6 +26,21 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         bytes32 paymentIdHash
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
+
+    function _checkBackingAsset(address borrower, uint256 newCreditLimit)
+        internal
+        view
+        virtual
+        override
+    {
+        // Checks to make sure the receivable value satisfies the requirement
+        if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
+            _receivableRequirementCheck(
+                newCreditLimit,
+                _receivableInfoMapping[borrower].receivableAmount
+            );
+        }
+    }
 
     /**
      * @notice Borrower makes one payment. If this is the final payment,
@@ -118,5 +138,63 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         returns (bool)
     {
         return _processedPaymentIds[paymentIdHash];
+    }
+
+    function receivableInfoMapping(address account)
+        external
+        view
+        returns (BS.ReceivableInfo memory)
+    {
+        return _receivableInfoMapping[account];
+    }
+
+    function receivableOwnershipMapping(bytes32 receivableHash) external view returns (address) {
+        return _receivableOwnershipMapping[receivableHash];
+    }
+
+    function _receivableRequirementCheck(uint256 creditLine, uint256 receivableAmount)
+        internal
+        view
+    {
+        if (
+            receivableAmount <
+            (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
+        ) revert Errors.insufficientReceivableAmount();
+    }
+
+    function _transferBackingAsset(
+        address borrower,
+        address receivableAsset,
+        uint256 receivableParam
+    ) internal virtual override {
+        // Transfer receivable assset.
+        BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
+        if (ri.receivableAsset != address(0)) {
+            if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
+            if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
+                // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
+                // for lookup by off-chain payment processers
+                _receivableOwnershipMapping[
+                    keccak256(abi.encode(receivableAsset, receivableParam))
+                ] = borrower;
+
+                // For ERC721, receivableParam is the tokenId
+                if (ri.receivableParam != receivableParam)
+                    revert Errors.receivableAssetParamMismatch();
+
+                IERC721(receivableAsset).safeTransferFrom(
+                    borrower,
+                    address(this),
+                    receivableParam
+                );
+            } else if (receivableAsset.supportsInterface(type(IERC20).interfaceId)) {
+                if (receivableParam < ri.receivableParam)
+                    revert Errors.insufficientReceivableAmount();
+
+                IERC20(receivableAsset).safeTransferFrom(borrower, address(this), receivableParam);
+            } else {
+                revert Errors.unsupportedReceivableAsset();
+            }
+        }
     }
 }
