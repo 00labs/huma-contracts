@@ -21,7 +21,8 @@ interface IReceivable {
         uint256 _receivableAmount,
         uint256 _receivableParam,
         uint256 _intervalInSeconds,
-        uint256 _remainingPeriods
+        uint256 _remainingPeriods,
+        uint256 aprInBps
     ) external;
 
     /**
