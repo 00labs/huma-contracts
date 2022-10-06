@@ -431,17 +431,25 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     ) internal returns (uint256 amountPaid) {
         _protocolAndPoolOn();
 
-        if (amount == 0) revert Errors.zeroAmountProvided();
+        // if (amount == 0) revert Errors.zeroAmountProvided();
+        require(amount != 0, "zeroAmountProvided()");
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        if (
-            cr.state == BS.CreditState.Requested ||
-            cr.state == BS.CreditState.Approved ||
-            cr.state == BS.CreditState.Deleted
-        ) {
-            revert Errors.creditLineNotInStateForMakingPayment();
-        }
+        // if (
+        //     cr.state == BS.CreditState.Requested ||
+        //     cr.state == BS.CreditState.Approved ||
+        //     cr.state == BS.CreditState.Deleted
+        // ) {
+        //     revert Errors.creditLineNotInStateForMakingPayment();
+        // }
+
+        require(
+            cr.state != BS.CreditState.Requested &&
+                cr.state != BS.CreditState.Approved &&
+                cr.state != BS.CreditState.Deleted,
+            "creditLineNotInStateForMakingPayment()"
+        );
 
         if (block.timestamp > cr.dueDate) {
             // Bring the account current. This is necessary since the account might have been dormant for
