@@ -334,7 +334,7 @@ describe("Invoice Factoring", function () {
                 .connect(eaServiceAccount)
                 .recordApprovedCredit(
                     borrower.address,
-                    1_000_000,
+                    800_000,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
                     1_500_000,
@@ -343,18 +343,45 @@ describe("Invoice Factoring", function () {
                     0
                 );
         });
-        it("Should allow evaluation agent to change an approved invoice factoring record", async function () {
+        it("Should prevent non-EA-borrower to change the limit for an approved invoice factoring record", async function () {
             await expect(
                 poolContract.connect(payer).changeCreditLine(borrower.address, 0)
-            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
+            ).to.be.revertedWith("onlyBorrowerOrEACanReduceCreditLine()");
+        });
+        it("Should allow borrower to reduce the limit for an approved invoice factoring record", async function () {
+            await poolContract.connect(borrower).changeCreditLine(borrower.address, 1000);
 
-            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
+            const creditInfo = await getCreditInfo(poolContract, borrower.address);
+            expect(creditInfo.creditLimit).to.equal(1000);
+
+            // await poolContract.connect(borrower).changeCreditLine(borrower.address, 0);
+            // expect(creditInfo.creditLimit).to.equal(0); // Means "Deleted"
+            // expect(creditInfo.state).to.equal(0); // Means "Deleted"
+        });
+        it("Should disallow borrower to increase the limit for an approved invoice factoring record", async function () {
+            await expect(
+                poolContract.connect(borrower).changeCreditLine(borrower.address, 1_000_000)
+            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
+        });
+        it("Should allow evaluation agent to increase an approved invoice factoring record", async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                .changeCreditLine(borrower.address, 1_000_000);
 
             //await poolContract.printDetailStatus(borrower.address);
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
 
-            expect(creditInfo.creditLimit).to.equal(0); // Means "Deleted"
-            expect(creditInfo.state).to.equal(0); // Means "Deleted"
+            expect(creditInfo.creditLimit).to.equal(1_000_000);
+        });
+        it("Should allow evaluation agent to decrease an approved invoice factoring record", async function () {
+            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000);
+            let creditInfo = await getCreditInfo(poolContract, borrower.address);
+            expect(creditInfo.creditLimit).to.equal(1000);
+
+            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
+            creditInfo = await getCreditInfo(poolContract, borrower.address);
+            expect(creditInfo.creditLimit).to.equal(0);
+            expect(creditInfo.state).to.equal(0);
         });
     });
 

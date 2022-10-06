@@ -306,7 +306,6 @@ describe("Base Credit Pool", function () {
             expect(await poolContract.isApproved(evaluationAgent.address)).to.equal(false);
 
             let oldBalance = await testTokenContract.balanceOf(borrower.address);
-            console.log(oldBalance);
             await poolContract.connect(borrower).drawdown(borrower.address, 100_000);
 
             // Two streams of income
