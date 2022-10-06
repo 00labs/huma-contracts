@@ -268,6 +268,64 @@ describe("Invoice Factoring", function () {
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
         });
+
+        it("Should approve new invoice if existing loan's balance is zero", async function () {
+            await poolConfigContract.connect(poolOwner).setReceivableRequiredInBps(12500);
+
+            await poolContract
+                .connect(eaServiceAccount)
+                .recordApprovedCredit(
+                    borrower.address,
+                    1_000_000,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1_500_000,
+                    30 * 86400,
+                    1,
+                    0
+                );
+
+            let creditInfo = await getCreditInfo(poolContract, borrower.address);
+
+            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.unbilledPrincipal).to.equal(0);
+            expect(creditInfo.remainingPeriods).to.equal(1);
+
+            let receivableInfo = await poolContract.receivableInfoMapping(borrower.address);
+            expect(receivableInfo.receivableAmount).to.equal(1_500_000);
+            expect(receivableInfo.receivableParam).to.equal(invoiceNFTTokenId);
+            expect(receivableInfo.receivableAsset).to.equal(invoiceNFTContract.address);
+
+            const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
+            const receipt = await tx.wait();
+            for (const evt of receipt.events) {
+                if (evt.event === "NFTGenerated") {
+                    invoiceNFTTokenId = evt.args.tokenId;
+                }
+            }
+
+            await poolContract
+                .connect(eaServiceAccount)
+                .recordApprovedCredit(
+                    borrower.address,
+                    1_000_000,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    2_500_000,
+                    60 * 86400,
+                    1,
+                    0
+                );
+            creditInfo = await getCreditInfo(poolContract, borrower.address);
+            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.unbilledPrincipal).to.equal(0);
+            expect(creditInfo.remainingPeriods).to.equal(1);
+
+            receivableInfo = await poolContract.receivableInfoMapping(borrower.address);
+            expect(receivableInfo.receivableAsset).to.equal(invoiceNFTContract.address);
+            expect(receivableInfo.receivableParam).to.equal(invoiceNFTTokenId);
+            expect(receivableInfo.receivableAmount).to.equal(2_500_000);
+        });
     });
 
     describe("Update Approved Invoice Factoring", function () {

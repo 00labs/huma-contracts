@@ -365,15 +365,27 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 remainingPeriods,
         bool preApproved
     ) internal virtual {
+        if (remainingPeriods == 0) revert Errors.requestedCreditWithZeroDuration();
+
         _protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
-        if (_creditRecordMapping[borrower].state != BS.CreditState.Deleted)
-            revert Errors.creditLineAlreadyExists();
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+
+        if (cr.state != BS.CreditState.Deleted) {
+            // Temp fix during Goerli test, should revert this logic later.
+            // If the user has an existing line, but there is no balance, close the credit line automatically.
+            cr = _updateDueInfo(borrower, true);
+            if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
+                cr.state = BS.CreditState.Deleted;
+                cr.remainingPeriods = 0;
+                emit CreditLineClosed(borrower, msg.sender);
+            } else {
+                revert Errors.creditLineAlreadyExists();
+            }
+        }
 
         // Borrowing amount needs to be lower than max for the pool.
         _maxCreditLineCheck(creditLimit);
-
-        if (remainingPeriods == 0) revert Errors.requestedCreditWithZeroDuration();
 
         _creditRecordStaticMapping[borrower] = BS.CreditRecordStatic({
             creditLimit: uint96(creditLimit),
@@ -382,9 +394,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             defaultAmount: uint96(0)
         });
 
-        BS.CreditRecord memory cr;
-
         cr.remainingPeriods = uint16(remainingPeriods);
+        cr.unbilledPrincipal = 0;
+        cr.dueDate = 0;
+        cr.correction = 0;
+        cr.totalDue = 0;
+        cr.feesAndInterestDue = 0;
+        cr.missedPeriods = 0;
 
         if (preApproved) {
             cr = _approveCredit(cr);
