@@ -208,12 +208,45 @@ describe("Base Credit Pool", function () {
             expect(loanInformation.state).to.equal(1);
         });
 
-        it("Shall reject loan requests if there is an outstanding laon", async function () {
+        it("Shall allow new request if there is existing loan in Requested state", async function () {
             await poolContract.connect(borrower).requestCredit(1_000, 30 * 86400, 12);
+            await poolContract.connect(borrower).requestCredit(2_000, 60 * 86400, 24);
+            const loanInformation = await getCreditInfo(poolContract, borrower.address);
+            expect(loanInformation.creditLimit).to.equal(2_000);
+            expect(loanInformation.intervalInSeconds).to.equal(60 * 86400);
+            expect(loanInformation.aprInBps).to.equal(1217);
+            expect(loanInformation.remainingPeriods).to.equal(24);
+            expect(loanInformation.state).to.equal(1);
+        });
+
+        it("Shall reject loan requests if there is an outstanding loan with outstanding balance", async function () {
+            await poolContract.connect(borrower).requestCredit(3_000, 30 * 86400, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(borrower.address, 2_000);
 
             await expect(
                 poolContract.connect(borrower).requestCredit(1_000, 30 * 86400, 12)
             ).to.be.revertedWith("creditLineAlreadyExists()");
+        });
+
+        it("Shall allow new request if existing loan has been paid off", async function () {
+            await poolContract.connect(borrower).requestCredit(3_000, 30 * 86400, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(borrower).drawdown(borrower.address, 3_000);
+            await testTokenContract.connect(borrower).mint(borrower.address, 2_000);
+            await testTokenContract.connect(borrower).approve(poolContract.address, 3_100);
+            await poolContract.connect(borrower).makePayment(borrower.address, 3_100);
+
+            await poolContract.connect(borrower).requestCredit(4_000, 90 * 86400, 36);
+            const loanInformation = await getCreditInfo(poolContract, borrower.address);
+            expect(loanInformation.creditLimit).to.equal(4_000);
+            expect(loanInformation.intervalInSeconds).to.equal(90 * 86400);
+            expect(loanInformation.aprInBps).to.equal(1217);
+            expect(loanInformation.remainingPeriods).to.equal(36);
+            expect(loanInformation.state).to.equal(1);
+            expect(loanInformation.totalDue).to.equal(0);
+            expect(loanInformation.feesAndInterestDue).to.equal(0);
+            expect(loanInformation.correction).to.equal(0);
         });
     });
 
@@ -272,12 +305,16 @@ describe("Base Credit Pool", function () {
             // Should return false when no loan exists
             expect(await poolContract.isApproved(evaluationAgent.address)).to.equal(false);
 
+            let oldBalance = await testTokenContract.balanceOf(borrower.address);
+            console.log(oldBalance);
             await poolContract.connect(borrower).drawdown(borrower.address, 100_000);
 
             // Two streams of income
             // fees: 2000. {protocol, poolOwner, EA, Pool}: {400, 100, 300, 1200}
             // interest income: 1000 {protocol, poolOwner, EA, Pool}: {200, 50, 150, 600}
-            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(98_000);
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
+                98_000 + Number(oldBalance)
+            );
 
             let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(600);
@@ -294,10 +331,8 @@ describe("Base Credit Pool", function () {
         });
 
         it("Borrow full amount that has been approved", async function () {
-            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
+            let oldBalance = await testTokenContract.balanceOf(borrower.address);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
-            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
-
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
             await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
@@ -305,7 +340,9 @@ describe("Base Credit Pool", function () {
             // fees: 11_000. protocol: 2200, pool owner: 550, EA: 1650, pool: 6600
             // borrower balance: 98000 + 989000 = 1_087_000
             // interest income: 10,002. {proto, poolowner, ea, pool} = {2000, 500, 1500, 6002}
-            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(989_000);
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
+                Number(oldBalance) + 989_000
+            );
 
             let accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.protocolIncome).to.equal(4200);
