@@ -19,6 +19,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 private constant SECONDS_IN_A_YEAR = 31536000;
+    uint256 private constant SECONDS_IN_A_DAY = 86400;
 
     /// Part of platform fee, charged when a borrow happens as a flat amount of the pool token
     uint256 public frontLoadingFeeFlat;
@@ -218,7 +219,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // Computes how many billing periods have passed. 1+ is needed since Solidity always
         // round to zero. When it is exactly at a billing cycle, it is desirable to 1+ as well
         if (_cr.dueDate > 0) {
-            periodsPassed = 1 + (block.timestamp - _cr.dueDate) / _crStatic.intervalInSeconds;
+            periodsPassed =
+                1 +
+                (block.timestamp - _cr.dueDate) /
+                (_crStatic.intervalInDays * SECONDS_IN_A_DAY);
+            if (periodsPassed > 360) {
+                periodsPassed = 360;
+            }
         } else {
             periodsPassed = 1;
         }
@@ -240,7 +247,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             // step 1. late fee calculation
             if (_cr.totalDue > 0)
                 fees = calcLateFee(
-                    _cr.dueDate + i * _crStatic.intervalInSeconds,
+                    _cr.dueDate + i * _crStatic.intervalInDays * SECONDS_IN_A_DAY,
                     _cr.totalDue,
                     _cr.unbilledPrincipal + _cr.totalDue
                 );
@@ -253,7 +260,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
 
             // step 4. computer interest
             interest =
-                (_cr.unbilledPrincipal * _crStatic.aprInBps * _crStatic.intervalInSeconds) /
+                (_cr.unbilledPrincipal *
+                    _crStatic.aprInBps *
+                    _crStatic.intervalInDays *
+                    SECONDS_IN_A_DAY) /
                 SECONDS_IN_A_YEAR /
                 HUNDRED_PERCENT_IN_BPS;
 

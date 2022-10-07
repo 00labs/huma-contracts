@@ -8,6 +8,7 @@ import "./BaseFeeManager.sol";
 
 contract BasePoolStorage {
     uint256 internal constant HUNDRED_PERCENT_IN_BPS = 10000;
+    uint256 internal constant SECONDS_IN_A_DAY = 86400;
 
     enum PoolStatus {
         Off,

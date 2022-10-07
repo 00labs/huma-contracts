@@ -137,7 +137,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
                         1_500_000,
-                        30 * 86400,
+                        30,
                         1,
                         0
                     )
@@ -156,7 +156,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
                         1_500_000,
-                        30 * 86400,
+                        30,
                         1,
                         0
                     )
@@ -175,7 +175,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
                         1_500_000,
-                        30 * 86400,
+                        30,
                         1,
                         0
                     )
@@ -192,7 +192,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
                         1_500_000,
-                        30 * 86400,
+                        30,
                         1,
                         0
                     )
@@ -212,7 +212,7 @@ describe("Invoice Factoring", function () {
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
                     1_500_000,
-                    30 * 86400,
+                    30,
                     1,
                     1000
                 );
@@ -239,7 +239,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
                         1_000_000,
-                        30 * 86400,
+                        30,
                         1,
                         0
                     )
@@ -257,7 +257,7 @@ describe("Invoice Factoring", function () {
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
                     1_500_000,
-                    30 * 86400,
+                    30,
                     1,
                     0
                 );
@@ -280,7 +280,7 @@ describe("Invoice Factoring", function () {
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
                     1_500_000,
-                    30 * 86400,
+                    30,
                     1,
                     0
                 );
@@ -312,7 +312,7 @@ describe("Invoice Factoring", function () {
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
                     2_500_000,
-                    60 * 86400,
+                    60,
                     1,
                     0
                 );
@@ -338,7 +338,7 @@ describe("Invoice Factoring", function () {
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
                     1_500_000,
-                    30 * 86400,
+                    30,
                     1,
                     0
                 );
@@ -409,13 +409,13 @@ describe("Invoice Factoring", function () {
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
                     1_500_0000,
-                    30 * 86400,
+                    30,
                     1,
                     0
                 );
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(record, recordStatic, 1_000_000, 0, 0, 0, 0, 0, 0, 1, 0, 30 * 86400, 2, 0);
+            checkRecord(record, recordStatic, 1_000_000, 0, 0, 0, 0, 0, 0, 1, 0, 30, 2, 0);
         });
 
         afterEach(async function () {
@@ -476,7 +476,7 @@ describe("Invoice Factoring", function () {
 
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 200_000, 0, 0, 0, 0, 30 * 86400, 3, 0);
+            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 200_000, 0, 0, 0, 0, 30, 3, 0);
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
             checkResult(dueInfo, 0, 0, 200_000, 0, 0);
@@ -521,7 +521,7 @@ describe("Invoice Factoring", function () {
 
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 1_000_000, 0, 0, 0, 0, 30 * 86400, 3, 0);
+            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 1_000_000, 0, 0, 0, 0, 30, 3, 0);
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
             checkResult(dueInfo, 0, 0, 1_000_000, 0, 0);
@@ -555,7 +555,7 @@ describe("Invoice Factoring", function () {
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
                     1_500_000,
-                    30 * 86400,
+                    30,
                     1,
                     0
                 );
@@ -655,7 +655,7 @@ describe("Invoice Factoring", function () {
 
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 0, 0, 0, 0, 0, 30 * 86400, 0, 0);
+            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
             checkResult(dueInfo, 0, 0, 0, 0, 0);

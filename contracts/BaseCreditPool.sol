@@ -19,7 +19,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         address indexed borrower,
         uint256 creditLimit,
         uint256 aprInBps,
-        uint256 payPeriodInSeconds,
+        uint256 payPeriodInDays,
         uint256 remainingPeriods,
         bool approved
     );
@@ -160,12 +160,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     /**
      * @notice accepts a credit request from msg.sender
      * @param creditLimit the credit line (number of pool token)
-     * @param intervalInSeconds duration of a payment cycle, typically 30 days
+     * @param intervalInDays duration of a payment cycle, typically 30 days
      * @param numOfPayments number of cycles for the credit line to be valid.
      */
     function requestCredit(
         uint256 creditLimit,
-        uint256 intervalInSeconds,
+        uint256 intervalInDays,
         uint256 numOfPayments
     ) external virtual override {
         // Open access to the borrower. Data validation happens in initiateCredit()
@@ -173,7 +173,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             msg.sender,
             creditLimit,
             _poolConfig.poolAprInBps(),
-            intervalInSeconds,
+            intervalInDays,
             numOfPayments,
             false
         );
@@ -231,10 +231,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     }
 
     function isDefaultReady(address borrower) public view virtual override returns (bool) {
-        uint32 intervalInSeconds = _creditRecordStaticMapping[borrower].intervalInSeconds;
+        uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
         return
-            _creditRecordMapping[borrower].missedPeriods * intervalInSeconds >=
-                _poolConfig.poolDefaultGracePeriodInSeconds() + intervalInSeconds
+            _creditRecordMapping[borrower].missedPeriods * intervalInDays * SECONDS_IN_A_DAY >=
+                _poolConfig.poolDefaultGracePeriodInSeconds() + intervalInDays * SECONDS_IN_A_DAY
                 ? true
                 : false;
     }
@@ -367,7 +367,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         address borrower,
         uint256 creditLimit,
         uint256 aprInBps,
-        uint256 intervalInSeconds,
+        uint256 intervalInDays,
         uint256 remainingPeriods,
         bool preApproved
     ) internal virtual {
@@ -396,7 +396,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         _creditRecordStaticMapping[borrower] = BS.CreditRecordStatic({
             creditLimit: uint96(creditLimit),
             aprInBps: uint16(aprInBps),
-            intervalInSeconds: uint32(intervalInSeconds),
+            intervalInDays: uint16(intervalInDays),
             defaultAmount: uint96(0)
         });
 
@@ -418,7 +418,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             borrower,
             creditLimit,
             aprInBps,
-            intervalInSeconds,
+            intervalInDays,
             remainingPeriods,
             preApproved
         );
@@ -583,11 +583,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 cr.dueDate = uint64(
                     cr.dueDate +
                         periodsPassed *
-                        _creditRecordStaticMapping[borrower].intervalInSeconds
+                        _creditRecordStaticMapping[borrower].intervalInDays *
+                        SECONDS_IN_A_DAY
                 );
             else
                 cr.dueDate = uint64(
-                    block.timestamp + _creditRecordStaticMapping[borrower].intervalInSeconds
+                    block.timestamp +
+                        _creditRecordStaticMapping[borrower].intervalInDays *
+                        SECONDS_IN_A_DAY
                 );
 
             // Adjusts remainingPeriods, special handling when reached the maturity of the credit line

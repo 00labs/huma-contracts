@@ -148,7 +148,7 @@ contract ReceivableFactoringPool is
      * @param receivableAsset the receivable asset used for this credit
      * @param receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
      * @param receivableAmount amount of the receivable asset
-     * @param intervalInSeconds time interval for each payback in units of days
+     * @param intervalInDays time interval for each payback in units of days
      * @param remainingPeriods the number of pay periods for this credit
      * @dev Only Evaluation Agents for this contract can call this function.
      */
@@ -158,7 +158,7 @@ contract ReceivableFactoringPool is
         address receivableAsset,
         uint256 receivableParam,
         uint256 receivableAmount,
-        uint256 intervalInSeconds,
+        uint256 intervalInDays,
         uint256 remainingPeriods,
         uint256 aprInBps
     ) external virtual override {
@@ -176,14 +176,7 @@ contract ReceivableFactoringPool is
         }
 
         // Pool status and data validation happens within initiate().
-        _initiateCredit(
-            borrower,
-            creditLimit,
-            aprInBps,
-            intervalInSeconds,
-            remainingPeriods,
-            true
-        );
+        _initiateCredit(borrower, creditLimit, aprInBps, intervalInDays, remainingPeriods, true);
     }
 
     function isPaymentProcessed(bytes32 paymentIdHash)

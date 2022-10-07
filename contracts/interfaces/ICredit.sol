@@ -33,12 +33,12 @@ interface ICredit {
     /**
      * @notice Requests a credit line
      * @param _creditLimit the limit of the credit line
-     * @param  _intervalInSeconds the time interval between two payments
+     * @param  _intervalInDays the time interval between two payments
      * @param _numOfPayments total number of payment cycles for the credit line
      */
     function requestCredit(
         uint256 _creditLimit,
-        uint256 _intervalInSeconds,
+        uint256 _intervalInDays,
         uint256 _numOfPayments
     ) external;
 
