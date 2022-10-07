@@ -55,6 +55,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
     function markPaymentInvalid(bytes32 paymentIdHash) external {
         onlyPDSServiceAccount();
 
+        _processedPaymentIds[paymentIdHash] = true;
         emit PaymentInvalidated(paymentIdHash);
     }
 
