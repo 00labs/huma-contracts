@@ -65,11 +65,17 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      */
     function changeCreditLine(address borrower, uint256 newCreditLimit) public virtual override {
         _protocolAndPoolOn();
-        onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
         _maxCreditLineCheck(newCreditLimit);
 
         uint256 oldCreditLimit = _creditRecordStaticMapping[borrower].creditLimit;
+
+        // Only EA can increase credit line. Only EA or the borrower can reduce credit line.
+        if (newCreditLimit > oldCreditLimit) onlyEAServiceAccount();
+        else {
+            if (msg.sender != borrower && msg.sender != _humaConfig.eaServiceAccount())
+                revert Errors.onlyBorrowerOrEACanReduceCreditLine();
+        }
 
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newCreditLimit);
 

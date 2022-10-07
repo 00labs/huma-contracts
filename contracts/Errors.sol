@@ -61,4 +61,5 @@ contract Errors {
     error underlyingTokenNotApprovedForHumaProtocol();
 
     error requestedCreditWithZeroDuration();
+    error onlyBorrowerOrEACanReduceCreditLine();
 }
