@@ -55,6 +55,11 @@ let ea_bcp = process.env["EA_BASE_CREDIT"];
 if (!ea_bcp) {
     ea_bcp = EMPTY_PRIVATE_KEY;
 }
+let invoicePayer = process.env["INVOICE_PAYER"];
+if (!invoicePayer) {
+    invoicePayer = EMPTY_PRIVATE_KEY;
+}
+
 //
 // Select the network you want to deploy to here:
 //
@@ -134,7 +139,17 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury, ea_bcp],
+            accounts: [
+                deployer,
+                proxyOwner,
+                lender,
+                ea,
+                eaService,
+                pdsService,
+                treasury,
+                ea_bcp,
+                invoicePayer,
+            ],
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",

@@ -6,7 +6,7 @@ const {
     sendTransaction,
 } = require("./utils.js");
 
-let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp;
+let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp, invoicePayer;
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -318,13 +318,18 @@ async function prepare() {
     await sendTransaction("ReceivableFactoringPool", poolFromEA, "makeInitialDeposit", [amountEA]);
 
     await sendTransaction("ReceivableFactoringPool", pool, "enablePool", []);
+
+    //invoicePayer
+    const amountInvoicePayer = BN.from(10_000_000_000).mul(BN.from(10).pow(BN.from(decimals)));
+    await sendTransaction("TestToken", usdc, "mint", [invoicePayer.address, amountInvoicePayer]);
 }
 
 async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury, ea_bcp] = await accounts;
+    [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury, ea_bcp, invoicePayer] =
+        await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);
     console.log("ea address: " + ea.address);

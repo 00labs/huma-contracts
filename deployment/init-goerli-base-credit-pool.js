@@ -100,9 +100,7 @@ async function initBaseCreditPoolFeeManager() {
     }
 
     const BaseFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
-    const feeManager = BaseFeeManager.attach(
-        deployedContracts["BaseCreditPoolFeeManager"]
-    );
+    const feeManager = BaseFeeManager.attach(deployedContracts["BaseCreditPoolFeeManager"]);
 
     await sendTransaction(
         "BaseCreditPoolFeeManager",
@@ -187,9 +185,7 @@ async function initBaseCreditPoolConfig() {
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
 
     const BaseFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
-    const feeManager = BaseFeeManager.attach(
-        deployedContracts["BaseCreditPoolFeeManager"]
-    );
+    const feeManager = BaseFeeManager.attach(deployedContracts["BaseCreditPoolFeeManager"]);
 
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "initialize", [
         "BaseCreditPool",
@@ -201,9 +197,7 @@ async function initBaseCreditPoolConfig() {
     const decimals = await hdt.decimals();
     const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("cap: " + cap);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolLiquidityCap", [
-        cap,
-    ]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolLiquidityCap", [cap]);
 
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPool", [
         deployedContracts["BaseCreditPool"],
@@ -227,32 +221,15 @@ async function initBaseCreditPoolConfig() {
     );
     const maxCL = BN.from(1_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("maxCL: " + maxCL);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setMaxCreditLine", [
-        maxCL,
-    ]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setMaxCreditLine", [maxCL]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setAPR", [1000]);
-    await sendTransaction(
-        "BaseCreditPoolConfig",
-        poolConfig,
-        "setReceivableRequiredInBps",
-        [0]
-    );
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setReceivableRequiredInBps", [0]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolPayPeriod", [15]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolToken", [
         deployedContracts["BaseCreditHDT"],
     ]);
-    await sendTransaction(
-        "BaseCreditPoolConfig",
-        poolConfig,
-        "setWithdrawalLockoutPeriod",
-        [90]
-    );
-    await sendTransaction(
-        "BaseCreditPoolConfig",
-        poolConfig,
-        "setPoolDefaultGracePeriod",
-        [60]
-    );
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [90]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
 
     await updateInitilizedContract("BaseCreditPoolConfig");
 }
@@ -293,9 +270,7 @@ async function prepareBaseCreditPool() {
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
     const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]);
 
-    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [
-        deployer.address,
-    ]);
+    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [deployer.address]);
     await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [ea_bcp.address]);
     await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [lender.address]);
 

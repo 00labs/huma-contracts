@@ -65,11 +65,17 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      */
     function changeCreditLine(address borrower, uint256 newCreditLimit) public virtual override {
         _protocolAndPoolOn();
-        onlyEAServiceAccount();
         // Borrowing amount needs to be lower than max for the pool.
         _maxCreditLineCheck(newCreditLimit);
 
         uint256 oldCreditLimit = _creditRecordStaticMapping[borrower].creditLimit;
+
+        // Only EA can increase credit line. Only EA or the borrower can reduce credit line.
+        if (newCreditLimit > oldCreditLimit) onlyEAServiceAccount();
+        else {
+            if (msg.sender != borrower && msg.sender != _humaConfig.eaServiceAccount())
+                revert Errors.onlyBorrowerOrEACanReduceCreditLine();
+        }
 
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newCreditLimit);
 
@@ -431,17 +437,25 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     ) internal returns (uint256 amountPaid) {
         _protocolAndPoolOn();
 
-        if (amount == 0) revert Errors.zeroAmountProvided();
+        // if (amount == 0) revert Errors.zeroAmountProvided();
+        require(amount != 0, "zeroAmountProvided()");
 
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
-        if (
-            cr.state == BS.CreditState.Requested ||
-            cr.state == BS.CreditState.Approved ||
-            cr.state == BS.CreditState.Deleted
-        ) {
-            revert Errors.creditLineNotInStateForMakingPayment();
-        }
+        // if (
+        //     cr.state == BS.CreditState.Requested ||
+        //     cr.state == BS.CreditState.Approved ||
+        //     cr.state == BS.CreditState.Deleted
+        // ) {
+        //     revert Errors.creditLineNotInStateForMakingPayment();
+        // }
+
+        require(
+            cr.state != BS.CreditState.Requested &&
+                cr.state != BS.CreditState.Approved &&
+                cr.state != BS.CreditState.Deleted,
+            "creditLineNotInStateForMakingPayment()"
+        );
 
         if (block.timestamp > cr.dueDate) {
             // Bring the account current. This is necessary since the account might have been dormant for
