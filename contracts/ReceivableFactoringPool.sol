@@ -21,6 +21,7 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         bytes32 paymentIdHash
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
+    event PaymentInvalidated(bytes32 paymentIdHash);
 
     /**
      * @notice Borrower makes one payment. If this is the final payment,
@@ -45,6 +46,16 @@ contract ReceivableFactoringPool is BaseCreditPool, IReceivable {
         if (amount > amountPaid) disperseRemainingFunds(borrower, amount - amountPaid);
 
         emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
+    }
+
+    /**
+     * @notice Used by the PDS service account to invalidate a payment and stop automatic
+     * processing services like subgraph from ingesting this payment.
+     */
+    function markPaymentInvalid(bytes32 paymentIdHash) external {
+        onlyPDSServiceAccount();
+
+        emit PaymentInvalidated(paymentIdHash);
     }
 
     /**
