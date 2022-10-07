@@ -138,7 +138,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_500_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
         });
@@ -156,7 +157,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_500_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("protocolIsPaused()");
         });
@@ -174,7 +176,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_500_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("poolIsNotOn()");
         });
@@ -190,7 +193,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_500_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
@@ -209,7 +213,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_000,
                     30 * 86400,
-                    1
+                    1,
+                    1000
                 );
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
@@ -217,6 +222,7 @@ describe("Invoice Factoring", function () {
             expect(creditInfo.creditLimit).to.equal(1_000_000);
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
+            expect(creditInfo.aprInBps).to.equal(1000);
         });
 
         it("Should reject approved invoice with invoice amount lower than the receivable requirement", async function () {
@@ -234,7 +240,8 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         1_000_000,
                         30 * 86400,
-                        1
+                        1,
+                        0
                     )
             ).to.be.revertedWith("insufficientReceivableAmount()");
         });
@@ -251,7 +258,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_000,
                     30 * 86400,
-                    1
+                    1,
+                    0
                 );
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
@@ -260,10 +268,10 @@ describe("Invoice Factoring", function () {
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
         });
-    });
 
-    describe("Update Approved Invoice Factoring", function () {
-        beforeEach(async function () {
+        it("Should approve new invoice if existing loan's balance is zero", async function () {
+            await poolConfigContract.connect(poolOwner).setReceivableRequiredInBps(12500);
+
             await poolContract
                 .connect(eaServiceAccount)
                 .recordApprovedCredit(
@@ -273,21 +281,107 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_000,
                     30 * 86400,
-                    1
+                    1,
+                    0
+                );
+
+            let creditInfo = await getCreditInfo(poolContract, borrower.address);
+
+            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.unbilledPrincipal).to.equal(0);
+            expect(creditInfo.remainingPeriods).to.equal(1);
+
+            let receivableInfo = await poolContract.receivableInfoMapping(borrower.address);
+            expect(receivableInfo.receivableAmount).to.equal(1_500_000);
+            expect(receivableInfo.receivableParam).to.equal(invoiceNFTTokenId);
+            expect(receivableInfo.receivableAsset).to.equal(invoiceNFTContract.address);
+
+            const tx = await invoiceNFTContract.mintNFT(borrower.address, "");
+            const receipt = await tx.wait();
+            for (const evt of receipt.events) {
+                if (evt.event === "NFTGenerated") {
+                    invoiceNFTTokenId = evt.args.tokenId;
+                }
+            }
+
+            await poolContract
+                .connect(eaServiceAccount)
+                .recordApprovedCredit(
+                    borrower.address,
+                    1_000_000,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    2_500_000,
+                    60 * 86400,
+                    1,
+                    0
+                );
+            creditInfo = await getCreditInfo(poolContract, borrower.address);
+            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.unbilledPrincipal).to.equal(0);
+            expect(creditInfo.remainingPeriods).to.equal(1);
+
+            receivableInfo = await poolContract.receivableInfoMapping(borrower.address);
+            expect(receivableInfo.receivableAsset).to.equal(invoiceNFTContract.address);
+            expect(receivableInfo.receivableParam).to.equal(invoiceNFTTokenId);
+            expect(receivableInfo.receivableAmount).to.equal(2_500_000);
+        });
+    });
+
+    describe("Update Approved Invoice Factoring", function () {
+        beforeEach(async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                .recordApprovedCredit(
+                    borrower.address,
+                    800_000,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1_500_000,
+                    30 * 86400,
+                    1,
+                    0
                 );
         });
-        it("Should allow evaluation agent to change an approved invoice factoring record", async function () {
+        it("Should prevent non-EA-borrower to change the limit for an approved invoice factoring record", async function () {
             await expect(
                 poolContract.connect(payer).changeCreditLine(borrower.address, 0)
-            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
+            ).to.be.revertedWith("onlyBorrowerOrEACanReduceCreditLine()");
+        });
+        it("Should allow borrower to reduce the limit for an approved invoice factoring record", async function () {
+            await poolContract.connect(borrower).changeCreditLine(borrower.address, 1000);
 
-            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
+            const creditInfo = await getCreditInfo(poolContract, borrower.address);
+            expect(creditInfo.creditLimit).to.equal(1000);
+
+            // await poolContract.connect(borrower).changeCreditLine(borrower.address, 0);
+            // expect(creditInfo.creditLimit).to.equal(0); // Means "Deleted"
+            // expect(creditInfo.state).to.equal(0); // Means "Deleted"
+        });
+        it("Should disallow borrower to increase the limit for an approved invoice factoring record", async function () {
+            await expect(
+                poolContract.connect(borrower).changeCreditLine(borrower.address, 1_000_000)
+            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
+        });
+        it("Should allow evaluation agent to increase an approved invoice factoring record", async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                .changeCreditLine(borrower.address, 1_000_000);
 
             //await poolContract.printDetailStatus(borrower.address);
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
 
-            expect(creditInfo.creditLimit).to.equal(0); // Means "Deleted"
-            expect(creditInfo.state).to.equal(0); // Means "Deleted"
+            expect(creditInfo.creditLimit).to.equal(1_000_000);
+        });
+        it("Should allow evaluation agent to decrease an approved invoice factoring record", async function () {
+            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000);
+            let creditInfo = await getCreditInfo(poolContract, borrower.address);
+            expect(creditInfo.creditLimit).to.equal(1000);
+
+            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
+            creditInfo = await getCreditInfo(poolContract, borrower.address);
+            expect(creditInfo.creditLimit).to.equal(0);
+            expect(creditInfo.state).to.equal(0);
         });
     });
 
@@ -316,7 +410,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_0000,
                     30 * 86400,
-                    1
+                    1,
+                    0
                 );
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -329,15 +424,29 @@ describe("Invoice Factoring", function () {
 
         it("Should not allow loan funding while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
-            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
-                "protocolIsPaused()"
-            );
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(
+                        borrower.address,
+                        1_000_000,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId
+                    )
+            ).to.be.revertedWith("protocolIsPaused()");
         });
 
         it("Shall reject drawdown without receivable", async function () {
-            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
-                "receivableAssetMismatch()"
-            );
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(
+                        borrower.address,
+                        1_000_000,
+                        ethers.constants.AddressZero,
+                        invoiceNFTTokenId
+                    )
+            ).to.be.revertedWith("receivableAssetMismatch()");
         });
 
         it("Should be able to borrow amount less than approved", async function () {
@@ -447,7 +556,8 @@ describe("Invoice Factoring", function () {
                     invoiceNFTTokenId,
                     1_500_000,
                     30 * 86400,
-                    1
+                    1,
+                    0
                 );
 
             await poolContract

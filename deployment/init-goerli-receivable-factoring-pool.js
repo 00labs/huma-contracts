@@ -6,7 +6,7 @@ const {
     sendTransaction,
 } = require("./utils.js");
 
-let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury;
+let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp, invoicePayer;
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -93,6 +93,7 @@ async function initFeeManager() {
 
     await updateInitilizedContract("ReceivableFactoringPoolFeeManager");
 }
+
 async function initHDT() {
     const initilized = await getInitilizedContract("HDT");
     if (initilized) {
@@ -142,7 +143,8 @@ async function initEA() {
 
     const eaNFTFromEA = eaNFT.connect(ea);
     await sendTransaction("EvaluationAgentNFT", eaNFTFromEA, "mintNFT", [ea.address]);
-
+    const eaNFTFromEA_bcp = eaNFT.connect(ea);
+    await sendTransaction("EvaluationAgentNFT", eaNFTFromEA_bcp, "mintNFT", [ea_bcp.address]);
     await updateInitilizedContract("EANFT");
 }
 
@@ -316,13 +318,18 @@ async function prepare() {
     await sendTransaction("ReceivableFactoringPool", poolFromEA, "makeInitialDeposit", [amountEA]);
 
     await sendTransaction("ReceivableFactoringPool", pool, "enablePool", []);
+
+    //invoicePayer
+    const amountInvoicePayer = BN.from(10_000_000_000).mul(BN.from(10).pow(BN.from(decimals)));
+    await sendTransaction("TestToken", usdc, "mint", [invoicePayer.address, amountInvoicePayer]);
 }
 
 async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury] = await accounts;
+    [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury, ea_bcp, invoicePayer] =
+        await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);
     console.log("ea address: " + ea.address);

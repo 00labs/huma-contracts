@@ -90,9 +90,9 @@ async function execute() {
     //     deployedContracts["HumaConfig"],
     // ]);
 
-    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
-    //     deployedContracts["ReceivableFactoringPoolFeeManager"],
-    // ]);
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
+        deployedContracts["ReceivableFactoringPoolFeeManager"],
+    ]);
 
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);

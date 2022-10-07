@@ -143,7 +143,7 @@ describe("Base Fee Manager", function () {
             await poolContract.connect(borrower).requestCredit(400, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await testTokenContract.connect(lender).approve(poolContract.address, 300);
-            await poolContract.connect(borrower).drawdown(400);
+            await poolContract.connect(borrower).drawdown(borrower.address, 400);
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -218,7 +218,7 @@ describe("Base Fee Manager", function () {
             await poolContract.connect(borrower).requestCredit(5000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await testTokenContract.connect(poolOwner).approve(poolContract.address, 4000);
-            await poolContract.connect(borrower).drawdown(4000);
+            await poolContract.connect(borrower).drawdown(borrower.address, 4000);
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -288,7 +288,7 @@ describe("Base Fee Manager", function () {
             await poolContract.connect(borrower).requestCredit(400, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await testTokenContract.connect(lender).approve(poolContract.address, 300);
-            await poolContract.connect(borrower).drawdown(400);
+            await poolContract.connect(borrower).drawdown(borrower.address, 400);
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -363,7 +363,7 @@ describe("Base Fee Manager", function () {
             await poolContract.connect(borrower).requestCredit(5000, 30 * 86400, 12);
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await testTokenContract.connect(poolOwner).approve(poolContract.address, 4000);
-            await poolContract.connect(borrower).drawdown(4000);
+            await poolContract.connect(borrower).drawdown(borrower.address, 4000);
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);

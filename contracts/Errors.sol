@@ -59,4 +59,7 @@ contract Errors {
 
     error proposedEADoesNotOwnProvidedEANFT();
     error underlyingTokenNotApprovedForHumaProtocol();
+
+    error requestedCreditWithZeroDuration();
+    error onlyBorrowerOrEACanReduceCreditLine();
 }
