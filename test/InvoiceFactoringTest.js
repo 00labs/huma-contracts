@@ -661,6 +661,30 @@ describe("Invoice Factoring", function () {
             checkResult(dueInfo, 0, 0, 0, 0, 0);
         });
 
+        it("Invalidate payback", async function () {
+            let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
+            await testTokenContract.burn(borrower.address, borrowerBalance - 890000);
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(890000);
+            await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
+
+            // simulates payments from payer.
+            await testTokenContract.connect(payer).transfer(poolContract.address, 1_500_000);
+
+            await poolContract
+                .connect(pdsServiceAccount)
+                .markPaymentInvalid(ethers.utils.formatBytes32String("1"));
+
+            await expect(
+                poolContract
+                    .connect(pdsServiceAccount)
+                    .onReceivedPayment(
+                        borrower.address,
+                        1_500_000,
+                        ethers.utils.formatBytes32String("1")
+                    )
+            ).to.be.revertedWith("paymentAlreadyProcessed()");
+        });
+
         describe("Default flow", async function () {
             it("Writeoff less than pool value", async function () {
                 await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(

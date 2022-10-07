@@ -31,6 +31,7 @@ contract ReceivableFactoringPool is
         bytes32 paymentIdHash
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
+    event PaymentInvalidated(bytes32 paymentIdHash);
     event DrawdownMadeWithReceivable(
         address indexed borrower,
         uint256 borrowAmount,
@@ -122,6 +123,20 @@ contract ReceivableFactoringPool is
         if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
 
         emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
+    }
+
+    /**
+     * @notice Used by the PDS service account to invalidate a payment and stop automatic
+     * processing services like subgraph from ingesting this payment.
+     * This will be called manually by the pool owner in extremely rare situations
+     * when an SDK bug or payment reaches an invalid state and bookkeeping must be
+     * manually made by the pool owners.
+     */
+    function markPaymentInvalid(bytes32 paymentIdHash) external {
+        onlyPDSServiceAccount();
+
+        _processedPaymentIds[paymentIdHash] = true;
+        emit PaymentInvalidated(paymentIdHash);
     }
 
     /**
