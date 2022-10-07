@@ -223,8 +223,10 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 1 +
                 (block.timestamp - _cr.dueDate) /
                 (_crStatic.intervalInDays * SECONDS_IN_A_DAY);
+            // No credit line has more than 360 periods. If it is longer than that, something
+            // is wrong. Set it to 361 so that the non view function can emit an event.
             if (periodsPassed > 360) {
-                periodsPassed = 360;
+                periodsPassed = 361;
             }
         } else {
             periodsPassed = 1;
