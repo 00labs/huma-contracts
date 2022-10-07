@@ -314,11 +314,9 @@ module.exports = {
             default: 0, // here this will by default take the first account as deployer
         },
     },
+
     etherscan: {
-        apiKey: {
-            mainnet: "DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW",
-            // add other network's API key here
-        },
+        apiKey: process.env.ETHERSCAN_API_KEY || null
     },
     contractSizer: {
         alphaSort: true,
