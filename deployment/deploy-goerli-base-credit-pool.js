@@ -15,8 +15,8 @@ async function deployContracts() {
     console.log("ea service address: " + eaService.address);
 
     const usdc = await deploy("TestToken", "USDC");
-    const evaluation_agent_NFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
-    const invoice_NFT = await deploy("InvoiceNFT", "RNNFT", [usdc.address]);
+    const evaluationAgentNFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
+    const invoiceNFT = await deploy("InvoiceNFT", "RNNFT", [usdc.address]);
 
     const humaConfig = await deploy("HumaConfig", "HumaConfig");
     const humaConfigTL = await deploy("TimelockController", "HumaConfigTimelock", [
