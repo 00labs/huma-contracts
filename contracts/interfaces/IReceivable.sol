@@ -11,7 +11,7 @@ interface IReceivable {
      * @param _receivableAsset the receivable asset used for this credit
      * @param _receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
      * @param _receivableAmount amount of the receivable asset
-     * @param _intervalInSeconds time interval for each payback in units of days
+     * @param _intervalInDays time interval for each payback in units of days
      * @param _remainingPeriods the number of pay periods for this credit
      */
     function recordApprovedCredit(
@@ -20,7 +20,7 @@ interface IReceivable {
         address _receivableAsset,
         uint256 _receivableAmount,
         uint256 _receivableParam,
-        uint256 _intervalInSeconds,
+        uint256 _intervalInDays,
         uint256 _remainingPeriods,
         uint256 aprInBps
     ) external;

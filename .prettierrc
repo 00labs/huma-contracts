@@ -21,6 +21,12 @@
           "bracketSpacing": false,
           "explicitTypes": "always"
         }
+      },
+      {
+        "files": "*.json",
+        "options": {
+            "printWidth": 80
+        }
       }
     ]
   }

@@ -26,7 +26,7 @@ library BaseStructs {
     struct CreditRecordStatic {
         uint96 creditLimit; // the limit of the credit line
         uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
-        uint32 intervalInSeconds; // # of seconds in one billing period
+        uint16 intervalInDays; // # of seconds in one billing period
         uint96 defaultAmount; // the amount that has been defaulted.
     }
 
@@ -62,7 +62,7 @@ library BaseStructs {
     //     console.log("cr.missedPeriods=", uint256(cr.missedPeriods));
     //     console.log("cr.remainingPeriods=", uint256(cr.remainingPeriods));
     //     console.log("cr.apr_in_bps=", uint256(cr.aprInBps));
-    //     console.log("cr.intervalInSeconds=", uint256(cr.intervalInSeconds));
+    //     console.log("cr.intervalInDays=", uint256(cr.intervalInDays));
     //     console.log("cr.state=", uint256(cr.state));
     // }
 }

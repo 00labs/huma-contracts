@@ -185,7 +185,7 @@ async function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, 
     if (v7 != "SKIP") expect(r.missedPeriods).to.equal(v7);
     if (v8 != "SKIP") expect(r.remainingPeriods).to.equal(v8);
     if (v9 != "SKIP") expect(rs.aprInBps).to.equal(v9);
-    if (v10 != "SKIP") expect(rs.intervalInSeconds).to.equal(v10);
+    if (v10 != "SKIP") expect(rs.intervalInDays).to.equal(v10);
     if (v11 != "SKIP") expect(r.state).to.equal(v11);
     if (v12 != "SKIP") expect(rs.defaultAmount).to.equal(v12);
 }
