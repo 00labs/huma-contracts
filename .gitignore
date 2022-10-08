@@ -17,3 +17,6 @@ yarn-error.log*
 
 # dependencies
 node_modules
+
+# verify args
+deployment/verify_args

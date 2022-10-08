@@ -41,9 +41,9 @@ async function deployContracts() {
         [],
     ]);
 
-    const evaluation_agent_NFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
+    const evaluationAgentNFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
 
-    const invoice_NFT = await deploy("InvoiceNFT", "RNNFT", [usdc.address]);
+    const invoiceNFT = await deploy("InvoiceNFT", "RNNFT", [usdc.address]);
 }
 
 deployContracts()

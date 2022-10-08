@@ -36,6 +36,10 @@ const getUpgradedContract = async function (contractName) {
     return await getContract("upgraded", contractName);
 };
 
+const getVerifiedContract = async function (contractName) {
+    return await getContract("verified", contractName);
+};
+
 const getDeployedContracts = async function () {
     return await getContracts("deployed");
 };
@@ -61,6 +65,10 @@ const updateInitilizedContract = async function (contractName) {
 
 const updateUpgradedContract = async function (contractName) {
     await updateContract("upgraded", contractName, "Done");
+};
+
+const updateVerifiedContract = async function (contractName) {
+    await updateContract("verified", contractName, "Done");
 };
 
 async function updateContract(type, contractName, value) {
@@ -160,4 +168,6 @@ module.exports = {
     sendTransaction,
     deploy,
     toFixedDecimal,
+    getVerifiedContract,
+    updateVerifiedContract
 };
