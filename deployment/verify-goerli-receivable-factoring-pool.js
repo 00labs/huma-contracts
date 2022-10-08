@@ -4,68 +4,140 @@ const {
     getVerifiedContract,
     updateVerifiedContract,
 } = require("./utils.js");
-const net = require("net");
 
-let deployedContracts;
+const fs = require("fs");
+
+const VERIFY_ARGS_PATH = "./deployment/verify_args/"
+
+let deployedContracts, proxyOwner, network, deployer;
+
+const getArgsFile = async function (contractName) {
+    const argsFile = `${VERIFY_ARGS_PATH}${contractName}.js`;
+    return argsFile;
+}
+
+const writeVerifyArgs = async function (contractName, args) {
+    const argsFile =  await getArgsFile(contractName);
+    let data = `module.exports = [
+        ${args.toString()},
+        ];`
+    // console.log(data)
+    await fs.mkdir(`${VERIFY_ARGS_PATH}`, { recursive: true }, (err) => {
+        if (err) throw err;
+    });
+    fs.writeFileSync(argsFile, data, {flag: "w"});
+    return argsFile;
+};
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
-async function etherscanVerify(contractName, contractAddress, argsFilePath, logMessage) {
-    let network = (await hre.ethers.provider.getNetwork()).name;
+async function etherscanVerify(contractName, contractAddress, argsFile, logMessage) {
     await sleep(5000);
     logMessage = !logMessage ? contractAddress : logMessage;
     console.log(`Verifying ${contractName}:${logMessage}`)
-    const command = !argsFilePath ? `yarn hardhat verify '${contractAddress}' --network ${network}` : `yarn hardhat verify ${contractAddress} --constructor-args ${argsFilePath} --network ${network}`
-    const verifyResult = execSync(command)
-    console.log(verifyResult)
-    console.log(`Verifying ${contractName}:${logMessage} ended!`)
+
+    const command = !argsFile ? `yarn hardhat verify '${contractAddress}' --network ${network}` : `yarn hardhat verify ${contractAddress} --constructor-args ${argsFile} --network ${network}`
+    let result;
+    try {
+        const verifyResult = execSync(command)
+        // console.log(verifyResult);
+        result = 'successful';
+    }
+    catch (error) {
+        if (!error.toString().includes("Reason: Already Verified" )) {
+            throw error;
+        }
+        else {
+            result = 'already verified';
+        }
+    };
+    console.log(`Verifying ${contractName}:${logMessage} ended!`);
+    return result;
 }
 
-async function verifyPool() {
-    const verified = await getVerifiedContract("ReceivableFactoringPool");
+async function verifyContract(contractKey, args) {
+    const verified = await getVerifiedContract(contractKey);
     if (verified) {
-        console.log("ReceivableFactoringPool is already verified!");
-        return;
+        console.log(`${contractKey} is already verified!`);
+        return 'already verified';
     }
 
-    if (!deployedContracts["ReceivableFactoringPool"]) {
-        throw new Error("ReceivableFactoringPool not deployed yet!");
+    if (!deployedContracts[contractKey]) {
+        throw new Error(`${contractKey} not deployed yet!`);
     }
-
-    const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
-    const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
-
-    await etherscanVerify(pool.address)
-
-    await updateVerifiedContract("ReceivableFactoringPool");
-}
-
-async function verifyPoolImpl() {
-    const verified = await getVerifiedContract("ReceivableFactoringPoolImpl");
-    if (verified) {
-        console.log("ReceivableFactoringPoolImpl is already verified!");
-        return;
+    let result;
+    if (args) {
+        const argsFile = await writeVerifyArgs(contractKey, args);
+        result = await etherscanVerify(contractKey, deployedContracts[contractKey], argsFile);
     }
-
-    if (!deployedContracts["ReceivableFactoringPoolImpl"]) {
-        throw new Error("ReceivableFactoringPoolImpl not deployed yet!");
+    else {
+        result = await etherscanVerify(contractKey, deployedContracts[contractKey]);
     }
-
-    const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
-    const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPoolImpl"]);
-
-    await etherscanVerify("ReceivableFactoringPoolImpl", pool.address)
-
-    await updateVerifiedContract("ReceivableFactoringPoolImpl");
+    await updateVerifiedContract(contractKey);
+    return result;
 }
 
 async function verifyContracts() {
-    const network = (await hre.ethers.provider.getNetwork()).name;
+    network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     deployedContracts = await getDeployedContracts();
+    const accounts = await hre.ethers.getSigners();
+    if (accounts.length == 0) {
+        throw new Error("Accounts not set!");
+    }
+    deployer = await accounts[0];
+    proxyOwner = await accounts[1];
+    console.log("proxyOwner address: " + proxyOwner.address);
 
-    // await verifyPool();
-    await verifyPoolImpl();
+    const verifyUsdc = await verifyContract('USDC');
+    console.log(`Verify USDC result: ${verifyUsdc}`);
+
+    const verifyEANFT = await verifyContract('EANFT');
+    console.log(`Verify EANFT result: ${verifyEANFT}`);
+
+    const verifyRNNFT = await verifyContract('RNNFT', [
+        `'${deployedContracts['USDC']}'`
+    ]);
+    console.log(`Verify RNNFT result: ${verifyRNNFT}`);
+
+    const verifyHumaConfig = await verifyContract('HumaConfig');
+    console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
+
+    const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
+        [
+            0,
+            `'${deployer.address}'`,
+            `'${deployer.address}'`,
+        ]);
+    console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+
+    const verifyFeeManager = await verifyContract('ReceivableFactoringPoolFeeManager');
+    console.log(`Verify FeeManager result: ${verifyFeeManager}`);
+
+    const verifyHDTImpl = await verifyContract('HDTImpl');
+    console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
+
+    const verifyHDT = await verifyContract('HDT',
+        [
+            `'${deployedContracts['HDTImpl']}'`,
+            `'${proxyOwner.address}'`,
+            '[]'
+        ]);
+    console.log(`Verify HDT result: ${verifyHDT}`);
+
+    const verifyPoolConfig = await verifyContract('ReceivableFactoringPoolConfig');
+    console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
+
+    const verifyPoolImpl = await verifyContract('ReceivableFactoringPoolImpl');
+    console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
+
+    const verifyPool = await verifyContract('ReceivableFactoringPool',
+        [
+            `'${deployedContracts['ReceivableFactoringPoolImpl']}'`,
+            `'${proxyOwner.address}'`,
+            '[]',
+        ]);
+    console.log(`Verify PoolImpl result: ${verifyPool}`);
 }
 
 verifyContracts()
@@ -74,3 +146,5 @@ verifyContracts()
         console.error(error);
         process.exit(1);
     });
+
+// Reason: Already Verified
