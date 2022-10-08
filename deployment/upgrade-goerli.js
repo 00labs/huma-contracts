@@ -10,7 +10,7 @@ let deployer, proxyOwner, deployedContracts;
 async function upgradePool() {
     const upgraded = await getUpgradedContract("ReceivableFactoringPool");
     if (upgraded) {
-        console.log("ReceivableFactoringPool is upgraded yet!");
+        console.log("ReceivableFactoringPool is upgraded already!");
         return;
     }
 
