@@ -25,3 +25,8 @@ Put `DEPLOYER`, `GOERLI_URL` and `PROXY_OWNER` in `.env`.
 yarn hardhat run --network goerli deployment/upgrade-goerli.js
 yarn hardhat run --network goerli deployment/run-goerli.js
 ```
+
+### Verify contracts on etherscan
+```
+yarn hardhat run --network goerli deployment/verify-goerli-receivable-factoring-pool.js
+```
