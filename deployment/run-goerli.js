@@ -89,24 +89,25 @@ async function execute() {
     // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setHumaConfig", [
     //     deployedContracts["HumaConfig"],
     // ]);
+    //
+    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
+    //     deployedContracts["ReceivableFactoringPoolFeeManager"],
+    // ]);
 
-    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
-        deployedContracts["ReceivableFactoringPoolFeeManager"],
-    ]);
-
-    const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
-    const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
-
-    const TimelockController = await hre.ethers.getContractFactory("TimelockController");
-    const humaConfigTL = TimelockController.attach(deployedContracts["HumaConfigTimelock"]);
-
-    await runTLOperation(
-        humaConfig,
-        "HumaConfig",
-        "setEANFTContractAddress",
-        [deployedContracts["EANFT"]],
-        humaConfigTL
-    );
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setAPR", [0]);
+    // const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
+    // const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
+    //
+    // const TimelockController = await hre.ethers.getContractFactory("TimelockController");
+    // const humaConfigTL = TimelockController.attach(deployedContracts["HumaConfigTimelock"]);
+    //
+    // await runTLOperation(
+    //     humaConfig,
+    //     "HumaConfig",
+    //     "setEANFTContractAddress",
+    //     [deployedContracts["EANFT"]],
+    //     humaConfigTL
+    // );
 
     // console.log(await humaConfig.pdsServiceAccount());
 }
