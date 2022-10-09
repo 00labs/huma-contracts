@@ -113,9 +113,8 @@ contract ReceivableFactoringPool is
         onlyPDSServiceAccount();
 
         // Makes sure no repeated processing of a payment.
-        //if (_processedPaymentIds[paymentIdHash] == true) revert Errors.paymentAlreadyProcessed();
-        require(!_processedPaymentIds[paymentIdHash], "paymentAlreadyProcessed()");
-
+        if (_processedPaymentIds[paymentIdHash] == true) revert Errors.paymentAlreadyProcessed();
+        
         _processedPaymentIds[paymentIdHash] = true;
 
         uint256 amountPaid = _makePayment(borrower, amount, true);
