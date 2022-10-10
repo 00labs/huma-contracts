@@ -230,7 +230,7 @@ async function initPoolConfig() {
     await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setMaxCreditLine", [
         maxCL,
     ]);
-    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setAPR", [1000]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setAPR", [0]);
     await sendTransaction(
         "ReceivableFactoringpoolConfig",
         poolConfig,
