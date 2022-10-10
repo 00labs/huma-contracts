@@ -3,6 +3,9 @@ const {getDeployedContracts, sendTransaction} = require("./utils.js");
 const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
 
+const MAX_FEE_PER_GAS = 100_000000000;
+const MAX_PRIORITY_FEE_PER_GAS = 10_000000000;
+
 let deployer, pds, deployedContracts;
 
 async function testRequire(contractInst, method, parameters, errMsg) {
@@ -36,7 +39,11 @@ async function testRequire(contractInst, method, parameters, errMsg) {
     let txHash;
     try {
         // the error happens during sending, a transaction is sent out.
-        tx = await contractInst[method](...parameters, {gasLimit: 500000});
+        tx = await contractInst[method](...parameters, {
+            gasLimit: 500000,
+            maxFeePerGas: MAX_FEE_PER_GAS,
+            maxPriorityFeePerGas: MAX_PRIORITY_FEE_PER_GAS,
+        });
         txHash = tx.hash;
         await tx.wait();
     } catch (e) {
@@ -50,7 +57,8 @@ async function testRequire(contractInst, method, parameters, errMsg) {
 
     // get error data by replaying failed transaction on that block
     tx = await hre.ethers.provider.getTransaction(txHash);
-    const errData = await hre.ethers.provider.call(tx, tx.blockNumber);
+    const ntx = {from: tx.from, to: tx.to, data: tx.data};
+    const errData = await hre.ethers.provider.call(ntx, tx.blockNumber);
     const errHex = hre.ethers.utils.hexlify(hre.ethers.utils.toUtf8Bytes(errMsg)).substring(2);
     if (errData.toString().includes(errHex)) {
         console.log(`Get ${errMsg} by replaying tx: ${txHash} on block: ${tx.blockNumber}`);
@@ -96,8 +104,13 @@ async function testError(contractInst, method, parameters, errFunc) {
     let txHash;
     try {
         // the error happens during sending, a transaction is sent out.
-        tx = await contractInst[method](...parameters, {gasLimit: 500000});
+        tx = await contractInst[method](...parameters, {
+            gasLimit: 500000,
+            maxFeePerGas: MAX_FEE_PER_GAS,
+            maxPriorityFeePerGas: MAX_PRIORITY_FEE_PER_GAS,
+        });
         txHash = tx.hash;
+        // console.log(tx);
         await tx.wait();
     } catch (e) {
         // console.log(e);
@@ -110,7 +123,26 @@ async function testError(contractInst, method, parameters, errFunc) {
 
     // get error data by replaying failed transaction on that block
     tx = await hre.ethers.provider.getTransaction(txHash);
-    const errData = await hre.ethers.provider.call(tx, tx.blockNumber);
+    const ntx = {from: tx.from, to: tx.to, data: tx.data};
+    const errData = await hre.ethers.provider.call(ntx, tx.blockNumber);
+    if (errData === errFuncId) {
+        console.log(`Get ${errFuncId} by replaying tx: ${txHash} on block: ${tx.blockNumber}`);
+    } else {
+        console.log(
+            `Can't get ${errFuncId} by replaying tx: ${txHash} on block: ${tx.blockNumber}`
+        );
+    }
+    console.log("");
+}
+
+async function verifyOnchainError(txHash, errFunc) {
+    const errFuncId = hre.ethers.utils
+        .keccak256(hre.ethers.utils.toUtf8Bytes(errFunc))
+        .substring(0, 10);
+    console.log(`${errFunc} selectId is ${errFuncId}`);
+    const tx = await hre.ethers.provider.getTransaction(txHash);
+    const ntx = {from: tx.from, to: tx.to, data: tx.data};
+    const errData = await hre.ethers.provider.call(ntx, tx.blockNumber);
     if (errData === errFuncId) {
         console.log(`Get ${errFuncId} by replaying tx: ${txHash} on block: ${tx.blockNumber}`);
     } else {
@@ -149,6 +181,11 @@ async function test() {
 
     // 4. require "zeroAmountProvided()" in internal function
     await testRequire(pool, "makePayment", [ZERO_ADDR, 0], "zeroAmountProvided()");
+
+    await verifyOnchainError(
+        "0x6daee41086d0793fb8010527266a1e2ac27f7ffd48a8122fb11bf9e60f5d3144",
+        "insufficientReceivableAmount()"
+    );
 }
 
 async function main() {
