@@ -219,7 +219,7 @@ async function initBaseCreditPoolConfig() {
         "setEARewardsAndLiquidity",
         [1000, 100]
     );
-    const maxCL = BN.from(1_000).mul(BN.from(10).pow(BN.from(decimals)));
+    const maxCL = BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("maxCL: " + maxCL);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setMaxCreditLine", [maxCL]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setAPR", [1000]);
@@ -228,7 +228,7 @@ async function initBaseCreditPoolConfig() {
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolToken", [
         deployedContracts["BaseCreditHDT"],
     ]);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [90]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [1]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
 
     await updateInitilizedContract("BaseCreditPoolConfig");
