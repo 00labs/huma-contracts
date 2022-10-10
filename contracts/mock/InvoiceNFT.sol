@@ -17,6 +17,9 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
     // ERC20 that this InvoiceNFT is paid in
     address internal immutable _tokenAddress;
 
+    mapping(address => uint256[]) private _nftTokenIds;
+    mapping(uint256 => uint256) private _tokenIdIndexes;
+
     event Mint(address recipient, string tokenURI);
     event NFTGenerated(address recipient, uint256 tokenId);
     event SetURI(uint256 tokenId, string tokenURI);
@@ -61,5 +64,40 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
     function setTokenURI(uint256 tokenId, string memory uri) external {
         emit SetURI(tokenId, uri);
         _setTokenURI(tokenId, uri);
+    }
+
+    function getNFTIds(address account) external view returns (uint256[] memory) {
+        return _nftTokenIds[account];
+    }
+
+    function getTokenIdIndex(uint256 tokenId) external view returns (uint256) {
+        return _tokenIdIndexes[tokenId];
+    }
+
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
+        if (from != address(0)) {
+            uint256 index = _tokenIdIndexes[tokenId];
+            if (index > 0) {
+                index = index - 1;
+                uint256[] storage tokenIds = _nftTokenIds[from];
+                uint256 len = tokenIds.length;
+                if (index < len && tokenIds[index] > 0) {
+                    if (index < len - 1) {
+                        tokenIds[index] = tokenIds[len - 1];
+                        _tokenIdIndexes[tokenIds[len - 1]] = index + 1;
+                    }
+                    tokenIds.pop();
+                }
+            }
+        }
+        if (to != address(0)) {
+            uint256[] storage tokenIds = _nftTokenIds[to];
+            tokenIds.push(tokenId);
+            _tokenIdIndexes[tokenId] = tokenIds.length;
+        }
     }
 }
