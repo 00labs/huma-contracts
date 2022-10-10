@@ -101,7 +101,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      */
     function drawdown(address borrower, uint256 borrowAmount) external virtual override {
         // Open access to the borrower
+        if (borrowAmount == 0) revert Errors.zeroAmountProvided();
         BS.CreditRecord memory cr = _creditRecordMapping[msg.sender];
+
         _checkDrawdownEligibility(borrower, cr, borrowAmount);
         uint256 netAmountToBorrower = _drawdown(borrower, cr, borrowAmount);
         emit DrawdownMade(borrower, borrowAmount, netAmountToBorrower, msg.sender);
@@ -240,7 +242,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     }
 
     function isLate(address borrower) external view virtual override returns (bool) {
-        return block.timestamp > _creditRecordMapping[borrower].dueDate ? true : false;
+        return
+            ((_creditRecordMapping[borrower].state > BS.CreditState.Approved &&
+                _creditRecordMapping[borrower].missedPeriods > 0) ||
+                block.timestamp > _creditRecordMapping[borrower].dueDate)
+                ? true
+                : false;
     }
 
     function _approveCredit(BS.CreditRecord memory cr)

@@ -291,6 +291,13 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(borrower).makePayment(borrower.address, 1_000_000);
         });
 
+        it("Should reject if the borrowing amount is zero", async function () {
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await expect(
+                poolContract.connect(borrower).drawdown(borrower.address, 0)
+            ).to.be.revertedWith("zeroAmountProvided()");
+        });
+
         it("Should reject if the borrowing amount is less than platform fees", async function () {
             await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
             await expect(
@@ -379,6 +386,30 @@ describe("Base Credit Pool", function () {
             await expect(
                 poolContract.connect(borrower).drawdown(borrower.address, 4000)
             ).to.be.revertedWith("creditLineNotInGoodStandingState()");
+        });
+    });
+
+    describe("IsLate()", function () {
+        it("Shall not mark the account as late if there is no drawdown", async function () {
+            await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+
+            expect(await poolContract.isLate(borrower.address)).to.equal(false);
+
+            advanceClock(31);
+            expect(await poolContract.isLate(borrower.address)).to.equal(false);
+        });
+        it("Shall mark the account as late if no payment is received by the dueDate", async function () {
+            await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            expect(await poolContract.isLate(borrower.address)).to.equal(false);
+            advanceClock(2);
+            await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
+            expect(await poolContract.isLate(borrower.address)).to.equal(false);
+            await advanceClock(31);
+            expect(await poolContract.isLate(borrower.address)).to.equal(true);
         });
     });
 
@@ -563,6 +594,7 @@ describe("Base Credit Pool", function () {
 
             // Period 3: 3 periods late. ready for default.
             advanceClock(30);
+            expect(await poolContract.isLate(borrower.address)).to.equal(true);
 
             // Intertionally bypass calling updateDueInfo(), and expects triggerDefault() to call it
             // await poolContract.updateDueInfo(borrower.address);
