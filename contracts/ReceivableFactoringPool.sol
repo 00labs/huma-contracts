@@ -16,9 +16,9 @@ import "./Errors.sol";
  * receive the remainder minus fees after the receivable is paid in full.
  */
 contract ReceivableFactoringPool is
+    IReceivable,
     BaseCreditPool,
     ReceivableFactoringPoolStorage,
-    IReceivable,
     IERC721Receiver
 {
     using SafeERC20 for IERC20;
@@ -153,13 +153,13 @@ contract ReceivableFactoringPool is
     function recordApprovedCredit(
         address borrower,
         uint256 creditLimit,
-        address receivableAsset,
-        uint256 receivableParam,
-        uint256 receivableAmount,
         uint256 intervalInDays,
         uint256 remainingPeriods,
-        uint256 aprInBps
-    ) external virtual override {
+        uint256 aprInBps,
+        address receivableAsset,
+        uint256 receivableParam,
+        uint256 receivableAmount
+    ) external virtual override(IReceivable) {
         onlyEAServiceAccount();
 
         _checkReceivableRequirement(creditLimit, receivableAmount);

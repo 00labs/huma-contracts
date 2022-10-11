@@ -102,15 +102,15 @@ async function setupPool() {
             await sendTransaction(
                 "ReceivableFactoringPool",
                 poolFromEAServiceAccount,
-                "recordApprovedCredit",
+                "approveCredit",
                 [
                     borrower.address,
                     toFixedDecimal(100, decimals),
+                    BN.from(30),
+                    BN.from(12),
                     rnNft.address,
                     tokenId,
                     toFixedDecimal(150, decimals),
-                    BN.from(30),
-                    BN.from(12),
                 ]
             );
 

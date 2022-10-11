@@ -141,7 +141,9 @@ describe("Base Fee Manager", function () {
             );
 
             await poolContract.connect(borrower).requestCredit(400, 30, 12);
-            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, 400, 30, 12, 1217);
             await testTokenContract.connect(lender).approve(poolContract.address, 300);
             await poolContract.connect(borrower).drawdown(borrower.address, 400);
 
@@ -216,7 +218,9 @@ describe("Base Fee Manager", function () {
 
             // Create a borrowing record
             await poolContract.connect(borrower).requestCredit(5000, 30, 12);
-            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, 5000, 30, 12, 1217);
             await testTokenContract.connect(poolOwner).approve(poolContract.address, 4000);
             await poolContract.connect(borrower).drawdown(borrower.address, 4000);
 
@@ -286,7 +290,9 @@ describe("Base Fee Manager", function () {
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500, 10);
             await poolContract.connect(borrower).requestCredit(400, 30, 12);
-            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, 400, 30, 12, 1217);
             await testTokenContract.connect(lender).approve(poolContract.address, 300);
             await poolContract.connect(borrower).drawdown(borrower.address, 400);
 
@@ -361,7 +367,9 @@ describe("Base Fee Manager", function () {
 
             // Create a borrowing record
             await poolContract.connect(borrower).requestCredit(5000, 30, 12);
-            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, 5000, 30, 12, 1217);
             await testTokenContract.connect(poolOwner).approve(poolContract.address, 4000);
             await poolContract.connect(borrower).drawdown(borrower.address, 4000);
 

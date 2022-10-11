@@ -134,12 +134,12 @@ describe("Invoice Factoring", function () {
                     .recordApprovedCredit(
                         borrower.address,
                         1_000_000,
-                        invoiceNFTContract.address,
-                        invoiceNFTTokenId,
-                        1_500_000,
                         30,
                         1,
-                        0
+                        0,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1_500_000
                     )
             ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
         });
@@ -153,12 +153,12 @@ describe("Invoice Factoring", function () {
                     .recordApprovedCredit(
                         borrower.address,
                         1_000_000,
-                        invoiceNFTContract.address,
-                        invoiceNFTTokenId,
-                        1_500_000,
                         30,
                         1,
-                        0
+                        0,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1_500_000
                     )
             ).to.be.revertedWith("protocolIsPaused()");
         });
@@ -172,12 +172,12 @@ describe("Invoice Factoring", function () {
                     .recordApprovedCredit(
                         borrower.address,
                         1_000_000,
-                        invoiceNFTContract.address,
-                        invoiceNFTTokenId,
-                        1_500_000,
                         30,
                         1,
-                        0
+                        0,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1_500_000
                     )
             ).to.be.revertedWith("poolIsNotOn()");
         });
@@ -189,12 +189,12 @@ describe("Invoice Factoring", function () {
                     .recordApprovedCredit(
                         borrower.address,
                         1_200_000,
-                        invoiceNFTContract.address,
-                        invoiceNFTTokenId,
-                        1_500_000,
                         30,
                         1,
-                        0
+                        0,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1_500_000
                     )
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
@@ -209,12 +209,12 @@ describe("Invoice Factoring", function () {
                 .recordApprovedCredit(
                     borrower.address,
                     1_000_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1_500_000,
                     30,
                     1,
-                    1000
+                    1000,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1_500_000
                 );
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
@@ -236,12 +236,12 @@ describe("Invoice Factoring", function () {
                     .recordApprovedCredit(
                         borrower.address,
                         1_000_000,
-                        invoiceNFTContract.address,
-                        invoiceNFTTokenId,
-                        1_000_000,
                         30,
                         1,
-                        0
+                        0,
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId,
+                        1_000_000
                     )
             ).to.be.revertedWith("insufficientReceivableAmount()");
         });
@@ -254,12 +254,12 @@ describe("Invoice Factoring", function () {
                 .recordApprovedCredit(
                     borrower.address,
                     1_000_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1_500_000,
                     30,
                     1,
-                    0
+                    0,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1_500_000
                 );
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
@@ -277,12 +277,12 @@ describe("Invoice Factoring", function () {
                 .recordApprovedCredit(
                     borrower.address,
                     1_000_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1_500_000,
                     30,
                     1,
-                    0
+                    0,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1_500_000
                 );
 
             let creditInfo = await getCreditInfo(poolContract, borrower.address);
@@ -309,12 +309,12 @@ describe("Invoice Factoring", function () {
                 .recordApprovedCredit(
                     borrower.address,
                     1_000_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    2_500_000,
                     60,
                     1,
-                    0
+                    0,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    2_500_000
                 );
             creditInfo = await getCreditInfo(poolContract, borrower.address);
             expect(creditInfo.creditLimit).to.equal(1_000_000);
@@ -335,12 +335,12 @@ describe("Invoice Factoring", function () {
                 .recordApprovedCredit(
                     borrower.address,
                     800_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1_500_000,
                     30,
                     1,
-                    0
+                    0,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1_500_000
                 );
         });
         it("Should prevent non-EA-borrower to change the limit for an approved invoice factoring record", async function () {
@@ -406,12 +406,12 @@ describe("Invoice Factoring", function () {
                 .recordApprovedCredit(
                     borrower.address,
                     1_000_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1_500_0000,
                     30,
                     1,
-                    0
+                    0,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1_500_0000
                 );
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -552,12 +552,12 @@ describe("Invoice Factoring", function () {
                 .recordApprovedCredit(
                     borrower.address,
                     1_000_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId,
-                    1_500_000,
                     30,
                     1,
-                    0
+                    0,
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId,
+                    1_500_000
                 );
 
             await poolContract

@@ -86,7 +86,9 @@ describe("Credit Line Integration Test", async function () {
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5000, 0, "SKIP", 0, 0, 0, 0, 12, 1217, 30, 1, 0);
 
-        await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+        await poolContract
+            .connect(eaServiceAccount)
+            .approveCredit(borrower.address, 5000, 30, 12, 1217);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5000, 0, "SKIP", 0, 0, 0, 0, 12, 1217, 30, 2, 0);
