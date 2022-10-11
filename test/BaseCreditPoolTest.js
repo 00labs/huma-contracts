@@ -300,7 +300,7 @@ describe("Base Credit Pool", function () {
         });
 
         it("Should reject if the borrowing amount is zero", async function () {
-            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
             await expect(
                 poolContract.connect(borrower).drawdown(borrower.address, 0)
             ).to.be.revertedWith("zeroAmountProvided()");
@@ -411,7 +411,7 @@ describe("Base Credit Pool", function () {
         it("Shall not mark the account as late if there is no drawdown", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
-            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
 
             expect(await poolContract.isLate(borrower.address)).to.equal(false);
 
@@ -421,7 +421,7 @@ describe("Base Credit Pool", function () {
         it("Shall mark the account as late if no payment is received by the dueDate", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
-            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address);
+            await poolContract.connect(eaServiceAccount).approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
             expect(await poolContract.isLate(borrower.address)).to.equal(false);
             advanceClock(2);
             await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
