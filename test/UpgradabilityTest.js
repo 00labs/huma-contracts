@@ -109,7 +109,9 @@ describe("Upgradability Test", function () {
 
         it("Should call deleted function failed", async function () {
             await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
-            await expect(poolContract.approveCredit(protocolOwner.address)).to.be.revertedWith(
+            await expect(
+                poolContract.approveCredit(protocolOwner.address, 5000, 30, 12, 1217)
+            ).to.be.revertedWith(
                 "function selector was not recognized and there's no fallback function"
             );
         });

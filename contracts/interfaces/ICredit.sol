@@ -4,7 +4,13 @@ import {BaseStructs as BS} from "../libraries/BaseStructs.sol";
 
 interface ICredit {
     /// Approves a credit line request
-    function approveCredit(address borrower) external;
+    function approveCredit(
+        address borrower,
+        uint256 creditLimit,
+        uint256 intervalInDays,
+        uint256 remainingPeriods,
+        uint256 aprInBps
+    ) external;
 
     /// Updating the credit limit of an existing credit line
     function changeCreditLine(address _borrower, uint256 newLine) external;

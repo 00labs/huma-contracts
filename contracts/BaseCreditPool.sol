@@ -48,10 +48,25 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * Approves the credit request with the terms on record.
      * @dev only Evaluation Agent can call
      */
-    function approveCredit(address borrower) public virtual override {
+    function approveCredit(
+        address borrower,
+        uint256 creditLimit,
+        uint256 intervalInDays,
+        uint256 remainingPeriods,
+        uint256 aprInBps
+    ) public virtual override {
         _protocolAndPoolOn();
         onlyEAServiceAccount();
-        _creditRecordMapping[borrower] = _approveCredit(_creditRecordMapping[borrower]);
+        BS.CreditRecordStatic memory crs = _creditRecordStaticMapping[borrower];
+        crs.creditLimit = uint96(creditLimit);
+        crs.aprInBps = uint16(aprInBps);
+        crs.intervalInDays = uint16(intervalInDays);
+        _creditRecordStaticMapping[borrower] = crs;
+
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        cr.remainingPeriods = uint16(remainingPeriods);
+        _creditRecordMapping[borrower] = _approveCredit(cr);
+
         emit CreditApproved(borrower, msg.sender);
     }
 
@@ -420,6 +435,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         } else cr.state = BS.CreditState.Requested;
 
         _creditRecordMapping[borrower] = cr;
+
         emit CreditInitiated(
             borrower,
             creditLimit,
