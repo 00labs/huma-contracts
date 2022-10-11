@@ -130,8 +130,8 @@ describe("Invoice Factoring", function () {
         it("Should only allow evaluation agents to post approved loan requests", async function () {
             await expect(
                 poolContract
-                    .connect(lender)
-                    .recordApprovedCredit(
+                    .connect(lender).functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)']
+                    (
                         borrower.address,
                         1_000_000,
                         30,
@@ -150,7 +150,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .recordApprovedCredit(
+                    .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                         borrower.address,
                         1_000_000,
                         30,
@@ -169,7 +169,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .recordApprovedCredit(
+                    .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                         borrower.address,
                         1_000_000,
                         30,
@@ -186,7 +186,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .recordApprovedCredit(
+                    .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                         borrower.address,
                         1_200_000,
                         30,
@@ -206,7 +206,7 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .recordApprovedCredit(
+                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                     borrower.address,
                     1_000_000,
                     30,
@@ -233,7 +233,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .recordApprovedCredit(
+                    .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                         borrower.address,
                         1_000_000,
                         30,
@@ -251,7 +251,7 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .recordApprovedCredit(
+                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                     borrower.address,
                     1_000_000,
                     30,
@@ -274,7 +274,7 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .recordApprovedCredit(
+                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                     borrower.address,
                     1_000_000,
                     30,
@@ -306,7 +306,7 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .recordApprovedCredit(
+                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                     borrower.address,
                     1_000_000,
                     60,
@@ -332,7 +332,7 @@ describe("Invoice Factoring", function () {
         beforeEach(async function () {
             await poolContract
                 .connect(eaServiceAccount)
-                .recordApprovedCredit(
+                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                     borrower.address,
                     800_000,
                     30,
@@ -403,7 +403,7 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .recordApprovedCredit(
+                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                     borrower.address,
                     1_000_000,
                     30,
@@ -549,7 +549,7 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .recordApprovedCredit(
+                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
                     borrower.address,
                     1_000_000,
                     30,

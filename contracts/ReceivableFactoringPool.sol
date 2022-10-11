@@ -150,7 +150,7 @@ contract ReceivableFactoringPool is
      * @param remainingPeriods the number of pay periods for this credit
      * @dev Only Evaluation Agents for this contract can call this function.
      */
-    function recordApprovedCredit(
+    function approveCredit(
         address borrower,
         uint256 creditLimit,
         uint256 intervalInDays,
