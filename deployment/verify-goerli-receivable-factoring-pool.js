@@ -44,7 +44,7 @@ async function etherscanVerify(contractName, contractAddress, argsFile, logMessa
         result = 'successful';
     }
     catch (error) {
-        if (!error.toString().includes("Reason: Already Verified" )) {
+        if (!error.toString().toLowerCase().includes("already verified" )) {
             throw error;
         }
         else {
