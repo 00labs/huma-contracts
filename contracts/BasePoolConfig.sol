@@ -152,7 +152,7 @@ contract BasePoolConfig is Ownable {
 
     function distributeIncome(uint256 value) external returns (uint256 poolIncome) {
         if (msg.sender != pool) {
-            revert Errors.callNotFromPool();
+            revert Errors.notPool();
         }
 
         uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / HUNDRED_PERCENT_IN_BPS;
@@ -175,7 +175,7 @@ contract BasePoolConfig is Ownable {
 
     function reverseIncome(uint256 value) external returns (uint256 poolIncome) {
         if (msg.sender != pool) {
-            revert Errors.callNotFromPool();
+            revert Errors.notPool();
         }
 
         uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / HUNDRED_PERCENT_IN_BPS;

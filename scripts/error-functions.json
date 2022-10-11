@@ -5,7 +5,6 @@
   "amountTooLow()": "0x5b05bfbf",
   "invalidBasisPointHigherThan10000()": "0x07982d85",
   "withdrawnAmountHigherThanBalance()": "0x477c0ab2",
-  "callNotFromPool()": "0x35677017",
   "permissionDeniedNotAdmin()": "0xf2c5b6a7",
   "permissionDeniedNotLender()": "0x68299b20",
   "evaluationAgentServiceAccountRequired()": "0x9b3b1ed6",

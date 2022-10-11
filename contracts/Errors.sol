@@ -11,7 +11,6 @@ contract Errors {
     error withdrawnAmountHigherThanBalance(); // 0x477c0ab2
 
     // security
-    error callNotFromPool(); // 0x35677017
     error permissionDeniedNotAdmin(); // 0xf2c5b6a7
     error permissionDeniedNotLender(); // 0x68299b20
     error evaluationAgentServiceAccountRequired(); // 0x9b3b1ed6
