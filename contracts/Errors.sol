@@ -2,64 +2,68 @@
 pragma solidity ^0.8.0;
 
 contract Errors {
-    error creditExpiredDueToFirstDrawdownTooLate();
-    error creditExpiredDueToMaturity();
-    error evaluationAgentServiceAccountRequired();
-    error creditLineNotInGoodStandingState();
-    error creditLineNotInStateForMakingPayment();
-    error creditLineNotInStateForDrawdown();
-    error creditLineExceeded();
-    error creditLineAlreadyExists();
-    error greaterThanMaxCreditLine();
-    error paymentDetectionServiceAccountRequired();
-    error defaultTriggeredTooEarly();
-    error defaultHasAlreadyBeenTriggered();
+    // common
+    error sameValue(); // 0x0811ff09
+    error zeroAddressProvided(); // 0x5ff75ab0
+    error zeroAmountProvided(); // 0x71799f2a
+    error amountTooLow(); // 0x5b05bfbf
+    error invalidBasisPointHigherThan10000(); // 0x07982d85
+    error withdrawnAmountHigherThanBalance(); // 0x477c0ab2
 
-    error zeroAddressProvided();
-    error zeroAmountProvided();
-    error amountTooLow();
-    error creditLineGreatThanUpperLimit();
+    // security
+    error callNotFromPool(); // 0x35677017
+    error permissionDeniedNotAdmin(); // 0xf2c5b6a7
+    error permissionDeniedNotLender(); // 0x68299b20
+    error evaluationAgentServiceAccountRequired(); // 0x9b3b1ed6
+    error paymentDetectionServiceAccountRequired(); // 0x731b978f
+    error notPoolOwner(); // 0xd39208c9
+    error notProtocolOwner(); // 0x97924c20
+    error notEvaluationAgent(); // 0x66f7b8b7
+    error notPauser(); // 0xdcdea7c8
+    error notPool(); // 0x26d29bbf
 
-    error permissionDeniedNotAdmin();
-    error permissionDeniedNotLender();
+    // system config
+    error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
+    error treasuryFeeHighThanUpperLimit(); // 0x39cda0d1
+    error alreayAPauser(); // 0xfbca9e38
+    error alreadyPoolAdmin(); // 0x7bb356e2
 
-    error callNotFromPool();
+    // fee config
+    error minPrincipalPaymentRateSettingTooHigh(); // 0xc11fc042
 
-    error sameValue();
-    error receivableAssetMismatch();
-    error unsupportedReceivableAsset();
-    error receivableAssetParamMismatch();
-    error insufficientReceivableAmount();
-    error maxCreditLimitExceeded();
-    error borrowingAmountLessThanPlatformFees();
-    error poolOwnerNotEnoughLiquidity();
-    error evaluationAgentNotEnoughLiquidity();
-    error withdrawnAmountHigherThanBalance();
-    error withdrawTooSoon();
-    error assetNotMatchWithPoolAsset();
-    error paymentAlreadyProcessed();
-    error exceededPoolLiquidityCap();
+    // pool config
+    error proposedEADoesNotOwnProvidedEANFT(); // 0x75b0da3b
+    error underlyingTokenNotApprovedForHumaProtocol(); // 0xce179d6d
+    error poolOwnerNotEnoughLiquidity(); // 0xe95282e2
+    error evaluationAgentNotEnoughLiquidity(); // 0x67e26217
 
-    error minPrincipalPaymentRateSettingTooHigh();
-    error protocolIsPaused();
-    error poolIsNotOn();
-    error invalidBasisPointHigherThan10000();
+    // pool state
+    error protocolIsPaused(); // 0x8f6fa2d4
+    error poolIsNotOn(); // 0x69b355df
 
-    error notPoolOwner();
-    error notProtocolOwner();
-    error notEvaluationAgent();
-    error notPauser();
-    error notPool();
+    // pool credit line
+    error creditExpiredDueToFirstDrawdownTooLate(); // 0x9fac7390
+    error creditExpiredDueToMaturity(); // 0xa52f3c3f
+    error creditLineNotInGoodStandingState(); // 0x96e79474
+    error creditLineNotInStateForMakingPayment(); // 0xf023e48b
+    error creditLineNotInStateForDrawdown(); // 0x4ff95a6d
+    error creditLineExceeded(); // 0xef7d66ff
+    error creditLineAlreadyExists(); // 0x6c5805f2
+    error creditLineGreatThanUpperLimit(); // 0xd8c27d2f
+    error greaterThanMaxCreditLine(); // 0x8a754ae8
+    error requestedCreditWithZeroDuration(); // 0xb16dd34d
+    error onlyBorrowerOrEACanReduceCreditLine(); // 0xd61dbe31
 
-    error alreayAPauser();
-    error alreadyPoolAdmin();
+    // pool operation
+    error exceededPoolLiquidityCap(); // 0x5642ebd4
+    error receivableAssetMismatch(); // 0x41dbeec1
+    error unsupportedReceivableAsset(); // 0xe60c383e
+    error receivableAssetParamMismatch(); // 0x1400a0b4
+    error insufficientReceivableAmount(); // 0xf7f34854
+    error borrowingAmountLessThanPlatformFees(); // 0x97fde118
+    error withdrawTooSoon(); // 0x67982472
+    error paymentAlreadyProcessed(); // 0xfd6754cf
 
-    error defaultGracePeriodLessThanMinAllowed();
-    error treasuryFeeHighThanUpperLimit();
-
-    error proposedEADoesNotOwnProvidedEANFT();
-    error underlyingTokenNotApprovedForHumaProtocol();
-
-    error requestedCreditWithZeroDuration();
-    error onlyBorrowerOrEACanReduceCreditLine();
+    error defaultTriggeredTooEarly(); // 0x7872424e
+    error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
 }

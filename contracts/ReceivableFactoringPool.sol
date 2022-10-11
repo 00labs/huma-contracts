@@ -101,7 +101,6 @@ contract ReceivableFactoringPool is
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev Reverted with assetNotMatchWithPoolAsset() when asset address does not match
      *
      */
     function onReceivedPayment(
@@ -114,7 +113,7 @@ contract ReceivableFactoringPool is
 
         // Makes sure no repeated processing of a payment.
         if (_processedPaymentIds[paymentIdHash] == true) revert Errors.paymentAlreadyProcessed();
-        
+
         _processedPaymentIds[paymentIdHash] = true;
 
         uint256 amountPaid = _makePayment(borrower, amount, true);

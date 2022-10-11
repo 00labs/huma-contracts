@@ -131,7 +131,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev "assetNotMatchWithPoolAsset()" reverted when asset address does not match
      * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
      */
     function makePayment(address borrower, uint256 amount)
@@ -434,7 +433,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev "assetNotMatchWithPoolAsset()" reverted when asset address does not match
      * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
      */
     function _makePayment(
