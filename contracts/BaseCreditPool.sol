@@ -9,12 +9,39 @@ import "./Errors.sol";
 
 import "hardhat/console.sol";
 
+/**
+ * @notice BaseCreditPool is the basic form of a complete pool in Huma Protocol.
+ * All production pools are expected to be instances of BaseCreditPool or
+ * contracts derived from it (e.g. ReceivableFactoringPool).
+ *
+ * All borrowing for BaseCreditPool starts with a credit line. As long as the account is in good
+ * standing and below the approved limit, the borrower can borrow and repay again and again,
+ * very similar to how a credit card works.
+ */
 contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     using SafeERC20 for IERC20;
     using BS for BS.CreditRecord;
 
+    /// Account billing info refreshed with the updated due amount and date
     event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
-    event CreditApproved(address indexed borrower, address by);
+    /// Credit line request has been approved
+    event CreditApproved(
+        address indexed borrower,
+        uint256 creditLimit,
+        uint256 intervalInDays,
+        uint256 remainingPeriods,
+        uint256 aprInBps
+    );
+
+    /**
+     * @notice Credit line created
+     * @param borrower the address of the borrower
+     * @param creditLimit the credit limit of the credit line
+     * @param aprInBps interest rate (APR) expressed in basis points, 1% is 100, 100% is 10000
+     * @param payPeriodInDays the number of days in each pay cycle
+     * @param remainingPeriods how many cycles are there before the credit line expires
+     * @param approved flag that shwos if the credit line has been approved or not
+     */
     event CreditInitiated(
         address indexed borrower,
         uint256 creditLimit,
@@ -23,29 +50,63 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 remainingPeriods,
         bool approved
     );
+    /// Credit limit for an existing credit line has been changed
     event CreditLineChanged(
         address indexed borrower,
         uint256 oldCreditLimit,
         uint256 newCreditLimit
     );
+    /// An existing credit line has been closed
     event CreditLineClosed(address indexed borrower, address by);
+    /**
+     * @notice The expiration (maturity) date of a credit line has been extended.
+     * @param borrower the address of the borrower
+     * @param numOfPeriods the number of pay periods to be extended
+     * @param remainingPeriods the remaining number of pay periods after the extension
+     */
     event CreditLineExtended(
         address indexed borrower,
         uint256 numOfPeriods,
         uint256 remainingPeriods,
         address by
     );
+    /**
+     * @notice The credit line has been marked as Defaulted.
+     * @param borrower the address of the borrower
+     * @param losses the total losses to be written off because of the default.
+     * @param by the address who has triggered the default
+     */
     event DefaultTriggered(address indexed borrower, uint256 losses, address by);
+    /**
+     * @notice A borrowing event has happened to the credit line
+     * @param borrower the address of the borrower
+     * @param borrowAmount the amount the user has borrowed
+     * @param netAmountToBorrower the borrowing amount minus the fees that are charged upfront
+     * @param by the address that has initiated the borrowing. This is most likely the borrower.
+     * In rare case, this could be EA.
+     */
     event DrawdownMade(
         address indexed borrower,
         uint256 borrowAmount,
         uint256 netAmountToBorrower,
         address by
     );
+    /**
+     * @notice A payment has been made against the credit line
+     * @param borrower the address of the borrower
+     * @param amount the payback amount
+     * @param by the address that has made the payment. It is possible for someone to make payment
+     * on behalf of the borrower.
+     */
     event PaymentMade(address indexed borrower, uint256 amount, address by);
 
     /**
-     * Approves the credit request with the terms on record.
+     * @notice Approves the credit request with the terms on record.
+     * @param borrower the address of the borrower
+     * @param creditLimit the credit limit of the credit line
+     * @param intervalInDays the number of days in each pay cycle
+     * @param remainingPeriods how many cycles are there before the credit line expires
+     * @param aprInBps interest rate (APR) expressed in basis points, 1% is 100, 100% is 10000
      * @dev only Evaluation Agent can call
      */
     function approveCredit(
@@ -67,15 +128,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         cr.remainingPeriods = uint16(remainingPeriods);
         _creditRecordMapping[borrower] = _approveCredit(cr);
 
-        emit CreditApproved(borrower, msg.sender);
+        emit CreditApproved(borrower, creditLimit, intervalInDays, remainingPeriods, aprInBps);
     }
 
     /**
      * @notice changes the limit of the borrower's credit line.
-     * @dev The credit line is marked as Deleted if 1) the new credit line is 0 and
-     * 2) there is no due or unbilled principals.
      * @param borrower the owner of the credit line
      * @param newCreditLimit the new limit of the line in the unit of pool token
+     * @dev The credit line is marked as Deleted if 1) the new credit line is 0 AND
+     * 2) there is no due or unbilled principals.
      * @dev only Evaluation Agent can call
      */
     function changeCreditLine(address borrower, uint256 newCreditLimit) public virtual override {
@@ -94,7 +155,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         _creditRecordStaticMapping[borrower].creditLimit = uint96(newCreditLimit);
 
-        // Delete the line when there is no due or unbilled principal
+        // Mark the line as Deleted when there is no due or unbilled principal
         if (newCreditLimit == 0) {
             // Bring the account current
             BS.CreditRecord memory cr = _updateDueInfo(borrower, true);
@@ -110,7 +171,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     }
 
     /**
-     * @notice allows the borrower to borrow against an approved credit line
+     * @notice allows the borrower to borrow against an approved credit line.
      * The borrower can borrow and pay back as many times as they would like.
      * @param borrowAmount the amount to borrow
      */
@@ -124,6 +185,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         emit DrawdownMade(borrower, borrowAmount, netAmountToBorrower, msg.sender);
     }
 
+    /**
+     * @notice The expiration (maturity) date of a credit line has been extended.
+     * @param borrower the address of the borrower
+     * @param numOfPeriods the number of pay periods to be extended
+     */
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods)
         external
         virtual
@@ -146,7 +212,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
      */
     function makePayment(address borrower, uint256 amount)
         public
@@ -157,16 +222,23 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         return _makePayment(borrower, amount, false);
     }
 
-    /// Brings the account status current.
+    /**
+     * @notice Updates the account and brings its billing status current
+     * @dev If the account is defaulted, no need to update the account anymore.
+     * @dev If the account is ready to be defaulted but not yet, update the account without
+     * distributing the income for the upcoming period. Otherwise, update and distribute income
+     * note the reason that we do not distribute income for the final cycle anymore since
+     * it does not make sense to distribute income that we know cannot be collected to the
+     * administrators (e.g. protocol, pool owner and EA) since it will only add more losses
+     * to the LPs. Unfortunately, this special business consideration added more complexity
+     * and cognitive load to _updateDueInfo(...).
+     */
     function refreshAccount(address borrower)
         external
         virtual
         override
         returns (BS.CreditRecord memory cr)
     {
-        // If the account is defaulted, no need to update the account anymore
-        // If the account is ready to be defaulted but not yet, update the account without
-        // distributing the income for the upcoming period. Otherwise, update and distribute income
         if (_creditRecordMapping[borrower].state != BS.CreditState.Defaulted) {
             if (isDefaultReady(borrower)) return _updateDueInfo(borrower, false);
             else return _updateDueInfo(borrower, true);
@@ -184,7 +256,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 intervalInDays,
         uint256 numOfPayments
     ) external virtual override {
-        // Open access to the borrower. Data validation happens in initiateCredit()
+        // Open access to the borrower. Data validation happens in _initiateCredit()
         _initiateCredit(
             msg.sender,
             creditLimit,
@@ -198,6 +270,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     /**
      * @notice Triggers the default process
      * @return losses the amount of remaining losses to the pool
+     * @dev It is possible for the borrower to payback even after default, especially in
+     * receivable factoring cases.
      */
     function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
         _protocolAndPoolOn();
@@ -216,6 +290,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
 
+        // Since the fees and interest are computed at the beginning of a cycle, they are included
+        // in totalDue by default. In a default case, it does not make sense to include them in
+        // the defaulted amount since the fees have not really happened at the default time.
         losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
 
         _creditRecordMapping[borrower].state = BS.CreditState.Defaulted;
@@ -246,15 +323,25 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         else return false;
     }
 
+    /**
+     * @notice checks if the credit line is ready to be triggered as deaulted
+     */
     function isDefaultReady(address borrower) public view virtual override returns (bool) {
         uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
         return
-            _creditRecordMapping[borrower].missedPeriods * intervalInDays * SECONDS_IN_A_DAY >=
-                _poolConfig.poolDefaultGracePeriodInSeconds() + intervalInDays * SECONDS_IN_A_DAY
+            _creditRecordMapping[borrower].missedPeriods * intervalInDays * SECONDS_IN_A_DAY >
+                _poolConfig.poolDefaultGracePeriodInSeconds()
                 ? true
                 : false;
     }
 
+    /** 
+     * @notice checks if the credit line is behind in payments
+     * @dev When the account is in Approved state, there is no borrowing yet, thus being late
+     * does not apply. Thus the check on account state. 
+     * @dev after the bill is refreshed, the due date is updated, it is possible that the new due 
+     // date is in the future, but if the bill refresh has set missedPeriods, the account is late.
+     */
     function isLate(address borrower) external view virtual override returns (bool) {
         return
             (_creditRecordMapping[borrower].state > BS.CreditState.Approved &&
@@ -272,7 +359,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // Note: Special logic. dueDate is normally used to track the next bill due.
         // Before the first drawdown, it is also used to set the deadline for the first
         // drawdown to happen, otherwise, the credit line expires.
-        // Decided to use this field in this way to save one field for the struct
+        // Decided to use this field in this way to save one field for the struct.
+        // Although we have room in the struct after split struct creditRecord and
+        // struct creditRecrodStatic, we keep it unchanged to leave room for the struct
+        // to expand in the future (note Solidity has limit on 13 fields in a struct)
         uint256 validPeriod = _poolConfig.creditApprovalExpirationInSeconds();
         if (validPeriod > 0) cr.dueDate = uint64(block.timestamp + validPeriod);
 
@@ -281,6 +371,16 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         return cr;
     }
 
+    /**
+     * @notice Checks if drawdown is allowed for the credit line at this point of time
+     * @dev the requester can be the borrower or the EA
+     * @dev requires the credit line to be in Approved (first drawdown) or
+     * Good Standing (return drawdown) state.
+     * @dev for first drawdown, after the credit line is approved, it needs to happen within
+     * the expiration window configured by the pool
+     * @dev the drawdown should not put the account over the approved credit limit
+     * @dev Please note cr.dueDate is the credit expiration date for the first drawdown.
+     */
     function _checkDrawdownEligibility(
         address borrower,
         BS.CreditRecord memory cr,
@@ -293,7 +393,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         if (cr.state != BS.CreditState.GoodStanding && cr.state != BS.CreditState.Approved)
             revert Errors.creditLineNotInStateForDrawdown();
         else if (cr.state == BS.CreditState.Approved) {
-            // After the credit approval, if the pool has credit expiration for first drawdown,
+            // After the credit approval, if the pool has credit expiration for the 1st drawdown,
             // the borrower must complete the first drawdown before the expiration date, which
             // is set in cr.dueDate in approveCredit().
             // note For pools without credit expiration for first drawdown, cr.dueDate is 0
@@ -328,11 +428,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // Set account status in good standing
             cr.state = BS.CreditState.GoodStanding;
         } else {
-            // Follow-on drawdown flow
+            // Return drawdown flow
             // Bring the account current.
             if (block.timestamp > cr.dueDate) {
                 cr = _updateDueInfo(borrower, true);
-                // note check state again
                 if (cr.state != BS.CreditState.GoodStanding)
                     revert Errors.creditLineNotInGoodStandingState();
             }
@@ -426,7 +525,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (preApproved) {
             ncr = _approveCredit(ncr);
-            emit CreditApproved(borrower, msg.sender);
+            emit CreditApproved(borrower, creditLimit, intervalInDays, remainingPeriods, aprInBps);
         } else ncr.state = BS.CreditState.Requested;
 
         _creditRecordMapping[borrower] = ncr;
@@ -552,6 +651,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         return (amountToCollect);
     }
 
+    /// Checks if the given amount is higher than what is allowed by the pool
     function _maxCreditLineCheck(uint256 amount) internal view {
         if (amount > _poolConfig.maxCreditLine()) {
             revert Errors.greaterThanMaxCreditLine();
@@ -628,10 +728,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         }
     }
 
+    /// Shared accessor to the credit record mapping for contract size consideration
     function _getCreditRecord(address account) private view returns (BS.CreditRecord memory) {
         return _creditRecordMapping[account];
     }
 
+    /// Shared accessor to the credit record static mapping for contract size consideration
     function _getCreditRecordStatic(address account)
         private
         view
