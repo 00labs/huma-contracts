@@ -315,7 +315,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         address borrower,
         BS.CreditRecord memory cr,
         uint256 borrowAmount
-    ) public virtual returns (uint256) {
+    ) internal virtual returns (uint256) {
         if (cr.state == BS.CreditState.Approved) {
             // Flow for first drawdown
             // Update total principal
@@ -540,8 +540,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
             cr.correction = 0;
 
-            if (cr.remainingPeriods == 0) cr.state = BS.CreditState.Deleted;
-            else cr.state = BS.CreditState.GoodStanding;
+            if (cr.remainingPeriods == 0) {
+                cr.state = BS.CreditState.Deleted;
+                emit CreditLineClosed(borrower, msg.sender);
+            } else cr.state = BS.CreditState.GoodStanding;
         }
 
         _creditRecordMapping[borrower] = cr;
