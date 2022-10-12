@@ -57,13 +57,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     ) public virtual override {
         _protocolAndPoolOn();
         onlyEAServiceAccount();
-        BS.CreditRecordStatic memory crs = _creditRecordStaticMapping[borrower];
+        BS.CreditRecordStatic memory crs = _getCreditRecordStatic(borrower);
         crs.creditLimit = uint96(creditLimit);
         crs.aprInBps = uint16(aprInBps);
         crs.intervalInDays = uint16(intervalInDays);
         _creditRecordStaticMapping[borrower] = crs;
 
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
         cr.remainingPeriods = uint16(remainingPeriods);
         _creditRecordMapping[borrower] = _approveCredit(cr);
 
@@ -203,7 +203,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         _protocolAndPoolOn();
 
         // check to make sure the default grace period has passed.
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
         if (block.timestamp > cr.dueDate) {
             cr = _updateDueInfo(borrower, false);
@@ -396,7 +396,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         _protocolAndPoolOn();
         // Borrowers cannot have two credit lines in one pool. They can request to increase line.
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
         if (cr.state != BS.CreditState.Deleted) {
             // Temp fix during Goerli test, should revert this logic later.
@@ -460,7 +460,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (amount == 0) revert Errors.zeroAmountProvided();
 
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
         if (
             cr.state == BS.CreditState.Requested ||
@@ -574,7 +574,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         virtual
         returns (BS.CreditRecord memory cr)
     {
-        cr = _creditRecordMapping[borrower];
+        cr = _getCreditRecord(borrower);
         bool alreadyLate = cr.totalDue > 0 ? true : false;
 
         // Gets the up-to-date due information for the borrower. If the account has been
@@ -631,6 +631,18 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
             emit BillRefreshed(borrower, cr.dueDate, msg.sender);
         }
+    }
+
+    function _getCreditRecord(address account) private view returns (BS.CreditRecord memory) {
+        return _creditRecordMapping[account];
+    }
+
+    function _getCreditRecordStatic(address account)
+        private
+        view
+        returns (BS.CreditRecordStatic memory)
+    {
+        return _creditRecordStaticMapping[account];
     }
 
     /// "Modifier" function that limits access to eaServiceAccount only
