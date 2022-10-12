@@ -498,7 +498,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
         if (cr.state != BS.CreditState.Deleted) {
-            // Temp fix during Goerli test, should revert this logic later.
             // If the user has an existing line, but there is no balance, close the credit line automatically.
             cr = _updateDueInfo(borrower, true);
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
