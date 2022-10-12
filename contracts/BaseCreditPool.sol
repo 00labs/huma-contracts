@@ -421,20 +421,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             defaultAmount: uint96(0)
         });
 
-        cr.remainingPeriods = uint16(remainingPeriods);
-        cr.unbilledPrincipal = 0;
-        cr.dueDate = 0;
-        cr.correction = 0;
-        cr.totalDue = 0;
-        cr.feesAndInterestDue = 0;
-        cr.missedPeriods = 0;
+        BS.CreditRecord memory ncr;
+        ncr.remainingPeriods = uint16(remainingPeriods);
 
         if (preApproved) {
-            cr = _approveCredit(cr);
+            ncr = _approveCredit(ncr);
             emit CreditApproved(borrower, msg.sender);
-        } else cr.state = BS.CreditState.Requested;
+        } else ncr.state = BS.CreditState.Requested;
 
-        _creditRecordMapping[borrower] = cr;
+        _creditRecordMapping[borrower] = ncr;
 
         emit CreditInitiated(
             borrower,
