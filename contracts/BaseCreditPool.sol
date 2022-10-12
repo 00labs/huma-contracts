@@ -257,9 +257,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
     function isLate(address borrower) external view virtual override returns (bool) {
         return
-            ((_creditRecordMapping[borrower].state > BS.CreditState.Approved &&
-                _creditRecordMapping[borrower].missedPeriods > 0) ||
-                block.timestamp > _creditRecordMapping[borrower].dueDate)
+            (_creditRecordMapping[borrower].state > BS.CreditState.Approved &&
+                (_creditRecordMapping[borrower].missedPeriods > 0 ||
+                    block.timestamp > _creditRecordMapping[borrower].dueDate))
                 ? true
                 : false;
     }
