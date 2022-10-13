@@ -65,11 +65,11 @@ async function execute() {
 
     const BaseCreditPoolFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
     const baseCreditPoolFeeManager = BaseCreditPoolFeeManager.attach(deployedContracts["BaseCreditPoolFeeManager"]);
-    await sendTransaction("BaseCreditPoolFeeManager", baseCreditPoolFeeManager, "setFees", [10_000_000, 100, 20_000_000, 100, 5_000_000]);
+    await sendTransaction("BaseCreditPoolFeeManager", baseCreditPoolFeeManager, "setFees", [10_000_000, 0, 20_000_000, 0, 5_000_000]);
 
     const ReceivableFactoringPoolFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
     const receivableFactoringPoolFeeManager = ReceivableFactoringPoolFeeManager.attach(deployedContracts["ReceivableFactoringPoolFeeManager"]);
-    await sendTransaction("BaseCreditPoolFeeManager", receivableFactoringPoolFeeManager, "setFees", [10_000_000, 100, 20_000_000, 100, 5_000_000]);
+    await sendTransaction("BaseCreditPoolFeeManager", receivableFactoringPoolFeeManager, "setFees", [10_000_000, 0, 20_000_000, 0, 5_000_000]);
 
     // const owner = await poolConfig.owner();
     // console.log("owner: " + owner);
