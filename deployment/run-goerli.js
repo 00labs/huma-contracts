@@ -43,46 +43,50 @@ async function runTLOperation(contract, name, method, parameters, tlContract) {
 }
 
 async function execute() {
-    if (!deployedContracts["ReceivableFactoringPoolConfig"]) {
-        throw new Error("ReceivableFactoringPoolConfig not deployed yet!");
+    // if (!deployedContracts["ReceivableFactoringPoolConfig"]) {
+    //     throw new Error("ReceivableFactoringPoolConfig not deployed yet!");
+    // }
+    //
+    // if (!deployedContracts["ReceivableFactoringPool"]) {
+    //     throw new Error("ReceivableFactoringPool not deployed yet!");
+    // }
+    //
+    // if (!deployedContracts["HumaConfig"]) {
+    //     throw new Error("HumaConfig not deployed yet!");
+    // }
+
+    if (!deployedContracts["BaseCreditPoolFeeManager"]) {
+        throw new Error("BaseCreditPoolFeeManager not deployed yet!");
     }
 
-    if (!deployedContracts["ReceivableFactoringPool"]) {
-        throw new Error("ReceivableFactoringPool not deployed yet!");
+    if (!deployedContracts["ReceivableFactoringPoolFeeManager"]) {
+        throw new Error("ReceivableFactoringPoolFeeManager not deployed yet!");
     }
 
-    if (!deployedContracts["HumaConfig"]) {
-        throw new Error("HumaConfig not deployed yet!");
-    }
+    const BaseCreditPoolFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
+    const baseCreditPoolFeeManager = BaseCreditPoolFeeManager.attach(deployedContracts["BaseCreditPoolFeeManager"]);
+    await sendTransaction("BaseCreditPoolFeeManager", baseCreditPoolFeeManager, "setFees", [10_000_000, 100, 20_000_000, 100, 5_000_000]);
 
-    if (!deployedContracts["EANFT"]) {
-        throw new Error("EANFT not deployed yet!");
-    }
+    const ReceivableFactoringPoolFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
+    const receivableFactoringPoolFeeManager = ReceivableFactoringPoolFeeManager.attach(deployedContracts["ReceivableFactoringPoolFeeManager"]);
+    await sendTransaction("BaseCreditPoolFeeManager", receivableFactoringPoolFeeManager, "setFees", [10_000_000, 100, 20_000_000, 100, 5_000_000]);
 
-    const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
-    const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
+    // const owner = await poolConfig.owner();
+    // console.log("owner: " + owner);
+    //
+    // const res = await poolConfig.getPoolSummary();
+    // console.log("res: " + res);
 
-    const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
-    const poolConfig = ReceivableFactoringPoolConfig.attach(
-        deployedContracts["ReceivableFactoringPoolConfig"]
-    );
+    // for (let i = 0; i < 1; i++) {
+    //     let v = await hre.ethers.provider.getStorageAt(pool.address, i);
+    //     console.log(`slot${i}: ${v}`);
+    // }
 
-    const owner = await poolConfig.owner();
-    console.log("owner: " + owner);
+    // console.log("pool status: " + (await pool.isPoolOn()));
 
-    const res = await poolConfig.getPoolSummary();
-    console.log("res: " + res);
-
-    for (let i = 0; i < 1; i++) {
-        let v = await hre.ethers.provider.getStorageAt(pool.address, i);
-        console.log(`slot${i}: ${v}`);
-    }
-
-    console.log("pool status: " + (await pool.isPoolOn()));
-
-    console.log(
-        "receivableOwnershipMapping: " + (await pool.receivableOwnershipMapping(ZERO_BYTES32))
-    );
+    // console.log(
+    //     "receivableOwnershipMapping: " + (await pool.receivableOwnershipMapping(ZERO_BYTES32))
+    // );
 
     // await sendTransaction("ReceivableFactoringPool", pool, "updateCoreData", []);
 
@@ -94,7 +98,7 @@ async function execute() {
     //     deployedContracts["ReceivableFactoringPoolFeeManager"],
     // ]);
 
-    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setAPR", [0]);
+    // await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setAPR", [0]);
     // const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     // const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
     //

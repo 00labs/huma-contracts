@@ -106,7 +106,7 @@ async function initBaseCreditPoolFeeManager() {
         "BaseCreditPoolFeeManager",
         feeManager,
         "setFees",
-        [1000, 100, 2000, 100, 500]
+        [10_000_000, 100, 20_000_000, 100, 5_000_000]
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
 
