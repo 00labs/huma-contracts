@@ -26,8 +26,13 @@ interface ICredit {
      * @param _borrower the borrower
      * @param _amount the payment amount
      * @param amountPaid the amount actually paid
+     * @return amountPaid the actuall amount paid to the contract. When the tendered
+     * amount is larger than the payoff amount, the contract only accepts the payoff amount.
+     * @return paidoff a flag indciating whether the account has been paid off.
      */
-    function makePayment(address _borrower, uint256 _amount) external returns (uint256 amountPaid);
+    function makePayment(address _borrower, uint256 _amount)
+        external
+        returns (uint256 amountPaid, bool paidoff);
 
     /**
      * @notice Refreshes the account status

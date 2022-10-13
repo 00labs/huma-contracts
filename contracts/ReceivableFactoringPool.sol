@@ -116,12 +116,12 @@ contract ReceivableFactoringPool is
 
         _processedPaymentIds[paymentIdHash] = true;
 
-        uint256 amountPaid = _makePayment(borrower, amount, true);
+        (uint256 amountPaid, bool paidoff) = _makePayment(borrower, amount, true);
 
         if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
 
         // Removes the receivable information for the borrower.
-        _setReceivableInfo(borrower, address(0), 0, 0);
+        if (paidoff) _setReceivableInfo(borrower, address(0), 0, 0);
 
         emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
     }
