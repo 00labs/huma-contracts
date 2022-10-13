@@ -158,7 +158,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // Mark the line as Deleted when there is no due or unbilled principal
         if (newCreditLimit == 0) {
             // Bring the account current
-            BS.CreditRecord memory cr = _updateDueInfo(borrower, true);
+            BS.CreditRecord memory cr = _updateDueInfo(borrower, false, true);
             // Note: updated state and remainingPeriods directly instead of the entire cr
             // for contract size consideration
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
@@ -199,7 +199,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // Although it is not essential to call _updateDueInfo() to extend the credit line duration
         // it is good practice to bring the account current while we update one of the fields.
         // Also, only if we call _updateDueInfo(), we can write proper tests.
-        _updateDueInfo(borrower, true);
+        _updateDueInfo(borrower, false, true);
         _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
         emit CreditLineExtended(
             borrower,
@@ -240,8 +240,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         returns (BS.CreditRecord memory cr)
     {
         if (_creditRecordMapping[borrower].state != BS.CreditState.Defaulted) {
-            if (isDefaultReady(borrower)) return _updateDueInfo(borrower, false);
-            else return _updateDueInfo(borrower, true);
+            if (isDefaultReady(borrower)) return _updateDueInfo(borrower, false, false);
+            else return _updateDueInfo(borrower, false, true);
         }
     }
 
@@ -280,7 +280,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
         if (block.timestamp > cr.dueDate) {
-            cr = _updateDueInfo(borrower, false);
+            cr = _updateDueInfo(borrower, false, false);
         }
 
         // Check if grace period has exceeded. Please note it takes a full pay period
@@ -423,7 +423,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
             // Generates the first bill
             // Note: the interest is calcuated at the beginning of each pay period
-            cr = _updateDueInfo(borrower, true);
+            cr = _updateDueInfo(borrower, true, true);
 
             // Set account status in good standing
             cr.state = BS.CreditState.GoodStanding;
@@ -431,7 +431,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // Return drawdown flow
             // Bring the account current.
             if (block.timestamp > cr.dueDate) {
-                cr = _updateDueInfo(borrower, true);
+                cr = _updateDueInfo(borrower, false, true);
                 if (cr.state != BS.CreditState.GoodStanding)
                     revert Errors.creditLineNotInGoodStandingState();
             }
@@ -499,7 +499,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (cr.state != BS.CreditState.Deleted) {
             // If the user has an existing line, but there is no balance, close the credit line automatically.
-            cr = _updateDueInfo(borrower, true);
+            cr = _updateDueInfo(borrower, false, true);
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 cr.state = BS.CreditState.Deleted;
                 cr.remainingPeriods = 0;
@@ -566,7 +566,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         if (block.timestamp > cr.dueDate) {
             // Bring the account current. This is necessary since the account might have been dormant for
             // several cycles.
-            cr = _updateDueInfo(borrower, true);
+            cr = _updateDueInfo(borrower, false, true);
         }
         uint96 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
 
@@ -663,12 +663,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @dev getDueInfo() gets the due information of the most current cycle. This function
      * updates the record in creditRecordMapping for `_borrower`
      */
-    function _updateDueInfo(address borrower, bool distributeChargesForLastCycle)
-        internal
-        virtual
-        returns (BS.CreditRecord memory cr)
-    {
+    function _updateDueInfo(
+        address borrower,
+        bool isFirstDrawdown,
+        bool distributeChargesForLastCycle
+    ) internal virtual returns (BS.CreditRecord memory cr) {
         cr = _getCreditRecord(borrower);
+        if (isFirstDrawdown) cr.dueDate = 0;
         bool alreadyLate = cr.totalDue > 0 ? true : false;
 
         // Gets the up-to-date due information for the borrower. If the account has been
@@ -682,12 +683,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.totalDue,
             cr.unbilledPrincipal,
             newCharges
-        ) = _feeManager.getDueInfo(cr, _creditRecordStaticMapping[borrower]);
+        ) = _feeManager.getDueInfo(cr, _getCreditRecordStatic(borrower));
 
         if (periodsPassed > 0) {
             // Distribute income
             if (distributeChargesForLastCycle) distributeIncome(newCharges);
             else distributeIncome(newCharges - cr.feesAndInterestDue);
+
             if (cr.dueDate > 0)
                 cr.dueDate = uint64(
                     cr.dueDate +
