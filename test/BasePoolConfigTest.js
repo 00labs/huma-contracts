@@ -176,6 +176,32 @@ describe("Base Pool Config", function () {
             ).to.be.revertedWith("evaluationAgentNotEnoughLiquidity()");
         });
 
+        it("Should reject when the proposed new EA does not own the EANFT", async function () {
+            let yetAnotherNFTTokenId;
+            const tx = await eaNFTContract.mintNFT(evaluationAgent.address);
+            const receipt = await tx.wait();
+            for (const evt of receipt.events) {
+                if (evt.event === "NFTGenerated") {
+                    yetAnotherNFTTokenId = evt.args.tokenId;
+                }
+            }
+
+            await testTokenContract.mint(evaluationAgent2.address, 2_000_000);
+            await testTokenContract
+                .connect(evaluationAgent2)
+                .approve(poolContract.address, 2_000_000);
+            await poolContract.connect(poolOwner).addApprovedLender(evaluationAgent2.address);
+            await expect(poolContract.connect(evaluationAgent2).deposit(2_000_000)).to.emit(
+                poolContract,
+                "LiquidityDeposited"
+            );
+            await expect(
+                poolConfigContract
+                    .connect(poolOwner)
+                    .setEvaluationAgent(yetAnotherNFTTokenId, evaluationAgent2.address)
+            ).to.revertedWith("proposedEADoesNotOwnProvidedEANFT");
+        });
+
         it("Should allow evaluation agent to be replaced when the old EA has rewards", async function () {
             await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
             await poolContract
