@@ -662,6 +662,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @dev this is used in both makePayment() and drawdown() to bring the account current
      * @dev getDueInfo() gets the due information of the most current cycle. This function
      * updates the record in creditRecordMapping for `_borrower`
+     * @param borrower the address of the borrwoer
+     * @param isFirstDrawdown whether this request is for the first drawdown of the credit line
+     * @param distributeChargesForLastCycle whether to distribute income to different parties
+     * (protocol, poolOwner, EA, and the pool). A `false` value is used in special cases
+     * like `default` when we do not pause the accrue and distribution of fees.
      */
     function _updateDueInfo(
         address borrower,
