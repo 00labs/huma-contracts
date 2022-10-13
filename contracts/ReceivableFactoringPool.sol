@@ -116,9 +116,12 @@ contract ReceivableFactoringPool is
 
         _processedPaymentIds[paymentIdHash] = true;
 
-        uint256 amountPaid = _makePayment(borrower, amount, true);
+        (uint256 amountPaid, bool paidoff) = _makePayment(borrower, amount, true);
 
         if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
+
+        // Removes the receivable information for the borrower.
+        if (paidoff) _setReceivableInfo(borrower, address(0), 0, 0);
 
         emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
     }
@@ -166,11 +169,7 @@ contract ReceivableFactoringPool is
 
         // Populates fields related to receivable
         if (receivableAsset != address(0)) {
-            BS.ReceivableInfo memory ri;
-            ri.receivableAsset = receivableAsset;
-            ri.receivableParam = receivableParam;
-            ri.receivableAmount = uint88(receivableAmount);
-            _receivableInfoMapping[borrower] = ri;
+            _setReceivableInfo(borrower, receivableAsset, receivableParam, receivableAmount);
         }
 
         // Pool status and data validation happens within initiate().
@@ -242,6 +241,22 @@ contract ReceivableFactoringPool is
             receivableAmount <
             (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
         ) revert Errors.insufficientReceivableAmount();
+    }
+
+    /**
+     * @notice Sets the receivable asset for the borrower
+     */
+    function _setReceivableInfo(
+        address borrower,
+        address receivableAsset,
+        uint256 receivableParam,
+        uint256 receivableAmount
+    ) internal virtual {
+        BS.ReceivableInfo memory ri;
+        ri.receivableAsset = receivableAsset;
+        ri.receivableParam = receivableParam;
+        ri.receivableAmount = uint88(receivableAmount);
+        _receivableInfoMapping[borrower] = ri;
     }
 
     /**

@@ -670,6 +670,11 @@ describe("Invoice Factoring", function () {
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
             checkResult(dueInfo, 0, 0, 0, 0, 0);
+
+            let receivableInfo = await poolContract.receivableInfoMapping(borrower.address);
+            expect(receivableInfo.receivableAsset).to.equal(ethers.constants.AddressZero);
+            expect(receivableInfo.receivableAmount).to.equal(0);
+            expect(receivableInfo.receivableParam).to.equal(0);
         });
 
         it("Invalidate payback", async function () {

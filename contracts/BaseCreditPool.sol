@@ -212,12 +212,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
+     * @return amountPaid the actuall amount paid to the contract. When the tendered
+     * amount is larger than the payoff amount, the contract only accepts the payoff amount.
+     * @return paidoff a flag indciating whether the account has been paid off.
      */
     function makePayment(address borrower, uint256 amount)
         public
         virtual
         override
-        returns (uint256 amountPaid)
+        returns (uint256 amountPaid, bool paidoff)
     {
         return _makePayment(borrower, amount, false);
     }
@@ -542,13 +545,18 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     /**
      * @notice Borrower makes one payment. If this is the final payment,
      * it automatically triggers the payoff process.
-     * @dev "AMOUNT_TOO_LOW" reverted when the asset is short of the scheduled payment and fees
+     * @param borrower the address of the borrower
+     * @param amount the payment amount
+     * @param isPaymentReceived a flag that indicates whether the payment has been received or not
+     * @return amountPaid the actuall amount paid to the contract. When the tendered
+     * amount is larger than the payoff amount, the contract only accepts the payoff amount.
+     * @return paidoff a flag indciating whether the account has been paid off.
      */
     function _makePayment(
         address borrower,
         uint256 amount,
         bool isPaymentReceived
-    ) internal returns (uint256 amountPaid) {
+    ) internal returns (uint256 amountPaid, bool paidoff) {
         _protocolAndPoolOn();
 
         if (amount == 0) revert Errors.zeroAmountProvided();
@@ -625,7 +633,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             distributeIncome(amountToCollect - principalPayment);
         }
 
+        bool paidOff;
         if (amountToCollect >= payoffAmount) {
+            paidOff = true;
             // the interest for the final pay period has been distributed. When the user pays off
             // early, the interest charge for the remainder of the period will be substracted,
             // thus the income should be reversed.
@@ -647,7 +657,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             emit PaymentMade(borrower, amountToCollect, msg.sender);
         }
 
-        return (amountToCollect);
+        return (amountToCollect, paidOff);
     }
 
     /// Checks if the given amount is higher than what is allowed by the pool
@@ -662,6 +672,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @dev this is used in both makePayment() and drawdown() to bring the account current
      * @dev getDueInfo() gets the due information of the most current cycle. This function
      * updates the record in creditRecordMapping for `_borrower`
+     * @param borrower the address of the borrwoer
+     * @param isFirstDrawdown whether this request is for the first drawdown of the credit line
+     * @param distributeChargesForLastCycle whether to distribute income to different parties
+     * (protocol, poolOwner, EA, and the pool). A `false` value is used in special cases
+     * like `default` when we do not pause the accrue and distribution of fees.
      */
     function _updateDueInfo(
         address borrower,
