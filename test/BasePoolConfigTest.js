@@ -46,8 +46,8 @@ describe("Base Pool Config", function () {
                 treasury,
                 lender,
                 protocolOwner,
-                evaluationAgent,
-                evaluationAgent
+                eaServiceAccount,
+                pdsServiceAccount
             );
 
         [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
@@ -59,8 +59,12 @@ describe("Base Pool Config", function () {
             feeManagerContract,
             testTokenContract,
             0,
-            eaNFTContract
+            eaNFTContract,
+            false // BaseCreditPool
         );
+
+        await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
+        await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
     });
 
     describe("Huma Pool Config Settings", function () {
@@ -172,9 +176,21 @@ describe("Base Pool Config", function () {
             ).to.be.revertedWith("evaluationAgentNotEnoughLiquidity()");
         });
 
-        it("Should allow evaluation agent to be replaced when the old EA has no rewards", async function () {
-            await testTokenContract.mint(evaluationAgent2.address, 2_000_000);
+        it("Should allow evaluation agent to be replaced when the old EA has rewards", async function () {
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
+            // origination fee: 11000
+            // first month interest: 10002
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(4200);
+            expect(accruedIncome.eaIncome).to.equal(3150);
+            expect(accruedIncome.poolOwnerIncome).to.equal(1050);
+            let oldBalance = await testTokenContract.balanceOf(evaluationAgent.address);
 
+            await testTokenContract.mint(evaluationAgent2.address, 2_000_000);
             await testTokenContract
                 .connect(evaluationAgent2)
                 .approve(poolContract.address, 2_000_000);
@@ -195,7 +211,11 @@ describe("Base Pool Config", function () {
                     newNFTTokenId,
                     poolOwner.address
                 )
-                .to.not.emit(poolConfigContract, "EvaluationAgentRewardsWithdrawn");
+                .to.emit(poolConfigContract, "EvaluationAgentRewardsWithdrawn")
+                .withArgs(evaluationAgent.address, 3150, poolOwner.address);
+            expect(await testTokenContract.balanceOf(evaluationAgent.address)).to.equal(
+                3150 + Number(oldBalance)
+            );
         });
     });
 });
