@@ -18,19 +18,6 @@ const getInvoiceContractFromAddress = async function (address, signer) {
     return ethers.getContractAt("ReceivableFactoringPool", address, signer);
 };
 
-// Let us limit the depth of describe to be 2.
-//
-// In before() of "Huma Pool", all the key supporting contracts are deployed.
-//
-// In beforeEach() of "Huma Pool", we deploy a new HumaPool with initial
-// liquidity 100 from the owner
-//
-// The full testing scenario is designed as:
-// 1. Lender contributes 300, together with owner's 100, the pool size is 1_000_000
-// 2. Factoring fee is 10 flat and 100 bps. Protocol fee is 50 bps.
-// 3. Borrower borrows 1_000_000. 14 fee charged (2 to treasury, 12 to the pool). Borrower get 386
-// 4. Payback 500. The 100 extra will be transferred to the borrower, led to a balance of 486.
-// 5. Owner balance becomes 103 with rounding error, lender balance becomes 309 with rounding error.
 describe("Invoice Factoring", function () {
     let poolContract;
     let poolConfigContract;
@@ -130,8 +117,10 @@ describe("Invoice Factoring", function () {
         it("Should only allow evaluation agents to post approved loan requests", async function () {
             await expect(
                 poolContract
-                    .connect(lender).functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)']
-                    (
+                    .connect(lender)
+                    .functions[
+                        "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                    ](
                         borrower.address,
                         1_000_000,
                         30,
@@ -150,7 +139,9 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                    .functions[
+                        "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                    ](
                         borrower.address,
                         1_000_000,
                         30,
@@ -169,7 +160,9 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                    .functions[
+                        "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                    ](
                         borrower.address,
                         1_000_000,
                         30,
@@ -186,7 +179,9 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                    .functions[
+                        "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                    ](
                         borrower.address,
                         1_200_000,
                         30,
@@ -206,7 +201,9 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                .functions[
+                    "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                ](
                     borrower.address,
                     1_000_000,
                     30,
@@ -233,7 +230,9 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                    .functions[
+                        "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                    ](
                         borrower.address,
                         1_000_000,
                         30,
@@ -251,7 +250,9 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                .functions[
+                    "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                ](
                     borrower.address,
                     1_000_000,
                     30,
@@ -274,7 +275,9 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                .functions[
+                    "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                ](
                     borrower.address,
                     1_000_000,
                     30,
@@ -306,7 +309,9 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                .functions[
+                    "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                ](
                     borrower.address,
                     1_000_000,
                     60,
@@ -332,7 +337,9 @@ describe("Invoice Factoring", function () {
         beforeEach(async function () {
             await poolContract
                 .connect(eaServiceAccount)
-                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                .functions[
+                    "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                ](
                     borrower.address,
                     800_000,
                     30,
@@ -403,7 +410,9 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                .functions[
+                    "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                ](
                     borrower.address,
                     1_000_000,
                     30,
@@ -549,7 +558,9 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(eaServiceAccount)
-                .functions['approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)'](
+                .functions[
+                    "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                ](
                     borrower.address,
                     1_000_000,
                     30,
@@ -739,12 +750,6 @@ describe("Invoice Factoring", function () {
                 // Pay period 3
                 advanceClock(30);
 
-                // Total 3 cycles late, do not charge fees for the final cycle, we got
-                // 2 cycles of late fee for 48. Distribution among {protocol, EA, poolOwner, pool}
-                // is {9, 7, 2, 30}. Pluge the origination fee {2, 2, 0, 10}. The balance is
-                // {11, 9, 2, 40}.
-                // The pool value was 531 before the loss. With a loss of 448, pool vlue became
-                // 83, {poolOwnerAsLP, lender} split is {18, 73}.
                 await expect(
                     poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 )
@@ -764,38 +769,86 @@ describe("Invoice Factoring", function () {
                 );
             });
 
-            // it("Writeoff more than pool value", async function () {
-            //     await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-            //         "defaultTriggeredTooEarly()"
-            //     );
+            it("Multiple partial payments after default", async function () {
+                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "defaultTriggeredTooEarly()"
+                );
 
-            //     advanceClock(60);
-            //     await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-            //         "defaultTriggeredTooEarly()"
-            //     );
+                advanceClock(30);
+                advanceClock(30);
+                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
+                    "defaultTriggeredTooEarly()"
+                );
 
-            //     advanceClock(60);
+                advanceClock(30);
 
-            //     // It was delayed for 4 cycles, we do not charge fees for the final cycle.
-            //     // This gets us 84 total late fees. Please note since updateDueInfo() was not called
-            //     // cycle by cycle, all the 84 will be distrbiuted once, vs. distribute 28 for 3
-            //     // times, this leads to different rounding result.
-            //     await expect(
-            //         poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
-            //     )
-            //         .to.emit(poolContract, "DefaultTriggered")
-            //         .withArgs(borrower.address, 472, eaServiceAccount.address);
+                await expect(
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
+                )
+                    .to.emit(poolContract, "DefaultTriggered")
+                    .withArgs(borrower.address, 1_024_120, eaServiceAccount.address);
 
-            //     expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(0);
-            //     expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(0);
+                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(799_390);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_598_780);
 
-            //     let accruedIncome = await poolConfigContract.accruedIncome();
-            //     expect(accruedIncome.protocolIncome).to.equal(16);
-            //     expect(accruedIncome.eaIncome).to.equal(12);
-            //     expect(accruedIncome.poolOwnerIncome).to.equal(3);
+                accruedIncome = await poolConfigContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(7024);
+                expect(accruedIncome.eaIncome).to.equal(5268);
+                expect(accruedIncome.poolOwnerIncome).to.equal(1756);
 
-            //     expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(14);
-            // });
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                    4_011_000
+                );
+
+                // simulates partial payback
+                advanceClock(10);
+                await testTokenContract.connect(payer).transfer(poolContract.address, 1_000_000);
+
+                await poolContract
+                    .connect(pdsServiceAccount)
+                    .onReceivedPayment(
+                        borrower.address,
+                        1_000_000,
+                        ethers.utils.formatBytes32String("1")
+                    );
+
+                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(998_411);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_996_822);
+
+                accruedIncome = await poolConfigContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(9472);
+                expect(accruedIncome.eaIncome).to.equal(7104);
+                expect(accruedIncome.poolOwnerIncome).to.equal(2368);
+
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                    5_011_000
+                );
+
+                advanceClock(10);
+                await testTokenContract.connect(payer).transfer(poolContract.address, 36_361);
+
+                await poolContract
+                    .connect(pdsServiceAccount)
+                    .onReceivedPayment(
+                        borrower.address,
+                        36_361,
+                        ethers.utils.formatBytes32String("2")
+                    );
+
+                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(
+                    1_005_683
+                );
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_011_366);
+
+                accruedIncome = await poolConfigContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(9472);
+                expect(accruedIncome.eaIncome).to.equal(7104);
+                expect(accruedIncome.poolOwnerIncome).to.equal(2368);
+
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                    5_047_361
+                );
+            });
         });
     });
 });

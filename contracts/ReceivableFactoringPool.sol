@@ -13,7 +13,7 @@ import "./Errors.sol";
 /**
  * @notice Receivable Factoring is the process for the receivable owner to trade in their
  * receivable for immediate access to portion of the fund tied with the receivable, and
- * receive the remainder minus fees after the receivable is paid in full.
+ * receive the remainder after the receivable is paid in full.
  */
 contract ReceivableFactoringPool is
     IReceivable,
