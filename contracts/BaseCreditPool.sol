@@ -577,9 +577,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // several cycles.
             cr = _updateDueInfo(borrower, false, true);
         }
-        uint96 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
 
-        // How much will be applied towards principal
+        uint256 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
+
+        // The amount to be applied towards principal
         uint256 principalPayment = 0;
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
@@ -597,15 +598,16 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 cr.feesAndInterestDue = 0;
             }
         } else {
-            if (amount < payoffAmount) {
-                amountToCollect = amount;
-                principalPayment = amount - cr.feesAndInterestDue;
-                cr.unbilledPrincipal = uint96(cr.unbilledPrincipal - (amount - cr.totalDue));
-            } else {
-                amountToCollect = payoffAmount;
-                principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
-                cr.unbilledPrincipal = 0;
-            }
+            amountToCollect = amount;
+            principalPayment = amount - cr.feesAndInterestDue;
+
+            uint256 principalCap = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
+            if (principalPayment > principalCap) principalPayment = principalCap;
+
+            cr.unbilledPrincipal = amount - cr.totalDue >= cr.unbilledPrincipal
+                ? 0
+                : uint96(cr.unbilledPrincipal - (amount - cr.totalDue));
+
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
             cr.missedPeriods = 0;
@@ -634,16 +636,33 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             distributeIncome(amountToCollect - principalPayment);
         }
 
-        bool paidOff;
-        if (amountToCollect >= payoffAmount) {
-            paidOff = true;
-            // the interest for the final pay period has been distributed. When the user pays off
-            // early, the interest charge for the remainder of the period will be substracted,
-            // thus the income should be reversed.
-            reverseIncome(uint256(uint96(0 - cr.correction)));
-            amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
-            cr.correction = 0;
+        // Computes payoff amount, including correction
 
+        // Since only payback generates generative correction, and all other actions (e.g. drawdown)
+        // will only increase totalDue, unbilledPrincipal, and move correction to the positive
+        // side, if abs(cr.correction) is larger than the sum of due and principal, the credit line
+        // would have been paid off at the last payment when the big negative cr.correction was
+        // generated. This statement is recursively true. Thus the assertion below.
+        if (cr.correction < 0) assert(payoffAmount > uint96(0 - cr.correction));
+
+        payoffAmount = uint256(uint96(int96(int256(payoffAmount)) + cr.correction));
+
+        bool paidOff = false;
+        if (amount >= payoffAmount) {
+            amountToCollect = payoffAmount;
+
+            // Distribut or reverse income to consume outstanding correction.
+            // Book income with positive correction, i.e., user had drawdown in the past cycle.
+            // Reverse income with negative correction, i.e., interest for the entire final pay
+            // period has been booked and distributed, but the user paid off early, thus negative
+            // correction and income reverse.
+            if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
+            else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
+
+            cr.correction = 0;
+            paidOff = true;
+
+            // Closes the credit line if it is in the final period
             if (cr.remainingPeriods == 0) {
                 cr.state = BS.CreditState.Deleted;
                 emit CreditLineClosed(borrower, msg.sender);

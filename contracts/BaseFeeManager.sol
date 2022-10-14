@@ -236,12 +236,13 @@ contract BaseFeeManager is IFeeManager, Ownable {
          * Loops through the cycles as we would generate statements for each cycle.
          * The logic for each iteration is as follows:
          * 1. Calcuate late fee if it is past due
-         * 2. Add outstanding due amount to the unbilled principal as the new base for principal
-         * 3. Calcuate interest for this new cycle using the new principal
-         * 4. Incorporate outstanding correction for the first iteration. The correction shall
+         * 2. Add membership fee
+         * 3  Add outstanding due amount to the unbilled principal as the new base for principal
+         * 4. Calcuate interest for this new cycle using the new principal
+         * 5. Incorporate outstanding correction for the first iteration. The correction shall
          *    reset after the first iteration, but cannot be udpated due to view only function.
          *    We will just ignore the correction for follow-on iterations.
-         * 5. Calculate the principal due, and minus it from the unbilled principal amount
+         * 6. Calculate the principal due, and minus it from the unbilled principal amount
          */
         uint256 fees = 0;
         uint256 interest = 0;
@@ -280,7 +281,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 _cr.correction = 0;
             }
 
-            // step 5. compute principal due and adjust unbilled principal
+            // step 6. compute principal due and adjust unbilled principal
             uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) /
                 HUNDRED_PERCENT_IN_BPS;
             _cr.feesAndInterestDue = uint96(fees + interest);
