@@ -581,40 +581,36 @@ describe("Base Credit Pool", function () {
         });
     });
 
-    // // In "Payback".beforeEach(), make sure there is a loan funded.
-    // describe.only("Quick payback", function () {
-    //     it("Process payback", async function () {
-    //         let blockNumBefore = await ethers.provider.getBlockNumber();
-    //         let blockBefore = await ethers.provider.getBlock(blockNumBefore);
+    // In "Payback".beforeEach(), make sure there is a loan funded.
+    describe("Quick payback", function () {
+        it("Process payback", async function () {
+            let blockNumBefore = await ethers.provider.getBlockNumber();
+            let blockBefore = await ethers.provider.getBlock(blockNumBefore);
 
-    //         let dueDate = blockBefore.timestamp + 2592000;
+            let dueDate = blockBefore.timestamp + 2592000;
 
-    //         let lenderBalance = await testTokenContract.balanceOf(lender.address);
+            let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
-    //         await poolConfigContract.connect(poolOwner).setAPR(1217);
-    //         await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
+            await poolConfigContract.connect(poolOwner).setAPR(1217);
+            await poolContract.connect(borrower).requestCredit(1_000_000, 30, 12);
 
-    //         await poolContract
-    //             .connect(eaServiceAccount)
-    //             .approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
-    //         await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
 
-    //         await testTokenContract.connect(borrower).approve(poolContract.address, 1_030_000);
+            await testTokenContract.mint(borrower.address, 1_030_000);
+            await testTokenContract.connect(borrower).approve(poolContract.address, 1_030_000);
 
-    //         await poolContract.connect(borrower).makePayment(borrower.address, 1_030_000);
+            await expect(poolContract.connect(borrower).makePayment(borrower.address, 1_030_100))
+                .to.emit(poolContract, "PaymentMade")
+                .withArgs(borrower.address, 1_000_000, borrower.address);
 
-    //         let creditInfo = await poolContract.creditRecordMapping(borrower.address);
-
-    //         expect(creditInfo.unbilledPrincipal).to.equal(0);
-    //         expect(creditInfo.remainingPeriods).to.equal(11);
-    //         let r = await poolContract.creditRecordMapping(borrower.address);
-    //         let rs = await poolContract.creditRecordStaticMapping(borrower.address);
-    //         checkRecord(r, rs, 0, 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 11, 0);
-
-    //         let dueInfo = await feeManagerContract.getDueInfo(r, rs);
-    //         checkResult(dueInfo, 0, 0, 0, 0, 0);
-    //     });
-    // });
+            let r = await poolContract.creditRecordMapping(borrower.address);
+            let rs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 0, 0, 0, 11, 1217, 30, 3, 0);
+        });
+    });
 
     // Default flow. After each pay period, simulates to LatePayMonitorService to call updateDueInfo().
     // Test scenario available at https://tinyurl.com/yc5fks9x

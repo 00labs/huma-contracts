@@ -22,6 +22,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     using SafeERC20 for IERC20;
     using BS for BS.CreditRecord;
 
+    enum CreditLineClosureReason {
+        Paidoff,
+        CreditLimitChangedToBeZero,
+        OverwrittenByNewLine
+    }
+
     /// Account billing info refreshed with the updated due amount and date
     event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
     /// Credit line request has been approved
@@ -56,8 +62,16 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 oldCreditLimit,
         uint256 newCreditLimit
     );
-    /// An existing credit line has been closed
-    event CreditLineClosed(address indexed borrower, address by);
+
+    /**
+     * @notice An existing credit line has been closed
+     * @param reasonCode the reason for the credit line closure
+     */
+    event CreditLineClosed(
+        address indexed borrower,
+        address by,
+        CreditLineClosureReason reasonCode
+    );
     /**
      * @notice The expiration (maturity) date of a credit line has been extended.
      * @param borrower the address of the borrower
@@ -163,7 +177,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // for contract size consideration
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
-                emit CreditLineClosed(borrower, msg.sender);
+                emit CreditLineClosed(
+                    borrower,
+                    msg.sender,
+                    CreditLineClosureReason.CreditLimitChangedToBeZero
+                );
             }
             _creditRecordMapping[borrower].remainingPeriods = 0;
         }
@@ -501,13 +519,17 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
         if (cr.state != BS.CreditState.Deleted) {
-            // If the user has an existing line, but there is no balance, close the old one 
+            // If the user has an existing line, but there is no balance, close the old one
             // and initate the new one automatically.
             cr = _updateDueInfo(borrower, false, true);
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 cr.state = BS.CreditState.Deleted;
                 cr.remainingPeriods = 0;
-                emit CreditLineClosed(borrower, msg.sender);
+                emit CreditLineClosed(
+                    borrower,
+                    msg.sender,
+                    CreditLineClosureReason.OverwrittenByNewLine
+                );
             } else {
                 revert Errors.creditLineAlreadyExists();
             }
@@ -665,7 +687,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // Closes the credit line if it is in the final period
             if (cr.remainingPeriods == 0) {
                 cr.state = BS.CreditState.Deleted;
-                emit CreditLineClosed(borrower, msg.sender);
+                emit CreditLineClosed(borrower, msg.sender, CreditLineClosureReason.Paidoff);
             } else cr.state = BS.CreditState.GoodStanding;
         }
 
