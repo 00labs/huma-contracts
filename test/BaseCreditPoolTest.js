@@ -241,9 +241,7 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(borrower).drawdown(borrower.address, 3_000);
             await testTokenContract.connect(borrower).mint(borrower.address, 2_000);
             await testTokenContract.connect(borrower).approve(poolContract.address, 3_100);
-            console.log("before makePayment");
             await poolContract.connect(borrower).makePayment(borrower.address, 3_100);
-            console.log("after makePayment");
             await poolContract.connect(borrower).requestCredit(4_000, 90, 36);
             const loanInformation = await getCreditInfo(poolContract, borrower.address);
             expect(loanInformation.creditLimit).to.equal(4_000);
