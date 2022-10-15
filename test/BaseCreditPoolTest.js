@@ -614,7 +614,7 @@ describe("Base Credit Pool", function () {
         });
     });
 
-    describe("Quick follow-up borrowing (for overflow)", function () {
+    describe("Quick large amount payback (for getDueInfo overflow)", function () {
         it("Quick follow-up borrowing", async function () {
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
