@@ -614,6 +614,76 @@ describe("Base Credit Pool", function () {
         });
     });
 
+    describe("Quick follow-up borrowing (for overflow)", function () {
+        it("Quick follow-up borrowing", async function () {
+            let blockNumBefore = await ethers.provider.getBlockNumber();
+            let blockBefore = await ethers.provider.getBlock(blockNumBefore);
+
+            let dueDate = blockBefore.timestamp + 2592000;
+
+            let lenderBalance = await testTokenContract.balanceOf(lender.address);
+
+            await poolConfigContract.connect(poolOwner).setAPR(1217);
+            await poolContract.connect(borrower).requestCredit(1_500_000, 30, 12);
+
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, 1_500_000, 30, 12, 1217);
+
+            await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
+
+            r = await poolContract.creditRecordMapping(borrower.address);
+            rs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(
+                r,
+                rs,
+                1_500_000,
+                1_000_000,
+                dueDate,
+                0,
+                10002,
+                10002,
+                0,
+                11,
+                1217,
+                30,
+                3,
+                0
+            );
+
+            // Generates negative correction
+            await await testTokenContract.connect(borrower).approve(poolContract.address, 900_000);
+            await expect(poolContract.connect(borrower).makePayment(borrower.address, 900_000))
+                .to.emit(poolContract, "PaymentMade")
+                .withArgs(borrower.address, 900_000, 0, 110_002, borrower.address);
+
+            r = await poolContract.creditRecordMapping(borrower.address);
+            rs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(r, rs, 1_500_000, 110_002, dueDate, -8902, 0, 0, 0, 11, 1217, 30, 3, 0);
+
+            // Consumes negative correction.
+            await advanceClock(90);
+            dueDate += 3 * 2592000;
+            await testTokenContract.connect(borrower).mint(borrower.address, 50_000);
+            await testTokenContract.connect(borrower).approve(poolContract.address, 50_000);
+            await expect(
+                poolContract.connect(borrower).makePayment(borrower.address, 50_000)
+            ).to.emit(poolContract, "PaymentMade");
+            r = await poolContract.creditRecordMapping(borrower.address);
+            rs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(r, rs, 1_500_000, 60_002, dueDate, -6102, 0, 0, 0, 8, 1217, 30, 3, 0);
+
+            await testTokenContract.connect(borrower).mint(borrower.address, 53_500);
+            await testTokenContract.connect(borrower).approve(poolContract.address, 53_500);
+            await expect(
+                poolContract.connect(borrower).makePayment(borrower.address, 53_500)
+            ).to.emit(poolContract, "PaymentMade");
+            r = await poolContract.creditRecordMapping(borrower.address);
+            rs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(r, rs, 1_500_000, 0, dueDate, 0, 0, 0, 0, 8, 1217, 30, 3, 0);
+        });
+    });
+
     // Default flow. After each pay period, simulates to LatePayMonitorService to call updateDueInfo().
     // Test scenario available at https://tinyurl.com/yc5fks9x
     describe("Default", function () {

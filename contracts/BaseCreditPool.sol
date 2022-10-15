@@ -753,6 +753,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.feesAndInterestDue,
             cr.totalDue,
             cr.unbilledPrincipal,
+            cr.correction,
             newCharges
         ) = _feeManager.getDueInfo(cr, _getCreditRecordStatic(borrower));
 
@@ -792,7 +793,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
             // Correction is used when moving to a new payment cycle, ready for reset.
             // However, correction has not been used if it is still the same cycle, cannot reset
-            if (periodsPassed > 0) cr.correction = 0;
+            //if (periodsPassed > 0) cr.correction = 0;
 
             _creditRecordMapping[borrower] = cr;
 
