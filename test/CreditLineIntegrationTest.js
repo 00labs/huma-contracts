@@ -251,7 +251,7 @@ describe("Credit Line Integration Test", async function () {
         await testTokenContract.connect(borrower).approve(poolContract.address, 3642);
         await expect(poolContract.connect(borrower).makePayment(borrower.address, 3642))
             .emit(poolContract, "PaymentMade")
-            .withArgs(borrower.address, 3620, borrower.address);
+            .withArgs(borrower.address, 3620, 0, 0, borrower.address);
 
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -354,7 +354,7 @@ describe("Credit Line Integration Test", async function () {
         await testTokenContract.connect(borrower).approve(poolContract.address, 959);
         await expect(poolContract.connect(borrower).makePayment(borrower.address, 959))
             .emit(poolContract, "PaymentMade")
-            .withArgs(borrower.address, 955, borrower.address);
+            .withArgs(borrower.address, 955, 0, 0, borrower.address);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5000, 0, dueDate, 0, 0, 0, 0, 0, 1217, 30, 0, 0);

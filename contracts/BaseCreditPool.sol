@@ -22,6 +22,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     using SafeERC20 for IERC20;
     using BS for BS.CreditRecord;
 
+    enum CreditLineClosureReason {
+        Paidoff,
+        CreditLimitChangedToBeZero,
+        OverwrittenByNewLine
+    }
+
     /// Account billing info refreshed with the updated due amount and date
     event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
     /// Credit line request has been approved
@@ -56,8 +62,16 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 oldCreditLimit,
         uint256 newCreditLimit
     );
-    /// An existing credit line has been closed
-    event CreditLineClosed(address indexed borrower, address by);
+
+    /**
+     * @notice An existing credit line has been closed
+     * @param reasonCode the reason for the credit line closure
+     */
+    event CreditLineClosed(
+        address indexed borrower,
+        address by,
+        CreditLineClosureReason reasonCode
+    );
     /**
      * @notice The expiration (maturity) date of a credit line has been extended.
      * @param borrower the address of the borrower
@@ -98,7 +112,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @param by the address that has made the payment. It is possible for someone to make payment
      * on behalf of the borrower.
      */
-    event PaymentMade(address indexed borrower, uint256 amount, address by);
+    event PaymentMade(
+        address indexed borrower,
+        uint256 amount,
+        uint256 totalDue,
+        uint256 unbilledPrincipal,
+        address by
+    );
 
     /**
      * @notice Approves the credit request with the terms on record.
@@ -163,7 +183,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // for contract size consideration
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
-                emit CreditLineClosed(borrower, msg.sender);
+                emit CreditLineClosed(
+                    borrower,
+                    msg.sender,
+                    CreditLineClosureReason.CreditLimitChangedToBeZero
+                );
             }
             _creditRecordMapping[borrower].remainingPeriods = 0;
         }
@@ -501,13 +525,17 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
         if (cr.state != BS.CreditState.Deleted) {
-            // If the user has an existing line, but there is no balance, close the old one 
+            // If the user has an existing line, but there is no balance, close the old one
             // and initate the new one automatically.
             cr = _updateDueInfo(borrower, false, true);
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 cr.state = BS.CreditState.Deleted;
                 cr.remainingPeriods = 0;
-                emit CreditLineClosed(borrower, msg.sender);
+                emit CreditLineClosed(
+                    borrower,
+                    msg.sender,
+                    CreditLineClosureReason.OverwrittenByNewLine
+                );
             } else {
                 revert Errors.creditLineAlreadyExists();
             }
@@ -577,9 +605,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // several cycles.
             cr = _updateDueInfo(borrower, false, true);
         }
-        uint96 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
 
-        // How much will be applied towards principal
+        uint256 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
+
+        // The amount to be applied towards principal
         uint256 principalPayment = 0;
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
@@ -597,15 +626,16 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 cr.feesAndInterestDue = 0;
             }
         } else {
-            if (amount < payoffAmount) {
-                amountToCollect = amount;
-                principalPayment = amount - cr.feesAndInterestDue;
-                cr.unbilledPrincipal = uint96(cr.unbilledPrincipal - (amount - cr.totalDue));
-            } else {
-                amountToCollect = payoffAmount;
-                principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
-                cr.unbilledPrincipal = 0;
-            }
+            amountToCollect = amount;
+            principalPayment = amount - cr.feesAndInterestDue;
+
+            uint256 principalCap = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
+            if (principalPayment > principalCap) principalPayment = principalCap;
+
+            cr.unbilledPrincipal = amount - cr.totalDue >= cr.unbilledPrincipal
+                ? 0
+                : uint96(cr.unbilledPrincipal - (amount - cr.totalDue));
+
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
             cr.missedPeriods = 0;
@@ -634,19 +664,38 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             distributeIncome(amountToCollect - principalPayment);
         }
 
-        bool paidOff;
-        if (amountToCollect >= payoffAmount) {
-            paidOff = true;
-            // the interest for the final pay period has been distributed. When the user pays off
-            // early, the interest charge for the remainder of the period will be substracted,
-            // thus the income should be reversed.
-            reverseIncome(uint256(uint96(0 - cr.correction)));
-            amountToCollect = uint256(int256(amountToCollect) + int256(cr.correction));
-            cr.correction = 0;
+        // Computes payoff amount, including correction
 
+        // Since only payback generates generative correction, and all other actions (e.g. drawdown)
+        // will only increase totalDue, unbilledPrincipal, and move correction to the positive
+        // side, if abs(cr.correction) is larger than the sum of due and principal, the credit line
+        // would have been paid off at the last payment when the big negative cr.correction was
+        // generated. This statement is recursively true. Thus the assertion below.
+        if (cr.correction < 0) assert(payoffAmount > uint96(0 - cr.correction));
+
+        payoffAmount = uint256(int256(payoffAmount) + int256(cr.correction));
+
+        bool paidOff = false;
+        if (amount >= payoffAmount) {
+            amountToCollect = payoffAmount;
+
+            // Distribut or reverse income to consume outstanding correction.
+            // Book income with positive correction, i.e., user had drawdown in the past cycle.
+            // Reverse income with negative correction, i.e., interest for the entire final pay
+            // period has been booked and distributed, but the user paid off early, thus negative
+            // correction and income reverse.
+            if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
+            else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
+
+            cr.correction = 0;
+            cr.unbilledPrincipal = 0;
+            cr.feesAndInterestDue = 0;
+            paidOff = true;
+
+            // Closes the credit line if it is in the final period
             if (cr.remainingPeriods == 0) {
                 cr.state = BS.CreditState.Deleted;
-                emit CreditLineClosed(borrower, msg.sender);
+                emit CreditLineClosed(borrower, msg.sender, CreditLineClosureReason.Paidoff);
             } else cr.state = BS.CreditState.GoodStanding;
         }
 
@@ -655,7 +704,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         if (amountToCollect > 0 && isPaymentReceived == false) {
             // Transfer assets from the _borrower to pool locker
             _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
-            emit PaymentMade(borrower, amountToCollect, msg.sender);
+            emit PaymentMade(
+                borrower,
+                amountToCollect,
+                cr.totalDue,
+                cr.unbilledPrincipal,
+                msg.sender
+            );
         }
 
         return (amountToCollect, paidOff);
