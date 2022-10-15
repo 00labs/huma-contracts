@@ -597,12 +597,16 @@ describe("Base Credit Pool", function () {
                 .approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
             await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
 
-            await testTokenContract.mint(borrower.address, 1_030_000);
-            await testTokenContract.connect(borrower).approve(poolContract.address, 1_030_000);
+            await testTokenContract.mint(borrower.address, 1_000_100);
 
-            await expect(poolContract.connect(borrower).makePayment(borrower.address, 1_030_100))
-                .to.emit(poolContract, "PaymentMade")
-                .withArgs(borrower.address, 1_000_000, borrower.address);
+            let oldBalance = await testTokenContract.balanceOf(borrower.address);
+            await testTokenContract.connect(borrower).approve(poolContract.address, 1_000_500);
+
+            await expect(
+                poolContract.connect(borrower).makePayment(borrower.address, 1_000_500)
+            ).to.emit(poolContract, "PaymentMade");
+            let newBalance = await testTokenContract.balanceOf(borrower.address);
+            expect(oldBalance - newBalance).to.be.within(1_000_000, 1_000_500);
 
             let r = await poolContract.creditRecordMapping(borrower.address);
             let rs = await poolContract.creditRecordStaticMapping(borrower.address);
@@ -803,7 +807,7 @@ describe("Base Credit Pool", function () {
 
             await expect(poolContract.connect(borrower).makePayment(borrower.address, 1_054_850))
                 .to.emit(poolContract, "PaymentMade")
-                .withArgs(borrower.address, 1_051_333, borrower.address);
+                .withArgs(borrower.address, 1_051_333, 0, 0, borrower.address);
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);

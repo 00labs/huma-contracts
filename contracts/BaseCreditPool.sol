@@ -112,7 +112,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @param by the address that has made the payment. It is possible for someone to make payment
      * on behalf of the borrower.
      */
-    event PaymentMade(address indexed borrower, uint256 amount, address by);
+    event PaymentMade(
+        address indexed borrower,
+        uint256 amount,
+        uint256 totalDue,
+        uint256 unbilledPrincipal,
+        address by
+    );
 
     /**
      * @notice Approves the credit request with the terms on record.
@@ -667,7 +673,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // generated. This statement is recursively true. Thus the assertion below.
         if (cr.correction < 0) assert(payoffAmount > uint96(0 - cr.correction));
 
-        payoffAmount = uint256(uint96(int96(int256(payoffAmount)) + cr.correction));
+        payoffAmount = uint256(int256(payoffAmount) + int256(cr.correction));
 
         bool paidOff = false;
         if (amount >= payoffAmount) {
@@ -682,6 +688,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
 
             cr.correction = 0;
+            cr.unbilledPrincipal = 0;
+            cr.feesAndInterestDue = 0;
             paidOff = true;
 
             // Closes the credit line if it is in the final period
@@ -696,7 +704,13 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         if (amountToCollect > 0 && isPaymentReceived == false) {
             // Transfer assets from the _borrower to pool locker
             _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
-            emit PaymentMade(borrower, amountToCollect, msg.sender);
+            emit PaymentMade(
+                borrower,
+                amountToCollect,
+                cr.totalDue,
+                cr.unbilledPrincipal,
+                msg.sender
+            );
         }
 
         return (amountToCollect, paidOff);
