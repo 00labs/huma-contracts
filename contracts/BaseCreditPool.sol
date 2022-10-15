@@ -753,6 +753,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.feesAndInterestDue,
             cr.totalDue,
             cr.unbilledPrincipal,
+            cr.correction,
             newCharges
         ) = _feeManager.getDueInfo(cr, _getCreditRecordStatic(borrower));
 
@@ -789,10 +790,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             if (cr.missedPeriods > 0) {
                 if (cr.state != BS.CreditState.Defaulted) cr.state = BS.CreditState.Delayed;
             } else cr.state = BS.CreditState.GoodStanding;
-
-            // Correction is used when moving to a new payment cycle, ready for reset.
-            // However, correction has not been used if it is still the same cycle, cannot reset
-            if (periodsPassed > 0) cr.correction = 0;
 
             _creditRecordMapping[borrower] = cr;
 

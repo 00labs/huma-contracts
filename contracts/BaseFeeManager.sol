@@ -208,12 +208,20 @@ contract BaseFeeManager is IFeeManager, Ownable {
             uint96 feesAndInterestDue,
             uint96 totalDue,
             uint96 unbilledPrincipal,
+            int96 correction,
             uint256 totalCharges
         )
     {
         // Directly returns if it is still within the current period
         if (block.timestamp <= _cr.dueDate) {
-            return (0, _cr.feesAndInterestDue, _cr.totalDue, _cr.unbilledPrincipal, 0);
+            return (
+                0,
+                _cr.feesAndInterestDue,
+                _cr.totalDue,
+                _cr.unbilledPrincipal,
+                _cr.correction,
+                0
+            );
         }
 
         // Computes how many billing periods have passed. 1+ is needed since Solidity always
@@ -246,6 +254,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
          */
         uint256 fees = 0;
         uint256 interest = 0;
+
         for (uint256 i = 0; i < periodsPassed; i++) {
             // step 1. late fee calculation
             if (_cr.totalDue > 0)
@@ -271,14 +280,17 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 HUNDRED_PERCENT_IN_BPS;
 
             // step 5. incorporate correction
-            // If r.correction is negative, its absolute value is guaranteed to be
-            // no more than interest. Thus, the following statement is safe.
-            // No correction after the 1st period since no drawdown is allowed
-            // when there are outstanding late payments
-            if (_cr.correction != 0) {
-                // correct interest if correction is not zero, and reset it immediately
+            if (_cr.correction > 0) {
                 interest = uint256(int256(interest) + _cr.correction);
                 _cr.correction = 0;
+            } else if (_cr.correction < 0) {
+                if (interest > uint256(int256(0 - _cr.correction))) {
+                    interest = uint256(int256(interest) + _cr.correction);
+                    _cr.correction = 0;
+                } else {
+                    _cr.correction += int96(uint96(interest));
+                    interest = 0;
+                }
             }
 
             // step 6. compute principal due and adjust unbilled principal
@@ -301,6 +313,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
             _cr.feesAndInterestDue,
             _cr.totalDue,
             _cr.unbilledPrincipal,
+            _cr.correction,
             totalCharges
         );
     }

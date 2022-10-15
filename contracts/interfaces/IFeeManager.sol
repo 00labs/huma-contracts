@@ -7,12 +7,12 @@ interface IFeeManager {
     /**
      * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
      * @dev Correction is used when there is change to the principal in the middle of the cycle
-     * due to drawdown or principal payment. Since Huma computes the interest at the beginning 
-     * of each cycle, if there is a drawdown, the interest for this extra borrowing is not 
+     * due to drawdown or principal payment. Since Huma computes the interest at the beginning
+     * of each cycle, if there is a drawdown, the interest for this extra borrowing is not
      * billed, there will be a positive correction to be added in the next bill. Conversely,
      * since the interest has been computed for the entire cycle, if there is principal payment
      * in the middle, some of the interest should be refunded. It will be marked as negative
-     * correction and be subtracted in the next bill. 
+     * correction and be subtracted in the next bill.
      */
     function calcCorrection(
         uint256 dueDate,
@@ -65,6 +65,7 @@ interface IFeeManager {
             uint96 feesAndInterestDue,
             uint96 totalDue,
             uint96 unbilledPrincipal,
+            int96 correction,
             uint256 totalCharges
         );
 
