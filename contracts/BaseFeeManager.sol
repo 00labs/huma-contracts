@@ -280,16 +280,6 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 HUNDRED_PERCENT_IN_BPS;
 
             // step 5. incorporate correction
-            // If r.correction is negative, its absolute value is guaranteed to be
-            // no more than interest. Thus, the following statement is safe.
-            // No correction after the 1st period since no drawdown is allowed
-            // when there are outstanding late payments
-            // if (_cr.correction != 0) {
-
-            //     // correct interest if correction is not zero, and reset it immediately
-            //     interest = uint256(int256(interest) + _cr.correction);
-            //     _cr.correction = 0;
-            // }
             if (_cr.correction > 0) {
                 interest = uint256(int256(interest) + _cr.correction);
                 _cr.correction = 0;
