@@ -106,7 +106,7 @@ async function initBaseCreditPoolFeeManager() {
         "BaseCreditPoolFeeManager",
         feeManager,
         "setFees",
-        [10_000_000, 100, 20_000_000, 100, 5_000_000]
+        [10_000_000, 0, 20_000_000, 0, 5_000_000]
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
 
@@ -306,14 +306,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    await initHumaConfig();
-    await initEA();
+    // await initHumaConfig();
+    // await initEA();
     await initBaseCreditPoolFeeManager();
-    await initBaseCreditPoolHDT();
-    await initBaseCreditPoolConfig();
-    await initBaseCreditPool();
-
-    await prepareBaseCreditPool();
+    // await initBaseCreditPoolHDT();
+    // await initBaseCreditPoolConfig();
+    // await initBaseCreditPool();
+    //
+    // await prepareBaseCreditPool();
 }
 
 initContracts()

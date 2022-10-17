@@ -87,7 +87,7 @@ async function initFeeManager() {
         "ReceivableFactoringPoolFeeManager",
         feeManager,
         "setFees",
-        [0, 500, 0, 500, 0]
+        [0, 1000, 0, 1000, 0]
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
 
@@ -336,14 +336,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    await initHumaConfig();
+    // await initHumaConfig();
     await initFeeManager();
-    await initHDT();
-    await initEA();
-    await initPoolConfig();
-    await initPool();
+    // await initHDT();
+    // await initEA();
+    // await initPoolConfig();
+    // await initPool();
 
-    await prepare();
+    // await prepare();
 }
 
 initContracts()

@@ -43,14 +43,18 @@ async function runTLOperation(contract, name, method, parameters, tlContract) {
 }
 
 async function execute() {
-    // if (!deployedContracts["ReceivableFactoringPoolConfig"]) {
-    //     throw new Error("ReceivableFactoringPoolConfig not deployed yet!");
-    // }
-    //
+    if (!deployedContracts["ReceivableFactoringPoolConfig"]) {
+        throw new Error("ReceivableFactoringPoolConfig not deployed yet!");
+    }
+
+    if (!deployedContracts["BaseCreditPoolConfig"]) {
+        throw new Error("ReceivableFactoringPoolConfig not deployed yet!");
+    }
+
     // if (!deployedContracts["ReceivableFactoringPool"]) {
     //     throw new Error("ReceivableFactoringPool not deployed yet!");
     // }
-    //
+
     // if (!deployedContracts["HumaConfig"]) {
     //     throw new Error("HumaConfig not deployed yet!");
     // }
@@ -63,13 +67,13 @@ async function execute() {
         throw new Error("ReceivableFactoringPoolFeeManager not deployed yet!");
     }
 
-    const BaseCreditPoolFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
-    const baseCreditPoolFeeManager = BaseCreditPoolFeeManager.attach(deployedContracts["BaseCreditPoolFeeManager"]);
-    await sendTransaction("BaseCreditPoolFeeManager", baseCreditPoolFeeManager, "setFees", [10_000_000, 0, 20_000_000, 0, 5_000_000]);
+    // const BaseCreditPoolFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
+    // const baseCreditPoolFeeManager = BaseCreditPoolFeeManager.attach(deployedContracts["BaseCreditPoolFeeManager"]);
+    // await sendTransaction("BaseCreditPoolFeeManager", baseCreditPoolFeeManager, "setFees", [10_000_000, 0, 20_000_000, 0, 5_000_000]);
 
-    const ReceivableFactoringPoolFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
-    const receivableFactoringPoolFeeManager = ReceivableFactoringPoolFeeManager.attach(deployedContracts["ReceivableFactoringPoolFeeManager"]);
-    await sendTransaction("BaseCreditPoolFeeManager", receivableFactoringPoolFeeManager, "setFees", [10_000_000, 0, 20_000_000, 0, 5_000_000]);
+    // const ReceivableFactoringPoolFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
+    // const receivableFactoringPoolFeeManager = ReceivableFactoringPoolFeeManager.attach(deployedContracts["ReceivableFactoringPoolFeeManager"]);
+    // await sendTransaction("BaseCreditPoolFeeManager", receivableFactoringPoolFeeManager, "setFees", [0, 1000, 0, 1000, 0]);
 
     // const owner = await poolConfig.owner();
     // console.log("owner: " + owner);
@@ -94,9 +98,20 @@ async function execute() {
     //     deployedContracts["HumaConfig"],
     // ]);
     //
-    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setFeeManager", [
-    //     deployedContracts["ReceivableFactoringPoolFeeManager"],
-    // ]);
+
+    const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
+    const receivableFactoringPoolConfig = ReceivableFactoringPoolConfig.attach(deployedContracts["ReceivableFactoringPoolConfig"]);
+
+    await sendTransaction("ReceivableFactoringPoolConfig", receivableFactoringPoolConfig, "setFeeManager", [
+        deployedContracts["ReceivableFactoringPoolFeeManager"],
+    ]);
+
+    const BaseCreditPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
+    const baseCreditPoolConfig = BaseCreditPoolConfig.attach(deployedContracts["BaseCreditPoolConfig"]);
+
+    await sendTransaction("BaseCreditPoolConfig", baseCreditPoolConfig, "setFeeManager", [
+        deployedContracts["BaseCreditPoolFeeManager"],
+    ]);
 
     // await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setAPR", [0]);
     // const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
