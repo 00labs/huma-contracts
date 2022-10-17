@@ -603,40 +603,29 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // several cycles.
             cr = _updateDueInfo(borrower, false, true);
         }
-        console.log("After updateDueInfo, cr.unbilledPrincipal=", cr.unbilledPrincipal);
 
-        // Computes payoff amount, including correction
-        // Since only payback generates generative correction, and all other actions (e.g. drawdown)
-        // will only increase totalDue, unbilledPrincipal, and move correction to the positive
-        // side, if abs(cr.correction) is larger than the sum of due and principal, the credit line
-        // would have been paid off at the last payment when the big negative cr.correction was
-        // generated. This statement is recursively true. Thus the assertion below.
+        // Computes the final payoff amount. Needs to consider the correction associated with
+        // all outstanding principals.
         uint256 payoffCorrection = _feeManager.calcCorrection(
             cr.dueDate,
             _creditRecordStaticMapping[borrower].aprInBps,
             cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
         );
 
-        bool paidOff = false;
         uint256 payoffAmount = uint256(
             int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
         ) - payoffCorrection;
 
-        console.log("In payoffAmount calculation, cr.unbilledPrincipal=", cr.unbilledPrincipal);
-        console.log("cr.totalDue=", cr.totalDue);
-        console.logInt(cr.correction);
-        console.log("payoffCorrection=", payoffCorrection);
-        console.log("payoffAmount=", payoffAmount);
-
-        // The amount to be applied towards principal
-        uint256 principalPayment = 0;
+        bool paidOff = false;
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
         uint256 amountToCollect;
 
+        // The amount to be applied towards principal
+        uint256 principalPayment = 0;
+
         if (amount < cr.totalDue) {
-            console.log("Below totalDue path");
             amountToCollect = amount;
             cr.totalDue = uint96(cr.totalDue - amount);
 
@@ -646,19 +635,17 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 principalPayment = amount - cr.feesAndInterestDue;
                 cr.feesAndInterestDue = 0;
             }
+            if (cr.state == BS.CreditState.Defaulted)
+                _recoverDefaultedAmount(borrower, amountToCollect);
         } else if (amount < payoffAmount) {
-            console.log("below payoff path");
             amountToCollect = amount;
 
             // Apply extra payments towards principal, reduce unbilledPrincipal amount
             cr.unbilledPrincipal -= uint96(amount - cr.totalDue);
 
             principalPayment = amount - cr.feesAndInterestDue;
-            console.log("principalPayment=", principalPayment);
             if (principalPayment > 0) {
                 // If there is principal payment, calcuate new correction
-                console.log("Before updating, cr.correction=");
-                console.logInt(cr.correction);
                 cr.correction -= int96(
                     uint96(
                         _feeManager.calcCorrection(
@@ -668,57 +655,36 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                         )
                     )
                 );
-                console.log("After updating.");
-                console.logInt(cr.correction);
             }
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
             cr.missedPeriods = 0;
+
+            // Moves account to GoodStanding if it was delayed.
             if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
+
+            // Recovers funds to the pool if the account is Defaulted.
+            // Only moves it to GoodStanding only after payoff, handled in the payoff branch
+            if (cr.state == BS.CreditState.Defaulted)
+                _recoverDefaultedAmount(borrower, amountToCollect);
         } else {
+            // Payoff logic
             paidOff = true;
             principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
             amountToCollect = payoffAmount;
-            // Distribut or reverse income to consume outstanding correction.
-            // Book income with positive correction, i.e., user had drawdown in the past cycle.
-            // Reverse income with negative correction, i.e., interest for the entire final pay
-            // period has been booked and distributed, but the user paid off early, thus negative
-            // correction and income reverse.
-            cr.correction = cr.correction - int96(int256(payoffCorrection));
-        }
 
-        // For account in default, record the recovered principal for the pool.
-        // Note: correction only impacts interest amount, thus no impact on recovered principal
-        if (cr.state == BS.CreditState.Defaulted) {
-            console.log("\nIn default recovery flow, principalPayment=", principalPayment);
-            console.log("_totalPoolValue=", _totalPoolValue);
-            console.log("defaultAmount=", _creditRecordStaticMapping[borrower].defaultAmount);
-
-            uint96 _defaultAmount = _creditRecordStaticMapping[borrower].defaultAmount;
-
-            if (_defaultAmount > 0) {
-                uint256 recoveredPrincipal;
-                if (_defaultAmount >= amountToCollect) {
-                    recoveredPrincipal = amountToCollect;
-                } else {
-                    recoveredPrincipal = _defaultAmount;
-                    distributeIncome(amountToCollect - recoveredPrincipal);
-                }
-                _totalPoolValue += recoveredPrincipal;
-                _defaultAmount -= uint96(recoveredPrincipal);
-                _creditRecordStaticMapping[borrower].defaultAmount = _defaultAmount;
-                console.log("\nAfter adjusting, recoveredPrincipal=", recoveredPrincipal);
+            if (cr.state == BS.CreditState.Defaulted) {
+                _recoverDefaultedAmount(borrower, amountToCollect);
             } else {
-                distributeIncome(amountToCollect);
-            }
-
-            console.log("After default logic, _totalPoolValue=", _totalPoolValue);
-        }
-
-        if (paidOff) {
-            console.log("In payoff flow, before distributeIncome, cr.correction=");
-            console.logInt(cr.correction);
-            if (cr.state != BS.CreditState.Defaulted) {
+                // Distribut or reverse income to consume outstanding correction.
+                // Positive correction is generated becasue of a drawdown within this period,
+                // it is not booked or distributed yet, needs to be distributed.
+                // Negative correction is generated because of a payment including principal
+                // within this period, the extra interest paid is not accounted for yet, thus
+                // a reversal.
+                // Note: For defaulted account, we do not distributed fees and interests
+                // until they are paid. It is handled in _recoverDefaultedAmount().
+                cr.correction = cr.correction - int96(int256(payoffCorrection));
                 if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
                 else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
             }
@@ -727,6 +693,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.unbilledPrincipal = 0;
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
+
             // Closes the credit line if it is in the final period
             if (cr.remainingPeriods == 0) {
                 cr.state = BS.CreditState.Deleted;
@@ -735,8 +702,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         }
 
         _creditRecordMapping[borrower] = cr;
-        console.log("\nAfter processing. cr.correction=");
-        console.logInt(cr.correction);
 
         if (amountToCollect > 0 && isPaymentReceived == false) {
             // Transfer assets from the _borrower to pool locker
@@ -749,8 +714,34 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 msg.sender
             );
         }
-        console.log("amountToCollect=", amountToCollect);
         return (amountToCollect, paidOff);
+    }
+
+    /**
+     * @notice Recovers amount when a payment is paid towards a defaulted account.
+     * @dev For any payment after a default, it is applied towards principal losses first.
+     * Only after the principal is fully recovered, it is applied towards fees & interest.
+     */
+    function _recoverDefaultedAmount(address borrower, uint256 amountToCollect) internal {
+        uint96 _defaultAmount = _creditRecordStaticMapping[borrower].defaultAmount;
+
+        if (_defaultAmount > 0) {
+            uint256 recoveredPrincipal;
+            if (_defaultAmount >= amountToCollect) {
+                recoveredPrincipal = amountToCollect;
+            } else {
+                recoveredPrincipal = _defaultAmount;
+                distributeIncome(amountToCollect - recoveredPrincipal);
+            }
+            _totalPoolValue += recoveredPrincipal;
+            _defaultAmount -= uint96(recoveredPrincipal);
+            _creditRecordStaticMapping[borrower].defaultAmount = _defaultAmount;
+        } else {
+            // note The account is moved out of Defaulted state only if the entire due
+            // including principals, fees&Interest are paid off. It is possible for
+            // the account to owe fees&Interest after _defaultAmount becomes zero.
+            distributeIncome(amountToCollect);
+        }
     }
 
     /// Checks if the given amount is higher than what is allowed by the pool
@@ -796,8 +787,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (periodsPassed > 0) {
             // Distribute income
-            console.log("before distributeIncome, newCharges=", newCharges);
-            console.log("distributeChargesForLastCycle=", distributeChargesForLastCycle);
             if (cr.state != BS.CreditState.Defaulted) {
                 if (distributeChargesForLastCycle) distributeIncome(newCharges);
                 else distributeIncome(newCharges - cr.feesAndInterestDue);
