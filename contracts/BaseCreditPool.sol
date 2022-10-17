@@ -616,8 +616,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
         ) - payoffCorrection;
 
-        bool paidOff = false;
-
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
         uint256 amountToCollect;
@@ -625,25 +623,33 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // The amount to be applied towards principal
         uint256 principalPayment = 0;
 
-        if (amount < cr.totalDue) {
-            amountToCollect = amount;
-            cr.totalDue = uint96(cr.totalDue - amount);
+        if (amount < payoffAmount) {
+            if (amount < cr.totalDue) {
+                amountToCollect = amount;
+                cr.totalDue = uint96(cr.totalDue - amount);
 
-            if (amount <= cr.feesAndInterestDue) {
-                cr.feesAndInterestDue = uint96(cr.feesAndInterestDue - amount);
+                if (amount <= cr.feesAndInterestDue) {
+                    cr.feesAndInterestDue = uint96(cr.feesAndInterestDue - amount);
+                } else {
+                    principalPayment = amount - cr.feesAndInterestDue;
+                    cr.feesAndInterestDue = 0;
+                }
             } else {
+                amountToCollect = amount;
+
+                // Apply extra payments towards principal, reduce unbilledPrincipal amount
+                cr.unbilledPrincipal -= uint96(amount - cr.totalDue);
+
                 principalPayment = amount - cr.feesAndInterestDue;
+                cr.totalDue = 0;
                 cr.feesAndInterestDue = 0;
+                cr.missedPeriods = 0;
+
+                // Moves account to GoodStanding if it was delayed.
+                if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
             }
-            if (cr.state == BS.CreditState.Defaulted)
-                _recoverDefaultedAmount(borrower, amountToCollect);
-        } else if (amount < payoffAmount) {
-            amountToCollect = amount;
 
-            // Apply extra payments towards principal, reduce unbilledPrincipal amount
-            cr.unbilledPrincipal -= uint96(amount - cr.totalDue);
-
-            principalPayment = amount - cr.feesAndInterestDue;
+            // Gets the correction.
             if (principalPayment > 0) {
                 // If there is principal payment, calcuate new correction
                 cr.correction -= int96(
@@ -656,12 +662,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                     )
                 );
             }
-            cr.feesAndInterestDue = 0;
-            cr.totalDue = 0;
-            cr.missedPeriods = 0;
-
-            // Moves account to GoodStanding if it was delayed.
-            if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
 
             // Recovers funds to the pool if the account is Defaulted.
             // Only moves it to GoodStanding only after payoff, handled in the payoff branch
@@ -669,7 +669,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 _recoverDefaultedAmount(borrower, amountToCollect);
         } else {
             // Payoff logic
-            paidOff = true;
             principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
             amountToCollect = payoffAmount;
 
@@ -714,7 +713,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 msg.sender
             );
         }
-        return (amountToCollect, paidOff);
+        return (amountToCollect, amountToCollect == payoffAmount);
     }
 
     /**
