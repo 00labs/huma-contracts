@@ -112,6 +112,9 @@ contract BaseFeeManager is IFeeManager, Ownable {
         // rounding to days
         uint256 remainingTime = dueDate - block.timestamp;
 
+        console.log("\nIn calcCorrection, amount=", amount);
+        console.log("remainingTime=", remainingTime);
+
         return (amount * aprInBps * remainingTime) / SECONDS_IN_A_YEAR / HUNDRED_PERCENT_IN_BPS;
     }
 

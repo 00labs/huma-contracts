@@ -306,8 +306,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // check to make sure the default grace period has passed.
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
+        if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
+
         if (block.timestamp > cr.dueDate) {
-            cr = _updateDueInfo(borrower, false, false);
+            cr = _updateDueInfo(borrower, false, true);
         }
 
         // Check if grace period has exceeded. Please note it takes a full pay period
@@ -315,12 +317,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // plus the grace period.
         if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
 
-        if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
-
-        // Since the fees and interest are computed at the beginning of a cycle, they are included
-        // in totalDue by default. In a default case, it does not make sense to include them in
-        // the defaulted amount since the fees have not really happened at the default time.
-        losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
+        // default amount includes all outstanding principals and fees
+        losses = cr.unbilledPrincipal + cr.totalDue;
 
         _creditRecordMapping[borrower].state = BS.CreditState.Defaulted;
 
@@ -605,8 +603,30 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // several cycles.
             cr = _updateDueInfo(borrower, false, true);
         }
+        console.log("After updateDueInfo, cr.unbilledPrincipal=", cr.unbilledPrincipal);
 
-        uint256 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
+        // Computes payoff amount, including correction
+        // Since only payback generates generative correction, and all other actions (e.g. drawdown)
+        // will only increase totalDue, unbilledPrincipal, and move correction to the positive
+        // side, if abs(cr.correction) is larger than the sum of due and principal, the credit line
+        // would have been paid off at the last payment when the big negative cr.correction was
+        // generated. This statement is recursively true. Thus the assertion below.
+        uint256 payoffCorrection = _feeManager.calcCorrection(
+            cr.dueDate,
+            _creditRecordStaticMapping[borrower].aprInBps,
+            cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
+        );
+
+        bool paidOff = false;
+        uint256 payoffAmount = uint256(
+            int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
+        ) - payoffCorrection;
+
+        console.log("In payoffAmount calculation, cr.unbilledPrincipal=", cr.unbilledPrincipal);
+        console.log("cr.totalDue=", cr.totalDue);
+        console.logInt(cr.correction);
+        console.log("payoffCorrection=", payoffCorrection);
+        console.log("payoffAmount=", payoffAmount);
 
         // The amount to be applied towards principal
         uint256 principalPayment = 0;
@@ -616,6 +636,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 amountToCollect;
 
         if (amount < cr.totalDue) {
+            console.log("Below totalDue path");
             amountToCollect = amount;
             cr.totalDue = uint96(cr.totalDue - amount);
 
@@ -625,73 +646,71 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 principalPayment = amount - cr.feesAndInterestDue;
                 cr.feesAndInterestDue = 0;
             }
-        } else {
+        } else if (amount < payoffAmount) {
+            console.log("below payoff path");
             amountToCollect = amount;
+
+            // Apply extra payments towards principal, reduce unbilledPrincipal amount
+            cr.unbilledPrincipal -= uint96(amount - cr.totalDue);
+
             principalPayment = amount - cr.feesAndInterestDue;
-
-            uint256 principalCap = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
-            if (principalPayment > principalCap) principalPayment = principalCap;
-
-            cr.unbilledPrincipal = amount - cr.totalDue >= cr.unbilledPrincipal
-                ? 0
-                : uint96(cr.unbilledPrincipal - (amount - cr.totalDue));
-
+            console.log("principalPayment=", principalPayment);
+            if (principalPayment > 0) {
+                // If there is principal payment, calcuate new correction
+                console.log("Before updating, cr.correction=");
+                console.logInt(cr.correction);
+                cr.correction -= int96(
+                    uint96(
+                        _feeManager.calcCorrection(
+                            cr.dueDate,
+                            _creditRecordStaticMapping[borrower].aprInBps,
+                            principalPayment
+                        )
+                    )
+                );
+                console.log("After updating.");
+                console.logInt(cr.correction);
+            }
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
             cr.missedPeriods = 0;
             if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
-        }
-
-        if (principalPayment > 0) {
-            // If there is principal payment, calcuate new correction
-            cr.correction -= int96(
-                uint96(
-                    _feeManager.calcCorrection(
-                        cr.dueDate,
-                        _creditRecordStaticMapping[borrower].aprInBps,
-                        principalPayment
-                    )
-                )
-            );
-        }
-
-        // For account in default, record the recovered principal for the pool.
-        // Note: correction only impacts interest amount, thus no impact on recovered principal
-        if (cr.state == BS.CreditState.Defaulted) {
-            _totalPoolValue += principalPayment;
-            _creditRecordStaticMapping[borrower].defaultAmount -= uint96(principalPayment);
-
-            distributeIncome(amountToCollect - principalPayment);
-        }
-
-        // Computes payoff amount, including correction
-
-        // Since only payback generates generative correction, and all other actions (e.g. drawdown)
-        // will only increase totalDue, unbilledPrincipal, and move correction to the positive
-        // side, if abs(cr.correction) is larger than the sum of due and principal, the credit line
-        // would have been paid off at the last payment when the big negative cr.correction was
-        // generated. This statement is recursively true. Thus the assertion below.
-        if (cr.correction < 0) assert(payoffAmount > uint96(0 - cr.correction));
-
-        payoffAmount = uint256(int256(payoffAmount) + int256(cr.correction));
-
-        bool paidOff = false;
-        if (amount >= payoffAmount) {
+        } else {
+            paidOff = true;
+            principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
             amountToCollect = payoffAmount;
-
             // Distribut or reverse income to consume outstanding correction.
             // Book income with positive correction, i.e., user had drawdown in the past cycle.
             // Reverse income with negative correction, i.e., interest for the entire final pay
             // period has been booked and distributed, but the user paid off early, thus negative
             // correction and income reverse.
+            cr.correction = cr.correction - int96(int256(payoffCorrection));
+            console.log("In payoff flow, before distributeIncome, cr.correction=");
+            console.logInt(cr.correction);
             if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
             else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
 
             cr.correction = 0;
             cr.unbilledPrincipal = 0;
             cr.feesAndInterestDue = 0;
-            paidOff = true;
+            cr.totalDue = 0;
+        }
 
+        // For account in default, record the recovered principal for the pool.
+        // Note: correction only impacts interest amount, thus no impact on recovered principal
+        if (cr.state == BS.CreditState.Defaulted) {
+            console.log("\nIn default recovery flow, principalPayment=", principalPayment);
+            console.log("_totalPoolValue=", _totalPoolValue);
+            console.log("defaultAmount=", _creditRecordStaticMapping[borrower].defaultAmount);
+
+            _totalPoolValue += principalPayment;
+            _creditRecordStaticMapping[borrower].defaultAmount -= uint96(principalPayment);
+            // Distribute the income since the last cycle of
+
+            distributeIncome(amountToCollect - principalPayment);
+        }
+
+        if (paidOff) {
             // Closes the credit line if it is in the final period
             if (cr.remainingPeriods == 0) {
                 cr.state = BS.CreditState.Deleted;
@@ -700,6 +719,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         }
 
         _creditRecordMapping[borrower] = cr;
+        console.log("\nAfter processing. cr.correction=");
+        console.logInt(cr.correction);
 
         if (amountToCollect > 0 && isPaymentReceived == false) {
             // Transfer assets from the _borrower to pool locker
@@ -712,7 +733,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 msg.sender
             );
         }
-
+        console.log("amountToCollect=", amountToCollect);
         return (amountToCollect, paidOff);
     }
 
@@ -759,6 +780,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (periodsPassed > 0) {
             // Distribute income
+            console.log("before distributeIncome, newCharges=", newCharges);
+            console.log("distributeChargesForLastCycle=", distributeChargesForLastCycle);
             if (distributeChargesForLastCycle) distributeIncome(newCharges);
             else distributeIncome(newCharges - cr.feesAndInterestDue);
 
