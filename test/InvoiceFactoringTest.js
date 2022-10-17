@@ -817,13 +817,13 @@ describe("Invoice Factoring", function () {
                         ethers.utils.formatBytes32String("1")
                     );
 
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(998_411);
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_996_822);
+                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(999_390);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_998_780);
 
                 accruedIncome = await poolConfigContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(9472);
-                expect(accruedIncome.eaIncome).to.equal(7104);
-                expect(accruedIncome.poolOwnerIncome).to.equal(2368);
+                expect(accruedIncome.protocolIncome).to.equal(7024);
+                expect(accruedIncome.eaIncome).to.equal(5268);
+                expect(accruedIncome.poolOwnerIncome).to.equal(1756);
 
                 expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
                     5_011_000

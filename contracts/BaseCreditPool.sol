@@ -306,6 +306,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // check to make sure the default grace period has passed.
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
+        if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
+
         if (block.timestamp > cr.dueDate) {
             cr = _updateDueInfo(borrower, false, false);
         }
@@ -315,12 +317,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // plus the grace period.
         if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
 
-        if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
-
-        // Since the fees and interest are computed at the beginning of a cycle, they are included
-        // in totalDue by default. In a default case, it does not make sense to include them in
-        // the defaulted amount since the fees have not really happened at the default time.
-        losses = cr.unbilledPrincipal + (cr.totalDue - cr.feesAndInterestDue);
+        // default amount includes all outstanding principals
+        losses = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
 
         _creditRecordMapping[borrower].state = BS.CreditState.Defaulted;
 
@@ -606,14 +604,26 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr = _updateDueInfo(borrower, false, true);
         }
 
-        uint256 payoffAmount = cr.totalDue + cr.unbilledPrincipal;
+        // Computes the final payoff amount. Needs to consider the correction associated with
+        // all outstanding principals.
+        uint256 payoffCorrection = _feeManager.calcCorrection(
+            cr.dueDate,
+            _creditRecordStaticMapping[borrower].aprInBps,
+            cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
+        );
 
-        // The amount to be applied towards principal
-        uint256 principalPayment = 0;
+        uint256 payoffAmount = uint256(
+            int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
+        ) - payoffCorrection;
+
+        bool paidOff = false;
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
         uint256 amountToCollect;
+
+        // The amount to be applied towards principal
+        uint256 principalPayment = 0;
 
         if (amount < cr.totalDue) {
             amountToCollect = amount;
@@ -625,72 +635,64 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 principalPayment = amount - cr.feesAndInterestDue;
                 cr.feesAndInterestDue = 0;
             }
-        } else {
+            if (cr.state == BS.CreditState.Defaulted)
+                _recoverDefaultedAmount(borrower, amountToCollect);
+        } else if (amount < payoffAmount) {
             amountToCollect = amount;
+
+            // Apply extra payments towards principal, reduce unbilledPrincipal amount
+            cr.unbilledPrincipal -= uint96(amount - cr.totalDue);
+
             principalPayment = amount - cr.feesAndInterestDue;
-
-            uint256 principalCap = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
-            if (principalPayment > principalCap) principalPayment = principalCap;
-
-            cr.unbilledPrincipal = amount - cr.totalDue >= cr.unbilledPrincipal
-                ? 0
-                : uint96(cr.unbilledPrincipal - (amount - cr.totalDue));
-
+            if (principalPayment > 0) {
+                // If there is principal payment, calcuate new correction
+                cr.correction -= int96(
+                    uint96(
+                        _feeManager.calcCorrection(
+                            cr.dueDate,
+                            _creditRecordStaticMapping[borrower].aprInBps,
+                            principalPayment
+                        )
+                    )
+                );
+            }
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
             cr.missedPeriods = 0;
+
+            // Moves account to GoodStanding if it was delayed.
             if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
-        }
 
-        if (principalPayment > 0) {
-            // If there is principal payment, calcuate new correction
-            cr.correction -= int96(
-                uint96(
-                    _feeManager.calcCorrection(
-                        cr.dueDate,
-                        _creditRecordStaticMapping[borrower].aprInBps,
-                        principalPayment
-                    )
-                )
-            );
-        }
-
-        // For account in default, record the recovered principal for the pool.
-        // Note: correction only impacts interest amount, thus no impact on recovered principal
-        if (cr.state == BS.CreditState.Defaulted) {
-            _totalPoolValue += principalPayment;
-            _creditRecordStaticMapping[borrower].defaultAmount -= uint96(principalPayment);
-
-            distributeIncome(amountToCollect - principalPayment);
-        }
-
-        // Computes payoff amount, including correction
-
-        // Since only payback generates generative correction, and all other actions (e.g. drawdown)
-        // will only increase totalDue, unbilledPrincipal, and move correction to the positive
-        // side, if abs(cr.correction) is larger than the sum of due and principal, the credit line
-        // would have been paid off at the last payment when the big negative cr.correction was
-        // generated. This statement is recursively true. Thus the assertion below.
-        if (cr.correction < 0) assert(payoffAmount > uint96(0 - cr.correction));
-
-        payoffAmount = uint256(int256(payoffAmount) + int256(cr.correction));
-
-        bool paidOff = false;
-        if (amount >= payoffAmount) {
+            // Recovers funds to the pool if the account is Defaulted.
+            // Only moves it to GoodStanding only after payoff, handled in the payoff branch
+            if (cr.state == BS.CreditState.Defaulted)
+                _recoverDefaultedAmount(borrower, amountToCollect);
+        } else {
+            // Payoff logic
+            paidOff = true;
+            principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
             amountToCollect = payoffAmount;
 
-            // Distribut or reverse income to consume outstanding correction.
-            // Book income with positive correction, i.e., user had drawdown in the past cycle.
-            // Reverse income with negative correction, i.e., interest for the entire final pay
-            // period has been booked and distributed, but the user paid off early, thus negative
-            // correction and income reverse.
-            if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
-            else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
+            if (cr.state == BS.CreditState.Defaulted) {
+                _recoverDefaultedAmount(borrower, amountToCollect);
+            } else {
+                // Distribut or reverse income to consume outstanding correction.
+                // Positive correction is generated becasue of a drawdown within this period,
+                // it is not booked or distributed yet, needs to be distributed.
+                // Negative correction is generated because of a payment including principal
+                // within this period, the extra interest paid is not accounted for yet, thus
+                // a reversal.
+                // Note: For defaulted account, we do not distributed fees and interests
+                // until they are paid. It is handled in _recoverDefaultedAmount().
+                cr.correction = cr.correction - int96(int256(payoffCorrection));
+                if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
+                else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
+            }
 
             cr.correction = 0;
             cr.unbilledPrincipal = 0;
             cr.feesAndInterestDue = 0;
-            paidOff = true;
+            cr.totalDue = 0;
 
             // Closes the credit line if it is in the final period
             if (cr.remainingPeriods == 0) {
@@ -712,8 +714,34 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 msg.sender
             );
         }
-
         return (amountToCollect, paidOff);
+    }
+
+    /**
+     * @notice Recovers amount when a payment is paid towards a defaulted account.
+     * @dev For any payment after a default, it is applied towards principal losses first.
+     * Only after the principal is fully recovered, it is applied towards fees & interest.
+     */
+    function _recoverDefaultedAmount(address borrower, uint256 amountToCollect) internal {
+        uint96 _defaultAmount = _creditRecordStaticMapping[borrower].defaultAmount;
+
+        if (_defaultAmount > 0) {
+            uint256 recoveredPrincipal;
+            if (_defaultAmount >= amountToCollect) {
+                recoveredPrincipal = amountToCollect;
+            } else {
+                recoveredPrincipal = _defaultAmount;
+                distributeIncome(amountToCollect - recoveredPrincipal);
+            }
+            _totalPoolValue += recoveredPrincipal;
+            _defaultAmount -= uint96(recoveredPrincipal);
+            _creditRecordStaticMapping[borrower].defaultAmount = _defaultAmount;
+        } else {
+            // note The account is moved out of Defaulted state only if the entire due
+            // including principals, fees&Interest are paid off. It is possible for
+            // the account to owe fees&Interest after _defaultAmount becomes zero.
+            distributeIncome(amountToCollect);
+        }
     }
 
     /// Checks if the given amount is higher than what is allowed by the pool
@@ -759,8 +787,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (periodsPassed > 0) {
             // Distribute income
-            if (distributeChargesForLastCycle) distributeIncome(newCharges);
-            else distributeIncome(newCharges - cr.feesAndInterestDue);
+            if (cr.state != BS.CreditState.Defaulted) {
+                if (distributeChargesForLastCycle) distributeIncome(newCharges);
+                else distributeIncome(newCharges - cr.feesAndInterestDue);
+            }
 
             if (cr.dueDate > 0)
                 cr.dueDate = uint64(
