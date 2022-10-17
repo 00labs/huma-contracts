@@ -21,7 +21,7 @@ const getLoanContractFromAddress = async function (address, signer) {
 //
 //
 // Numbers in Google Sheet: more detail: (shorturl.at/dfqrT)
-describe.only("Base Credit Pool", function () {
+describe("Base Credit Pool", function () {
     let poolContract;
     let poolConfigContract;
     let hdtContract;
@@ -148,24 +148,17 @@ describe.only("Base Credit Pool", function () {
 
             await testTokenContract.mint(borrower.address, 1080);
             await testTokenContract.connect(borrower).approve(poolContract.address, 4040);
-            console.log("zero");
             await poolContract.connect(borrower).makePayment(borrower.address, 4040);
             // Note since there is no time passed, the interest charged will be offset at the payoff
             record = await poolContract.creditRecordMapping(borrower.address);
-            console.log("1");
             expect(record.totalDue).to.equal(0);
-            console.log("2");
             expect(record.unbilledPrincipal).to.equal(0);
-            console.log("3");
 
             await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
-            console.log("4");
             result = await poolContract.creditRecordStaticMapping(borrower.address);
             expect(result.creditLimit).to.equal(0);
-            console.log("5");
             record = await poolContract.creditRecordMapping(borrower.address);
             expect(record.state).to.equal(0);
-            console.log("6");
 
             // remove the extra tokens in the borrower's account to return to clean account status
             await testTokenContract.burn(
@@ -173,7 +166,6 @@ describe.only("Base Credit Pool", function () {
                 await testTokenContract.balanceOf(borrower.address)
             );
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
-            console.log("7");
         });
     });
 
@@ -665,7 +657,7 @@ describe.only("Base Credit Pool", function () {
         });
     });
 
-    describe.only("Quick large amount payback (for getDueInfo overflow)", function () {
+    describe("Quick large amount payback (for getDueInfo overflow)", function () {
         it("Quick follow-up borrowing", async function () {
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
@@ -879,7 +871,6 @@ describe.only("Base Credit Pool", function () {
             advanceClock(40);
             dueDate += 2592000;
 
-            console.log("\n*** First payment ***");
             await testTokenContract.connect(borrower).approve(poolContract.address, 25_000);
 
             await poolContract.connect(borrower).makePayment(borrower.address, 25_000);
@@ -918,7 +909,6 @@ describe.only("Base Credit Pool", function () {
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_036_000);
 
             // // Stage 3: pay off
-            console.log("\n*** Second payment ***");
             advanceClock(10);
             await testTokenContract.connect(borrower).approve(poolContract.address, 1_077_000);
 
