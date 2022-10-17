@@ -138,6 +138,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function distributeIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.distributeIncome(value);
+        console.log("distributeIncome, value=", value);
+        console.log("poolIncome=", poolIncome);
         _totalPoolValue += poolIncome;
     }
 
@@ -152,6 +154,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * poolOwner and EA do not participate in losses, but they participate in income reverse.
      */
     function distributeLosses(uint256 value) internal virtual {
+        console.log("distributeLosses called, value=", value);
         if (_totalPoolValue > value) _totalPoolValue -= value;
         else _totalPoolValue = 0;
         emit LossesDistributed(value, _totalPoolValue);
@@ -168,6 +171,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function reverseIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.reverseIncome(value);
+        console.log("reverseIncome called. value=", value);
         _totalPoolValue -= poolIncome;
     }
 

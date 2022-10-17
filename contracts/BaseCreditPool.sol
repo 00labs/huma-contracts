@@ -309,7 +309,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
 
         if (block.timestamp > cr.dueDate) {
-            cr = _updateDueInfo(borrower, false, true);
+            cr = _updateDueInfo(borrower, false, false);
         }
 
         // Check if grace period has exceeded. Please note it takes a full pay period
@@ -317,8 +317,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // plus the grace period.
         if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
 
-        // default amount includes all outstanding principals and fees
-        losses = cr.unbilledPrincipal + cr.totalDue;
+        // default amount includes all outstanding principals
+        losses = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
 
         _creditRecordMapping[borrower].state = BS.CreditState.Defaulted;
 
@@ -685,15 +685,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // period has been booked and distributed, but the user paid off early, thus negative
             // correction and income reverse.
             cr.correction = cr.correction - int96(int256(payoffCorrection));
-            console.log("In payoff flow, before distributeIncome, cr.correction=");
-            console.logInt(cr.correction);
-            if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
-            else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
-
-            cr.correction = 0;
-            cr.unbilledPrincipal = 0;
-            cr.feesAndInterestDue = 0;
-            cr.totalDue = 0;
         }
 
         // For account in default, record the recovered principal for the pool.
@@ -703,14 +694,39 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             console.log("_totalPoolValue=", _totalPoolValue);
             console.log("defaultAmount=", _creditRecordStaticMapping[borrower].defaultAmount);
 
-            _totalPoolValue += principalPayment;
-            _creditRecordStaticMapping[borrower].defaultAmount -= uint96(principalPayment);
-            // Distribute the income since the last cycle of
+            uint96 _defaultAmount = _creditRecordStaticMapping[borrower].defaultAmount;
 
-            distributeIncome(amountToCollect - principalPayment);
+            if (_defaultAmount > 0) {
+                uint256 recoveredPrincipal;
+                if (_defaultAmount >= amountToCollect) {
+                    recoveredPrincipal = amountToCollect;
+                } else {
+                    recoveredPrincipal = _defaultAmount;
+                    distributeIncome(amountToCollect - recoveredPrincipal);
+                }
+                _totalPoolValue += recoveredPrincipal;
+                _defaultAmount -= uint96(recoveredPrincipal);
+                _creditRecordStaticMapping[borrower].defaultAmount = _defaultAmount;
+                console.log("\nAfter adjusting, recoveredPrincipal=", recoveredPrincipal);
+            } else {
+                distributeIncome(amountToCollect);
+            }
+
+            console.log("After default logic, _totalPoolValue=", _totalPoolValue);
         }
 
         if (paidOff) {
+            console.log("In payoff flow, before distributeIncome, cr.correction=");
+            console.logInt(cr.correction);
+            if (cr.state != BS.CreditState.Defaulted) {
+                if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
+                else if (cr.correction < 0) reverseIncome(uint256(uint96(0 - cr.correction)));
+            }
+
+            cr.correction = 0;
+            cr.unbilledPrincipal = 0;
+            cr.feesAndInterestDue = 0;
+            cr.totalDue = 0;
             // Closes the credit line if it is in the final period
             if (cr.remainingPeriods == 0) {
                 cr.state = BS.CreditState.Deleted;
@@ -782,8 +798,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // Distribute income
             console.log("before distributeIncome, newCharges=", newCharges);
             console.log("distributeChargesForLastCycle=", distributeChargesForLastCycle);
-            if (distributeChargesForLastCycle) distributeIncome(newCharges);
-            else distributeIncome(newCharges - cr.feesAndInterestDue);
+            if (cr.state != BS.CreditState.Defaulted) {
+                if (distributeChargesForLastCycle) distributeIncome(newCharges);
+                else distributeIncome(newCharges - cr.feesAndInterestDue);
+            }
 
             if (cr.dueDate > 0)
                 cr.dueDate = uint64(
