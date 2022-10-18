@@ -122,10 +122,10 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         if (_totalPoolValue + amount > _poolConfig.poolLiquidityCap())
             revert Errors.exceededPoolLiquidityCap();
 
-        _underlyingToken.safeTransferFrom(lender, address(this), amount);
         uint256 shares = _poolToken.mintAmount(lender, amount);
         _lastDepositTime[lender] = block.timestamp;
         _totalPoolValue += amount;
+        _underlyingToken.safeTransferFrom(lender, address(this), amount);
 
         emit LiquidityDeposited(lender, amount, shares);
     }
@@ -204,9 +204,10 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         BasePoolConfig newPoolConfig = BasePoolConfig(poolConfigAddr);
         newPoolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
 
+        _poolConfig = newPoolConfig;
+
         // note set old pool config allowance to 0
         _safeApproveForPoolConfig(0);
-        _poolConfig = newPoolConfig;
         // note approve max amount to pool config for admin withdraw functions
         _safeApproveForPoolConfig(type(uint256).max);
 

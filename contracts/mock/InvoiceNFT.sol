@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "../Errors.sol";
 
 contract InvoiceNFT is ERC721URIStorage, Ownable {
     using SafeERC20 for IERC20;
@@ -33,6 +34,7 @@ contract InvoiceNFT is ERC721URIStorage, Ownable {
     );
 
     constructor(address tokenAddress) ERC721("InvoiceNFT", "HumaNFT") {
+        if (tokenAddress == address(0)) revert Errors.zeroAddressProvided();
         _tokenAddress = tokenAddress;
     }
 
