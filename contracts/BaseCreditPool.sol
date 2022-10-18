@@ -616,6 +616,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
         ) - payoffCorrection;
 
+        console.log("cr.unbilledPrincipal=", cr.unbilledPrincipal);
+        console.log("cr.totalDue=", cr.totalDue);
+        console.logInt(cr.correction);
+        console.log("payoffAmount=", payoffAmount);
+
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
         uint256 amountToCollect;
@@ -774,21 +779,24 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // late or dormant for multiple cycles, getDueInfo() will bring it current and
         // return the most up-to-date due information.
         uint256 periodsPassed;
-        uint256 newCharges;
+        int96 newCharges;
         (
             periodsPassed,
             cr.feesAndInterestDue,
             cr.totalDue,
             cr.unbilledPrincipal,
-            cr.correction,
             newCharges
         ) = _feeManager.getDueInfo(cr, _getCreditRecordStatic(borrower));
 
         if (periodsPassed > 0) {
+            cr.correction = 0;
             // Distribute income
             if (cr.state != BS.CreditState.Defaulted) {
-                if (distributeChargesForLastCycle) distributeIncome(newCharges);
-                else distributeIncome(newCharges - cr.feesAndInterestDue);
+                if (!distributeChargesForLastCycle)
+                    newCharges = newCharges - int96(cr.feesAndInterestDue);
+
+                if (newCharges > 0) distributeIncome(uint256(uint96(newCharges)));
+                else if (newCharges < 0) reverseIncome(uint256(uint96(0 - newCharges)));
             }
 
             if (cr.dueDate > 0)

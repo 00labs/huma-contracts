@@ -36,7 +36,7 @@ let eaNFTContract;
 let eaServiceAccount;
 let pdsServiceAccount;
 
-describe("Credit Line Integration Test", async function () {
+describe.only("Credit Line Integration Test", async function () {
     before(async function () {
         [
             defaultDeployer,
@@ -137,7 +137,7 @@ describe("Credit Line Integration Test", async function () {
         dueDate += 2592000;
 
         let r = await feeManagerContract.getDueInfo(record, recordStatic);
-        checkResult(r, 1, 49, 244, 3705, 49);
+        checkResult(r, 1, 39, 234, 3715, 49);
     });
 
     it("Day 40: 2st payment (pay full amountDue)", async function () {
