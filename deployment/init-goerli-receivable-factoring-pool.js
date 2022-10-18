@@ -253,6 +253,15 @@ async function initPoolConfig() {
         "setPoolDefaultGracePeriod",
         [60]
     );
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "addApprovedLender", [
+        deployer.address,
+    ]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "addApprovedLender", [
+        ea.address,
+    ]);
+    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "addApprovedLender", [
+        lender.address,
+    ]);
 
     await updateInitilizedContract("ReceivableFactoringPoolConfig");
 }
@@ -293,12 +302,6 @@ async function prepare() {
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
     const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
 
-    await sendTransaction("ReceivableFactoringPool", pool, "addApprovedLender", [
-        deployer.address,
-    ]);
-    await sendTransaction("ReceivableFactoringPool", pool, "addApprovedLender", [ea.address]);
-    await sendTransaction("ReceivableFactoringPool", pool, "addApprovedLender", [lender.address]);
-
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
     const decimals = await usdc.decimals();
@@ -336,14 +339,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    // await initHumaConfig();
+    await initHumaConfig();
     await initFeeManager();
-    // await initHDT();
-    // await initEA();
-    // await initPoolConfig();
-    // await initPool();
+    await initHDT();
+    await initEA();
+    await initPoolConfig();
+    await initPool();
 
-    // await prepare();
+    await prepare();
 }
 
 initContracts()

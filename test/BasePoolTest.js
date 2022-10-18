@@ -127,7 +127,7 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Removed lenders cannot deposit", async function () {
-            await poolContract.connect(poolOwner).removeApprovedLender(lender.address);
+            await poolConfigContract.connect(poolOwner).removeApprovedLender(lender.address);
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
                 "permissionDeniedNotLender"
             );
