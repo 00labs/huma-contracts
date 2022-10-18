@@ -1,0 +1,242 @@
+[
+  {
+    "inputs": [],
+    "name": "alreadyPoolAdmin",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "alreayAPauser",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "amountTooLow",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "borrowingAmountLessThanPlatformFees",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditExpiredDueToFirstDrawdownTooLate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditExpiredDueToMaturity",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineAlreadyExists",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineGreatThanUpperLimit",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineNotInGoodStandingState",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineNotInStateForDrawdown",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineNotInStateForMakingPayment",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "defaultGracePeriodLessThanMinAllowed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "defaultHasAlreadyBeenTriggered",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "defaultTriggeredTooEarly",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "drawdownFunctionUsedInsteadofDrawdownWithReceivable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "evaluationAgentNotEnoughLiquidity",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "evaluationAgentServiceAccountRequired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "exceededPoolLiquidityCap",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "greaterThanMaxCreditLine",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "insufficientReceivableAmount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "invalidBasisPointHigherThan10000",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "minPrincipalPaymentRateSettingTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notEvaluationAgent",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPauser",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPool",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPoolOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notProtocolOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "onlyBorrowerOrEACanReduceCreditLine",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "paymentAlreadyProcessed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "paymentDetectionServiceAccountRequired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "permissionDeniedNotAdmin",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "permissionDeniedNotLender",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "poolIsNotOn",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "poolOwnerNotEnoughLiquidity",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "proposedEADoesNotOwnProvidedEANFT",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "protocolIsPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "receivableAssetMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "receivableAssetParamMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "requestedCreditWithZeroDuration",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "sameValue",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "treasuryFeeHighThanUpperLimit",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "underlyingTokenNotApprovedForHumaProtocol",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "unsupportedReceivableAsset",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "withdrawTooSoon",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "withdrawnAmountHigherThanBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "zeroAddressProvided",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "zeroAmountProvided",
+    "type": "error"
+  }
+]

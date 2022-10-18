@@ -1,0 +1,115 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_creditLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_intervalInDays",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_remainingPeriods",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_aprInBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_receivableAsset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_receivableParam",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_receivableAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "approveCredit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "borrowAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "receivableAsset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "receivableParam",
+        "type": "uint256"
+      }
+    ],
+    "name": "drawdownWithReceivable",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "paymentIdHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "isPaymentProcessed",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "paymentIdHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "onReceivedPayment",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

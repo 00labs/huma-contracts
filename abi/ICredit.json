@@ -1,0 +1,273 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "creditLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "intervalInDays",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "remainingPeriods",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "aprInBps",
+        "type": "uint256"
+      }
+    ],
+    "name": "approveCredit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "newLine",
+        "type": "uint256"
+      }
+    ],
+    "name": "changeCreditLine",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_borrowAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "drawdown",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "numOfPeriods",
+        "type": "uint256"
+      }
+    ],
+    "name": "extendCreditLineDuration",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      }
+    ],
+    "name": "isApproved",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      }
+    ],
+    "name": "isDefaultReady",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      }
+    ],
+    "name": "isLate",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "makePayment",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "amountPaid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "paidoff",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      }
+    ],
+    "name": "refreshAccount",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint96",
+            "name": "unbilledPrincipal",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint64",
+            "name": "dueDate",
+            "type": "uint64"
+          },
+          {
+            "internalType": "int96",
+            "name": "correction",
+            "type": "int96"
+          },
+          {
+            "internalType": "uint96",
+            "name": "totalDue",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint96",
+            "name": "feesAndInterestDue",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint16",
+            "name": "missedPeriods",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "remainingPeriods",
+            "type": "uint16"
+          },
+          {
+            "internalType": "enum BaseStructs.CreditState",
+            "name": "state",
+            "type": "uint8"
+          }
+        ],
+        "internalType": "struct BaseStructs.CreditRecord",
+        "name": "cr",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_creditLimit",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_intervalInDays",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_numOfPayments",
+        "type": "uint256"
+      }
+    ],
+    "name": "requestCredit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      }
+    ],
+    "name": "triggerDefault",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "losses",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
