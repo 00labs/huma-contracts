@@ -16,7 +16,7 @@ interface ICredit {
     function changeCreditLine(address _borrower, uint256 newLine) external;
 
     /// Makes drawdown from an approved credit line
-    function drawdown(address borrower, uint256 _borrowAmount) external;
+    function drawdown(uint256 _borrowAmount) external;
 
     /// Extends the validity period of the credit line
     function extendCreditLineDuration(address borrower, uint256 numOfPeriods) external;

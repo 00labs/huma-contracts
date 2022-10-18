@@ -2748,6 +2748,11 @@ commander@3.0.2:
   resolved "https://registry.yarnpkg.com/commander/-/commander-3.0.2.tgz#6837c3fb677ad9933d1cfba42dd14d5117d6b39e"
   integrity sha512-Gar0ASD4BDyKC4hl4DwHqDrmvjoxWKZigVnAbn5H1owvm4CxCPdb0HQDehwNYMJpla5+M2tPmPARzhtYuwpHow==
 
+commander@^8.1.0:
+  version "8.3.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-8.3.0.tgz#4837ea1b2da67b9c616a67afbb0fafee567bca66"
+  integrity sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==
+
 compare-versions@^4.0.0:
   version "4.1.4"
   resolved "https://registry.yarnpkg.com/compare-versions/-/compare-versions-4.1.4.tgz#3571f4d610924d4414846a4183d386c8f3d51112"
@@ -8247,6 +8252,19 @@ solc@^0.6.3:
     js-sha3 "0.8.0"
     memorystream "^0.3.1"
     require-from-string "^2.0.0"
+    semver "^5.5.0"
+    tmp "0.0.33"
+
+solc@^0.8.17:
+  version "0.8.17"
+  resolved "https://registry.yarnpkg.com/solc/-/solc-0.8.17.tgz#c748fec6a64bf029ec406aa9b37e75938d1115ae"
+  integrity sha512-Dtidk2XtTTmkB3IKdyeg6wLYopJnBVxdoykN8oP8VY3PQjN16BScYoUJTXFm2OP7P0hXNAqWiJNmmfuELtLf8g==
+  dependencies:
+    command-exists "^1.2.8"
+    commander "^8.1.0"
+    follow-redirects "^1.12.1"
+    js-sha3 "0.8.0"
+    memorystream "^0.3.1"
     semver "^5.5.0"
     tmp "0.0.33"
 

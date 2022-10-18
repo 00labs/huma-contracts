@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 /**
  * @notice Interface for contracts that can record pre-approved credit request
  */
-interface IReceivable{
+interface IReceivable {
     /**
      * @param _borrower the borrower address
      * @param _creditLimit the limit of the credit
@@ -25,7 +25,6 @@ interface IReceivable{
         uint256 _receivableAmount
     ) external;
 
-
     /**
      * @notice reports after an payment is received for the borrower from a source
      * other than the borrower wallet
@@ -44,7 +43,6 @@ interface IReceivable{
 
     /// Makes drawdown using receivables included in the approval of the credit line
     function drawdownWithReceivable(
-        address _borrower,
         uint256 borrowAmount,
         address receivableAsset,
         uint256 receivableParam

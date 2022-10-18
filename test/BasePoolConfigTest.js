@@ -207,7 +207,7 @@ describe("Base Pool Config", function () {
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
-            await poolContract.connect(borrower).drawdown(borrower.address, 1_000_000);
+            await poolContract.connect(borrower).drawdown(1_000_000);
             // origination fee: 11000
             // first month interest: 10002
             let accruedIncome = await poolConfigContract.accruedIncome();

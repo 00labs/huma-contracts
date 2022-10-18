@@ -96,14 +96,11 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @param borrower the address of the borrower
      * @param borrowAmount the amount the user has borrowed
      * @param netAmountToBorrower the borrowing amount minus the fees that are charged upfront
-     * @param by the address that has initiated the borrowing. This is most likely the borrower.
-     * In rare case, this could be EA.
      */
     event DrawdownMade(
         address indexed borrower,
         uint256 borrowAmount,
-        uint256 netAmountToBorrower,
-        address by
+        uint256 netAmountToBorrower
     );
     /**
      * @notice A payment has been made against the credit line
@@ -199,14 +196,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * The borrower can borrow and pay back as many times as they would like.
      * @param borrowAmount the amount to borrow
      */
-    function drawdown(address borrower, uint256 borrowAmount) external virtual override {
+    function drawdown(uint256 borrowAmount) external virtual override {
+        address borrower = msg.sender;
         // Open access to the borrower
         if (borrowAmount == 0) revert Errors.zeroAmountProvided();
-        BS.CreditRecord memory cr = _creditRecordMapping[msg.sender];
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
 
         _checkDrawdownEligibility(borrower, cr, borrowAmount);
         uint256 netAmountToBorrower = _drawdown(borrower, cr, borrowAmount);
-        emit DrawdownMade(borrower, borrowAmount, netAmountToBorrower, msg.sender);
+        emit DrawdownMade(borrower, borrowAmount, netAmountToBorrower);
     }
 
     /**
@@ -713,6 +711,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 msg.sender
             );
         }
+
+        // amountToCollect == payoffAmount indicates whether it is paid off or not.
+        // Used this way to save a local varaible to battle with stack too deep issue.
         return (amountToCollect, amountToCollect == payoffAmount);
     }
 
