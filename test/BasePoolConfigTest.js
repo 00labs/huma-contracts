@@ -190,7 +190,9 @@ describe("Base Pool Config", function () {
             await testTokenContract
                 .connect(evaluationAgent2)
                 .approve(poolContract.address, 2_000_000);
-            await poolContract.connect(poolOwner).addApprovedLender(evaluationAgent2.address);
+            await poolConfigContract
+                .connect(poolOwner)
+                .addApprovedLender(evaluationAgent2.address);
             await expect(poolContract.connect(evaluationAgent2).deposit(2_000_000)).to.emit(
                 poolContract,
                 "LiquidityDeposited"
@@ -220,7 +222,9 @@ describe("Base Pool Config", function () {
             await testTokenContract
                 .connect(evaluationAgent2)
                 .approve(poolContract.address, 2_000_000);
-            await poolContract.connect(poolOwner).addApprovedLender(evaluationAgent2.address);
+            await poolConfigContract
+                .connect(poolOwner)
+                .addApprovedLender(evaluationAgent2.address);
             await expect(poolContract.connect(evaluationAgent2).deposit(2_000_000)).to.emit(
                 poolContract,
                 "LiquidityDeposited"

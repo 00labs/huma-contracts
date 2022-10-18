@@ -86,6 +86,9 @@ contract BasePoolConfig is Ownable {
 
     AccruedIncome internal _accuredIncome;
 
+    // The addresses that are allowed to lend to this pool. Configurable only by the pool owner
+    mapping(address => bool) internal _approvedLenders;
+
     event APRChanged(uint256 aprInBps, address by);
     event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
     event EARewardsAndLiquidityChanged(
@@ -126,6 +129,20 @@ contract BasePoolConfig is Ownable {
     event ProtocolRewardsWithdrawn(address receiver, uint256 amount, address by);
     event ReceivableRequiredInBpsChanged(uint256 receivableInBps, address by);
     event WithdrawalLockoutPeriodChanged(uint256 lockoutPeriodInDays, address by);
+
+    event AddApprovedLender(address indexed lender, address by);
+    event RemoveApprovedLender(address indexed lender, address by);
+
+    /**
+     * @notice Lenders need to pass compliance reqirements. Pool owner will administer off-chain
+     * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
+     * call this function to mark a lender as approved.
+     */
+    function addApprovedLender(address lender) external virtual {
+        _onlyOwnerOrHumaMasterAdmin();
+        _approvedLenders[lender] = true;
+        emit AddApprovedLender(lender, msg.sender);
+    }
 
     function initialize(
         string memory _poolName,
@@ -171,6 +188,16 @@ contract BasePoolConfig is Ownable {
         poolIncome = (valueForPool - ownerIncome - eaIncome);
 
         emit IncomeDistributed(protocolFee, ownerIncome, eaIncome, poolIncome);
+    }
+
+    /**
+     * @notice Disables a lender. This prevents the lender from making more deposits.
+     * The capital that the lender has contributed can continue to work as normal.
+     */
+    function removeApprovedLender(address lender) external virtual {
+        _onlyOwnerOrHumaMasterAdmin();
+        _approvedLenders[lender] = false;
+        emit RemoveApprovedLender(lender, msg.sender);
     }
 
     function reverseIncome(uint256 value) external returns (uint256 poolIncome) {
@@ -486,6 +513,11 @@ contract BasePoolConfig is Ownable {
         );
     }
 
+    /// Reports if the given account has been approved as a lender for this pool
+    function isApprovedLender(address account) external view virtual returns (bool) {
+        return _approvedLenders[account];
+    }
+
     function isOwnerOrEA(address account) public view returns (bool) {
         return (account == owner() || account == evaluationAgent);
     }
@@ -546,6 +578,11 @@ contract BasePoolConfig is Ownable {
         underlyingToken.safeTransferFrom(pool, receiver, amount);
 
         emit EvaluationAgentRewardsWithdrawn(receiver, amount, caller);
+    }
+
+    /// "Modifier" function that limits access to approved lenders only.
+    function _onlyApprovedLender(address lender) external view {
+        if (!_approvedLenders[lender]) revert Errors.permissionDeniedNotLender();
     }
 
     /// "Modifier" function that limits access to pool owner or EA.
