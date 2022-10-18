@@ -616,11 +616,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
         ) - payoffCorrection;
 
-        console.log("cr.unbilledPrincipal=", cr.unbilledPrincipal);
-        console.log("cr.totalDue=", cr.totalDue);
-        console.logInt(cr.correction);
-        console.log("payoffAmount=", payoffAmount);
-
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
         uint256 amountToCollect;
@@ -778,7 +773,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // Gets the up-to-date due information for the borrower. If the account has been
         // late or dormant for multiple cycles, getDueInfo() will bring it current and
         // return the most up-to-date due information.
-        uint256 periodsPassed;
+        uint256 periodsPassed = 0;
         int96 newCharges;
         (
             periodsPassed,
