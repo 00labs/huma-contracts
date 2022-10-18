@@ -98,7 +98,7 @@ describe("Credit Line Integration Test", async function () {
 
         dueDate = blockBefore.timestamp + 2592000;
 
-        await poolContract.connect(borrower).drawdown(borrower.address, 2000);
+        await poolContract.connect(borrower).drawdown(2000);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5040, 1900, dueDate, 0, 120, 20, 0, 11, 1217, 30, 3, 0);
@@ -110,7 +110,7 @@ describe("Credit Line Integration Test", async function () {
     it("Day 15: Second drawdown (to test offset)", async function () {
         advanceClock(15);
 
-        await poolContract.connect(borrower).drawdown(borrower.address, 2000);
+        await poolContract.connect(borrower).drawdown(2000);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5040, 3900, dueDate, 10, 120, 20, 0, 11, 1217, 30, 3, 0);
@@ -263,7 +263,7 @@ describe("Credit Line Integration Test", async function () {
         advanceClock(80);
         dueDate += 2592000 * 3;
 
-        await poolContract.connect(borrower).drawdown(borrower.address, 4000);
+        await poolContract.connect(borrower).drawdown(4000);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5040, 4000, dueDate, 40, 0, 0, 0, 1, 1217, 30, 3, 0);
@@ -297,14 +297,14 @@ describe("Credit Line Integration Test", async function () {
 
     it("Day 352: Drawdown blocked due to over limit", async function () {
         advanceClock(2);
-        await expect(
-            poolContract.connect(borrower).drawdown(borrower.address, 2000)
-        ).to.be.revertedWith("creditLineExceeded()");
+        await expect(poolContract.connect(borrower).drawdown(2000)).to.be.revertedWith(
+            "creditLineExceeded()"
+        );
     });
 
     it("Day 355: Additional drawdown within limit allowed", async function () {
         advanceClock(3);
-        await poolContract.connect(borrower).drawdown(borrower.address, 1000);
+        await poolContract.connect(borrower).drawdown(1000);
         record = await poolContract.creditRecordMapping(borrower.address);
         recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
         checkRecord(record, recordStatic, 5040, 1000, dueDate, 1, 4060, 20, 0, 2, 1217, 30, 3, 0);
@@ -344,9 +344,9 @@ describe("Credit Line Integration Test", async function () {
 
     it("Day 400: Additional drawdown blocked (credit line matured)", async function () {
         advanceClock(10);
-        await expect(
-            poolContract.connect(borrower).drawdown(borrower.address, 10)
-        ).to.be.revertedWith("creditExpiredDueToMaturity()");
+        await expect(poolContract.connect(borrower).drawdown(10)).to.be.revertedWith(
+            "creditExpiredDueToMaturity()"
+        );
     });
 
     it("Day 415: Payoff", async function () {

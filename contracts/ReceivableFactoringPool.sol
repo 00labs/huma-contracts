@@ -36,7 +36,6 @@ contract ReceivableFactoringPool is
         address indexed borrower,
         uint256 borrowAmount,
         uint256 netAmountToBorrower,
-        address by,
         address receivableAsset,
         uint256 receivableParam
     );
@@ -59,7 +58,6 @@ contract ReceivableFactoringPool is
      * drawdownWithReceivable() should be used instead.
      */
     function drawdown(
-        address, /*borrower*/
         uint256 /*borrowAmount*/
     ) external virtual override {
         /// Intentional empty implementation to disable this function.
@@ -71,12 +69,12 @@ contract ReceivableFactoringPool is
     //  * it is tokenId; for ERC20, it is the quantity of the asset
 
     function drawdownWithReceivable(
-        address borrower,
         uint256 borrowAmount,
         address receivableAsset,
         uint256 receivableParam
     ) external virtual override {
-        BS.CreditRecord memory cr = _creditRecordMapping[msg.sender];
+        address borrower = msg.sender;
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
         if (cr.state == BS.CreditState.Approved)
@@ -87,7 +85,6 @@ contract ReceivableFactoringPool is
             borrower,
             borrowAmount,
             netAmountToBorrower,
-            msg.sender,
             receivableAsset,
             receivableParam
         );

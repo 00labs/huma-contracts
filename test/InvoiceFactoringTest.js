@@ -433,9 +433,9 @@ describe("Invoice Factoring", function () {
 
         it("Should not allow calling to drawdown()", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
-            await expect(
-                poolContract.connect(borrower).drawdown(borrower.address, 1_000_000)
-            ).to.be.revertedWith("drawdownFunctionUsedInsteadofDrawdownWithReceivable");
+            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
+                "drawdownFunctionUsedInsteadofDrawdownWithReceivable"
+            );
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
@@ -444,7 +444,6 @@ describe("Invoice Factoring", function () {
                 poolContract
                     .connect(borrower)
                     .drawdownWithReceivable(
-                        borrower.address,
                         1_000_000,
                         invoiceNFTContract.address,
                         invoiceNFTTokenId
@@ -457,7 +456,6 @@ describe("Invoice Factoring", function () {
                 poolContract
                     .connect(borrower)
                     .drawdownWithReceivable(
-                        borrower.address,
                         1_000_000,
                         ethers.constants.AddressZero,
                         invoiceNFTTokenId
@@ -466,11 +464,16 @@ describe("Invoice Factoring", function () {
         });
 
         it("Should be able to borrow amount less than approved", async function () {
-            await poolContract
-                .connect(borrower)
-                .drawdownWithReceivable(
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(200_000, invoiceNFTContract.address, invoiceNFTTokenId)
+            )
+                .to.emit(poolContract, "DrawdownMadeWithReceivable")
+                .withArgs(
                     borrower.address,
                     200_000,
+                    197_000,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId
                 );
@@ -501,12 +504,7 @@ describe("Invoice Factoring", function () {
         it("Should be able to borrow the full approved amount", async function () {
             await poolContract
                 .connect(borrower)
-                .drawdownWithReceivable(
-                    borrower.address,
-                    1_000_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId
-                );
+                .drawdownWithReceivable(1_000_000, invoiceNFTContract.address, invoiceNFTTokenId);
 
             // Keccack hash is properly computed
             expect(
@@ -580,12 +578,7 @@ describe("Invoice Factoring", function () {
 
             await poolContract
                 .connect(borrower)
-                .drawdownWithReceivable(
-                    borrower.address,
-                    1_000_000,
-                    invoiceNFTContract.address,
-                    invoiceNFTTokenId
-                );
+                .drawdownWithReceivable(1_000_000, invoiceNFTContract.address, invoiceNFTTokenId);
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
 
