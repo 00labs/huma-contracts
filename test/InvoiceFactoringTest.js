@@ -431,6 +431,13 @@ describe("Invoice Factoring", function () {
             await humaConfigContract.connect(protocolOwner).unpauseProtocol();
         });
 
+        it("Should not allow calling to drawdown()", async function () {
+            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await expect(
+                poolContract.connect(borrower).drawdown(borrower.address, 1_000_000)
+            ).to.be.revertedWith("drawdownFunctionUsedInsteadofDrawdownWithReceivable");
+        });
+
         it("Should not allow loan funding while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pauseProtocol();
             await expect(

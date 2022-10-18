@@ -616,8 +616,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
         ) - payoffCorrection;
 
-        bool paidOff = false;
-
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
         uint256 amountToCollect;
@@ -625,25 +623,33 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // The amount to be applied towards principal
         uint256 principalPayment = 0;
 
-        if (amount < cr.totalDue) {
-            amountToCollect = amount;
-            cr.totalDue = uint96(cr.totalDue - amount);
+        if (amount < payoffAmount) {
+            if (amount < cr.totalDue) {
+                amountToCollect = amount;
+                cr.totalDue = uint96(cr.totalDue - amount);
 
-            if (amount <= cr.feesAndInterestDue) {
-                cr.feesAndInterestDue = uint96(cr.feesAndInterestDue - amount);
+                if (amount <= cr.feesAndInterestDue) {
+                    cr.feesAndInterestDue = uint96(cr.feesAndInterestDue - amount);
+                } else {
+                    principalPayment = amount - cr.feesAndInterestDue;
+                    cr.feesAndInterestDue = 0;
+                }
             } else {
+                amountToCollect = amount;
+
+                // Apply extra payments towards principal, reduce unbilledPrincipal amount
+                cr.unbilledPrincipal -= uint96(amount - cr.totalDue);
+
                 principalPayment = amount - cr.feesAndInterestDue;
+                cr.totalDue = 0;
                 cr.feesAndInterestDue = 0;
+                cr.missedPeriods = 0;
+
+                // Moves account to GoodStanding if it was delayed.
+                if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
             }
-            if (cr.state == BS.CreditState.Defaulted)
-                _recoverDefaultedAmount(borrower, amountToCollect);
-        } else if (amount < payoffAmount) {
-            amountToCollect = amount;
 
-            // Apply extra payments towards principal, reduce unbilledPrincipal amount
-            cr.unbilledPrincipal -= uint96(amount - cr.totalDue);
-
-            principalPayment = amount - cr.feesAndInterestDue;
+            // Gets the correction.
             if (principalPayment > 0) {
                 // If there is principal payment, calcuate new correction
                 cr.correction -= int96(
@@ -656,12 +662,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                     )
                 );
             }
-            cr.feesAndInterestDue = 0;
-            cr.totalDue = 0;
-            cr.missedPeriods = 0;
-
-            // Moves account to GoodStanding if it was delayed.
-            if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
 
             // Recovers funds to the pool if the account is Defaulted.
             // Only moves it to GoodStanding only after payoff, handled in the payoff branch
@@ -669,7 +669,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 _recoverDefaultedAmount(borrower, amountToCollect);
         } else {
             // Payoff logic
-            paidOff = true;
             principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
             amountToCollect = payoffAmount;
 
@@ -714,7 +713,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 msg.sender
             );
         }
-        return (amountToCollect, paidOff);
+        return (amountToCollect, amountToCollect == payoffAmount);
     }
 
     /**
@@ -774,22 +773,25 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // Gets the up-to-date due information for the borrower. If the account has been
         // late or dormant for multiple cycles, getDueInfo() will bring it current and
         // return the most up-to-date due information.
-        uint256 periodsPassed;
-        uint256 newCharges;
+        uint256 periodsPassed = 0;
+        int96 newCharges;
         (
             periodsPassed,
             cr.feesAndInterestDue,
             cr.totalDue,
             cr.unbilledPrincipal,
-            cr.correction,
             newCharges
         ) = _feeManager.getDueInfo(cr, _getCreditRecordStatic(borrower));
 
         if (periodsPassed > 0) {
+            cr.correction = 0;
             // Distribute income
             if (cr.state != BS.CreditState.Defaulted) {
-                if (distributeChargesForLastCycle) distributeIncome(newCharges);
-                else distributeIncome(newCharges - cr.feesAndInterestDue);
+                if (!distributeChargesForLastCycle)
+                    newCharges = newCharges - int96(cr.feesAndInterestDue);
+
+                if (newCharges > 0) distributeIncome(uint256(uint96(newCharges)));
+                else if (newCharges < 0) reverseIncome(uint256(uint96(0 - newCharges)));
             }
 
             if (cr.dueDate > 0)

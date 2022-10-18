@@ -702,7 +702,22 @@ describe("Base Credit Pool", function () {
 
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_500_000, 110_002, dueDate, -8902, 0, 0, 0, 11, 1217, 30, 3, 0);
+            await checkRecord(
+                r,
+                rs,
+                1_500_000,
+                110_002,
+                dueDate,
+                -8902,
+                0,
+                0,
+                0,
+                11,
+                1217,
+                30,
+                3,
+                0
+            );
 
             // Consumes negative correction.
             await advanceClock(90);
@@ -714,13 +729,13 @@ describe("Base Credit Pool", function () {
             ).to.emit(poolContract, "PaymentMade");
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_500_000, 60_002, dueDate, -6102, 0, 0, 0, 8, 1217, 30, 3, 0);
+            await checkRecord(r, rs, 1_500_000, 60_275, dueDate, -458, 0, 0, 0, 8, 1217, 30, 3, 0);
 
-            await testTokenContract.connect(borrower).mint(borrower.address, 53_500);
-            await testTokenContract.connect(borrower).approve(poolContract.address, 53_500);
-            await expect(
-                poolContract.connect(borrower).makePayment(borrower.address, 53_500)
-            ).to.emit(poolContract, "PaymentMade");
+            await testTokenContract.connect(borrower).mint(borrower.address, 60_000);
+            await testTokenContract.connect(borrower).approve(poolContract.address, 60_000);
+            await expect(poolContract.connect(borrower).makePayment(borrower.address, 60_000))
+                .to.emit(poolContract, "PaymentMade")
+                .withArgs(borrower.address, 59215, 0, 0, borrower.address);
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
             checkRecord(r, rs, 1_500_000, 0, dueDate, 0, 0, 0, 0, 8, 1217, 30, 3, 0);

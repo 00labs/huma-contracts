@@ -58,8 +58,12 @@ contract ReceivableFactoringPool is
      * @notice Drawdown function is disabled for this contract intentionally.
      * drawdownWithReceivable() should be used instead.
      */
-    function drawdown(address borrower, uint256 borrowAmount) external virtual override {
+    function drawdown(
+        address, /*borrower*/
+        uint256 /*borrowAmount*/
+    ) external virtual override {
         /// Intentional empty implementation to disable this function.
+        revert Errors.drawdownFunctionUsedInsteadofDrawdownWithReceivable();
     }
 
     //      * @param receivableAsset the contract address of the receivable
