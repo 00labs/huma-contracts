@@ -713,8 +713,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         }
 
         // amountToCollect == payoffAmount indicates whether it is paid off or not.
-        // Used this way to save a local varaible to battle with stack too deep issue.
-        return (amountToCollect, amountToCollect == payoffAmount);
+        // Use >= as a safe practice
+        return (amountToCollect, amountToCollect >= payoffAmount);
     }
 
     /**

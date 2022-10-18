@@ -113,7 +113,7 @@ contract ReceivableFactoringPool is
         onlyPDSServiceAccount();
 
         // Makes sure no repeated processing of a payment.
-        if (_processedPaymentIds[paymentIdHash] == true) revert Errors.paymentAlreadyProcessed();
+        if (_processedPaymentIds[paymentIdHash]) revert Errors.paymentAlreadyProcessed();
 
         _processedPaymentIds[paymentIdHash] = true;
 
@@ -253,10 +253,11 @@ contract ReceivableFactoringPool is
         uint256 receivableParam,
         uint256 receivableAmount
     ) internal virtual {
-        BS.ReceivableInfo memory ri;
-        ri.receivableAsset = receivableAsset;
-        ri.receivableParam = receivableParam;
-        ri.receivableAmount = uint88(receivableAmount);
+        BS.ReceivableInfo memory ri = BS.ReceivableInfo(
+            receivableAsset,
+            uint88(receivableAmount),
+            receivableParam
+        );
         _receivableInfoMapping[borrower] = ri;
     }
 

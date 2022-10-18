@@ -13,8 +13,8 @@ library BaseStructs {
     struct CreditRecord {
         uint96 unbilledPrincipal; // the amount of principal not included in the bill
         uint64 dueDate; // the due date of the next payment
-        // correction is the adjustment of interest over or under-counted becasue of drawdown
-        // or principal payment in the middle of a month
+        // correction is the adjustment of interest over or under-counted because of drawdown
+        // or principal payment in the middle of a billing period
         int96 correction;
         uint96 totalDue; // the due amount of the next payment
         uint96 feesAndInterestDue; // interest and fees due for the next payment
@@ -26,7 +26,7 @@ library BaseStructs {
     struct CreditRecordStatic {
         uint96 creditLimit; // the limit of the credit line
         uint16 aprInBps; // annual percentage rate in basis points, 3.75% is represented as 375
-        uint16 intervalInDays; // # of seconds in one billing period
+        uint16 intervalInDays; // # of days in one billing period
         uint96 defaultAmount; // the amount that has been defaulted.
     }
 

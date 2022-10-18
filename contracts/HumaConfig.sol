@@ -86,7 +86,7 @@ contract HumaConfig is Ownable {
 
     /// Makes sure the msg.sender is one of the pausers
     modifier onlyPausers() {
-        if (pausers[msg.sender] == false) revert Errors.notPauser();
+        if (!pausers[msg.sender]) revert Errors.notPauser();
         _;
     }
 
@@ -155,7 +155,7 @@ contract HumaConfig is Ownable {
      */
     function removePauser(address _pauser) external onlyOwner {
         if (_pauser == address(0)) revert Errors.zeroAddressProvided();
-        if (pausers[_pauser] == false) revert Errors.notPauser();
+        if (!pausers[_pauser]) revert Errors.notPauser();
 
         pausers[_pauser] = false;
 
@@ -171,7 +171,7 @@ contract HumaConfig is Ownable {
      */
     function removePoolAdmin(address _poolAdmin) external onlyOwner {
         if (_poolAdmin == address(0)) revert Errors.zeroAddressProvided();
-        if (poolAdmins[_poolAdmin] == false) revert Errors.notPoolOwner();
+        if (!poolAdmins[_poolAdmin]) revert Errors.notPoolOwner();
 
         poolAdmins[_poolAdmin] = false;
 

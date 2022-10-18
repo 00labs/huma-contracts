@@ -151,6 +151,9 @@ contract BasePoolConfig is Ownable {
         address _feeManager
     ) external onlyOwner {
         poolName = _poolName;
+        if (_poolToken == address(0)) revert Errors.zeroAddressProvided();
+        if (_humaConfig == address(0)) revert Errors.zeroAddressProvided();
+        if (_feeManager == address(0)) revert Errors.zeroAddressProvided();
         poolToken = HDT(_poolToken);
 
         humaConfig = HumaConfig(_humaConfig);
@@ -268,6 +271,9 @@ contract BasePoolConfig is Ownable {
         // not enough balance, the transaction will fail. PoolOwner has to find enough
         // liquidity to pay the EA before replacing it.
         address oldEA = evaluationAgent;
+        evaluationAgent = agent;
+        evaluationAgentId = eaId;
+
         if (oldEA != address(0)) {
             uint256 rewardsToPayout = _accuredIncome._eaIncome - _accuredIncome._eaIncomeWithdrawn;
             if (rewardsToPayout > 0) {
@@ -275,13 +281,12 @@ contract BasePoolConfig is Ownable {
             }
         }
 
-        evaluationAgent = agent;
-        evaluationAgentId = eaId;
         emit EvaluationAgentChanged(oldEA, agent, eaId, msg.sender);
     }
 
     function setFeeManager(address _feeManager) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (_feeManager == address(0)) revert Errors.zeroAddressProvided();
         feeManager = _feeManager;
         emit FeeManagerChanged(_feeManager, msg.sender);
     }
@@ -305,6 +310,7 @@ contract BasePoolConfig is Ownable {
 
     function setPool(address _pool) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (_pool == address(0)) revert Errors.zeroAddressProvided();
         pool = _pool;
         emit PoolChanged(_pool, msg.sender);
     }
