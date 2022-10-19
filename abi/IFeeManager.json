@@ -1,0 +1,266 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "dueDate",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "aprInBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "calcCorrection",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "correction",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "calcFrontLoadingFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "fees",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "dueDate",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalDue",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      }
+    ],
+    "name": "calcLateFee",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "fees",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint96",
+            "name": "unbilledPrincipal",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint64",
+            "name": "dueDate",
+            "type": "uint64"
+          },
+          {
+            "internalType": "int96",
+            "name": "correction",
+            "type": "int96"
+          },
+          {
+            "internalType": "uint96",
+            "name": "totalDue",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint96",
+            "name": "feesAndInterestDue",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint16",
+            "name": "missedPeriods",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "remainingPeriods",
+            "type": "uint16"
+          },
+          {
+            "internalType": "enum BaseStructs.CreditState",
+            "name": "state",
+            "type": "uint8"
+          }
+        ],
+        "internalType": "struct BaseStructs.CreditRecord",
+        "name": "_cr",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint96",
+            "name": "creditLimit",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint16",
+            "name": "aprInBps",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "intervalInDays",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint96",
+            "name": "defaultAmount",
+            "type": "uint96"
+          }
+        ],
+        "internalType": "struct BaseStructs.CreditRecordStatic",
+        "name": "_crStatic",
+        "type": "tuple"
+      }
+    ],
+    "name": "getDueInfo",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "periodsPassed",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint96",
+        "name": "feesAndInterestDue",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint96",
+        "name": "totalDue",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint96",
+        "name": "unbilledPrincipal",
+        "type": "uint96"
+      },
+      {
+        "internalType": "int96",
+        "name": "totalCharges",
+        "type": "int96"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getFees",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "_frontLoadingFeeFlat",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_frontLoadingFeeBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_lateFeeFlat",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_lateFeeBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_membershipFee",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_frontLoadingFeeFlat",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_frontLoadingFeeBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_lateFeeFlat",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_lateFeeBps",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_membershipFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "setFees",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_minPrincipalRateInBps",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMinPrincipalRateInBps",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
