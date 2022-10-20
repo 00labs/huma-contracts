@@ -86,11 +86,6 @@
   },
   {
     "inputs": [],
-    "name": "permissionDeniedNotLender",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "poolIsNotOn",
     "type": "error"
   },
@@ -138,25 +133,6 @@
     "inputs": [],
     "name": "zeroAmountProvided",
     "type": "error"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "lender",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "AddApprovedLender",
-    "type": "event"
   },
   {
     "anonymous": false,
@@ -696,38 +672,6 @@
     "type": "event"
   },
   {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "lender",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
-      }
-    ],
-    "name": "RemoveApprovedLender",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "lender",
-        "type": "address"
-      }
-    ],
-    "name": "addApprovedLender",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -1073,25 +1017,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "isApprovedLender",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
         "name": "borrower",
         "type": "address"
       }
@@ -1415,19 +1340,6 @@
         "type": "tuple"
       }
     ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "lender",
-        "type": "address"
-      }
-    ],
-    "name": "removeApprovedLender",
-    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
