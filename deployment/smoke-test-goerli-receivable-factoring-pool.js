@@ -23,6 +23,9 @@ async function smokeTest() {
 
     const protocolPaused = await humaConfig.isProtocolPaused();
     console.log("Huma protocol is on: " + !protocolPaused);
+    if (protocolPaused) {
+        throw new Error("Protocol is Paused!")
+    }
 
     console.log("*******************************************************************");
     console.log("*                       Checking pool status                      *");
@@ -42,6 +45,10 @@ async function smokeTest() {
 
     const poolOn = await receivableFactoringPool.isPoolOn();
     console.log("ReceivableFactoringPool is on: " + poolOn);
+
+    if (!poolOn) {
+        throw new Error("ReceivableFactoringPool is off!")
+    }
 
     const totalPoolValue = await receivableFactoringPool.totalPoolValue();
     console.log("ReceivableFactoringPool total pool value: " + totalPoolValue);
