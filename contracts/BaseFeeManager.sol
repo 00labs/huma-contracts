@@ -21,16 +21,16 @@ contract BaseFeeManager is IFeeManager, Ownable {
     uint256 private constant SECONDS_IN_A_YEAR = 31536000;
     uint256 private constant SECONDS_IN_A_DAY = 86400;
 
-    /// Part of platform fee, charged when a borrow happens as a flat amount
+    /// Part of platform fee, charged as a flat amount when a borrow happens
     uint256 public frontLoadingFeeFlat;
 
-    /// Part of platform fee, charged when a borrow happens as a % of the borrowing amount
+    /// Part of platform fee, charged as a % of the borrowing amount when a borrow happens
     uint256 public frontLoadingFeeBps;
 
-    /// Part of late fee, charged when a payment is late as a flat amount of the pool token
+    /// Part of late fee, charged as a flat amount of the pool token when a payment is late
     uint256 public lateFeeFlat;
 
-    /// Part of late fee, charged when a payment is late as % of the totaling outstanding balance
+    /// Part of late fee, charged as % of the totaling outstanding balance when a payment is late
     uint256 public lateFeeBps;
 
     // membership fee per pay period. It is a flat fee
