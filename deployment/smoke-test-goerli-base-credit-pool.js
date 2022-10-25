@@ -26,6 +26,11 @@ async function smokeTest() {
     if (protocolPaused) {
         throw new Error("Protocol is Paused!")
     }
+    const protocolFee = await humaConfig.protocolFee();
+    console.log("Huma protocol fee is: " + protocolFee);
+
+    const humaTreasuryAddress = await humaConfig.humaTreasury();
+    console.log("huma treasury address is: " + humaTreasuryAddress);
 
     console.log("*******************************************************************");
     console.log("*                       Checking pool status                      *");
