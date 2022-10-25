@@ -27,7 +27,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     /// Part of platform fee, charged as a % of the borrowing amount when a borrow happens
     uint256 public frontLoadingFeeBps;
 
-    /// Part of late fee, charged as a flat amount of the pool token when a payment is late
+    /// Part of late fee, charged as a flat amount when a payment is late
     uint256 public lateFeeFlat;
 
     /// Part of late fee, charged as % of the totaling outstanding balance when a payment is late
