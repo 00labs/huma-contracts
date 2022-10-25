@@ -39,6 +39,9 @@ contract BasePoolStorage {
     // whether the pool is ON or OFF
     PoolStatus internal _status;
 
+    // The addresses that are allowed to lend to this pool. Configurable only by the pool owner
+    mapping(address => bool) internal _approvedLenders;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
