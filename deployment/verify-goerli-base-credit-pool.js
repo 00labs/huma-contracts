@@ -106,8 +106,8 @@ async function verifyContracts() {
     const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
         [
             0,
-            `'${deployer.address}'`,
-            `'${deployer.address}'`,
+            `['${deployer.address}']`,
+            `['${deployer.address}']`,
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
