@@ -690,6 +690,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.unbilledPrincipal = 0;
             cr.feesAndInterestDue = 0;
             cr.totalDue = 0;
+            cr.missedPeriods = 0;
 
             // Closes the credit line if it is in the final period
             if (cr.remainingPeriods == 0) {

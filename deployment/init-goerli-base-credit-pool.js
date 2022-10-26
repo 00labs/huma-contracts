@@ -232,16 +232,6 @@ async function initBaseCreditPoolConfig() {
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
 
     await updateInitilizedContract("BaseCreditPoolConfig");
-
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addApprovedLender", [
-        deployer.address,
-    ]);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addApprovedLender", [
-        ea_bcp.address,
-    ]);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addApprovedLender", [
-        lender.address,
-    ]);
 }
 
 async function initBaseCreditPool() {
@@ -280,6 +270,10 @@ async function prepareBaseCreditPool() {
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
     const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]);
 
+    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [deployer.address]);
+    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [ea_bcp.address]);
+    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [lender.address]);
+
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
     const decimals = await usdc.decimals();
@@ -312,14 +306,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    await initHumaConfig();
-    await initEA();
+    // await initHumaConfig();
+    // await initEA();
     await initBaseCreditPoolFeeManager();
-    await initBaseCreditPoolHDT();
-    await initBaseCreditPoolConfig();
-    await initBaseCreditPool();
-
-    await prepareBaseCreditPool();
+    // await initBaseCreditPoolHDT();
+    // await initBaseCreditPoolConfig();
+    // await initBaseCreditPool();
+    //
+    // await prepareBaseCreditPool();
 }
 
 initContracts()

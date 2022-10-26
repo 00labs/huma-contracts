@@ -35,6 +35,9 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     event PoolDisabled(address indexed by);
     event PoolEnabled(address indexed by);
 
+    event AddApprovedLender(address indexed lender, address by);
+    event RemoveApprovedLender(address indexed lender, address by);
+
     /**
      * @dev This event emits when new losses are distributed
      * @param lossesDistributed the amount of losses by the pool
@@ -173,6 +176,17 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
 
     /**
+     * @notice Lenders need to pass compliance reqirements. Pool owner will administer off-chain
+     * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
+     * call this function to mark a lender as approved.
+     */
+    function addApprovedLender(address lender) external virtual override {
+        _onlyOwnerOrHumaMasterAdmin();
+        _approvedLenders[lender] = true;
+        emit AddApprovedLender(lender, msg.sender);
+    }
+
+    /**
      * @notice turns off the pool
      */
     function disablePool() external virtual override {
@@ -191,6 +205,16 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
         _status = PoolStatus.On;
         emit PoolEnabled(msg.sender);
+    }
+
+    /**
+     * @notice Disables a lender. This prevents the lender from making more deposits.
+     * The capital that the lender has contributed can continue to work as normal.
+     */
+    function removeApprovedLender(address lender) external virtual override {
+        _onlyOwnerOrHumaMasterAdmin();
+        _approvedLenders[lender] = false;
+        emit RemoveApprovedLender(lender, msg.sender);
     }
 
     /**
@@ -241,6 +265,11 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         poolToken_ = address(_poolToken);
         humaConfig_ = address(_humaConfig);
         feeManager_ = address(_feeManager);
+    }
+
+    /// Reports if the given account has been approved as a lender for this pool
+    function isApprovedLender(address account) external view virtual override returns (bool) {
+        return _approvedLenders[account];
     }
 
     /// Gets the on/off status of the pool
@@ -309,7 +338,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
     /// "Modifier" function that limits access to approved lenders only.
     function _onlyApprovedLender(address lender) internal view {
-        _poolConfig._onlyApprovedLender(lender);
+        if (!_approvedLenders[lender]) revert Errors.permissionDeniedNotLender();
     }
 
     /// "Modifier" function that limits access to pool owner or protocol owner
