@@ -1,12 +1,1 @@
-{
-  "HumaConfig": "Done",
-  "ReceivableFactoringPoolFeeManager": "Done",
-  "HDT": "Done",
-  "EANFT": "Done",
-  "ReceivableFactoringPoolConfig": "Done",
-  "ReceivableFactoringPool": "Done",
-  "BaseCreditPoolFeeManager": "Done",
-  "BaseCreditHDT": "Done",
-  "BaseCreditPoolConfig": "Done",
-  "BaseCreditPool": "Done"
-}
+{"HumaConfig":"Done","ReceivableFactoringPoolFeeManager":"Done","HDT":"Done","EANFT":"Done","ReceivableFactoringPoolConfig":"Done","ReceivableFactoringPool":"Done"}
