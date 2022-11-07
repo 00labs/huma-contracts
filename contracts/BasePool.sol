@@ -225,13 +225,14 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         address oldConfig = address(_poolConfig);
         if (poolConfigAddr == oldConfig) revert Errors.sameValue();
 
+        // note set old pool config allowance to 0
+        _safeApproveForPoolConfig(0);
+
         BasePoolConfig newPoolConfig = BasePoolConfig(poolConfigAddr);
         newPoolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
 
         _poolConfig = newPoolConfig;
 
-        // note set old pool config allowance to 0
-        _safeApproveForPoolConfig(0);
         // note approve max amount to pool config for admin withdraw functions
         _safeApproveForPoolConfig(type(uint256).max);
 
