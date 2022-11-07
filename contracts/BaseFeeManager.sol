@@ -18,8 +18,8 @@ contract BaseFeeManager is IFeeManager, Ownable {
     // Divider to convert BPS to percentage
     uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
-    uint256 private constant SECONDS_IN_A_YEAR = 31536000;
-    uint256 private constant SECONDS_IN_A_DAY = 86400;
+    uint256 private constant SECONDS_IN_A_YEAR = 365 days;
+    uint256 private constant SECONDS_IN_A_DAY = 1 days;
 
     /// Part of platform fee, charged as a flat amount when a borrow happens
     uint256 public frontLoadingFeeFlat;

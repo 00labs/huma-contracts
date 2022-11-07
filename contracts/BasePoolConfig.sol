@@ -59,8 +59,8 @@ contract BasePoolConfig is Ownable {
     }
 
     uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
-    uint256 private constant SECONDS_IN_A_DAY = 86400;
-    uint256 private constant SECONDS_IN_180_DAYS = 15552000;
+    uint256 private constant SECONDS_IN_A_DAY = 1 days;
+    uint256 private constant SECONDS_IN_180_DAYS = 180 days;
     uint256 private constant WITHDRAWAL_LOCKOUT_PERIOD_IN_SECONDS = SECONDS_IN_180_DAYS;
 
     string public poolName;
