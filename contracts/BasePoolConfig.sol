@@ -395,6 +395,9 @@ contract BasePoolConfig is Ownable {
             revert Errors.withdrawnAmountHigherThanBalance();
         _accuredIncome._protocolIncomeWithdrawn += amount;
         address treasuryAddress = humaConfig.humaTreasury();
+        // It is possible that Huma protocolTreasury is missed in the setup. If that happens,
+        // the transaction is reverted. The protocol owner can still withdraw protocol fee
+        // after protocolTreasury is configured in HumaConfig.
         if (treasuryAddress != address(0)) {
             underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
             emit ProtocolRewardsWithdrawn(treasuryAddress, amount, msg.sender);
