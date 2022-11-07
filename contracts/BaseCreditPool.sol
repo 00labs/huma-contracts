@@ -135,6 +135,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     ) public virtual override {
         _protocolAndPoolOn();
         onlyEAServiceAccount();
+        _maxCreditLineCheck(creditLimit);
         BS.CreditRecordStatic memory crs = _getCreditRecordStatic(borrower);
         crs.creditLimit = uint96(creditLimit);
         crs.aprInBps = uint16(aprInBps);

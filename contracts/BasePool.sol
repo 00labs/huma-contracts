@@ -168,7 +168,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function reverseIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.reverseIncome(value);
-        _totalPoolValue -= poolIncome;
+        if (_totalPoolValue > poolIncome) _totalPoolValue -= poolIncome;
+        else _totalPoolValue = 0;
     }
 
     //********************************************/
