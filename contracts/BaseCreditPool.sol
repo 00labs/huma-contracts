@@ -118,7 +118,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     );
 
     /**
-     * @notice Approves the credit request with the terms on record.
+     * @notice Approves the credit request with the terms provided.
      * @param borrower the address of the borrower
      * @param creditLimit the credit limit of the credit line
      * @param intervalInDays the number of days in each pay cycle
