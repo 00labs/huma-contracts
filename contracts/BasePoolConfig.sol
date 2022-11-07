@@ -218,6 +218,9 @@ contract BasePoolConfig is Ownable {
 
     function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external {
         _onlyOwnerOrHumaMasterAdmin();
+
+        if (rewardsRate > HUNDRED_PERCENT_IN_BPS || liquidityRate > HUNDRED_PERCENT_IN_BPS)
+            revert Errors.invalidBasisPointHigherThan10000();
         _poolConfig._rewardRateInBpsForEA = rewardsRate;
         _poolConfig._liquidityRateInBpsByEA = liquidityRate;
         emit EARewardsAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
@@ -266,6 +269,7 @@ contract BasePoolConfig is Ownable {
 
     function setHumaConfig(address _humaConfig) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (_humaConfig == address(0)) revert Errors.zeroAddressProvided();
         humaConfig = HumaConfig(_humaConfig);
         emit HumaConfigChanged(_humaConfig, msg.sender);
     }
@@ -304,12 +308,16 @@ contract BasePoolConfig is Ownable {
      */
     function setPoolLiquidityCap(uint256 liquidityCap) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (liquidityCap == 0) revert Errors.zeroAmountProvided();
         _poolConfig._liquidityCap = liquidityCap;
         emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
     }
 
     function setPoolOwnerRewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (rewardsRate > HUNDRED_PERCENT_IN_BPS || liquidityRate > HUNDRED_PERCENT_IN_BPS)
+            revert Errors.invalidBasisPointHigherThan10000();
+
         _poolConfig._rewardRateInBpsForPoolOwner = rewardsRate;
         _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
         emit PoolOwnerRewardsAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
@@ -317,6 +325,7 @@ contract BasePoolConfig is Ownable {
 
     function setPoolPayPeriod(uint256 periodInDays) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (periodInDays == 0) revert Errors.zeroAmountProvided();
         _poolConfig._payPeriodInDays = periodInDays;
         emit PoolPayPeriodChanged(periodInDays, msg.sender);
     }
@@ -332,6 +341,7 @@ contract BasePoolConfig is Ownable {
 
     function setPoolToken(address _poolToken) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (_poolToken == address(0)) revert Errors.zeroAddressProvided();
         poolToken = HDT(_poolToken);
         address assetToken = poolToken.assetToken();
         underlyingToken = IERC20(poolToken.assetToken());
@@ -364,6 +374,7 @@ contract BasePoolConfig is Ownable {
     function withdrawEAFee(uint256 amount) external {
         address ea = evaluationAgent;
         if (msg.sender != ea) revert Errors.notEvaluationAgent();
+        if (amount == 0) revert Errors.zeroAmountProvided();
         if (amount + _accuredIncome._eaIncomeWithdrawn > _accuredIncome._eaIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
         _withdrawEAFee(ea, ea, amount);
@@ -372,6 +383,7 @@ contract BasePoolConfig is Ownable {
     function withdrawPoolOwnerFee(uint256 amount) external {
         address poolOwner = owner();
         if (msg.sender != poolOwner) revert Errors.notPoolOwner();
+        if (amount == 0) revert Errors.zeroAmountProvided();
         if (amount + _accuredIncome._poolOwnerIncomeWithdrawn > _accuredIncome._poolOwnerIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
         _accuredIncome._poolOwnerIncomeWithdrawn += amount;
