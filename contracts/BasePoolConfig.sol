@@ -398,6 +398,8 @@ contract BasePoolConfig is Ownable {
         if (treasuryAddress != address(0)) {
             underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
             emit ProtocolRewardsWithdrawn(treasuryAddress, amount, msg.sender);
+        } else {
+            revert Errors.zeroAddressProvided();
         }
     }
 
