@@ -20,7 +20,6 @@ contract BasePoolConfig is Ownable {
      * @notice Stores required liquidity rate and rewards rate for Pool Owner and EA
      */
     struct PoolConfig {
-        // The first 6 fields are IP-related, optimized for one storage slot.
         // The max liquidity allowed for the pool.
         uint256 _liquidityCap;
         // How long a lender has to wait after the last deposit before they can withdraw
@@ -33,14 +32,13 @@ contract BasePoolConfig is Ownable {
         uint256 _liquidityRateInBpsByEA;
         // Percentage of the _liquidityCap to be contributed by Pool Owner
         uint256 _liquidityRateInBpsByPoolOwner;
-        // Below fields are borrowing related. Optimized for one storage slot.
         // the maximum credit line for an address in terms of the amount of poolTokens
         uint256 _maxCreditLine;
         // the grace period at the pool level before a Default can be triggered
         uint256 _poolDefaultGracePeriodInSeconds;
         // pay period for the pool, measured in number of days
         uint256 _payPeriodInDays;
-        // Percentage of receivable required for credits in this pool in terms of bais points
+        // Percentage of receivable required for credits in this pool in terms of basis points
         // For over receivableization, use more than 100%, for no receivable, use 0.
         uint256 _receivableRequiredInBps;
         // the default APR for the pool in terms of basis points.
@@ -304,7 +302,7 @@ contract BasePoolConfig is Ownable {
 
     /**
      * @notice Sets the cap of the pool liquidity.
-     * @param liquidityCap the upper bound that the pool accepts liquidity from the depositers
+     * @param liquidityCap the upper bound that the pool accepts liquidity from the depositors
      */
     function setPoolLiquidityCap(uint256 liquidityCap) external {
         _onlyOwnerOrHumaMasterAdmin();
@@ -571,7 +569,7 @@ contract BasePoolConfig is Ownable {
         if (!isOwnerOrEA(account)) revert Errors.permissionDeniedNotAdmin();
     }
 
-    /// "MOdifier" function that limits access to pool owner or Huma protocol owner
+    /// "Modifier" function that limits access to pool owner or Huma protocol owner
     function _onlyOwnerOrHumaMasterAdmin() internal view {
         onlyOwnerOrHumaMasterAdmin(msg.sender);
     }

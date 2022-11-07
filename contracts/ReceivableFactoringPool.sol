@@ -201,7 +201,7 @@ contract ReceivableFactoringPool is
 
     /**
      * @notice Checks if the borrower has enough receivable to back the requested credit line.
-     * @param borrower the borrower addrescredit limit requested
+     * @param borrower the borrower address
      * @param newCreditLimit the credit limit requested
      */
     function _checkReceivableAssetFor(address borrower, uint256 newCreditLimit)
@@ -221,7 +221,7 @@ contract ReceivableFactoringPool is
     /**
      * @notice disperse the remaining funds associated with the factoring to the borrower
      * @param receiver receiver of the funds, namely, the borrower
-     * @param amount the amount of the dispersement
+     * @param amount the amount of the dispursement
      */
     function _disperseRemainingFunds(address receiver, uint256 amount) internal {
         _underlyingToken.safeTransfer(receiver, amount);
@@ -274,7 +274,7 @@ contract ReceivableFactoringPool is
         address receivableAsset,
         uint256 receivableParam
     ) internal virtual {
-        // Transfer receivable assset.
+        // Transfer receivable asset.
         BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
         if (ri.receivableAsset != address(0)) {
             if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();

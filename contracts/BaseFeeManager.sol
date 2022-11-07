@@ -192,7 +192,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * @return periodsPassed the number of billing periods has passed since the last statement.
      * If it is within the same period, it will be 0.
      * @return feesAndInterestDue the sum of fees and interest due. If multiple cycles have passed,
-     * this amount is not necessarily the stotal fees and interest charged. It only returns the amount
+     * this amount is not necessarily the total fees and interest charged. It only returns the amount
      * that is due currently.
      * @return totalDue amount due in this period, it includes fees, interest, and min principal
      */
@@ -268,7 +268,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 if (_cr.correction < 0) {
                     uint96 correctionAbs = uint96(0 - _cr.correction);
                     // Note: If _cr.unbilledPrincipal is less than abs(correction), the account
-                    // should have been paid off in the last payment. Thus the assersion below.
+                    // should have been paid off in the last payment. Thus the assertion below.
                     // One outlier case is drastic interest hike at the time of payments made.
                     //
                     assert(_cr.unbilledPrincipal > correctionAbs);

@@ -36,7 +36,7 @@ contract BasePoolStorage {
     // Tracks the last deposit time for each lender in this pool
     mapping(address => uint256) internal _lastDepositTime;
 
-    // whether the pool is ON or OFF
+    // Whether the pool is ON or OFF
     PoolStatus internal _status;
 
     // The addresses that are allowed to lend to this pool. Configurable only by the pool owner

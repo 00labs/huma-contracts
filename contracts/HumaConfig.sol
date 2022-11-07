@@ -138,7 +138,7 @@ contract HumaConfig is Ownable {
 
     /**
      * @notice Pauses the entire protocol. Used in extreme cases by the pausers.
-     * @dev This function will not be governed by timelock due to its sentivity to timing.
+     * @dev This function will not be governed by timelock due to its sensitivity to timing.
      * @dev Emits a ProtocolPausedChanged event.
      */
     function pauseProtocol() external onlyPausers {
@@ -214,7 +214,7 @@ contract HumaConfig is Ownable {
     /**
      * @notice Sets the validity of an asset for liquidity in Huma. Only proto admin can do so.
      * @param asset Address of the valid asset.
-     * @param valid The new validity status a Liquidity Asset in Pools.
+     * @param valid The new validity status of a Liquidity Asset in Pools.
      * @dev Emits a LiquidityAssetAdded event when the asset is set to be valid
      * Emits a LiquidityAssetRemoved event when the asset is set to be invalid
      */

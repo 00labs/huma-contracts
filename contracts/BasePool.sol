@@ -83,7 +83,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     /**
      * @notice Withdraw capital from the pool in the unit of underlyingToken
      * @dev Withdrawals are not allowed when 1) the pool withdraw is paused or
-     *      2) the LP has not reached lockout period since their last depisit
+     *      2) the LP has not reached lockout period since their last depsit
      *      3) the requested amount is higher than the LP's remaining principal
      * @dev the `amount` is total amount to withdraw, not the number of HDT shares,
      * which will be computed based on the current price per share
@@ -177,7 +177,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
 
     /**
-     * @notice Lenders need to pass compliance reqirements. Pool owner will administer off-chain
+     * @notice Lenders need to pass compliance requirements. Pool owner will administer off-chain
      * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
      * call this function to mark a lender as approved.
      */
