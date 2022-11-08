@@ -66,6 +66,11 @@
   },
   {
     "inputs": [],
+    "name": "paymentDetectionServiceAccountRequired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "permissionDeniedNotLender",
     "type": "error"
   },

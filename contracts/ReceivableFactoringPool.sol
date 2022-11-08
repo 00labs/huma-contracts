@@ -304,10 +304,4 @@ contract ReceivableFactoringPool is
             }
         }
     }
-
-    /// "Modifier" function that limits access to pdsServiceAccount only.
-    function onlyPDSServiceAccount() internal view {
-        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
-            revert Errors.paymentDetectionServiceAccountRequired();
-    }
 }

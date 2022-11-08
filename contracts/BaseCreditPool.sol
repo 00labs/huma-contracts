@@ -233,8 +233,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     }
 
     /**
-     * @notice Borrower makes one payment. If this is the final payment,
-     * it automatically triggers the payoff process.
+     * @notice Makes one payment for the borrower. This can be initiated by the borrower
+     * or by PDSServiceAccount with the allowance approval from the borrower.
+     * If this is the final payment, it automatically triggers the payoff process.
      * @return amountPaid the actual amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
      * @return paidoff a flag indicating whether the account has been paid off.
@@ -245,6 +246,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         override
         returns (uint256 amountPaid, bool paidoff)
     {
+        if (msg.sender != borrower) onlyPDSServiceAccount();
+
         return _makePayment(borrower, amount, false);
     }
 
@@ -704,7 +707,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (amountToCollect > 0 && isPaymentReceived == false) {
             // Transfer assets from the _borrower to pool locker
-            _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
+            _underlyingToken.safeTransferFrom(borrower, address(this), amountToCollect);
             emit PaymentMade(
                 borrower,
                 amountToCollect,
@@ -844,6 +847,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         returns (BS.CreditRecordStatic memory)
     {
         return _creditRecordStaticMapping[account];
+    }
+
+    /// "Modifier" function that limits access to pdsServiceAccount only.
+    function onlyPDSServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
+            revert Errors.paymentDetectionServiceAccountRequired();
     }
 
     /// "Modifier" function that limits access to eaServiceAccount only
