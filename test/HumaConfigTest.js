@@ -178,33 +178,33 @@ describe("Huma Config", function () {
 
     describe("Pause and Unpause Protocol", function () {
         it("Should disallow non-pauser to pause the protocol", async function () {
-            await expect(configContract.connect(randomUser).pauseProtocol()).to.be.revertedWith(
+            await expect(configContract.connect(randomUser).pause()).to.be.revertedWith(
                 "notPauser()"
             );
-            await expect(configContract.connect(treasury).pauseProtocol()).to.be.revertedWith(
+            await expect(configContract.connect(treasury).pause()).to.be.revertedWith(
                 "notPauser()"
             );
         });
 
         it("Should be able to pause the protocol", async function () {
-            await expect(configContract.connect(pauser).pauseProtocol())
-                .to.emit(configContract, "ProtocolPaused")
+            await expect(configContract.connect(pauser).pause())
+                .to.emit(configContract, "Paused")
                 .withArgs(pauser.address);
-            expect(await configContract.isProtocolPaused()).to.equal(true);
+            expect(await configContract.paused()).to.equal(true);
         });
 
         it("Should disallow non-owner to unpause", async function () {
-            await expect(configContract.connect(pauser).unpauseProtocol()).to.be.revertedWith(
+            await expect(configContract.connect(pauser).unpause()).to.be.revertedWith(
                 "Ownable: caller is not the owner"
             );
         });
 
         it("Should allow owner to unpause", async function () {
-            expect(await configContract.connect(origOwner).unpauseProtocol())
-                .to.emit(configContract, "ProtocolUnpaused")
+            expect(await configContract.connect(origOwner).unpause())
+                .to.emit(configContract, "Unpaused")
                 .withArgs(origOwner.address);
 
-            expect(await configContract.isProtocolPaused()).to.equal(false);
+            expect(await configContract.paused()).to.equal(false);
         });
     });
 

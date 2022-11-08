@@ -111,7 +111,8 @@ describe("Invoice Factoring", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should only allow evaluation agents to post approved loan requests", async function () {
@@ -134,7 +135,7 @@ describe("Invoice Factoring", function () {
         });
 
         it("Should not allow posting approved loans while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
 
             await expect(
                 poolContract
@@ -428,18 +429,19 @@ describe("Invoice Factoring", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow calling to drawdown()", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
                 "drawdownFunctionUsedInsteadofDrawdownWithReceivable"
             );
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract
                     .connect(borrower)
@@ -586,11 +588,12 @@ describe("Invoice Factoring", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow payback while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
 
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, 5)

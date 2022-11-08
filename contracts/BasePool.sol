@@ -334,7 +334,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     /// "Modifier" function that limits access only when both protocol and pool are on.
     /// Did not use modifier for contract size consideration.
     function _protocolAndPoolOn() internal view {
-        if (_humaConfig.isProtocolPaused()) revert Errors.protocolIsPaused();
+        if (_humaConfig.paused()) revert Errors.protocolIsPaused();
         if (_status != PoolStatus.On) revert Errors.poolIsNotOn();
     }
 

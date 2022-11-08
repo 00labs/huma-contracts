@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "./Errors.sol";
 
@@ -9,7 +10,7 @@ import "hardhat/console.sol";
 
 /** @notice HumaConfig maintains all the global configurations supported by Huma protocol.
  */
-contract HumaConfig is Ownable {
+contract HumaConfig is Ownable, Pausable {
     /// Lower bound of protocol default grace period.
     uint32 private constant MIN_DEFAULT_GRACE_PERIOD = 1 days;
 
@@ -21,9 +22,6 @@ contract HumaConfig is Ownable {
 
     /// The treasury fee upper bound in bps.
     uint16 private constant TREASURY_FEE_UPPER_BOUND = 5000; // 50%
-
-    /// Flag that shows whether the protocol is paused or not
-    bool public protocolPaused;
 
     /// Seconds passed the due date before a default can be triggered
     uint32 public protocolDefaultGracePeriodInSeconds;
@@ -80,8 +78,6 @@ contract HumaConfig is Ownable {
     event PoolAdminRemoved(address indexed poolAdmin, address by);
     event ProtocolDefaultGracePeriodChanged(uint256 gracePeriod);
     event ProtocolInitialized(address by);
-    event ProtocolPaused(address by);
-    event ProtocolUnpaused(address by);
     event TreasuryFeeChanged(uint256 oldFee, uint256 newFee);
 
     /// Makes sure the msg.sender is one of the pausers
@@ -139,11 +135,9 @@ contract HumaConfig is Ownable {
     /**
      * @notice Pauses the entire protocol. Used in extreme cases by the pausers.
      * @dev This function will not be governed by timelock due to its sensitivity to timing.
-     * @dev Emits a ProtocolPausedChanged event.
      */
-    function pauseProtocol() external onlyPausers {
-        protocolPaused = true;
-        emit ProtocolPaused(msg.sender);
+    function pause() external onlyPausers {
+        _pause();
     }
 
     /**
@@ -266,11 +260,9 @@ contract HumaConfig is Ownable {
 
     /**
      * @notice Unpause the entire protocol. Only the protocol owner can do so.
-     * @dev Emits a ProtocolUnpaused event.
      */
-    function unpauseProtocol() external onlyOwner {
-        protocolPaused = false;
-        emit ProtocolUnpaused(msg.sender);
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
     /// Reports if the asset is supported by the protocol or not
@@ -286,10 +278,5 @@ contract HumaConfig is Ownable {
     /// Reports ia given user account is an approved pool admin
     function isPoolAdmin(address account) external view returns (bool) {
         return poolAdmins[account];
-    }
-
-    /// Reports if the protocol is paused right now
-    function isProtocolPaused() external view returns (bool) {
-        return protocolPaused;
     }
 }

@@ -28,7 +28,8 @@ async function deployContracts(
 
     await humaConfigContract.transferOwnership(protocolOwner.address);
     await humaConfigContract.connect(protocolOwner).addPauser(protocolOwner.address);
-    await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+    if (await humaConfigContract.connect(protocolOwner).paused())
+        await humaConfigContract.connect(protocolOwner).unpause();
 
     // Deploy Fee Manager
     const feeManagerFactory = await ethers.getContractFactory("BaseFeeManager");

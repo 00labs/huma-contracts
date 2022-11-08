@@ -88,11 +88,12 @@ describe("Base Credit Pool", function () {
 
     describe("BaseCreditPool settings", function () {
         it("Should not allow credit line to be changed when protocol is paused", async function () {
-            await humaConfigContract.connect(protocolOwner).pauseProtocol();
+            if ((await humaConfigContract.connect(protocolOwner).paused()) == false)
+                await humaConfigContract.connect(protocolOwner).pause();
             await expect(
                 poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000000)
             ).to.be.revertedWith("protocolIsPaused()");
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow non-EA to change credit line", async function () {
@@ -173,11 +174,12 @@ describe("Base Credit Pool", function () {
     // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
     describe("Borrowing request", function () {
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should reject loan requests while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract.connect(borrower).requestCredit(1_000_000, 30, 12)
             ).to.be.revertedWith("protocolIsPaused()");
@@ -261,11 +263,12 @@ describe("Base Credit Pool", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(poolContract.connect(borrower).drawdown(400)).to.be.revertedWith(
                 "protocolIsPaused()"
             );
@@ -535,11 +538,12 @@ describe("Base Credit Pool", function () {
         });
 
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow payback while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, 5)
             ).to.be.revertedWith("protocolIsPaused()");
