@@ -154,16 +154,14 @@ contract BasePoolConfig is Ownable, Initializable {
         // Default values for the pool configurations. The pool owners are expected to reset
         // these values when setting up the pools. Setting these default values to avoid
         // strange behaviors when the pool owner missed setting up these configurations.
-        _poolConfig._liquidityCap = 1;
+        // _liquidityCap, _maxCreditLine, _creditApprovalExpirationInSeconds are left at 0.
         _poolConfig._rewardRateInBpsForEA = 100;
         _poolConfig._rewardRateInBpsForPoolOwner = 100;
         _poolConfig._liquidityRateInBpsByEA = 200;
         _poolConfig._liquidityRateInBpsByPoolOwner = 200;
-        _poolConfig._maxCreditLine = 1;
         _poolConfig._payPeriodInDays = 30;
         _poolConfig._receivableRequiredInBps = 10000;
         _poolConfig._poolAprInBps = 1500;
-        _poolConfig._creditApprovalExpirationInSeconds = 0;
     }
 
     function distributeIncome(uint256 value) external returns (uint256 poolIncome) {
