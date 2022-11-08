@@ -336,14 +336,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    await initHumaConfig();
+    // await initHumaConfig();
     await initFeeManager();
-    await initHDT();
-    await initEA();
-    await initPoolConfig();
-    await initPool();
+    // await initHDT();
+    // await initEA();
+    // await initPoolConfig();
+    // await initPool();
 
-    await prepare();
+    // await prepare();
 }
 
 initContracts()

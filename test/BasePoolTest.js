@@ -81,11 +81,12 @@ describe("Base Pool - LP and Admin functions", function () {
 
     describe("Deposit", function () {
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Cannot deposit while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
                 "protocolIsPaused()"
             );
@@ -137,11 +138,12 @@ describe("Base Pool - LP and Admin functions", function () {
     // In beforeEach() of Withdraw, we make sure there is 100 liquidity provided.
     describe("Withdraw", function () {
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not withdraw while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
                 "protocolIsPaused()"
             );

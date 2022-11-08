@@ -2,7 +2,8 @@ name: CI
 
 on:
   pull_request:
-    branches: [ "master" ]
+    types: [opened, reopened, edited, synchronize]
+    branches: [ "master", "CertiK_audit"]
 
   workflow_dispatch:
 

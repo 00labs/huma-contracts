@@ -306,14 +306,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    await initHumaConfig();
-    await initEA();
+    // await initHumaConfig();
+    // await initEA();
     await initBaseCreditPoolFeeManager();
-    await initBaseCreditPoolHDT();
-    await initBaseCreditPoolConfig();
-    await initBaseCreditPool();
-
-    await prepareBaseCreditPool();
+    // await initBaseCreditPoolHDT();
+    // await initBaseCreditPoolConfig();
+    // await initBaseCreditPool();
+    //
+    // await prepareBaseCreditPool();
 }
 
 initContracts()
