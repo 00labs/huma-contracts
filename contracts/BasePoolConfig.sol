@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -13,7 +14,7 @@ import "./Errors.sol";
 
 import "hardhat/console.sol";
 
-contract BasePoolConfig is Ownable {
+contract BasePoolConfig is Ownable, Initializable {
     using SafeERC20 for IERC20;
 
     /**
@@ -130,7 +131,7 @@ contract BasePoolConfig is Ownable {
         address _poolToken,
         address _humaConfig,
         address _feeManager
-    ) external onlyOwner {
+    ) external onlyOwner initializer {
         poolName = _poolName;
         if (_poolToken == address(0)) revert Errors.zeroAddressProvided();
         if (_humaConfig == address(0)) revert Errors.zeroAddressProvided();
