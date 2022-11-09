@@ -1,4 +1,6 @@
-const {deploy} = require("./utils.js");
+const {deploy} = require("../utils.js");
+
+const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB'
 
 async function deployContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
@@ -20,15 +22,15 @@ async function deployContracts() {
     const humaConfig = await deploy("HumaConfig", "HumaConfig");
     const humaConfigTL = await deploy("TimelockController", "HumaConfigTimelock", [
         0,
-        [deployer.address],
-        [deployer.address],
+        [HUMA_OWNER_ADRESS],
+        [HUMA_OWNER_ADRESS],
     ]);
 
     const feeManager = await deploy("BaseFeeManager", "ReceivableFactoringPoolFeeManager");
     const hdtImpl = await deploy("HDT", "HDTImpl");
     const hdt = await deploy("TransparentUpgradeableProxy", "HDT", [
         hdtImpl.address,
-        proxyOwner.address,
+        HUMA_OWNER_ADRESS,
         [],
     ]);
 
@@ -37,7 +39,7 @@ async function deployContracts() {
     const poolImpl = await deploy("ReceivableFactoringPool", "ReceivableFactoringPoolImpl");
     const pool = await deploy("TransparentUpgradeableProxy", "ReceivableFactoringPool", [
         poolImpl.address,
-        proxyOwner.address,
+        HUMA_OWNER_ADRESS,
         [],
     ]);
 

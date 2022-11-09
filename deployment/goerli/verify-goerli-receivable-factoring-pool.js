@@ -3,11 +3,13 @@ const {
     getDeployedContracts,
     getVerifiedContract,
     updateVerifiedContract,
-} = require("./utils.js");
+} = require("../utils.js");
 
 const fs = require("fs");
 
-const VERIFY_ARGS_PATH = "./deployment/verify_args/"
+const VERIFY_ARGS_PATH = "./deployment/goerli/verify_args/";
+
+const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
 
 let deployedContracts, proxyOwner, network, deployer;
 
@@ -106,8 +108,8 @@ async function verifyContracts() {
     const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
         [
             0,
-            `['${deployer.address}']`,
-            `['${deployer.address}']`,
+            `['${HUMA_OWNER_ADRESS}']`,
+            `['${HUMA_OWNER_ADRESS}']`,
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
@@ -120,7 +122,7 @@ async function verifyContracts() {
     const verifyHDT = await verifyContract('HDT',
         [
             `'${deployedContracts['HDTImpl']}'`,
-            `'${proxyOwner.address}'`,
+            `'${HUMA_OWNER_ADRESS}'`,
             '[]'
         ]);
     console.log(`Verify HDT result: ${verifyHDT}`);
@@ -134,7 +136,7 @@ async function verifyContracts() {
     const verifyPool = await verifyContract('ReceivableFactoringPool',
         [
             `'${deployedContracts['ReceivableFactoringPoolImpl']}'`,
-            `'${proxyOwner.address}'`,
+            `'${HUMA_OWNER_ADRESS}'`,
             '[]',
         ]);
     console.log(`Verify PoolImpl result: ${verifyPool}`);

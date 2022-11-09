@@ -4,9 +4,11 @@ const {
     updateInitilizedContract,
     getDeployedContracts,
     sendTransaction,
-} = require("./utils.js");
+} = require("../utils.js");
 
 let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp, invoicePayer;
+
+const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -61,7 +63,7 @@ async function initHumaConfig() {
     const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
     await sendTransaction("HumaConfigTimelock", humaConfigTL, "renounceRole", [
         adminRole,
-        deployer.address,
+        HUMA_OWNER_ADRESS,
     ]);
 
     await updateInitilizedContract("HumaConfig");
@@ -336,14 +338,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    // await initHumaConfig();
+    await initHumaConfig();
     await initFeeManager();
-    // await initHDT();
-    // await initEA();
-    // await initPoolConfig();
-    // await initPool();
+    await initHDT();
+    await initEA();
+    await initPoolConfig();
+    await initPool();
 
-    // await prepare();
+    await prepare();
 }
 
 initContracts()
