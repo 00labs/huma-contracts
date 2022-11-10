@@ -177,12 +177,12 @@ contract BasePoolConfig is Ownable, Initializable {
      * @notice Adds a operator, who can add or remove approved lenders.
      * @param _opeartor Address to be added to the operator list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
-     * @dev If the address is already an operator, revert w/ "alreayAPauser"
+     * @dev If the address is already an operator, revert w/ "alreadyAnOperator"
      * @dev Emits a PoolOperatorAdded event.
      */
     function addPoolOperator(address _opeartor) external onlyOwner {
         if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
-        if (poolOperators[_opeartor]) revert Errors.alreayAnOperator();
+        if (poolOperators[_opeartor]) revert Errors.alreadyAnOperator();
 
         poolOperators[_opeartor] = true;
 

@@ -280,7 +280,7 @@ describe("Base Pool Config", function () {
             it("Should reject add operator request if it is already an operator", async function () {
                 await expect(
                     poolConfigContract.connect(poolOwner).addPoolOperator(poolOperator2.address)
-                ).to.be.revertedWith("alreayAnOperator()");
+                ).to.be.revertedWith("alreadyAnOperator()");
             });
 
             it("Should disallow non-owner to remove a operator", async function () {
