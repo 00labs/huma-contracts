@@ -1,17 +1,17 @@
 [
   {
     "inputs": [],
+    "name": "alreadyAPauser",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "alreadyAnOperator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "alreadyPoolAdmin",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "alreayAPauser",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "alreayAnOperator",
     "type": "error"
   },
   {

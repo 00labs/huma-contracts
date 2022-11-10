@@ -126,7 +126,7 @@ describe("Huma Config", function () {
         it("Should reject add-pauser request if it is already a pauser", async function () {
             await expect(
                 configContract.connect(origOwner).addPauser(pauser.address)
-            ).to.be.revertedWith("alreayAPauser()");
+            ).to.be.revertedWith("alreadyAPauser()");
         });
 
         it("Should disallow non-owner to remove a pauser", async function () {

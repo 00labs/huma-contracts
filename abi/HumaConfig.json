@@ -6,12 +6,12 @@
   },
   {
     "inputs": [],
-    "name": "alreadyPoolAdmin",
+    "name": "alreadyAPauser",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "alreayAPauser",
+    "name": "alreadyPoolAdmin",
     "type": "error"
   },
   {
