@@ -3,11 +3,13 @@ const {
     getDeployedContracts,
     getVerifiedContract,
     updateVerifiedContract,
-} = require("./utils.js");
+} = require("../utils.js");
 
 const fs = require("fs");
 
-const VERIFY_ARGS_PATH = "./deployment/verify_args/"
+const VERIFY_ARGS_PATH = "./deployment/goerli/verify_args/";
+
+const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
 
 let deployedContracts, proxyOwner, network, deployer;
 
@@ -106,35 +108,35 @@ async function verifyContracts() {
     const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
         [
             0,
-            `'${deployer.address}'`,
-            `'${deployer.address}'`,
+            `['${HUMA_OWNER_ADRESS}']`,
+            `['${HUMA_OWNER_ADRESS}']`,
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
-    const verifyFeeManager = await verifyContract('BaseCreditPoolFeeManager');
+    const verifyFeeManager = await verifyContract('ReceivableFactoringPoolFeeManager');
     console.log(`Verify FeeManager result: ${verifyFeeManager}`);
 
-    const verifyHDTImpl = await verifyContract('BaseCreditHDTImpl');
+    const verifyHDTImpl = await verifyContract('HDTImpl');
     console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
 
-    const verifyHDT = await verifyContract('BaseCreditHDT',
+    const verifyHDT = await verifyContract('HDT',
         [
-            `'${deployedContracts['BaseCreditHDTImpl']}'`,
-            `'${proxyOwner.address}'`,
+            `'${deployedContracts['HDTImpl']}'`,
+            `'${HUMA_OWNER_ADRESS}'`,
             '[]'
         ]);
     console.log(`Verify HDT result: ${verifyHDT}`);
 
-    const verifyPoolConfig = await verifyContract('BaseCreditPoolConfig');
+    const verifyPoolConfig = await verifyContract('ReceivableFactoringPoolConfig');
     console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
 
-    const verifyPoolImpl = await verifyContract('BaseCreditPoolImpl');
+    const verifyPoolImpl = await verifyContract('ReceivableFactoringPoolImpl');
     console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
 
-    const verifyPool = await verifyContract('BaseCreditPool',
+    const verifyPool = await verifyContract('ReceivableFactoringPool',
         [
-            `'${deployedContracts['BaseCreditPoolImpl']}'`,
-            `'${proxyOwner.address}'`,
+            `'${deployedContracts['ReceivableFactoringPoolImpl']}'`,
+            `'${HUMA_OWNER_ADRESS}'`,
             '[]',
         ]);
     console.log(`Verify PoolImpl result: ${verifyPool}`);

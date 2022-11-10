@@ -23,6 +23,14 @@ let goerliUrl = process.env["GOERLI_URL"];
 if (!goerliUrl) {
     goerliUrl = EMPTY_URL;
 }
+let mumbaiUrl = process.env["MUMBAI_URL"];
+if (!mumbaiUrl) {
+    mumbaiUrl = EMPTY_URL;
+}
+let polygonUrl = process.env["POLYGON_URL"];
+if (!polygonUrl) {
+    polygonUrl = EMPTY_URL;
+}
 let deployer = process.env["DEPLOYER"];
 if (!deployer) {
     deployer = EMPTY_PRIVATE_KEY;
@@ -58,6 +66,14 @@ if (!ea_bcp) {
 let invoicePayer = process.env["INVOICE_PAYER"];
 if (!invoicePayer) {
     invoicePayer = EMPTY_PRIVATE_KEY;
+}
+let baseCreditPoolOperator = process.env["BASE_CREDIT_POOL_OPERATOR"];
+if (!baseCreditPoolOperator) {
+    baseCreditPoolOperator = EMPTY_PRIVATE_KEY;
+}
+let ReceivableFactoringPoolOperator = process.env["RECEIVABLE_FACTORING_POOL_OPERATOR"];
+if (!ReceivableFactoringPoolOperator) {
+    ReceivableFactoringPoolOperator = EMPTY_PRIVATE_KEY;
 }
 
 //
@@ -149,6 +165,8 @@ module.exports = {
                 treasury,
                 ea_bcp,
                 invoicePayer,
+                baseCreditPoolOperator,
+                ReceivableFactoringPoolOperator,
             ],
         },
         xdai: {
@@ -173,20 +191,32 @@ module.exports = {
             },
         },
         polygon: {
-            url: "https://polygon-rpc.com",
-            // url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXx/polygon/mainnet", // <---- YOUR MORALIS ID! (not limited to infura)
-            gasPrice: 3200000000,
-            accounts: {
-                mnemonic: mnemonic(),
-            },
+            url: polygonUrl,
+            accounts: [
+                deployer,
+                proxyOwner,
+                lender,
+                ea,
+                eaService,
+                pdsService,
+                treasury,
+                ea_bcp,
+                invoicePayer,
+            ],
         },
         mumbai: {
-            url: "https://rpc-mumbai.maticvigil.com",
-            // url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXX/polygon/mumbai", // <---- YOUR MORALIS ID! (not limited to infura)
-            gasPrice: 3200000000,
-            accounts: {
-                mnemonic: mnemonic(),
-            },
+            url: mumbaiUrl,
+            accounts: [
+                deployer,
+                proxyOwner,
+                lender,
+                ea,
+                eaService,
+                pdsService,
+                treasury,
+                ea_bcp,
+                invoicePayer,
+            ],
         },
         matic: {
             url: "https://rpc-mainnet.maticvigil.com/",

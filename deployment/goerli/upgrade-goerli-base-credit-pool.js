@@ -3,7 +3,7 @@ const {
     updateUpgradedContract,
     getDeployedContracts,
     sendTransaction,
-} = require("./utils.js");
+} = require("../utils.js");
 
 let deployer, proxyOwner, deployedContracts;
 
