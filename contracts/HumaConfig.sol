@@ -104,12 +104,12 @@ contract HumaConfig is Ownable, Pausable {
      * @notice Adds a pauser, who can pause the entire protocol. Only proto admin can do so.
      * @param _pauser Address to be added to the pauser list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
-     * @dev If the address is already a pauser, revert w/ "alreayAPauser"
+     * @dev If the address is already a pauser, revert w/ "alreadyAPauser"
      * @dev Emits a PauserAdded event.
      */
     function addPauser(address _pauser) external onlyOwner {
         if (_pauser == address(0)) revert Errors.zeroAddressProvided();
-        if (pausers[_pauser]) revert Errors.alreayAPauser();
+        if (pausers[_pauser]) revert Errors.alreadyAPauser();
 
         pausers[_pauser] = true;
 
