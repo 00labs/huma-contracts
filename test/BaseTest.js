@@ -60,7 +60,8 @@ async function deployAndSetupPool(
     testTokenContract,
     principalRateInBps,
     eaNFTContract,
-    isReceivableContractFlag
+    isReceivableContractFlag,
+    poolOperator
 ) {
     await testTokenContract.give1000To(lender.address);
     await testTokenContract.give1000To(poolOwner.address);
@@ -140,9 +141,11 @@ async function deployAndSetupPool(
 
     await poolConfig.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
 
-    await poolContract.connect(poolOwner).addApprovedLender(poolOwner.address);
-    await poolContract.connect(poolOwner).addApprovedLender(evaluationAgent.address);
-    await poolContract.connect(poolOwner).addApprovedLender(lender.address);
+    await poolConfig.connect(poolOwner).addPoolOperator(poolOperator.address);
+
+    await poolContract.connect(poolOperator).addApprovedLender(poolOwner.address);
+    await poolContract.connect(poolOperator).addApprovedLender(evaluationAgent.address);
+    await poolContract.connect(poolOperator).addApprovedLender(lender.address);
 
     await testTokenContract.connect(poolOwner).approve(poolContract.address, 1_000_000);
     await poolContract.connect(poolOwner).makeInitialDeposit(1_000_000);

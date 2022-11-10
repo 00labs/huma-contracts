@@ -1,6 +1,11 @@
 [
   {
     "inputs": [],
+    "name": "alreayAnOperator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "evaluationAgentNotEnoughLiquidity",
     "type": "error"
   },
@@ -12,6 +17,11 @@
   {
     "inputs": [],
     "name": "notEvaluationAgent",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notOperator",
     "type": "error"
   },
   {
@@ -439,6 +449,44 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "PoolOperatorAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "PoolOperatorRemoved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "uint256",
         "name": "rewardsRate",
@@ -603,6 +651,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_opeartor",
+        "type": "address"
+      }
+    ],
+    "name": "addPoolOperator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -844,6 +905,25 @@
         "type": "address"
       }
     ],
+    "name": "isOperator",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
     "name": "isOwnerOrEA",
     "outputs": [
       {
@@ -1009,6 +1089,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_opeartor",
+        "type": "address"
+      }
+    ],
+    "name": "removePoolOperator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

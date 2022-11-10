@@ -85,6 +85,9 @@ contract BasePoolConfig is Ownable, Initializable {
 
     AccruedIncome internal _accuredIncome;
 
+    /// Pool operators can add or remove lenders.
+    mapping(address => bool) private poolOperators;
+
     event APRChanged(uint256 aprInBps, address by);
     event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
     event EARewardsAndLiquidityChanged(
@@ -126,6 +129,12 @@ contract BasePoolConfig is Ownable, Initializable {
     event ReceivableRequiredInBpsChanged(uint256 receivableInBps, address by);
     event WithdrawalLockoutPeriodChanged(uint256 lockoutPeriodInDays, address by);
 
+    /// An operator has been added. An operator is someone who can add or remove approved lenders.
+    event PoolOperatorAdded(address indexed operator, address by);
+
+    /// A operator has been removed
+    event PoolOperatorRemoved(address indexed operator, address by);
+
     function initialize(
         string memory _poolName,
         address _poolToken,
@@ -162,6 +171,22 @@ contract BasePoolConfig is Ownable, Initializable {
         _poolConfig._payPeriodInDays = 30;
         _poolConfig._receivableRequiredInBps = 10000;
         _poolConfig._poolAprInBps = 1500;
+    }
+
+    /**
+     * @notice Adds a operator, who can add or remove approved lenders.
+     * @param _opeartor Address to be added to the operator list
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev If the address is already an operator, revert w/ "alreayAPauser"
+     * @dev Emits a PoolOperatorAdded event.
+     */
+    function addPoolOperator(address _opeartor) external onlyOwner {
+        if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
+        if (poolOperators[_opeartor]) revert Errors.alreayAnOperator();
+
+        poolOperators[_opeartor] = true;
+
+        emit PoolOperatorAdded(_opeartor, msg.sender);
     }
 
     function distributeIncome(uint256 value) external returns (uint256 poolIncome) {
@@ -524,6 +549,11 @@ contract BasePoolConfig is Ownable, Initializable {
         return (account == owner() || account == evaluationAgent);
     }
 
+    /// Reports if a given user account is an approved operator or not
+    function isOperator(address account) external view returns (bool) {
+        return poolOperators[account];
+    }
+
     function maxCreditLine() external view returns (uint256) {
         return _poolConfig._maxCreditLine;
     }
@@ -546,6 +576,22 @@ contract BasePoolConfig is Ownable, Initializable {
 
     function receivableRequiredInBps() external view returns (uint256) {
         return _poolConfig._receivableRequiredInBps;
+    }
+
+    /**
+     * @notice Removes a pool operator.
+     * @param _opeartor Address to be removed from the operator list
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev If the address is not currently a operator, revert w/ "notOperator()"
+     * @dev Emits a PoolOperatorRemoved event.
+     */
+    function removePoolOperator(address _opeartor) external onlyOwner {
+        if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
+        if (!poolOperators[_opeartor]) revert Errors.notOperator();
+
+        poolOperators[_opeartor] = false;
+
+        emit PoolOperatorRemoved(_opeartor, msg.sender);
     }
 
     function rewardsAndLiquidityRateForEA() external view returns (uint256, uint256) {

@@ -40,6 +40,7 @@ describe("Base Credit Pool", function () {
     let pdsServiceAccount;
     let record;
     let recordStatic;
+    let poolOperator;
 
     before(async function () {
         [
@@ -53,6 +54,7 @@ describe("Base Credit Pool", function () {
             protocolOwner,
             eaServiceAccount,
             pdsServiceAccount,
+            poolOperator,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -77,7 +79,8 @@ describe("Base Credit Pool", function () {
             testTokenContract,
             0,
             eaNFTContract,
-            false // BaseCreditPool
+            false, // BaseCreditPool
+            poolOperator
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);

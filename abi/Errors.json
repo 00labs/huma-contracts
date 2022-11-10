@@ -11,6 +11,11 @@
   },
   {
     "inputs": [],
+    "name": "alreayAnOperator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "amountTooLow",
     "type": "error"
   },
@@ -121,6 +126,11 @@
   },
   {
     "inputs": [],
+    "name": "notOperator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "notPauser",
     "type": "error"
   },
@@ -167,6 +177,11 @@
   {
     "inputs": [],
     "name": "poolIsNotOn",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "poolOperatorRequired",
     "type": "error"
   },
   {

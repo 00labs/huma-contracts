@@ -36,6 +36,8 @@ let eaServiceAccount;
 let pdsServiceAccount;
 let newNFTTokenId;
 let evaluationAgent2;
+let poolOperator;
+let lender2;
 
 describe("Base Pool - LP and Admin functions", function () {
     before(async function () {
@@ -51,6 +53,8 @@ describe("Base Pool - LP and Admin functions", function () {
             eaServiceAccount,
             pdsServiceAccount,
             evaluationAgent2,
+            poolOperator,
+            lender2,
         ] = await ethers.getSigners();
     });
 
@@ -75,8 +79,38 @@ describe("Base Pool - LP and Admin functions", function () {
             testTokenContract,
             0,
             eaNFTContract,
-            false
+            false,
+            poolOperator
         );
+    });
+
+    describe("Approve lenders", function () {
+        it("Non-operator shall not be able to approve lenders ", async function () {
+            await expect(
+                poolContract.connect(borrower).addApprovedLender(lender2.address)
+            ).to.be.revertedWith("poolOperatorRequired()");
+        });
+        it("Shall be able to approve lenders successfully ", async function () {
+            await expect(poolContract.connect(poolOperator).addApprovedLender(lender2.address))
+                .to.emit(poolContract, "AddApprovedLender")
+                .withArgs(lender2.address, poolOperator.address);
+            expect(
+                await poolContract.connect(poolOperator).isApprovedLender(lender2.address)
+            ).to.equal(true);
+        });
+        it("Non-operator shall not be able to remove approved lenders ", async function () {
+            await expect(
+                poolContract.connect(borrower).removeApprovedLender(lender2.address)
+            ).to.be.revertedWith("poolOperatorRequired()");
+        });
+        it("Shall be able to remove approved lenders successfully ", async function () {
+            await expect(poolContract.connect(poolOperator).removeApprovedLender(lender2.address))
+                .to.emit(poolContract, "RemoveApprovedLender")
+                .withArgs(lender2.address, poolOperator.address);
+            expect(
+                await poolContract.connect(poolOperator).isApprovedLender(lender2.address)
+            ).to.equal(false);
+        });
     });
 
     describe("Deposit", function () {
@@ -128,7 +162,7 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Removed lenders cannot deposit", async function () {
-            await poolContract.connect(poolOwner).removeApprovedLender(lender.address);
+            await poolContract.connect(poolOperator).removeApprovedLender(lender.address);
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
                 "permissionDeniedNotLender"
             );

@@ -23,6 +23,8 @@ let eaServiceAccount;
 let pdsServiceAccount;
 let newNFTTokenId;
 let evaluationAgent2;
+let poolOperator;
+let poolOperator2;
 
 describe("Base Pool Config", function () {
     before(async function () {
@@ -38,6 +40,8 @@ describe("Base Pool Config", function () {
             eaServiceAccount,
             pdsServiceAccount,
             evaluationAgent2,
+            poolOperator,
+            poolOperator2,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -60,7 +64,8 @@ describe("Base Pool Config", function () {
             testTokenContract,
             0,
             eaNFTContract,
-            false // BaseCreditPool
+            false, // BaseCreditPool
+            poolOperator
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
@@ -190,7 +195,7 @@ describe("Base Pool Config", function () {
             await testTokenContract
                 .connect(evaluationAgent2)
                 .approve(poolContract.address, 2_000_000);
-            await poolContract.connect(poolOwner).addApprovedLender(evaluationAgent2.address);
+            await poolContract.connect(poolOperator).addApprovedLender(evaluationAgent2.address);
             await expect(poolContract.connect(evaluationAgent2).deposit(2_000_000)).to.emit(
                 poolContract,
                 "LiquidityDeposited"
@@ -220,7 +225,7 @@ describe("Base Pool Config", function () {
             await testTokenContract
                 .connect(evaluationAgent2)
                 .approve(poolContract.address, 2_000_000);
-            await poolContract.connect(poolOwner).addApprovedLender(evaluationAgent2.address);
+            await poolContract.connect(poolOperator).addApprovedLender(evaluationAgent2.address);
             await expect(poolContract.connect(evaluationAgent2).deposit(2_000_000)).to.emit(
                 poolContract,
                 "LiquidityDeposited"
@@ -242,6 +247,97 @@ describe("Base Pool Config", function () {
             expect(await testTokenContract.balanceOf(evaluationAgent.address)).to.equal(
                 3150 + Number(oldBalance)
             );
+        });
+        describe("Add and Remove Pool Operator", function () {
+            it("Should disallow non-owner to add operators", async function () {
+                await expect(
+                    poolConfigContract.connect(lender).addPoolOperator(poolOperator2.address)
+                ).to.be.revertedWith("Ownable: caller is not the owner");
+            });
+
+            it("Should reject 0 address operator", async function () {
+                await expect(
+                    poolConfigContract
+                        .connect(poolOwner)
+                        .addPoolOperator(ethers.constants.AddressZero)
+                ).to.be.revertedWith("zeroAddressProvided()");
+            });
+
+            it("Should allow operator to be added", async function () {
+                expect(
+                    await poolConfigContract
+                        .connect(poolOwner)
+                        .addPoolOperator(poolOperator2.address)
+                )
+                    .to.emit(poolConfigContract, "PoolOperatorAdded")
+                    .withArgs(poolOperator2.address, poolOwner.address);
+
+                expect(
+                    await poolConfigContract.connect(poolOwner).isOperator(poolOperator2.address)
+                ).to.equal(true);
+            });
+
+            it("Should reject add operator request if it is already an operator", async function () {
+                await expect(
+                    poolConfigContract.connect(poolOwner).addPoolOperator(poolOperator2.address)
+                ).to.be.revertedWith("alreayAnOperator()");
+            });
+
+            it("Should disallow non-owner to remove a operator", async function () {
+                await expect(
+                    poolConfigContract.connect(lender).removePoolOperator(poolOperator2.address)
+                ).to.be.revertedWith("Ownable: caller is not the owner");
+
+                expect(await poolConfigContract.isOperator(poolOperator2.address)).to.equal(true);
+
+                await expect(
+                    poolConfigContract
+                        .connect(poolOperator2)
+                        .removePoolOperator(poolOperator2.address)
+                ).to.be.revertedWith("Ownable: caller is not the owner");
+
+                expect(await poolConfigContract.isOperator(poolOperator2.address)).to.equal(true);
+            });
+
+            it("Should disallow removal of operator using zero address", async function () {
+                await expect(
+                    poolConfigContract
+                        .connect(poolOwner)
+                        .removePoolOperator(ethers.constants.AddressZero)
+                ).to.be.revertedWith("zeroAddressProvided()");
+            });
+
+            it("Should reject attemp to removal a operator who is not a operator", async function () {
+                await expect(
+                    poolConfigContract.connect(poolOwner).removePoolOperator(treasury.address)
+                ).to.be.revertedWith("notOperator()");
+            });
+
+            it("Should remove a operator successfully", async function () {
+                await expect(
+                    poolConfigContract.connect(poolOwner).removePoolOperator(poolOperator2.address)
+                )
+                    .to.emit(poolConfigContract, "PoolOperatorRemoved")
+                    .withArgs(poolOperator2.address, poolOwner.address);
+
+                expect(
+                    await poolConfigContract.connect(poolOwner).isOperator(poolOperator2.address)
+                ).to.equal(false);
+            });
+
+            it("Should allow removed operator to be added back", async function () {
+                expect(
+                    await poolConfigContract
+                        .connect(poolOwner)
+                        .addPoolOperator(poolOperator2.address)
+                )
+                    .to.emit(poolConfigContract, "PoolOperatorAdded")
+                    .withArgs(poolOperator2.address, poolOwner.address);
+
+                expect(
+                    await poolConfigContract.connect(poolOwner).isOperator(poolOperator2.address)
+                ).to.equal(true);
+            });
         });
     });
 });

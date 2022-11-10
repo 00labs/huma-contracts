@@ -28,6 +28,7 @@ let evaluationAgent;
 let protocolOwner;
 let eaServiceAccount;
 let pdsServiceAccount;
+let poolOperator;
 
 let record;
 let recordStatic;
@@ -45,6 +46,7 @@ describe("Base Fee Manager", function () {
             protocolOwner,
             eaServiceAccount,
             pdsServiceAccount,
+            poolOperator,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -67,7 +69,8 @@ describe("Base Fee Manager", function () {
             testTokenContract,
             0,
             eaNFTContract,
-            false
+            false,
+            poolOperator
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
@@ -137,7 +140,8 @@ describe("Base Fee Manager", function () {
                 testTokenContract,
                 0,
                 eaNFTContract,
-                false
+                false,
+                poolOperator
             );
 
             await poolContract.connect(borrower).requestCredit(400, 30, 12);
@@ -209,7 +213,8 @@ describe("Base Fee Manager", function () {
                 testTokenContract,
                 500,
                 eaNFTContract,
-                false
+                false,
+                poolOperator
             );
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100, 0);
@@ -285,7 +290,8 @@ describe("Base Fee Manager", function () {
                 testTokenContract,
                 0,
                 eaNFTContract,
-                false
+                false,
+                poolOperator
             );
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500, 10);
@@ -358,7 +364,8 @@ describe("Base Fee Manager", function () {
                 testTokenContract,
                 500,
                 eaNFTContract,
-                false
+                false,
+                poolOperator
             );
 
             await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 100, 10);
