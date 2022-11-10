@@ -67,6 +67,14 @@ let invoicePayer = process.env["INVOICE_PAYER"];
 if (!invoicePayer) {
     invoicePayer = EMPTY_PRIVATE_KEY;
 }
+let baseCreditPoolOperator = process.env["BASE_CREDIT_POOL_OPERATOR"];
+if (!baseCreditPoolOperator) {
+    baseCreditPoolOperator = EMPTY_PRIVATE_KEY;
+}
+let ReceivableFactoringPoolOperator = process.env["RECEIVABLE_FACTORING_POOL_OPERATOR"];
+if (!ReceivableFactoringPoolOperator) {
+    ReceivableFactoringPoolOperator = EMPTY_PRIVATE_KEY;
+}
 
 //
 // Select the network you want to deploy to here:
@@ -157,6 +165,8 @@ module.exports = {
                 treasury,
                 ea_bcp,
                 invoicePayer,
+                baseCreditPoolOperator,
+                ReceivableFactoringPoolOperator,
             ],
         },
         xdai: {

@@ -6,7 +6,8 @@ const {
     sendTransaction,
 } = require("../utils.js");
 
-let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp;
+let deployer, deployedContracts, lender, ea, eaService;
+let pdsService, treasury, ea_bcp, bcpOperator, rfpOperator;
 
 const HUMA_OWNER_MULTI_SIG='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
 const POOL_OWNER_MULTI_SIG='0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA';
@@ -261,6 +262,8 @@ async function initBaseCreditPoolConfig() {
     ]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [1]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
+    
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [bcpOperator.address]);
 
     await transferOwnershipToPoolTL("BasePoolConfig", "BaseCreditPoolConfig");
 
@@ -302,11 +305,11 @@ async function prepareBaseCreditPool() {
     }
 
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
-    const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]);
+    const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]).connect(bcpOperator);
 
-    // await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [deployer.address]);
-    // await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [ea_bcp.address]);
-    // await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [lender.address]);
+    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [deployer.address]);
+    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [ea_bcp.address]);
+    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [lender.address]);
 
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
@@ -333,7 +336,12 @@ async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury, ea_bcp] = await accounts;
+    let invoicePayer;
+    [
+        deployer, proxyOwner, lender, ea, 
+        eaService, pdsService, treasury, ea_bcp,
+        invoicePayer, bcpOperator, rfpOperator
+    ] = await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);
     console.log("ea address: " + ea.address);
