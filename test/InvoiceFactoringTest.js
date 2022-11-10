@@ -35,6 +35,7 @@ describe("Invoice Factoring", function () {
     let eaNFTContract;
     let eaServiceAccount;
     let pdsServiceAccount;
+    let poolOperator;
     let r;
     let rs;
 
@@ -55,6 +56,7 @@ describe("Invoice Factoring", function () {
             eaServiceAccount,
             pdsServiceAccount,
             payer,
+            poolOperator,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -92,7 +94,8 @@ describe("Invoice Factoring", function () {
             testTokenContract,
             0,
             eaNFTContract,
-            true
+            true,
+            poolOperator
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);

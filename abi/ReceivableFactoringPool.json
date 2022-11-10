@@ -96,6 +96,11 @@
   },
   {
     "inputs": [],
+    "name": "poolOperatorRequired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "protocolIsPaused",
     "type": "error"
   },

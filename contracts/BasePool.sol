@@ -182,7 +182,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * call this function to mark a lender as approved.
      */
     function addApprovedLender(address lender) external virtual override {
-        _onlyOwnerOrHumaMasterAdmin();
+        _onlyPoolOperator();
         _approvedLenders[lender] = true;
         emit AddApprovedLender(lender, msg.sender);
     }
@@ -213,7 +213,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * The capital that the lender has contributed can continue to work as normal.
      */
     function removeApprovedLender(address lender) external virtual override {
-        _onlyOwnerOrHumaMasterAdmin();
+        _onlyPoolOperator();
         _approvedLenders[lender] = false;
         emit RemoveApprovedLender(lender, msg.sender);
     }
@@ -346,5 +346,10 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     /// "Modifier" function that limits access to pool owner or protocol owner
     function _onlyOwnerOrHumaMasterAdmin() internal view {
         _poolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
+    }
+
+    /// "Modifier" function that limits access to pool operators only
+    function _onlyPoolOperator() internal view {
+        if (!_poolConfig.isOperator(msg.sender)) revert Errors.poolOperatorRequired();
     }
 }

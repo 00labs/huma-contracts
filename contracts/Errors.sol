@@ -15,9 +15,11 @@ contract Errors {
     error permissionDeniedNotLender(); // 0x68299b20
     error evaluationAgentServiceAccountRequired(); // 0x9b3b1ed6
     error paymentDetectionServiceAccountRequired(); // 0x731b978f
+    error poolOperatorRequired();
     error notPoolOwner(); // 0xd39208c9
     error notProtocolOwner(); // 0x97924c20
     error notEvaluationAgent(); // 0x66f7b8b7
+    error notOperator();
     error notPauser(); // 0xdcdea7c8
     error notPool(); // 0x26d29bbf
     error drawdownFunctionUsedInsteadofDrawdownWithReceivable();
@@ -25,7 +27,8 @@ contract Errors {
     // system config
     error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
     error treasuryFeeHighThanUpperLimit(); // 0x39cda0d1
-    error alreayAPauser(); // 0xfbca9e38
+    error alreadyAnOperator();
+    error alreadyAPauser(); // 0xfbca9e38
     error alreadyPoolAdmin(); // 0x7bb356e2
 
     // fee config
