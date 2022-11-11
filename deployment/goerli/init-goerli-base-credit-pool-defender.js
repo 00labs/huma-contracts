@@ -300,6 +300,7 @@ async function prepareBaseCreditPool() {
     await sendTransaction("BaseCreditPool", poolFrombcpOperator, "addApprovedLender", [deployer.address]);
     await sendTransaction("BaseCreditPool", poolFrombcpOperator, "addApprovedLender", [ea_bcp.address]);
     await sendTransaction("BaseCreditPool", poolFrombcpOperator, "addApprovedLender", [lender.address]);
+    await sendTransaction("BaseCreditPool", poolFrombcpOperator, "addApprovedLender", [bcpOwnerTreasury.address]);
 
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
