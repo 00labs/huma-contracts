@@ -19,9 +19,9 @@ contract Errors {
     error notPoolOwner(); // 0xd39208c9
     error notProtocolOwner(); // 0x97924c20
     error notEvaluationAgent(); // 0x66f7b8b7
-    error notOperator();
-    error notPoolOwnerTreasury();
-    error notPoolOwnerOrEA();
+    error notOperator(); // 0xf67113fe
+    error notPoolOwnerTreasury(); // 0x325bf3c2
+    error notPoolOwnerOrEA(); // 0xd6ed9384
     error notPauser(); // 0xdcdea7c8
     error notPool(); // 0x26d29bbf
     error drawdownFunctionUsedInsteadofDrawdownWithReceivable();
@@ -29,7 +29,7 @@ contract Errors {
     // system config
     error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
     error treasuryFeeHighThanUpperLimit(); // 0x39cda0d1
-    error alreadyAnOperator();
+    error alreadyAnOperator(); // 0x75cea0fc
     error alreadyAPauser(); // 0xfbca9e38
     error alreadyPoolAdmin(); // 0x7bb356e2
 
