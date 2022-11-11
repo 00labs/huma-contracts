@@ -1,6 +1,8 @@
 const {deploy} = require("../utils.js");
 
-const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB'
+const HUMA_OWNER_MULTI_SIG='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
+
+const POOL_OWNER_MULTI_SIG='0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA';
 
 async function deployContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
@@ -22,15 +24,24 @@ async function deployContracts() {
     const humaConfig = await deploy("HumaConfig", "HumaConfig");
     const humaConfigTL = await deploy("TimelockController", "HumaConfigTimelock", [
         0,
-        [HUMA_OWNER_ADRESS],
-        [HUMA_OWNER_ADRESS],
+        [HUMA_OWNER_MULTI_SIG],
+        [deployer.address],
     ]);
+
+    const receivableFactoringPoolTL = await deploy(
+        "TimelockController", 
+        "ReceivableFactoringPoolTimelock", 
+        [
+            0,
+            [POOL_OWNER_MULTI_SIG],
+            [deployer.address],
+        ]);
 
     const feeManager = await deploy("BaseFeeManager", "ReceivableFactoringPoolFeeManager");
     const hdtImpl = await deploy("HDT", "HDTImpl");
     const hdt = await deploy("TransparentUpgradeableProxy", "HDT", [
         hdtImpl.address,
-        HUMA_OWNER_ADRESS,
+        receivableFactoringPoolTL.address,
         [],
     ]);
 
@@ -39,7 +50,7 @@ async function deployContracts() {
     const poolImpl = await deploy("ReceivableFactoringPool", "ReceivableFactoringPoolImpl");
     const pool = await deploy("TransparentUpgradeableProxy", "ReceivableFactoringPool", [
         poolImpl.address,
-        HUMA_OWNER_ADRESS,
+        receivableFactoringPoolTL.address,
         [],
     ]);
 

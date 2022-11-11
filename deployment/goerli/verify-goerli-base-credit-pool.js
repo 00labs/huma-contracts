@@ -9,7 +9,8 @@ const fs = require("fs");
 
 const VERIFY_ARGS_PATH = "./deployment/goerli/verify_args/"
 
-const OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB'
+const HUMA_OWNER_MULTI_SIG='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
+const POOL_OWNER_MULTI_SIG='0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA';
 
 let deployedContracts, proxyOwner, network, deployer;
 
@@ -102,14 +103,14 @@ async function verifyContracts() {
     ]);
     console.log(`Verify RNNFT result: ${verifyRNNFT}`);
 
-    const verifyHumaConfig = await verifyContract('HumaConfig');
-    console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
+    // const verifyHumaConfig = await verifyContract('HumaConfig');
+    // console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
 
     const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
         [
             0,
-            `['${OWNER_ADRESS}']`,
-            `['${OWNER_ADRESS}']`,
+            `['${HUMA_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
@@ -122,7 +123,7 @@ async function verifyContracts() {
     const verifyHDT = await verifyContract('BaseCreditHDT',
         [
             `'${deployedContracts['BaseCreditHDTImpl']}'`,
-            `'${OWNER_ADRESS}'`,
+            `'${deployedContracts['BaseCreditPoolTimelock']}'`,
             '[]'
         ]);
     console.log(`Verify HDT result: ${verifyHDT}`);
@@ -136,7 +137,7 @@ async function verifyContracts() {
     const verifyPool = await verifyContract('BaseCreditPool',
         [
             `'${deployedContracts['BaseCreditPoolImpl']}'`,
-            `'${OWNER_ADRESS}'`,
+            `'${deployedContracts['BaseCreditPoolTimelock']}'`,
             '[]',
         ]);
     console.log(`Verify PoolImpl result: ${verifyPool}`);

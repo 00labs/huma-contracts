@@ -8,29 +8,30 @@ const {
 
 let deployer, deployedContracts, lender, ea, eaService;
 let pdsService, treasury, ea_bcp, bcpOperator, rfpOperator;
+let bcpOwnerTreasury, rfpOwnerTreasury;
 
 const HUMA_OWNER_MULTI_SIG='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
 const POOL_OWNER_MULTI_SIG='0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA';
 
-async function transferOwnershipToPoolTL(contractName, contractKey) {
-    if (!deployedContracts["BaseCreditPoolTimelock"]) {
-        throw new Error("BaseCreditPoolTimelock not deployed yet!");
+async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
+    if (!deployedContracts[timeLockKey]) {
+        throw new Error(`${timeLockKey} not deployed yet!`);
     }
 
     if (!deployedContracts[contractKey]) {
         throw new Error(`${contractKey} not deployed yet!`);
     }
 
-    const TimelockController = await hre.ethers.getContractFactory("TimelockController");
-    const baseCreditPoolTL = TimelockController.attach(deployedContracts["BaseCreditPoolTimelock"]);
+    const TimeLockController = await hre.ethers.getContractFactory("TimelockController");
+    const timeLockController = TimeLockController.attach(deployedContracts[timeLockKey]);
 
     const Contract = await hre.ethers.getContractFactory(contractName);
     const contract = Contract.attach(deployedContracts[contractKey]);
 
-    await sendTransaction(contractKey, contract, "transferOwnership", [baseCreditPoolTL.address]);
+    await sendTransaction(contractKey, contract, "transferOwnership", [timeLockController.address]);
 
-    const adminRole = await baseCreditPoolTL.TIMELOCK_ADMIN_ROLE();
-    await sendTransaction(contractKey, baseCreditPoolTL, "renounceRole", [
+    const adminRole = await timeLockController.TIMELOCK_ADMIN_ROLE();
+    await sendTransaction(contractKey, timeLockController, "renounceRole", [
         adminRole,
         deployer.address,
     ]);
@@ -47,10 +48,6 @@ async function initHumaConfig() {
         throw new Error("HumaConfig not deployed yet!");
     }
 
-    if (!deployedContracts["HumaConfigTimelock"]) {
-        throw new Error("HumaConfigTimelock not deployed yet!");
-    }
-
     if (!deployedContracts["EANFT"]) {
         throw new Error("EANFT not deployed yet!");
     }
@@ -61,9 +58,6 @@ async function initHumaConfig() {
 
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
-
-    const TimelockController = await hre.ethers.getContractFactory("TimelockController");
-    const humaConfigTL = TimelockController.attach(deployedContracts["HumaConfigTimelock"]);
 
     await sendTransaction("HumaConfig", humaConfig, "setProtocolDefaultGracePeriod", [
         30 * 24 * 3600,
@@ -85,12 +79,7 @@ async function initHumaConfig() {
     // Set treasury for the protocol
     await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasury.address]);
 
-    await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
-    const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
-    await sendTransaction("HumaConfigTimelock", humaConfigTL, "renounceRole", [
-        adminRole,
-        deployer.address,
-    ]);
+    await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock")
 
     await updateInitilizedContract("HumaConfig");
 }
@@ -138,7 +127,7 @@ async function initBaseCreditPoolFeeManager() {
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
     
-    await transferOwnershipToPoolTL("BaseFeeManager", "BaseCreditPoolFeeManager");
+    await transferOwnershipToTL("BaseFeeManager", "BaseCreditPoolFeeManager", "BaseCreditPoolTimelock");
 
     await updateInitilizedContract("BaseCreditPoolFeeManager");
 }
@@ -173,7 +162,7 @@ async function initBaseCreditPoolHDT() {
 
     await sendTransaction("HDT", hdt, "setPool", [deployedContracts["BaseCreditPool"]]);
     
-    await transferOwnershipToPoolTL("HDT", "BaseCreditHDT");
+    await transferOwnershipToTL("HDT", "BaseCreditHDT", "BaseCreditPoolTimelock");
 
     await updateInitilizedContract("BaseCreditHDT");
 }
@@ -262,10 +251,10 @@ async function initBaseCreditPoolConfig() {
     ]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [1]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
-    
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [bcpOperator.address]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolOwnerTreasury", [bcpOwnerTreasury.address]);
 
-    await transferOwnershipToPoolTL("BasePoolConfig", "BaseCreditPoolConfig");
+    await transferOwnershipToTL("BasePoolConfig", "BaseCreditPoolConfig", "BaseCreditPoolTimelock");
 
     await updateInitilizedContract("BaseCreditPoolConfig");
 }
@@ -305,21 +294,25 @@ async function prepareBaseCreditPool() {
     }
 
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
-    const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]).connect(bcpOperator);
+    const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"])
+    const poolFrombcpOperator = pool.connect(bcpOperator);
 
-    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [deployer.address]);
-    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [ea_bcp.address]);
-    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [lender.address]);
+    await sendTransaction("BaseCreditPool", poolFrombcpOperator, "addApprovedLender", [deployer.address]);
+    await sendTransaction("BaseCreditPool", poolFrombcpOperator, "addApprovedLender", [ea_bcp.address]);
+    await sendTransaction("BaseCreditPool", poolFrombcpOperator, "addApprovedLender", [lender.address]);
 
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
     const decimals = await usdc.decimals();
 
-    // // Owner
-    // const amountOwner = BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)));
-    // await sendTransaction("TestToken", usdc, "mint", [POOL_OWNER_MULTI_SIG, amountOwner]);
-    // await sendTransaction("TestToken", usdc, "approve", [pool.address, amountOwner]);
-    // await sendTransaction("BaseCreditPool", pool, "makeInitialDeposit", [amountOwner]);
+    // Owner
+    const usdcFromPoolOwnerTreasury = await usdc.connect(bcpOwnerTreasury);
+    const poolFromPoolOwnerTreasury = await pool.connect(bcpOwnerTreasury);
+    const amountOwner = BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)));
+    console.log("owner to deposit: " + amountOwner);
+    await sendTransaction("TestToken", usdc, "mint", [bcpOwnerTreasury.address, amountOwner]);
+    await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [pool.address, amountOwner]);
+    await sendTransaction("BaseCreditPool", poolFromPoolOwnerTreasury, "makeInitialDeposit", [amountOwner]);
 
     // EA
     const usdcFromEA = await usdc.connect(ea_bcp);
@@ -340,7 +333,8 @@ async function initContracts() {
     [
         deployer, proxyOwner, lender, ea, 
         eaService, pdsService, treasury, ea_bcp,
-        invoicePayer, bcpOperator, rfpOperator
+        invoicePayer, bcpOperator, rfpOperator,
+        bcpOwnerTreasury, rfpOwnerTreasury
     ] = await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);

@@ -71,9 +71,17 @@ let baseCreditPoolOperator = process.env["BASE_CREDIT_POOL_OPERATOR"];
 if (!baseCreditPoolOperator) {
     baseCreditPoolOperator = EMPTY_PRIVATE_KEY;
 }
-let ReceivableFactoringPoolOperator = process.env["RECEIVABLE_FACTORING_POOL_OPERATOR"];
-if (!ReceivableFactoringPoolOperator) {
-    ReceivableFactoringPoolOperator = EMPTY_PRIVATE_KEY;
+let receivableFactoringPoolOperator = process.env["RECEIVABLE_FACTORING_POOL_OPERATOR"];
+if (!receivableFactoringPoolOperator) {
+    receivableFactoringPoolOperator = EMPTY_PRIVATE_KEY;
+}
+let receivableFactoringPoolOwnerTreasury = process.env["RECEIVABLE_FACTORING_POOL_OWNER_TREASURY"];
+if (!receivableFactoringPoolOwnerTreasury) {
+    receivableFactoringPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
+}
+let baseCreditPoolOwnerTreasury = process.env["BASE_CREDIT_POOL_OPERATOR"];
+if (!baseCreditPoolOwnerTreasury) {
+    baseCreditPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
 }
 
 //
@@ -166,7 +174,9 @@ module.exports = {
                 ea_bcp,
                 invoicePayer,
                 baseCreditPoolOperator,
-                ReceivableFactoringPoolOperator,
+                receivableFactoringPoolOperator,
+                baseCreditPoolOwnerTreasury,
+                receivableFactoringPoolOwnerTreasury
             ],
         },
         xdai: {
