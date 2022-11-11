@@ -419,7 +419,7 @@ contract BasePoolConfig is Ownable, Initializable {
 
     function withdrawEAFee(uint256 amount) external {
         // Either Pool owner treasury or EA can trigger reward withdraw for EA
-        onlyPoolOwnerTreasuryOrEA(msg.sender);
+        onlyPoolOwnerOrEA(msg.sender);
         if (amount == 0) revert Errors.zeroAmountProvided();
         if (amount + _accuredIncome._eaIncomeWithdrawn > _accuredIncome._eaIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
@@ -555,8 +555,8 @@ contract BasePoolConfig is Ownable, Initializable {
         );
     }
 
-    function isPoolOwnerTreasuryOrEA(address account) public view returns (bool) {
-        return (account == poolOwnerTreasury || account == evaluationAgent);
+    function isPoolOwnerOrEA(address account) public view returns (bool) {
+        return (account == owner() || account == evaluationAgent);
     }
 
     /// Reports if a given user account is an approved operator or not
@@ -577,8 +577,8 @@ contract BasePoolConfig is Ownable, Initializable {
     }
 
     /// "Modifier" function that limits access to pool owner or EA.
-    function onlyPoolOwnerTreasuryOrEA(address account) public view {
-        if (!isPoolOwnerTreasuryOrEA(account)) revert Errors.notPoolOwnerTreasuryOrEA();
+    function onlyPoolOwnerOrEA(address account) public view {
+        if (!isPoolOwnerOrEA(account)) revert Errors.notPoolOwnerOrEA();
     }
 
     function payPeriodInDays() external view returns (uint256) {

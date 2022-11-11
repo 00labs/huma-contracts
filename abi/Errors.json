@@ -146,12 +146,12 @@
   },
   {
     "inputs": [],
-    "name": "notPoolOwnerTreasury",
+    "name": "notPoolOwnerOrEA",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "notPoolOwnerTreasuryOrEA",
+    "name": "notPoolOwnerTreasury",
     "type": "error"
   },
   {

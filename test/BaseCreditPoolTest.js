@@ -1002,7 +1002,7 @@ describe("Base Credit Pool", function () {
 
         it("Should not allow non-poolOwnerTreasury or EA withdraw EA fee", async function () {
             await expect(poolConfigContract.withdrawEAFee(1)).to.be.revertedWith(
-                "notPoolOwnerTreasuryOrEA"
+                "notPoolOwnerOrEA"
             );
         });
 
