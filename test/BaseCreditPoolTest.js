@@ -41,6 +41,7 @@ describe("Base Credit Pool", function () {
     let record;
     let recordStatic;
     let poolOperator;
+    let poolOwnerTreasury;
 
     before(async function () {
         [
@@ -55,6 +56,7 @@ describe("Base Credit Pool", function () {
             eaServiceAccount,
             pdsServiceAccount,
             poolOperator,
+            poolOwnerTreasury,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -80,7 +82,8 @@ describe("Base Credit Pool", function () {
             0,
             eaNFTContract,
             false, // BaseCreditPool
-            poolOperator
+            poolOperator,
+            poolOwnerTreasury
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
@@ -580,7 +583,9 @@ describe("Base Credit Pool", function () {
             expect(await poolContract.totalPoolValue()).to.equal(5_012_602);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_022_002);
 
-            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(1_002_520);
+            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                1_002_520
+            );
             expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
                 2_005_040
             );
@@ -824,7 +829,9 @@ describe("Base Credit Pool", function () {
             // Checks pool value and all LP's withdrawable funds
             expect(await hdtContract.totalSupply()).to.equal(5_000_000);
             expect(await poolContract.totalPoolValue()).to.equal(3_984_663);
-            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(796_932);
+            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                796_932
+            );
             expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
                 1_593_865
             );
@@ -875,7 +882,9 @@ describe("Base Credit Pool", function () {
             // Checks pool value and all LP's withdrawable funds
             expect(await hdtContract.totalSupply()).to.equal(5_000_000);
             expect(await poolContract.totalPoolValue()).to.equal(3_984_663);
-            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(796_932);
+            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                796_932
+            );
             expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
                 1_593_865
             );
@@ -918,7 +927,9 @@ describe("Base Credit Pool", function () {
                 1_029_850
             );
             expect(await poolContract.totalPoolValue()).to.equal(4_009_663);
-            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(801_932);
+            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                801_932
+            );
             expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
                 1_603_865
             );
@@ -959,7 +970,9 @@ describe("Base Credit Pool", function () {
                 0
             );
             expect(await poolContract.totalPoolValue()).to.equal(5_065_351);
-            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(1_013_070);
+            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                1_013_070
+            );
             expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
                 2_026_140
             );
@@ -983,13 +996,13 @@ describe("Base Credit Pool", function () {
 
         it("Should not allow non-pool-owner to withdraw pool owner fee", async function () {
             await expect(poolConfigContract.withdrawPoolOwnerFee(1)).to.be.revertedWith(
-                "notPoolOwner"
+                "notPoolOwnerTreasury"
             );
         });
 
-        it("Should not allow non-ea withdraw ea fee", async function () {
+        it("Should not allow non-poolOwnerTreasury or EA withdraw EA fee", async function () {
             await expect(poolConfigContract.withdrawEAFee(1)).to.be.revertedWith(
-                "notEvaluationAgent"
+                "notPoolOwnerTreasuryOrEA"
             );
         });
 
@@ -1000,8 +1013,8 @@ describe("Base Credit Pool", function () {
             );
         });
 
-        it("Should not withdraw pool owner fee while amount > withdrawable", async function () {
-            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwner);
+        it("Should not withdraw pool owner fee if amount > withdrawable", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwnerTreasury);
             await expect(poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)).to.be.revertedWith(
                 "withdrawnAmountHigherThanBalance"
             );
@@ -1046,13 +1059,13 @@ describe("Base Credit Pool", function () {
 
             let accruedIncome = await poolConfigContract.accruedIncome();
             const amount = accruedIncome.poolOwnerIncome;
-            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwner);
-            const beforeBalance = await testTokenContract.balanceOf(poolOwner.address);
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwnerTreasury);
+            const beforeBalance = await testTokenContract.balanceOf(poolOwnerTreasury.address);
 
             await poolConfigFromPoolOwner.withdrawPoolOwnerFee(amount);
             accruedIncome = await poolConfigContract.accruedIncome();
             expect(accruedIncome.poolOwnerIncomeWithdrawn).equals(amount);
-            const afterBalance = await testTokenContract.balanceOf(poolOwner.address);
+            const afterBalance = await testTokenContract.balanceOf(poolOwnerTreasury.address);
             expect(amount).equals(afterBalance.sub(beforeBalance));
 
             await expect(poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)).to.be.revertedWith(

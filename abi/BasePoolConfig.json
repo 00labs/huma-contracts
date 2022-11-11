@@ -31,7 +31,12 @@
   },
   {
     "inputs": [],
-    "name": "notPoolOwner",
+    "name": "notPoolOwnerTreasury",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPoolOwnerTreasuryOrEA",
     "type": "error"
   },
   {
@@ -541,12 +546,6 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
       }
     ],
     "name": "PoolRewardsWithdrawn",
@@ -924,7 +923,7 @@
         "type": "address"
       }
     ],
-    "name": "isOwnerOrEA",
+    "name": "isPoolOwnerTreasuryOrEA",
     "outputs": [
       {
         "internalType": "bool",
@@ -956,7 +955,7 @@
         "type": "address"
       }
     ],
-    "name": "onlyOwnerOrEA",
+    "name": "onlyEA",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
@@ -970,6 +969,32 @@
       }
     ],
     "name": "onlyOwnerOrHumaMasterAdmin",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "onlyPoolOwnerTreasury",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "onlyPoolOwnerTreasuryOrEA",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
@@ -1060,6 +1085,19 @@
         "internalType": "string",
         "name": "",
         "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "poolOwnerTreasury",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1333,6 +1371,19 @@
       }
     ],
     "name": "setPoolOwnerRewardsAndLiquidity",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_poolOwnerTreasury",
+        "type": "address"
+      }
+    ],
+    "name": "setPoolOwnerTreasury",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

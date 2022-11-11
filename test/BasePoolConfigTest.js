@@ -25,6 +25,7 @@ let newNFTTokenId;
 let evaluationAgent2;
 let poolOperator;
 let poolOperator2;
+let poolOwnerTreasury;
 
 describe("Base Pool Config", function () {
     before(async function () {
@@ -42,6 +43,7 @@ describe("Base Pool Config", function () {
             evaluationAgent2,
             poolOperator,
             poolOperator2,
+            poolOwnerTreasury,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -65,7 +67,8 @@ describe("Base Pool Config", function () {
             0,
             eaNFTContract,
             false, // BaseCreditPool
-            poolOperator
+            poolOperator,
+            poolOwnerTreasury
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
@@ -74,9 +77,9 @@ describe("Base Pool Config", function () {
 
     describe("Huma Pool Config Settings", function () {
         it("Should have correct liquidity post beforeEach() run", async function () {
-            expect(await poolContract.lastDepositTime(poolOwner.address)).to.not.equal(0);
+            expect(await poolContract.lastDepositTime(poolOwnerTreasury.address)).to.not.equal(0);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(5_000_000);
-            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
+            expect(await hdtContract.balanceOf(poolOwnerTreasury.address)).to.equal(1_000_000);
             const fees = await feeManagerContract.getFees();
             expect(fees._frontLoadingFeeFlat).to.equal(1000);
             expect(fees._frontLoadingFeeBps).to.equal(100);

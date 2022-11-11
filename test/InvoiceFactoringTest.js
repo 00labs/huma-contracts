@@ -38,6 +38,7 @@ describe("Invoice Factoring", function () {
     let poolOperator;
     let r;
     let rs;
+    let poolOwnerTreasury;
 
     let invoiceNFTContract;
     let invoiceNFTTokenId;
@@ -57,6 +58,7 @@ describe("Invoice Factoring", function () {
             pdsServiceAccount,
             payer,
             poolOperator,
+            poolOwnerTreasury,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -95,7 +97,8 @@ describe("Invoice Factoring", function () {
             0,
             eaNFTContract,
             true,
-            poolOperator
+            poolOperator,
+            poolOwnerTreasury
         );
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
@@ -665,7 +668,9 @@ describe("Invoice Factoring", function () {
             expect(await poolContract.totalPoolValue()).to.equal(5_006_600);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(5_011_000);
 
-            expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(1_001_320);
+            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                1_001_320
+            );
             expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
                 2_002_640
             );
@@ -713,7 +718,7 @@ describe("Invoice Factoring", function () {
                     "defaultTriggeredTooEarly()"
                 );
                 // post withdraw
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     1_001_320
                 );
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_002_640);
@@ -731,7 +736,7 @@ describe("Invoice Factoring", function () {
                 await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                     "defaultTriggeredTooEarly()"
                 );
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     1_002_760
                 );
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_005_520);
@@ -748,7 +753,7 @@ describe("Invoice Factoring", function () {
                 await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                     "defaultTriggeredTooEarly()"
                 );
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     1_004_214
                 );
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_008_428);
@@ -767,7 +772,9 @@ describe("Invoice Factoring", function () {
                     .to.emit(poolContract, "DefaultTriggered")
                     .withArgs(borrower.address, 1_024_120, eaServiceAccount.address);
 
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(799_390);
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                    799_390
+                );
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_598_780);
 
                 accruedIncome = await poolConfigContract.accruedIncome();
@@ -799,7 +806,9 @@ describe("Invoice Factoring", function () {
                     .to.emit(poolContract, "DefaultTriggered")
                     .withArgs(borrower.address, 1_024_120, eaServiceAccount.address);
 
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(799_390);
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                    799_390
+                );
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_598_780);
 
                 accruedIncome = await poolConfigContract.accruedIncome();
@@ -823,7 +832,9 @@ describe("Invoice Factoring", function () {
                         ethers.utils.formatBytes32String("1")
                     );
 
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(999_390);
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                    999_390
+                );
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_998_780);
 
                 accruedIncome = await poolConfigContract.accruedIncome();
@@ -846,7 +857,7 @@ describe("Invoice Factoring", function () {
                         ethers.utils.formatBytes32String("2")
                     );
 
-                expect(await hdtContract.withdrawableFundsOf(poolOwner.address)).to.equal(
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     1_005_683
                 );
                 expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_011_366);

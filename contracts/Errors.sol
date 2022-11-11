@@ -20,6 +20,8 @@ contract Errors {
     error notProtocolOwner(); // 0x97924c20
     error notEvaluationAgent(); // 0x66f7b8b7
     error notOperator();
+    error notPoolOwnerTreasury();
+    error notPoolOwnerTreasuryOrEA();
     error notPauser(); // 0xdcdea7c8
     error notPool(); // 0x26d29bbf
     error drawdownFunctionUsedInsteadofDrawdownWithReceivable();

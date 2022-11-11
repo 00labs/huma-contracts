@@ -38,6 +38,7 @@ let newNFTTokenId;
 let evaluationAgent2;
 let poolOperator;
 let lender2;
+let poolOwnerTreasury;
 
 describe("Base Pool - LP and Admin functions", function () {
     before(async function () {
@@ -55,6 +56,7 @@ describe("Base Pool - LP and Admin functions", function () {
             evaluationAgent2,
             poolOperator,
             lender2,
+            poolOwnerTreasury,
         ] = await ethers.getSigners();
     });
 
@@ -80,7 +82,8 @@ describe("Base Pool - LP and Admin functions", function () {
             0,
             eaNFTContract,
             false,
-            poolOperator
+            poolOperator,
+            poolOwnerTreasury
         );
     });
 
@@ -151,7 +154,7 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(6_000_000);
 
             expect(await hdtContract.balanceOf(lender.address)).to.equal(3_000_000);
-            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
+            expect(await hdtContract.balanceOf(poolOwnerTreasury.address)).to.equal(1_000_000);
             expect(await hdtContract.totalSupply()).to.equal(6_000_000);
         });
 
@@ -225,7 +228,7 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_000_000);
 
             expect(await hdtContract.balanceOf(lender.address)).to.equal(1_000_000);
-            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
+            expect(await hdtContract.balanceOf(poolOwnerTreasury.address)).to.equal(1_000_000);
             expect(await hdtContract.totalSupply()).to.equal(4_000_000);
         });
 
@@ -235,7 +238,7 @@ describe("Base Pool - LP and Admin functions", function () {
             await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
             await ethers.provider.send("evm_mine", []);
 
-            await expect(poolContract.connect(poolOwner).withdraw(10)).to.be.revertedWith(
+            await expect(poolContract.connect(poolOwnerTreasury).withdraw(10)).to.be.revertedWith(
                 "poolOwnerNotEnoughLiquidity()"
             );
 
@@ -253,7 +256,7 @@ describe("Base Pool - LP and Admin functions", function () {
             // Update liquidity rate for pool owner to be lower
             await poolConfigContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 1);
             // Should succeed
-            await poolContract.connect(poolOwner).withdraw(10);
+            await poolContract.connect(poolOwnerTreasury).withdraw(10);
         });
     });
 });

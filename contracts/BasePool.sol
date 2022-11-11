@@ -76,7 +76,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * @param amount the number of `poolToken` to be deposited
      */
     function makeInitialDeposit(uint256 amount) external virtual override {
-        _poolConfig.onlyOwnerOrEA(msg.sender);
+        _poolConfig.isPoolOwnerTreasuryOrEA(msg.sender);
         return _deposit(msg.sender, amount);
     }
 
@@ -105,7 +105,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
         if (msg.sender == _poolConfig.evaluationAgent())
             _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
-        else if (msg.sender == _poolConfig.owner())
+        else if (msg.sender == _poolConfig.poolOwnerTreasury())
             _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);

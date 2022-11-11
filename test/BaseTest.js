@@ -61,10 +61,11 @@ async function deployAndSetupPool(
     principalRateInBps,
     eaNFTContract,
     isReceivableContractFlag,
-    poolOperator
+    poolOperator,
+    poolOwnerTreasury
 ) {
     await testTokenContract.give1000To(lender.address);
-    await testTokenContract.give1000To(poolOwner.address);
+    await testTokenContract.give1000To(poolOwnerTreasury.address);
     await testTokenContract.give1000To(evaluationAgent.address);
 
     await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(principalRateInBps);
@@ -141,14 +142,15 @@ async function deployAndSetupPool(
 
     await poolConfig.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
 
+    await poolConfig.connect(poolOwner).setPoolOwnerTreasury(poolOwnerTreasury.address);
     await poolConfig.connect(poolOwner).addPoolOperator(poolOperator.address);
 
-    await poolContract.connect(poolOperator).addApprovedLender(poolOwner.address);
+    await poolContract.connect(poolOperator).addApprovedLender(poolOwnerTreasury.address);
     await poolContract.connect(poolOperator).addApprovedLender(evaluationAgent.address);
     await poolContract.connect(poolOperator).addApprovedLender(lender.address);
 
-    await testTokenContract.connect(poolOwner).approve(poolContract.address, 1_000_000);
-    await poolContract.connect(poolOwner).makeInitialDeposit(1_000_000);
+    await testTokenContract.connect(poolOwnerTreasury).approve(poolContract.address, 1_000_000);
+    await poolContract.connect(poolOwnerTreasury).makeInitialDeposit(1_000_000);
 
     await testTokenContract.connect(evaluationAgent).approve(poolContract.address, 2_000_000);
     await poolContract.connect(evaluationAgent).makeInitialDeposit(2_000_000);
