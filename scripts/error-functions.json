@@ -45,5 +45,9 @@
   "withdrawTooSoon()": "0x67982472",
   "paymentAlreadyProcessed()": "0xfd6754cf",
   "defaultTriggeredTooEarly()": "0x7872424e",
-  "defaultHasAlreadyBeenTriggered()": "0xeb8d2ccc"
+  "defaultHasAlreadyBeenTriggered()": "0xeb8d2ccc",
+  "notOperator()": "0xf67113fe",
+  "notPoolOwnerTreasury()": "0x325bf3c2",
+  "notPoolOwnerOrEA()": "0xd6ed9384",
+  "alreadyAnOperator()": "0x75cea0fc"
 }
