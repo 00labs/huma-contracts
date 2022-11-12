@@ -103,8 +103,8 @@ async function verifyContracts() {
     ]);
     console.log(`Verify RNNFT result: ${verifyRNNFT}`);
 
-    // const verifyHumaConfig = await verifyContract('HumaConfig');
-    // console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
+    const verifyHumaConfig = await verifyContract('HumaConfig');
+    console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
 
     const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
         [
@@ -113,6 +113,22 @@ async function verifyContracts() {
             `['${deployer.address}']`,
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+
+    const verifyBaseCreditPoolTL = await verifyContract('BaseCreditPoolTimelock',
+        [
+            0,
+            `['${POOL_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
+        ]);
+    console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+
+    const verifyBaseCreditPoolProxyAdminTL = await verifyContract('BaseCreditPoolProxyAdminTimelock',
+        [
+            0,
+            `['${POOL_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
+        ]);
+    console.log(`Verify HumaConfigTimelock result: ${verifyBaseCreditPoolProxyAdminTL}`);
 
     const verifyFeeManager = await verifyContract('BaseCreditPoolFeeManager');
     console.log(`Verify FeeManager result: ${verifyFeeManager}`);
@@ -123,7 +139,7 @@ async function verifyContracts() {
     const verifyHDT = await verifyContract('BaseCreditHDT',
         [
             `'${deployedContracts['BaseCreditHDTImpl']}'`,
-            `'${deployedContracts['BaseCreditPoolTimelock']}'`,
+            `'${deployedContracts['BaseCreditPoolProxyAdminTimelock']}'`,
             '[]'
         ]);
     console.log(`Verify HDT result: ${verifyHDT}`);
@@ -137,7 +153,7 @@ async function verifyContracts() {
     const verifyPool = await verifyContract('BaseCreditPool',
         [
             `'${deployedContracts['BaseCreditPoolImpl']}'`,
-            `'${deployedContracts['BaseCreditPoolTimelock']}'`,
+            `'${deployedContracts['BaseCreditPoolProxyAdminTimelock']}'`,
             '[]',
         ]);
     console.log(`Verify PoolImpl result: ${verifyPool}`);

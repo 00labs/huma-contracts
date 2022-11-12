@@ -1,7 +1,6 @@
 const {deploy} = require("../utils.js");
 
 const HUMA_OWNER_MULTI_SIG='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
-
 const POOL_OWNER_MULTI_SIG='0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA';
 
 async function deployContracts() {
@@ -35,11 +34,17 @@ async function deployContracts() {
         [deployer.address],
     ]);
 
+    const baseCreditPoolProxyAdminTL = await deploy("TimelockController", "BaseCreditPoolProxyAdminTimelock", [
+        0,
+        [POOL_OWNER_MULTI_SIG],
+        [deployer.address],
+    ]);
+
     const bc_feeManager = await deploy("BaseFeeManager", "BaseCreditPoolFeeManager");
     const bc_hdtImpl = await deploy("HDT", "BaseCreditHDTImpl");
     const bc_hdt = await deploy("TransparentUpgradeableProxy", "BaseCreditHDT", [
         bc_hdtImpl.address,
-        baseCreditPoolTL.address,
+        baseCreditPoolProxyAdminTL.address,
         [],
     ]);
     const bc_poolConfig = await deploy("BasePoolConfig", "BaseCreditPoolConfig");
@@ -47,7 +52,7 @@ async function deployContracts() {
     const bc_poolImpl = await deploy("BaseCreditPool", "BaseCreditPoolImpl");
     const bc_pool = await deploy("TransparentUpgradeableProxy", "BaseCreditPool", [
         bc_poolImpl.address,
-        baseCreditPoolTL.address,
+        baseCreditPoolProxyAdminTL.address,
         [],
     ]);
     // End of deploying base credit pool

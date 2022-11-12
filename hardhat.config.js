@@ -79,7 +79,7 @@ let receivableFactoringPoolOwnerTreasury = process.env["RECEIVABLE_FACTORING_POO
 if (!receivableFactoringPoolOwnerTreasury) {
     receivableFactoringPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
 }
-let baseCreditPoolOwnerTreasury = process.env["BASE_CREDIT_POOL_OPERATOR"];
+let baseCreditPoolOwnerTreasury = process.env["BASE_CREDIT_POOL_OWNER_TREASURY"];
 if (!baseCreditPoolOwnerTreasury) {
     baseCreditPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
 }
