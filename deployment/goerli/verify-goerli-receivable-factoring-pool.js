@@ -9,7 +9,8 @@ const fs = require("fs");
 
 const VERIFY_ARGS_PATH = "./deployment/goerli/verify_args/";
 
-const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
+const HUMA_OWNER_MULTI_SIG='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
+const POOL_OWNER_MULTI_SIG='0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA';
 
 let deployedContracts, proxyOwner, network, deployer;
 
@@ -108,10 +109,26 @@ async function verifyContracts() {
     const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
         [
             0,
-            `['${HUMA_OWNER_ADRESS}']`,
-            `['${HUMA_OWNER_ADRESS}']`,
+            `['${HUMA_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+
+    const verifyReceivableFactoringPoolTL = await verifyContract('ReceivableFactoringPoolTimelock',
+        [
+            0,
+            `['${POOL_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
+        ]);
+    console.log(`Verify ReceivableFactoringPoolTimelock result: ${verifyReceivableFactoringPoolTL}`);
+
+    const verifyrRceivableFactoringPoolProxyAdminTL = await verifyContract('ReceivableFactoringPoolProxyAdminTimelock',
+        [
+            0,
+            `['${POOL_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
+        ]);
+    console.log(`Verify ReceivableFactoringPoolProxyAdminTimelock result: ${verifyrRceivableFactoringPoolProxyAdminTL}`);
 
     const verifyFeeManager = await verifyContract('ReceivableFactoringPoolFeeManager');
     console.log(`Verify FeeManager result: ${verifyFeeManager}`);
@@ -122,7 +139,7 @@ async function verifyContracts() {
     const verifyHDT = await verifyContract('HDT',
         [
             `'${deployedContracts['HDTImpl']}'`,
-            `'${HUMA_OWNER_ADRESS}'`,
+            `'${deployedContracts['ReceivableFactoringPoolProxyAdminTimelock']}'`,
             '[]'
         ]);
     console.log(`Verify HDT result: ${verifyHDT}`);
@@ -136,10 +153,10 @@ async function verifyContracts() {
     const verifyPool = await verifyContract('ReceivableFactoringPool',
         [
             `'${deployedContracts['ReceivableFactoringPoolImpl']}'`,
-            `'${HUMA_OWNER_ADRESS}'`,
+            `'${deployedContracts['ReceivableFactoringPoolProxyAdminTimelock']}'`,
             '[]',
         ]);
-    console.log(`Verify PoolImpl result: ${verifyPool}`);
+    console.log(`Verify Pool result: ${verifyPool}`);
 }
 
 verifyContracts()

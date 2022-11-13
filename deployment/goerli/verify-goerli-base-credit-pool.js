@@ -120,7 +120,7 @@ async function verifyContracts() {
             `['${POOL_OWNER_MULTI_SIG}']`,
             `['${deployer.address}']`,
         ]);
-    console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+    console.log(`Verify HumaConfigTimelock result: ${verifyBaseCreditPoolTL}`);
 
     const verifyBaseCreditPoolProxyAdminTL = await verifyContract('BaseCreditPoolProxyAdminTimelock',
         [
@@ -156,7 +156,7 @@ async function verifyContracts() {
             `'${deployedContracts['BaseCreditPoolProxyAdminTimelock']}'`,
             '[]',
         ]);
-    console.log(`Verify PoolImpl result: ${verifyPool}`);
+    console.log(`Verify Pool result: ${verifyPool}`);
 }
 
 verifyContracts()

@@ -342,7 +342,7 @@ async function initContracts() {
     console.log("ea address: " + ea.address);
 
     deployedContracts = await getDeployedContracts();
-    console.log(bcpOwnerTreasury.address, rfpOperator.address);
+    
     await initHumaConfig();
     await initEA();
     await initBaseCreditPoolFeeManager();
