@@ -1,0 +1,2654 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/BaseCreditPool.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> BaseCreditPool.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">95.62% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>131/137</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">88.28% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>113/128</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>25/25</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">98.48% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>195/198</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846
+847
+848
+849
+850
+851
+852
+853
+854
+855
+856
+857
+858
+859
+860
+861
+862
+863
+864</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-yes">40×</span>
+<span class="cline-any cline-yes">34×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">66×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">54×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">19×</span>
+<span class="cline-any cline-yes">19×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">55×</span>
+<span class="cline-any cline-yes">55×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">55×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">55×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">55×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">53×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">53×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">42×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">41×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">49×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">40×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">9×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">6×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">69×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">69×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">65×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">65×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">64×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">62×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">62×</span>
+<span class="cline-any cline-yes">62×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">62×</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">62×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">62×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">32×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">30×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">8×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">11×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">13×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">26×</span>
+<span class="cline-any cline-yes">26×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">29×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">111×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75×</span>
+<span class="cline-any cline-yes">75×</span>
+<span class="cline-any cline-yes">75×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75×</span>
+<span class="cline-any cline-yes">75×</span>
+<span class="cline-any cline-yes">75×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">75×</span>
+<span class="cline-any cline-yes">70×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70×</span>
+<span class="cline-any cline-yes">69×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">69×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70×</span>
+<span class="cline-any cline-yes">25×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70×</span>
+<span class="cline-any cline-yes">49×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70×</span>
+<span class="cline-any cline-yes">15×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">70×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">215×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">109×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">7×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">65×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity ^0.8.0;
+&nbsp;
+import "./interfaces/ICredit.sol";
+&nbsp;
+import "./BasePool.sol";
+import "./BaseCreditPoolStorage.sol";
+import "./Errors.sol";
+&nbsp;
+import "hardhat/console.sol";
+&nbsp;
+/**
+ * @notice BaseCreditPool is the basic form of a complete pool in Huma Protocol.
+ * All production pools are expected to be instances of BaseCreditPool or
+ * contracts derived from it (e.g. ReceivableFactoringPool).
+ *
+ * All borrowing for BaseCreditPool starts with a credit line. As long as the account is in good
+ * standing and below the approved limit, the borrower can borrow and repay again and again,
+ * very similar to how a credit card works.
+ */
+contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
+    using SafeERC20 for IERC20;
+    using BS for BS.CreditRecord;
+&nbsp;
+    enum CreditLineClosureReason {
+        Paidoff,
+        CreditLimitChangedToBeZero,
+        OverwrittenByNewLine
+    }
+&nbsp;
+    /// Account billing info refreshed with the updated due amount and date
+    event BillRefreshed(address indexed borrower, uint256 newDueDate, address by);
+    /// Credit line request has been approved
+    event CreditApproved(
+        address indexed borrower,
+        uint256 creditLimit,
+        uint256 intervalInDays,
+        uint256 remainingPeriods,
+        uint256 aprInBps
+    );
+&nbsp;
+    /**
+     * @notice Credit line created
+     * @param borrower the address of the borrower
+     * @param creditLimit the credit limit of the credit line
+     * @param aprInBps interest rate (APR) expressed in basis points, 1% is 100, 100% is 10000
+     * @param payPeriodInDays the number of days in each pay cycle
+     * @param remainingPeriods how many cycles are there before the credit line expires
+     * @param approved flag that shows if the credit line has been approved or not
+     */
+    event CreditInitiated(
+        address indexed borrower,
+        uint256 creditLimit,
+        uint256 aprInBps,
+        uint256 payPeriodInDays,
+        uint256 remainingPeriods,
+        bool approved
+    );
+    /// Credit limit for an existing credit line has been changed
+    event CreditLineChanged(
+        address indexed borrower,
+        uint256 oldCreditLimit,
+        uint256 newCreditLimit
+    );
+&nbsp;
+    /**
+     * @notice An existing credit line has been closed
+     * @param reasonCode the reason for the credit line closure
+     */
+    event CreditLineClosed(
+        address indexed borrower,
+        address by,
+        CreditLineClosureReason reasonCode
+    );
+    /**
+     * @notice The expiration (maturity) date of a credit line has been extended.
+     * @param borrower the address of the borrower
+     * @param numOfPeriods the number of pay periods to be extended
+     * @param remainingPeriods the remaining number of pay periods after the extension
+     */
+    event CreditLineExtended(
+        address indexed borrower,
+        uint256 numOfPeriods,
+        uint256 remainingPeriods,
+        address by
+    );
+    /**
+     * @notice The credit line has been marked as Defaulted.
+     * @param borrower the address of the borrower
+     * @param losses the total losses to be written off because of the default.
+     * @param by the address who has triggered the default
+     */
+    event DefaultTriggered(address indexed borrower, uint256 losses, address by);
+    /**
+     * @notice A borrowing event has happened to the credit line
+     * @param borrower the address of the borrower
+     * @param borrowAmount the amount the user has borrowed
+     * @param netAmountToBorrower the borrowing amount minus the fees that are charged upfront
+     */
+    event DrawdownMade(
+        address indexed borrower,
+        uint256 borrowAmount,
+        uint256 netAmountToBorrower
+    );
+    /**
+     * @notice A payment has been made against the credit line
+     * @param borrower the address of the borrower
+     * @param amount the payback amount
+     * @param by the address that has made the payment. It is possible for someone to make payment
+     * on behalf of the borrower.
+     */
+    event PaymentMade(
+        address indexed borrower,
+        uint256 amount,
+        uint256 totalDue,
+        uint256 unbilledPrincipal,
+        address by
+    );
+&nbsp;
+    /**
+     * @notice Approves the credit request with the terms provided.
+     * @param borrower the address of the borrower
+     * @param creditLimit the credit limit of the credit line
+     * @param intervalInDays the number of days in each pay cycle
+     * @param remainingPeriods how many cycles are there before the credit line expires
+     * @param aprInBps interest rate (APR) expressed in basis points, 1% is 100, 100% is 10000
+     * @dev only Evaluation Agent can call
+     */
+    function approveCredit(
+        address borrower,
+        uint256 creditLimit,
+        uint256 intervalInDays,
+        uint256 remainingPeriods,
+        uint256 aprInBps
+    ) public virtual override {
+        _protocolAndPoolOn();
+        onlyEAServiceAccount();
+        _maxCreditLineCheck(creditLimit);
+        BS.CreditRecordStatic memory crs = _getCreditRecordStatic(borrower);
+        crs.creditLimit = uint96(creditLimit);
+        crs.aprInBps = uint16(aprInBps);
+        crs.intervalInDays = uint16(intervalInDays);
+        _creditRecordStaticMapping[borrower] = crs;
+&nbsp;
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
+        cr.remainingPeriods = uint16(remainingPeriods);
+        _creditRecordMapping[borrower] = _approveCredit(cr);
+&nbsp;
+        emit CreditApproved(borrower, creditLimit, intervalInDays, remainingPeriods, aprInBps);
+    }
+&nbsp;
+    /**
+     * @notice changes the limit of the borrower's credit line.
+     * @param borrower the owner of the credit line
+     * @param newCreditLimit the new limit of the line in the unit of pool token
+     * @dev The credit line is marked as Deleted if 1) the new credit line is 0 AND
+     * 2) there is no due or unbilled principals.
+     * @dev only Evaluation Agent can call
+     */
+    function changeCreditLine(address borrower, uint256 newCreditLimit) public virtual override {
+        _protocolAndPoolOn();
+        // Borrowing amount needs to be lower than max for the pool.
+        _maxCreditLineCheck(newCreditLimit);
+&nbsp;
+        uint256 oldCreditLimit = _creditRecordStaticMapping[borrower].creditLimit;
+&nbsp;
+        // Only EA can increase credit line. Only EA or the borrower can reduce credit line.
+        if (newCreditLimit &gt; oldCreditLimit) onlyEAServiceAccount();
+        else {
+            if (msg.sender != borrower &amp;&amp; msg.sender != _humaConfig.eaServiceAccount())
+                revert Errors.onlyBorrowerOrEACanReduceCreditLine();
+        }
+&nbsp;
+        _creditRecordStaticMapping[borrower].creditLimit = uint96(newCreditLimit);
+&nbsp;
+        // Mark the line as Deleted when there is no due or unbilled principal
+        if (newCreditLimit == 0) {
+            // Bring the account current
+            BS.CreditRecord memory cr = _updateDueInfo(borrower, false, true);
+            // Note: updated state and remainingPeriods directly instead of the entire cr
+            // for contract size consideration
+            if (cr.totalDue == 0 &amp;&amp; cr.unbilledPrincipal == 0) {
+                _creditRecordMapping[borrower].state = BS.CreditState.Deleted;
+                emit CreditLineClosed(
+                    borrower,
+                    msg.sender,
+                    CreditLineClosureReason.CreditLimitChangedToBeZero
+                );
+            }
+            _creditRecordMapping[borrower].remainingPeriods = 0;
+        }
+        emit CreditLineChanged(borrower, oldCreditLimit, newCreditLimit);
+    }
+&nbsp;
+    /**
+     * @notice allows the borrower to borrow against an approved credit line.
+     * The borrower can borrow and pay back as many times as they would like.
+     * @param borrowAmount the amount to borrow
+     */
+    function drawdown(uint256 borrowAmount) external virtual override {
+        address borrower = msg.sender;
+        // Open access to the borrower
+        if (borrowAmount == 0) revert Errors.zeroAmountProvided();
+        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+&nbsp;
+        _checkDrawdownEligibility(borrower, cr, borrowAmount);
+        uint256 netAmountToBorrower = _drawdown(borrower, cr, borrowAmount);
+        emit DrawdownMade(borrower, borrowAmount, netAmountToBorrower);
+    }
+&nbsp;
+    /**
+     * @notice The expiration (maturity) date of a credit line has been extended.
+     * @param borrower the address of the borrower
+     * @param numOfPeriods the number of pay periods to be extended
+     */
+    function extendCreditLineDuration(address borrower, uint256 numOfPeriods)
+        external
+        virtual
+        override
+    {
+        onlyEAServiceAccount();
+        // Although it is not essential to call _updateDueInfo() to extend the credit line duration
+        // it is good practice to bring the account current while we update one of the fields.
+        // Also, only if we call _updateDueInfo(), we can write proper tests.
+        _updateDueInfo(borrower, false, true);
+        _creditRecordMapping[borrower].remainingPeriods += uint16(numOfPeriods);
+        emit CreditLineExtended(
+            borrower,
+            numOfPeriods,
+            _creditRecordMapping[borrower].remainingPeriods,
+            msg.sender
+        );
+    }
+&nbsp;
+    /**
+     * @notice Makes one payment for the borrower. This can be initiated by the borrower
+     * or by PDSServiceAccount with the allowance approval from the borrower.
+     * If this is the final payment, it automatically triggers the payoff process.
+     * @return amountPaid the actual amount paid to the contract. When the tendered
+     * amount is larger than the payoff amount, the contract only accepts the payoff amount.
+     * @return paidoff a flag indicating whether the account has been paid off.
+     */
+    function makePayment(address borrower, uint256 amount)
+        public
+        virtual
+        override
+        returns (uint256 amountPaid, bool paidoff)
+    {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (msg.sender != borrower) <span class="cstat-no" title="statement not covered" >onlyPDSServiceAccount()</span>;
+&nbsp;
+        return _makePayment(borrower, amount, false);
+    }
+&nbsp;
+    /**
+     * @notice Updates the account and brings its billing status current
+     * @dev If the account is defaulted, no need to update the account anymore.
+     * @dev If the account is ready to be defaulted but not yet, update the account without
+     * distributing the income for the upcoming period. Otherwise, update and distribute income
+     * note the reason that we do not distribute income for the final cycle anymore since
+     * it does not make sense to distribute income that we know cannot be collected to the
+     * administrators (e.g. protocol, pool owner and EA) since it will only add more losses
+     * to the LPs. Unfortunately, this special business consideration added more complexity
+     * and cognitive load to _updateDueInfo(...).
+     */
+    function refreshAccount(address borrower)
+        external
+        virtual
+        override
+        returns (BS.CreditRecord memory cr)
+    {
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (_creditRecordMapping[borrower].state != BS.CreditState.Defaulted) {
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (isDefaultReady(borrower)) <span class="cstat-no" title="statement not covered" >return _updateDueInfo(borrower, false, false);</span>
+            else return _updateDueInfo(borrower, false, true);
+        }
+    }
+&nbsp;
+    /**
+     * @notice accepts a credit request from msg.sender
+     * @param creditLimit the credit line (number of pool token)
+     * @param intervalInDays duration of a payment cycle, typically 30 days
+     * @param numOfPayments number of cycles for the credit line to be valid.
+     */
+    function requestCredit(
+        uint256 creditLimit,
+        uint256 intervalInDays,
+        uint256 numOfPayments
+    ) external virtual override {
+        // Open access to the borrower. Data validation happens in _initiateCredit()
+        _initiateCredit(
+            msg.sender,
+            creditLimit,
+            _poolConfig.poolAprInBps(),
+            intervalInDays,
+            numOfPayments,
+            false
+        );
+    }
+&nbsp;
+    /**
+     * @notice Triggers the default process
+     * @return losses the amount of remaining losses to the pool
+     * @dev It is possible for the borrower to payback even after default, especially in
+     * receivable factoring cases.
+     */
+    function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
+        _protocolAndPoolOn();
+&nbsp;
+        // check to make sure the default grace period has passed.
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
+&nbsp;
+        if (cr.state == BS.CreditState.Defaulted) revert Errors.defaultHasAlreadyBeenTriggered();
+&nbsp;
+        if (block.timestamp &gt; cr.dueDate) {
+            cr = _updateDueInfo(borrower, false, false);
+        }
+&nbsp;
+        // Check if grace period has exceeded. Please note it takes a full pay period
+        // before the account is considered to be late. The time passed should be one pay period
+        // plus the grace period.
+        if (!isDefaultReady(borrower)) revert Errors.defaultTriggeredTooEarly();
+&nbsp;
+        // default amount includes all outstanding principals
+        losses = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
+&nbsp;
+        _creditRecordMapping[borrower].state = BS.CreditState.Defaulted;
+&nbsp;
+        _creditRecordStaticMapping[borrower].defaultAmount = uint96(losses);
+&nbsp;
+        distributeLosses(losses);
+&nbsp;
+        emit DefaultTriggered(borrower, losses, msg.sender);
+&nbsp;
+        return losses;
+    }
+&nbsp;
+    function creditRecordMapping(address account) external view returns (BS.CreditRecord memory) {
+        return _creditRecordMapping[account];
+    }
+&nbsp;
+    function creditRecordStaticMapping(address account)
+        external
+        view
+        returns (BS.CreditRecordStatic memory)
+    {
+        return _creditRecordStaticMapping[account];
+    }
+&nbsp;
+    function isApproved(address borrower) external view virtual override returns (bool) {
+        if ((_creditRecordMapping[borrower].state &gt;= BS.CreditState.Approved)) return true;
+        else return false;
+    }
+&nbsp;
+    /**
+     * @notice checks if the credit line is ready to be triggered as defaulted
+     */
+    function isDefaultReady(address borrower) public view virtual override returns (bool) {
+        uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
+        return
+            _creditRecordMapping[borrower].missedPeriods * intervalInDays * SECONDS_IN_A_DAY &gt;
+                _poolConfig.poolDefaultGracePeriodInSeconds()
+                ? true
+                : false;
+    }
+&nbsp;
+    /** 
+     * @notice checks if the credit line is behind in payments
+     * @dev When the account is in Approved state, there is no borrowing yet, thus being late
+     * does not apply. Thus the check on account state. 
+     * @dev after the bill is refreshed, the due date is updated, it is possible that the new due 
+     // date is in the future, but if the bill refresh has set missedPeriods, the account is late.
+     */
+    function isLate(address borrower) external view virtual override returns (bool) {
+        return
+            (_creditRecordMapping[borrower].state &gt; BS.CreditState.Approved &amp;&amp;
+                (_creditRecordMapping[borrower].missedPeriods &gt; 0 ||
+                    block.timestamp &gt; _creditRecordMapping[borrower].dueDate))
+                ? true
+                : false;
+    }
+&nbsp;
+    function _approveCredit(BS.CreditRecord memory cr)
+        internal
+        view
+        returns (BS.CreditRecord memory)
+    {
+        // Note: Special logic. dueDate is normally used to track the next bill due.
+        // Before the first drawdown, it is also used to set the deadline for the first
+        // drawdown to happen, otherwise, the credit line expires.
+        // Decided to use this field in this way to save one field for the struct.
+        // Although we have room in the struct after split struct creditRecord and
+        // struct creditRecordStatic, we keep it unchanged to leave room for the struct
+        // to expand in the future (note Solidity has limit on 13 fields in a struct)
+        uint256 validPeriod = _poolConfig.creditApprovalExpirationInSeconds();
+        if (validPeriod &gt; 0) cr.dueDate = uint64(block.timestamp + validPeriod);
+&nbsp;
+        cr.state = BS.CreditState.Approved;
+&nbsp;
+        return cr;
+    }
+&nbsp;
+    /**
+     * @notice Checks if drawdown is allowed for the credit line at this point of time
+     * @dev the requester can be the borrower or the EA
+     * @dev requires the credit line to be in Approved (first drawdown) or
+     * Good Standing (return drawdown) state.
+     * @dev for first drawdown, after the credit line is approved, it needs to happen within
+     * the expiration window configured by the pool
+     * @dev the drawdown should not put the account over the approved credit limit
+     * @dev Please note cr.dueDate is the credit expiration date for the first drawdown.
+     */
+    function _checkDrawdownEligibility(
+        address borrower,
+        BS.CreditRecord memory cr,
+        uint256 borrowAmount
+    ) internal view {
+        _protocolAndPoolOn();
+        ///msg.sender needs to be the borrower themselves or the EA.
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (msg.sender != borrower) <span class="cstat-no" title="statement not covered" >onlyEAServiceAccount()</span>;
+&nbsp;
+        if (cr.state != BS.CreditState.GoodStanding &amp;&amp; cr.state != BS.CreditState.Approved)
+            revert Errors.creditLineNotInStateForDrawdown();
+        else if (cr.state == BS.CreditState.Approved) {
+            // After the credit approval, if the pool has credit expiration for the 1st drawdown,
+            // the borrower must complete the first drawdown before the expiration date, which
+            // is set in cr.dueDate in approveCredit().
+            // note For pools without credit expiration for first drawdown, cr.dueDate is 0
+            // before the first drawdown, thus the cr.dueDate &gt; 0 condition in the check
+            if (cr.dueDate &gt; 0 &amp;&amp; block.timestamp &gt; cr.dueDate)
+                revert Errors.creditExpiredDueToFirstDrawdownTooLate();
+&nbsp;
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (borrowAmount &gt; _creditRecordStaticMapping[borrower].creditLimit)
+                revert Errors.creditLineExceeded();
+        }
+    }
+&nbsp;
+    /**
+     * @notice helper function for drawdown
+     * @param borrower the borrower
+     * @param borrowAmount the amount to borrow
+     */
+    function _drawdown(
+        address borrower,
+        BS.CreditRecord memory cr,
+        uint256 borrowAmount
+    ) internal virtual returns (uint256) {
+        if (cr.state == BS.CreditState.Approved) {
+            // Flow for first drawdown
+            // Update total principal
+            _creditRecordMapping[borrower].unbilledPrincipal = uint96(borrowAmount);
+&nbsp;
+            // Generates the first bill
+            // Note: the interest is calculated at the beginning of each pay period
+            cr = _updateDueInfo(borrower, true, true);
+&nbsp;
+            // Set account status in good standing
+            cr.state = BS.CreditState.GoodStanding;
+        } else {
+            // Return drawdown flow
+            // Bring the account current.
+            if (block.timestamp &gt; cr.dueDate) {
+                cr = _updateDueInfo(borrower, false, true);
+                if (cr.state != BS.CreditState.GoodStanding)
+                    revert Errors.creditLineNotInGoodStandingState();
+            }
+&nbsp;
+            if (
+                borrowAmount &gt;
+                (_creditRecordStaticMapping[borrower].creditLimit -
+                    cr.unbilledPrincipal -
+                    (cr.totalDue - cr.feesAndInterestDue))
+            ) revert Errors.creditLineExceeded();
+&nbsp;
+            // note Drawdown is not allowed in the final pay period since the payment due for
+            // such drawdown will fall outside of the window of the credit line.
+            // note since we bill at the beginning of a period, cr.remainingPeriods is zero
+            // in the final period.
+            if (cr.remainingPeriods == 0) revert Errors.creditExpiredDueToMaturity();
+&nbsp;
+            // For non-first bill, we do not update the current bill, the interest for the rest of
+            // this pay period is accrued in correction and will be added to the next bill.
+            cr.correction += int96(
+                uint96(
+                    _feeManager.calcCorrection(
+                        cr.dueDate,
+                        _creditRecordStaticMapping[borrower].aprInBps,
+                        borrowAmount
+                    )
+                )
+            );
+&nbsp;
+            cr.unbilledPrincipal = uint96(cr.unbilledPrincipal + borrowAmount);
+        }
+&nbsp;
+        _creditRecordMapping[borrower] = cr;
+&nbsp;
+        (uint256 netAmountToBorrower, uint256 platformFees) = _feeManager.distBorrowingAmount(
+            borrowAmount
+        );
+&nbsp;
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (platformFees &gt; 0) distributeIncome(platformFees);
+&nbsp;
+        // Transfer funds to the _borrower
+        _underlyingToken.safeTransfer(borrower, netAmountToBorrower);
+&nbsp;
+        return netAmountToBorrower;
+    }
+&nbsp;
+    /**
+     * @notice initiation of a credit line
+     * @param borrower the address of the borrower
+     * @param creditLimit the amount of the liquidity asset that the borrower obtains
+     */
+    function _initiateCredit(
+        address borrower,
+        uint256 creditLimit,
+        uint256 aprInBps,
+        uint256 intervalInDays,
+        uint256 remainingPeriods,
+        bool preApproved
+    ) internal virtual {
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (remainingPeriods == 0) revert Errors.requestedCreditWithZeroDuration();
+&nbsp;
+        _protocolAndPoolOn();
+        // Borrowers cannot have two credit lines in one pool. They can request to increase line.
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
+&nbsp;
+        if (cr.state != BS.CreditState.Deleted) {
+            // If the user has an existing line, but there is no balance, close the old one
+            // and initiate the new one automatically.
+            cr = _updateDueInfo(borrower, false, true);
+            if (cr.totalDue == 0 &amp;&amp; cr.unbilledPrincipal == 0) {
+                cr.state = BS.CreditState.Deleted;
+                cr.remainingPeriods = 0;
+                emit CreditLineClosed(
+                    borrower,
+                    msg.sender,
+                    CreditLineClosureReason.OverwrittenByNewLine
+                );
+            } else {
+                revert Errors.creditLineAlreadyExists();
+            }
+        }
+&nbsp;
+        // Borrowing amount needs to be lower than max for the pool.
+        _maxCreditLineCheck(creditLimit);
+&nbsp;
+        _creditRecordStaticMapping[borrower] = BS.CreditRecordStatic({
+            creditLimit: uint96(creditLimit),
+            aprInBps: uint16(aprInBps),
+            intervalInDays: uint16(intervalInDays),
+            defaultAmount: uint96(0)
+        });
+&nbsp;
+        BS.CreditRecord memory ncr;
+        ncr.remainingPeriods = uint16(remainingPeriods);
+&nbsp;
+        if (preApproved) {
+            ncr = _approveCredit(ncr);
+            emit CreditApproved(borrower, creditLimit, intervalInDays, remainingPeriods, aprInBps);
+        } else ncr.state = BS.CreditState.Requested;
+&nbsp;
+        _creditRecordMapping[borrower] = ncr;
+&nbsp;
+        emit CreditInitiated(
+            borrower,
+            creditLimit,
+            aprInBps,
+            intervalInDays,
+            remainingPeriods,
+            preApproved
+        );
+    }
+&nbsp;
+    /**
+     * @notice Borrower makes one payment. If this is the final payment,
+     * it automatically triggers the payoff process.
+     * @param borrower the address of the borrower
+     * @param amount the payment amount
+     * @param isPaymentReceived a flag that indicates whether the payment has been received or not
+     * @return amountPaid the actuall amount paid to the contract. When the tendered
+     * amount is larger than the payoff amount, the contract only accepts the payoff amount.
+     * @return paidoff a flag indciating whether the account has been paid off.
+     */
+    function _makePayment(
+        address borrower,
+        uint256 amount,
+        bool isPaymentReceived
+    ) internal returns (uint256 amountPaid, bool paidoff) {
+        _protocolAndPoolOn();
+&nbsp;
+        if (amount == 0) revert Errors.zeroAmountProvided();
+&nbsp;
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
+&nbsp;
+        <span class="missing-if-branch" title="if path not taken" >I</span>if (
+            cr.state == BS.CreditState.Requested ||
+            cr.state == BS.CreditState.Approved ||
+            cr.state == BS.CreditState.Deleted
+        ) {
+            revert Errors.creditLineNotInStateForMakingPayment();
+        }
+&nbsp;
+        if (block.timestamp &gt; cr.dueDate) {
+            // Bring the account current. This is necessary since the account might have been dormant for
+            // several cycles.
+            cr = _updateDueInfo(borrower, false, true);
+        }
+&nbsp;
+        // Computes the final payoff amount. Needs to consider the correction associated with
+        // all outstanding principals.
+        uint256 payoffCorrection = _feeManager.calcCorrection(
+            cr.dueDate,
+            _creditRecordStaticMapping[borrower].aprInBps,
+            cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
+        );
+&nbsp;
+        uint256 payoffAmount = uint256(
+            int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
+        ) - payoffCorrection;
+&nbsp;
+        // The amount to be collected from the borrower. When _amount is more than what is needed
+        // for payoff, only the payoff amount will be transferred
+        uint256 amountToCollect;
+&nbsp;
+        // The amount to be applied towards principal
+        uint256 principalPayment = 0;
+&nbsp;
+        if (amount &lt; payoffAmount) {
+            if (amount &lt; cr.totalDue) {
+                amountToCollect = amount;
+                cr.totalDue = uint96(cr.totalDue - amount);
+&nbsp;
+                if (amount &lt;= cr.feesAndInterestDue) {
+                    cr.feesAndInterestDue = uint96(cr.feesAndInterestDue - amount);
+                } else {
+                    principalPayment = amount - cr.feesAndInterestDue;
+                    cr.feesAndInterestDue = 0;
+                }
+            } else {
+                amountToCollect = amount;
+&nbsp;
+                // Apply extra payments towards principal, reduce unbilledPrincipal amount
+                cr.unbilledPrincipal -= uint96(amount - cr.totalDue);
+&nbsp;
+                principalPayment = amount - cr.feesAndInterestDue;
+                cr.totalDue = 0;
+                cr.feesAndInterestDue = 0;
+                cr.missedPeriods = 0;
+&nbsp;
+                // Moves account to GoodStanding if it was delayed.
+                if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
+            }
+&nbsp;
+            // Gets the correction.
+            if (principalPayment &gt; 0) {
+                // If there is principal payment, calculate new correction
+                cr.correction -= int96(
+                    uint96(
+                        _feeManager.calcCorrection(
+                            cr.dueDate,
+                            _creditRecordStaticMapping[borrower].aprInBps,
+                            principalPayment
+                        )
+                    )
+                );
+            }
+&nbsp;
+            // Recovers funds to the pool if the account is Defaulted.
+            // Only moves it to GoodStanding only after payoff, handled in the payoff branch
+            if (cr.state == BS.CreditState.Defaulted)
+                _recoverDefaultedAmount(borrower, amountToCollect);
+        } else {
+            // Payoff logic
+            principalPayment = cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue;
+            amountToCollect = payoffAmount;
+&nbsp;
+            if (cr.state == BS.CreditState.Defaulted) {
+                _recoverDefaultedAmount(borrower, amountToCollect);
+            } else {
+                // Distribut or reverse income to consume outstanding correction.
+                // Positive correction is generated because of a drawdown within this period.
+                // It is not booked or distributed yet, needs to be distributed.
+                // Negative correction is generated because of a payment including principal
+                // within this period. The extra interest paid is not accounted for yet, thus
+                // a reversal.
+                // Note: For defaulted account, we do not distribute fees and interests
+                // until they are paid. It is handled in _recoverDefaultedAmount().
+                cr.correction = cr.correction - int96(int256(payoffCorrection));
+                <span class="missing-if-branch" title="if path not taken" >I</span>if (cr.correction &gt; 0) <span class="cstat-no" title="statement not covered" >distributeIncome(uint256(uint96(cr.correction)))</span>;
+                else if (cr.correction &lt; 0) reverseIncome(uint256(uint96(0 - cr.correction)));
+            }
+&nbsp;
+            cr.correction = 0;
+            cr.unbilledPrincipal = 0;
+            cr.feesAndInterestDue = 0;
+            cr.totalDue = 0;
+            cr.missedPeriods = 0;
+&nbsp;
+            // Closes the credit line if it is in the final period
+            if (cr.remainingPeriods == 0) {
+                cr.state = BS.CreditState.Deleted;
+                emit CreditLineClosed(borrower, msg.sender, CreditLineClosureReason.Paidoff);
+            } else cr.state = BS.CreditState.GoodStanding;
+        }
+&nbsp;
+        _creditRecordMapping[borrower] = cr;
+&nbsp;
+        if (amountToCollect &gt; 0 &amp;&amp; isPaymentReceived == false) {
+            // Transfer assets from the _borrower to pool locker
+            _underlyingToken.safeTransferFrom(borrower, address(this), amountToCollect);
+            emit PaymentMade(
+                borrower,
+                amountToCollect,
+                cr.totalDue,
+                cr.unbilledPrincipal,
+                msg.sender
+            );
+        }
+&nbsp;
+        // amountToCollect == payoffAmount indicates whether it is paid off or not.
+        // Use &gt;= as a safe practice
+        return (amountToCollect, amountToCollect &gt;= payoffAmount);
+    }
+&nbsp;
+    /**
+     * @notice Recovers amount when a payment is paid towards a defaulted account.
+     * @dev For any payment after a default, it is applied towards principal losses first.
+     * Only after the principal is fully recovered, it is applied towards fees &amp; interest.
+     */
+    function _recoverDefaultedAmount(address borrower, uint256 amountToCollect) internal {
+        uint96 _defaultAmount = _creditRecordStaticMapping[borrower].defaultAmount;
+&nbsp;
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (_defaultAmount &gt; 0) {
+            uint256 recoveredPrincipal;
+            if (_defaultAmount &gt;= amountToCollect) {
+                recoveredPrincipal = amountToCollect;
+            } else {
+                recoveredPrincipal = _defaultAmount;
+                distributeIncome(amountToCollect - recoveredPrincipal);
+            }
+            _totalPoolValue += recoveredPrincipal;
+            _defaultAmount -= uint96(recoveredPrincipal);
+            _creditRecordStaticMapping[borrower].defaultAmount = _defaultAmount;
+        } else {
+            // note The account is moved out of Defaulted state only if the entire due
+            // including principals, fees&amp;Interest are paid off. It is possible for
+            // the account to owe fees&amp;Interest after _defaultAmount becomes zero.
+<span class="cstat-no" title="statement not covered" >            distributeIncome(amountToCollect)</span>;
+        }
+    }
+&nbsp;
+    /// Checks if the given amount is higher than what is allowed by the pool
+    function _maxCreditLineCheck(uint256 amount) internal view {
+        if (amount &gt; _poolConfig.maxCreditLine()) {
+            revert Errors.greaterThanMaxCreditLine();
+        }
+    }
+&nbsp;
+    /**
+     * @notice updates CreditRecord for `_borrower` using the most up to date information.
+     * @dev this is used in both makePayment() and drawdown() to bring the account current
+     * @dev getDueInfo() gets the due information of the most current cycle. This function
+     * updates the record in creditRecordMapping for `_borrower`
+     * @param borrower the address of the borrwoer
+     * @param isFirstDrawdown whether this request is for the first drawdown of the credit line
+     * @param distributeChargesForLastCycle whether to distribute income to different parties
+     * (protocol, poolOwner, EA, and the pool). A `false` value is used in special cases
+     * like `default` when we do not pause the accrue and distribution of fees.
+     */
+    function _updateDueInfo(
+        address borrower,
+        bool isFirstDrawdown,
+        bool distributeChargesForLastCycle
+    ) internal virtual returns (BS.CreditRecord memory cr) {
+        cr = _getCreditRecord(borrower);
+        if (isFirstDrawdown) cr.dueDate = 0;
+        bool alreadyLate = cr.totalDue &gt; 0 ? true : false;
+&nbsp;
+        // Gets the up-to-date due information for the borrower. If the account has been
+        // late or dormant for multiple cycles, getDueInfo() will bring it current and
+        // return the most up-to-date due information.
+        uint256 periodsPassed = 0;
+        int96 newCharges;
+        (
+            periodsPassed,
+            cr.feesAndInterestDue,
+            cr.totalDue,
+            cr.unbilledPrincipal,
+            newCharges
+        ) = _feeManager.getDueInfo(cr, _getCreditRecordStatic(borrower));
+&nbsp;
+        if (periodsPassed &gt; 0) {
+            cr.correction = 0;
+            // Distribute income
+            if (cr.state != BS.CreditState.Defaulted) {
+                if (!distributeChargesForLastCycle)
+                    newCharges = newCharges - int96(cr.feesAndInterestDue);
+&nbsp;
+                if (newCharges &gt; 0) distributeIncome(uint256(uint96(newCharges)));
+                else <span class="missing-if-branch" title="if path not taken" >I</span>if (newCharges &lt; 0) <span class="cstat-no" title="statement not covered" >reverseIncome(uint256(uint96(0 - newCharges)))</span>;
+            }
+&nbsp;
+            if (cr.dueDate &gt; 0)
+                cr.dueDate = uint64(
+                    cr.dueDate +
+                        periodsPassed *
+                        _creditRecordStaticMapping[borrower].intervalInDays *
+                        SECONDS_IN_A_DAY
+                );
+            else
+                cr.dueDate = uint64(
+                    block.timestamp +
+                        _creditRecordStaticMapping[borrower].intervalInDays *
+                        SECONDS_IN_A_DAY
+                );
+&nbsp;
+            // Adjusts remainingPeriods, special handling when reached the maturity of the credit line
+            if (cr.remainingPeriods &gt; periodsPassed) {
+                cr.remainingPeriods = uint16(cr.remainingPeriods - periodsPassed);
+            } else {
+                cr.remainingPeriods = 0;
+            }
+&nbsp;
+            // Sets the right missedPeriods and state for the credit record
+            if (alreadyLate) cr.missedPeriods = uint16(cr.missedPeriods + periodsPassed);
+            else cr.missedPeriods = 0;
+&nbsp;
+            if (cr.missedPeriods &gt; 0) {
+                if (cr.state != BS.CreditState.Defaulted) cr.state = BS.CreditState.Delayed;
+            } else cr.state = BS.CreditState.GoodStanding;
+&nbsp;
+            _creditRecordMapping[borrower] = cr;
+&nbsp;
+            emit BillRefreshed(borrower, cr.dueDate, msg.sender);
+        }
+    }
+&nbsp;
+    /// Shared accessor to the credit record mapping for contract size consideration
+    function _getCreditRecord(address account) private view returns (BS.CreditRecord memory) {
+        return _creditRecordMapping[account];
+    }
+&nbsp;
+    /// Shared accessor to the credit record static mapping for contract size consideration
+    function _getCreditRecordStatic(address account)
+        private
+        view
+        returns (BS.CreditRecordStatic memory)
+    {
+        return _creditRecordStaticMapping[account];
+    }
+&nbsp;
+    /// "Modifier" function that limits access to pdsServiceAccount only.
+    function onlyPDSServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
+            revert Errors.paymentDetectionServiceAccountRequired();
+    }
+&nbsp;
+    /// "Modifier" function that limits access to eaServiceAccount only
+    function onlyEAServiceAccount() internal view {
+        if (msg.sender != _humaConfig.eaServiceAccount())
+            revert Errors.evaluationAgentServiceAccountRequired();
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Nov 11 2022 16:26:20 GMT-0800 (Pacific Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>
