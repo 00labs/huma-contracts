@@ -253,6 +253,13 @@ contract ReceivableFactoringPool is
         uint256 receivableParam,
         uint256 receivableAmount
     ) internal virtual {
+        // If receivables are required, they need to be ERC721 or ERC20.
+        if (
+            receivableAsset != address(0) &&
+            !receivableAsset.supportsInterface(type(IERC721).interfaceId) &&
+            !receivableAsset.supportsInterface(type(IERC20).interfaceId)
+        ) revert Errors.unsupportedReceivableAsset();
+
         BS.ReceivableInfo memory ri = BS.ReceivableInfo(
             receivableAsset,
             uint88(receivableAmount),
@@ -299,8 +306,6 @@ contract ReceivableFactoringPool is
                     revert Errors.insufficientReceivableAmount();
 
                 IERC20(receivableAsset).safeTransferFrom(borrower, address(this), receivableParam);
-            } else {
-                revert Errors.unsupportedReceivableAsset();
             }
         }
     }

@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/BaseFeeManager.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> BaseFeeManager.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>26/26</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">89.29% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>25/28</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>8/8</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">98.11% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>52/53</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">73×</span>
+<span class="cline-any cline-yes">73×</span>
+<span class="cline-any cline-yes">73×</span>
+<span class="cline-any cline-yes">73×</span>
+<span class="cline-any cline-yes">73×</span>
+<span class="cline-any cline-yes">73×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">122×</span>
+<span class="cline-any cline-yes">121×</span>
+<span class="cline-any cline-yes">121×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">56×</span>
+<span class="cline-any cline-yes">55×</span>
+<span class="cline-any cline-yes">55×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">44×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">43×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">111×</span>
+<span class="cline-any cline-yes">19×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">92×</span>
+<span class="cline-any cline-yes">47×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">47×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">92×</span>
+<span class="cline-any cline-yes">92×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">92×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-yes">56×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-yes">10×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-yes">132×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">92×</span>
+<span class="cline-any cline-yes">23×</span>
+<span class="cline-any cline-yes">23×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">92×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity ^0.8.0;
+&nbsp;
+import "@openzeppelin/contracts/access/Ownable.sol";
+&nbsp;
+import "./interfaces/IFeeManager.sol";
+import "./HumaConfig.sol";
+import "./Errors.sol";
+import {BaseStructs as BS} from "./libraries/BaseStructs.sol";
+import "hardhat/console.sol";
+&nbsp;
+/**
+ *
+ */
+contract BaseFeeManager is IFeeManager, Ownable {
+    using BS for BS.CreditRecord;
+&nbsp;
+    // Divider to convert BPS to percentage
+    uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
+    // Divider to get monthly interest rate from APR BPS. 10000 * 12
+    uint256 private constant SECONDS_IN_A_YEAR = 365 days;
+    uint256 private constant SECONDS_IN_A_DAY = 1 days;
+&nbsp;
+    /// Part of platform fee, charged as a flat amount when a borrow happens
+    uint256 public frontLoadingFeeFlat;
+&nbsp;
+    /// Part of platform fee, charged as a % of the borrowing amount when a borrow happens
+    uint256 public frontLoadingFeeBps;
+&nbsp;
+    /// Part of late fee, charged as a flat amount when a payment is late
+    uint256 public lateFeeFlat;
+&nbsp;
+    /// Part of late fee, charged as % of the totaling outstanding balance when a payment is late
+    uint256 public lateFeeBps;
+&nbsp;
+    // membership fee per pay period. It is a flat fee
+    uint256 public membershipFee;
+&nbsp;
+    ///The min % of the outstanding principal to be paid in the statement for each each period
+    uint256 public minPrincipalRateInBps;
+&nbsp;
+    event FeeChanged(
+        uint256 frontLoandingFeeFlat,
+        uint256 frontLoadingFeeBps,
+        uint256 lateFeeFlat,
+        uint256 lateFeeBps,
+        uint256 membershipFee
+    );
+&nbsp;
+    event MinPrincipalRateChanged(uint256 minPrincipalRateInBps);
+&nbsp;
+    /**
+     * @notice Sets the standard front loading and late fee policy for the fee manager
+     * @param _frontLoadingFeeFlat flat fee portion of the front loading fee
+     * @param _frontLoadingFeeBps a fee in the percentage of a new borrowing
+     * @param _lateFeeFlat flat fee portion of the late
+     * @param _lateFeeBps a fee in the percentage of the outstanding balance
+     * @dev Only owner can make this setting
+     */
+    function setFees(
+        uint256 _frontLoadingFeeFlat,
+        uint256 _frontLoadingFeeBps,
+        uint256 _lateFeeFlat,
+        uint256 _lateFeeBps,
+        uint256 _membershipFee
+    ) external virtual override onlyOwner {
+        frontLoadingFeeFlat = _frontLoadingFeeFlat;
+        frontLoadingFeeBps = _frontLoadingFeeBps;
+        lateFeeFlat = _lateFeeFlat;
+        lateFeeBps = _lateFeeBps;
+        membershipFee = _membershipFee;
+        emit FeeChanged(
+            _frontLoadingFeeFlat,
+            _frontLoadingFeeBps,
+            _lateFeeFlat,
+            _lateFeeBps,
+            _membershipFee
+        );
+    }
+&nbsp;
+    /**
+     * @notice Sets the min percentage of principal to be paid in each billing period
+     * @param _minPrincipalRateInBps the min % in unit of bps. For example, 5% will be 500
+     * @dev Only owner can make this setting
+     * @dev There is a global limit of 5000 bps (50%).
+     */
+    function setMinPrincipalRateInBps(uint256 _minPrincipalRateInBps)
+        external
+        virtual
+        override
+        onlyOwner
+    {
+        if (_minPrincipalRateInBps &gt;= 5000) revert Errors.minPrincipalPaymentRateSettingTooHigh();
+        minPrincipalRateInBps = _minPrincipalRateInBps;
+        emit MinPrincipalRateChanged(_minPrincipalRateInBps);
+    }
+&nbsp;
+    /**
+     * @notice Computes the amount to be offseted due to in-cycle drawdown or principal payment
+     * @dev Correction is used when there is change to the principal in the middle of the cycle
+     * due to drawdown or principal payment. Since Huma computes the interest at the beginning
+     * of each cycle, if there is a drawdown, the interest for this extra borrowing is not
+     * billed, there will be a positive correction to be added in the next bill. Conversely,
+     * since the interest has been computed for the entire cycle, if there is principal payment
+     * in the middle, some of the interest should be refunded. It will be marked as negative
+     * correction and be subtracted in the next bill.
+     */
+    function calcCorrection(
+        uint256 dueDate,
+        uint256 aprInBps,
+        uint256 amount
+    ) external view virtual override returns (uint256 correction) {
+        // rounding to days
+        uint256 remainingTime = dueDate - block.timestamp;
+&nbsp;
+        return (amount * aprInBps * remainingTime) / SECONDS_IN_A_YEAR / HUNDRED_PERCENT_IN_BPS;
+    }
+&nbsp;
+    /**
+     * @notice Computes the front loading fee including both the flat fee and percentage fee
+     * @param _amount the borrowing amount
+     * @return fees the amount of fees to be charged for this borrowing
+     */
+    function calcFrontLoadingFee(uint256 _amount)
+        public
+        view
+        virtual
+        override
+        returns (uint256 fees)
+    {
+        fees = frontLoadingFeeFlat;
+        <span class="missing-if-branch" title="else path not taken" >E</span>if (frontLoadingFeeBps &gt; 0)
+            fees += (_amount * frontLoadingFeeBps) / HUNDRED_PERCENT_IN_BPS;
+    }
+&nbsp;
+    /**
+     * @notice Computes the late fee including both the flat fee and percentage fee
+     * @param dueDate the due date of the payment
+     * @param totalDue the amount that is due
+     * @param totalBalance the total balance including amount due and unbilled principal
+     * @return fees the amount of late fees to be charged
+     * @dev Charges only if 1) there is outstanding due, 2) the due date has passed
+     */
+    function calcLateFee(
+        uint256 dueDate,
+        uint256 totalDue,
+        uint256 totalBalance
+    ) public view virtual override returns (uint256 fees) {
+        if (block.timestamp &gt; dueDate &amp;&amp; totalDue &gt; 0) {
+            fees = lateFeeFlat;
+            <span class="missing-if-branch" title="else path not taken" >E</span>if (lateFeeBps &gt; 0) fees += (totalBalance * lateFeeBps) / HUNDRED_PERCENT_IN_BPS;
+        }
+    }
+&nbsp;
+    /**
+     * @notice Apply front loading fee, distribute the total amount to borrower, pool, &amp; protocol
+     * @param borrowAmount the amount of the borrowing
+     * @return amtToBorrower the amount that the borrower can take
+     * @return platformFees the platform charges
+     * @dev the protocol always takes a percentage of the total fee generated
+     */
+    function distBorrowingAmount(uint256 borrowAmount)
+        external
+        view
+        returns (uint256 amtToBorrower, uint256 platformFees)
+    {
+        // Calculate platform fee, which includes protocol fee and pool fee
+        platformFees = calcFrontLoadingFee(borrowAmount);
+&nbsp;
+        if (borrowAmount &lt; platformFees) revert Errors.borrowingAmountLessThanPlatformFees();
+&nbsp;
+        amtToBorrower = borrowAmount - platformFees;
+&nbsp;
+        return (amtToBorrower, platformFees);
+    }
+&nbsp;
+    /**
+     * @notice Gets the current total due, fees and interest due, and payoff amount.
+     * Because there is no "cron" kind of mechanism, it is possible that the account is behind
+     * for multiple cycles due to a lack of activities. This function will traverse through
+     * these cycles to get the most up-to-date due information.
+     * @dev This is a view only function, it does not update the account status. It is used to
+     * help the borrowers to get their balances without paying gases.
+     * @dev the difference between totalDue and feesAndInterestDue is required principal payment
+     * @dev payoffAmount is good until the next statement date. It includes the interest for the
+     * entire current/new billing period. We will ask for allowance of the total payoff amount,
+     * but if the borrower pays off before the next due date, we will subtract the interest saved
+     * and only transfer an amount lower than the original payoff estimate.
+     * @dev please note the first due date is set after the initial drawdown. All the future due
+     * dates are computed by adding multiples of the payment interval to the first due date.
+     * @param _cr the credit record associated the account
+     * @return periodsPassed the number of billing periods has passed since the last statement.
+     * If it is within the same period, it will be 0.
+     * @return feesAndInterestDue the sum of fees and interest due. If multiple cycles have passed,
+     * this amount is not necessarily the total fees and interest charged. It only returns the amount
+     * that is due currently.
+     * @return totalDue amount due in this period, it includes fees, interest, and min principal
+     */
+    function getDueInfo(
+        BaseStructs.CreditRecord memory _cr,
+        BaseStructs.CreditRecordStatic memory _crStatic
+    )
+        public
+        view
+        virtual
+        override
+        returns (
+            uint256 periodsPassed,
+            uint96 feesAndInterestDue,
+            uint96 totalDue,
+            uint96 unbilledPrincipal,
+            int96 totalCharges
+        )
+    {
+        // Directly returns if it is still within the current period
+        if (block.timestamp &lt;= _cr.dueDate) {
+            return (0, _cr.feesAndInterestDue, _cr.totalDue, _cr.unbilledPrincipal, 0);
+        }
+&nbsp;
+        // Computes how many billing periods have passed. 1+ is needed since Solidity always
+        // round to zero. When it is exactly at a billing cycle, it is desirable to 1+ as well
+        if (_cr.dueDate &gt; 0) {
+            periodsPassed =
+                1 +
+                (block.timestamp - _cr.dueDate) /
+                (_crStatic.intervalInDays * SECONDS_IN_A_DAY);
+            // No credit line has more than 360 periods. If it is longer than that, something
+            // is wrong. Set it to 361 so that the non view function can emit an event.
+            <span class="missing-if-branch" title="if path not taken" >I</span>if (periodsPassed &gt; 360) {
+                periodsPassed = 361;
+            }
+        } else {
+            periodsPassed = 1;
+        }
+&nbsp;
+        /**
+         * Loops through the cycles as we would generate statements for each cycle.
+         * The logic for each iteration is as follows:
+         * 1. Calcuate late fee if it is past due based on outstanding principal and due
+         * 2. Add membership fee
+         * 3  Add outstanding due amount and corrections to the unbilled principal
+         *    as the new base for principal
+         * 4. Calcuate interest for this new cycle using the new principal
+         * 5. Calculate the principal due, and minus it from the unbilled principal amount
+         */
+        uint256 fees = 0;
+        uint256 interest = 0;
+&nbsp;
+        for (uint256 i = 0; i &lt; periodsPassed; i++) {
+            // step 1. late fee calculation
+            if (_cr.totalDue &gt; 0)
+                fees = calcLateFee(
+                    _cr.dueDate + i * _crStatic.intervalInDays * SECONDS_IN_A_DAY,
+                    _cr.totalDue,
+                    _cr.unbilledPrincipal + _cr.totalDue
+                );
+&nbsp;
+            // step 2. membership fee
+            fees += membershipFee;
+&nbsp;
+            // step 3. adding dues to principal
+            _cr.unbilledPrincipal += _cr.totalDue;
+            // Negative correction is generated by in-cycle payments only.
+            // Positive correction is generated by in-cycle drawdowns only.
+            // Incorporate pending corrections into principals
+            if (_cr.correction != 0) {
+                totalCharges += _cr.correction;
+                if (_cr.correction &lt; 0) {
+                    uint96 correctionAbs = uint96(0 - _cr.correction);
+                    // Note: If _cr.unbilledPrincipal is less than abs(correction), the account
+                    // should have been paid off in the last payment. Thus the assertion below.
+                    // One outlier case is drastic interest hike at the time of payments made.
+                    //
+                    assert(_cr.unbilledPrincipal &gt; correctionAbs);
+                    _cr.unbilledPrincipal -= correctionAbs;
+                } else _cr.unbilledPrincipal += uint96(_cr.correction);
+                _cr.correction = 0;
+            }
+&nbsp;
+            // step 4. compute interest
+            interest =
+                (_cr.unbilledPrincipal *
+                    _crStatic.aprInBps *
+                    _crStatic.intervalInDays *
+                    SECONDS_IN_A_DAY) /
+                SECONDS_IN_A_YEAR /
+                HUNDRED_PERCENT_IN_BPS;
+&nbsp;
+            // step 5. compute principal due and adjust unbilled principal
+            uint256 principalToBill = (_cr.unbilledPrincipal * minPrincipalRateInBps) /
+                HUNDRED_PERCENT_IN_BPS;
+            _cr.feesAndInterestDue = uint96(fees + interest);
+            totalCharges += int96(uint96(fees + interest));
+            _cr.totalDue = uint96(fees + interest + principalToBill);
+            _cr.unbilledPrincipal = uint96(_cr.unbilledPrincipal - principalToBill);
+        }
+&nbsp;
+        // If passed final period, all principal is due
+        if (periodsPassed &gt;= _cr.remainingPeriods) {
+            _cr.totalDue += _cr.unbilledPrincipal;
+            _cr.unbilledPrincipal = 0;
+        }
+&nbsp;
+        return (
+            periodsPassed,
+            _cr.feesAndInterestDue,
+            _cr.totalDue,
+            _cr.unbilledPrincipal,
+            totalCharges
+        );
+    }
+&nbsp;
+    /**
+     * @notice Gets the fee structure for the pool
+     * @param _frontLoadingFeeFlat flat fee portion of the front loading fee
+     * @param _frontLoadingFeeBps a fee in the percentage of a new borrowing
+     * @param _lateFeeFlat flat fee portion of the late
+     * @param _lateFeeBps a fee in the percentage of the outstanding balance
+     */
+    function getFees()
+        external
+        view
+        virtual
+        override
+        returns (
+            uint256 _frontLoadingFeeFlat,
+            uint256 _frontLoadingFeeBps,
+            uint256 _lateFeeFlat,
+            uint256 _lateFeeBps,
+            uint256 _membershipFee
+        )
+    {
+        return (frontLoadingFeeFlat, frontLoadingFeeBps, lateFeeFlat, lateFeeBps, membershipFee);
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Nov 11 2022 16:26:20 GMT-0800 (Pacific Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

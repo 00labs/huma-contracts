@@ -109,6 +109,7 @@ describe("Invoice Factoring", function () {
         await humaConfigContract.connect(protocolOwner).setTreasuryFee(2000);
         await poolConfigContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 0);
         await poolConfigContract.connect(poolOwner).setEARewardsAndLiquidity(1875, 0);
+        await poolConfigContract.connect(poolOwner).setReceivableRequiredInBps(100);
     });
 
     describe("Post Approved Invoice Factoring", function () {
@@ -471,6 +472,14 @@ describe("Invoice Factoring", function () {
             ).to.be.revertedWith("receivableAssetMismatch()");
         });
 
+        it("Shall reject drawdown when receivable param mismatches", async function () {
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(1_000_000, invoiceNFTContract.address, 12345)
+            ).to.be.revertedWith("receivableAssetParamMismatch()");
+        });
+
         it("Should be able to borrow amount less than approved", async function () {
             await expect(
                 poolContract
@@ -547,6 +556,81 @@ describe("Invoice Factoring", function () {
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
             checkResult(dueInfo, 0, 0, 1_000_000, 0, 0);
+        });
+    });
+
+    describe("Invoice Factoring Funding with ERC20 as receivables", function () {
+        beforeEach(async function () {
+            console.log("In JS, ddress=", testTokenContract.address);
+            await testTokenContract.connect(borrower).mint(borrower.address, 10_000);
+            await testTokenContract.connect(borrower).approve(poolContract.address, 10_000);
+
+            await poolContract
+                .connect(eaServiceAccount)
+                .functions[
+                    "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                ](
+                    borrower.address,
+                    1_000_000,
+                    30,
+                    1,
+                    0,
+                    testTokenContract.address,
+                    10_000,
+                    10_000
+                );
+            record = await poolContract.creditRecordMapping(borrower.address);
+            recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(record, recordStatic, 1_000_000, 0, 0, 0, 0, 0, 0, 1, 0, 30, 2, 0);
+        });
+
+        afterEach(async function () {
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
+        });
+
+        it("Should reject since the receivable amount is less than approved", async function () {
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(200_000, testTokenContract.address, 5_000)
+            ).to.be.revertedWith("insufficientReceivableAmount()");
+        });
+
+        it("Should reject since the receivable is either IERC721 or IERC20", async function () {
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(200_000, hdtContract.address, 5_000)
+            ).to.be.revertedWith("receivableAssetMismatch()");
+        });
+
+        it("Should be able to borrow amount less than approved", async function () {
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(200_000, testTokenContract.address, 10_000)
+            )
+                .to.emit(poolContract, "DrawdownMadeWithReceivable")
+                .withArgs(borrower.address, 200_000, 197_000, testTokenContract.address, 10_000);
+
+            let blockNumBefore = await ethers.provider.getBlockNumber();
+            let blockBefore = await ethers.provider.getBlock(blockNumBefore);
+
+            dueDate = blockBefore.timestamp + 2592000;
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            checkArruedIncome(accruedIncome, 600, 450, 150);
+
+            expect(await poolContract.totalPoolValue()).to.equal(5_001_800);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_813_000);
+
+            r = await poolContract.creditRecordMapping(borrower.address);
+            rs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 200_000, 0, 0, 0, 0, 30, 3, 0);
+
+            let dueInfo = await feeManagerContract.getDueInfo(r, rs);
+            checkResult(dueInfo, 0, 0, 200_000, 0, 0);
         });
     });
 
@@ -649,6 +733,10 @@ describe("Invoice Factoring", function () {
                     1_500_000,
                     ethers.utils.formatBytes32String("1")
                 );
+
+            expect(
+                await poolContract.isPaymentProcessed(ethers.utils.formatBytes32String("1"))
+            ).to.equal(true);
 
             await expect(
                 poolContract
