@@ -15,7 +15,8 @@ describe("Huma Config", function () {
         newTreasury,
         pdsServiceAccount,
         eaServiceAccount,
-        randomUser;
+        randomUser,
+        eaNFTContract;
 
     before(async function () {
         [
@@ -29,6 +30,10 @@ describe("Huma Config", function () {
             eaServiceAccount,
             randomUser,
         ] = await ethers.getSigners();
+
+        // Deploy EvaluationAgentNFT
+        const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
+        eaNFTContract = await EvaluationAgentNFT.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         configContract = await HumaConfig.deploy();
@@ -94,6 +99,18 @@ describe("Huma Config", function () {
             expect(await configContract.connect(origOwner).setHumaTreasury(newTreasury.address))
                 .to.emit(configContract, "HumaTreasuryChanged")
                 .withArgs(newTreasury.address);
+            expect(await configContract.connect(origOwner).humaTreasury()).to.equal(
+                newTreasury.address
+            );
+        });
+
+        it("Should not emit event if try to set treasury to the existing treasury address", async function () {
+            expect(await configContract.connect(origOwner).humaTreasury()).to.equal(
+                newTreasury.address
+            );
+            expect(
+                await configContract.connect(origOwner).setHumaTreasury(newTreasury.address)
+            ).to.not.emit(configContract, "HumaTreasuryChanged");
             expect(await configContract.connect(origOwner).humaTreasury()).to.equal(
                 newTreasury.address
             );
@@ -425,6 +442,31 @@ describe("Huma Config", function () {
                 .to.emit(configContract, "LiquidityAssetRemoved")
                 .withArgs(testTokenContract.address, origOwner.address);
             expect(await configContract.isAssetValid(testTokenContract.address)).to.equal(false);
+        });
+    });
+
+    describe("Change EA NFT Contract Address", function () {
+        it("Should disallow non-proto-admin to change EANFT Address", async function () {
+            await expect(
+                configContract.connect(randomUser).setEANFTContractAddress(eaNFTContract.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should reject zero address EANFT contract address", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .setEANFTContractAddress(ethers.constants.AddressZero)
+            ).to.be.revertedWith("zeroAddressProvided()");
+        });
+
+        it("Should be able to change EANFT Address", async function () {
+            await expect(
+                configContract.connect(origOwner).setEANFTContractAddress(eaNFTContract.address)
+            )
+                .to.emit(configContract, "EANFTContractAddressChanged")
+                .withArgs(eaNFTContract.address);
+            expect(await configContract.eaNFTContractAddress()).to.equal(eaNFTContract.address);
         });
     });
 });
