@@ -126,6 +126,11 @@
   },
   {
     "inputs": [],
+    "name": "notNFTOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "notOperator",
     "type": "error"
   },

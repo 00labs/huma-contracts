@@ -15,7 +15,7 @@ contract Errors {
     error permissionDeniedNotLender(); // 0x68299b20
     error evaluationAgentServiceAccountRequired(); // 0x9b3b1ed6
     error paymentDetectionServiceAccountRequired(); // 0x731b978f
-    error poolOperatorRequired();
+    error poolOperatorRequired(); // 0xdc2dc6d0
     error notPoolOwner(); // 0xd39208c9
     error notProtocolOwner(); // 0x97924c20
     error notEvaluationAgent(); // 0x66f7b8b7
@@ -24,7 +24,8 @@ contract Errors {
     error notPoolOwnerOrEA(); // 0xd6ed9384
     error notPauser(); // 0xdcdea7c8
     error notPool(); // 0x26d29bbf
-    error drawdownFunctionUsedInsteadofDrawdownWithReceivable();
+    error drawdownFunctionUsedInsteadofDrawdownWithReceivable(); // 0x7e737537
+    error notNFTOwner(); // 0x091a5762
 
     // system config
     error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
