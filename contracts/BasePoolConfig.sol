@@ -127,6 +127,7 @@ contract BasePoolConfig is Ownable, Initializable {
         uint256 liquidityRate,
         address indexed by
     );
+    event PoolOwnerTreasuryChanged(address treasury, address indexed by);
     event PoolPayPeriodChanged(uint256 periodInDays, address by);
     event PoolRewardsWithdrawn(address receiver, uint256 amount);
     event ProtocolRewardsWithdrawn(address receiver, uint256 amount, address by);
@@ -383,6 +384,7 @@ contract BasePoolConfig is Ownable, Initializable {
         _onlyOwnerOrHumaMasterAdmin();
         if (_poolOwnerTreasury == address(0)) revert Errors.zeroAddressProvided();
         poolOwnerTreasury = _poolOwnerTreasury;
+        emit PoolOwnerTreasuryChanged(_poolOwnerTreasury, msg.sender);
     }
 
     function setPoolToken(address _poolToken) external {
@@ -446,12 +448,9 @@ contract BasePoolConfig is Ownable, Initializable {
         // It is possible that Huma protocolTreasury is missed in the setup. If that happens,
         // the transaction is reverted. The protocol owner can still withdraw protocol fee
         // after protocolTreasury is configured in HumaConfig.
-        if (treasuryAddress != address(0)) {
-            underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
-            emit ProtocolRewardsWithdrawn(treasuryAddress, amount, msg.sender);
-        } else {
-            revert Errors.zeroAddressProvided();
-        }
+        assert(treasuryAddress != address(0));
+        underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
+        emit ProtocolRewardsWithdrawn(treasuryAddress, amount, msg.sender);
     }
 
     function accruedIncome()
@@ -568,10 +567,6 @@ contract BasePoolConfig is Ownable, Initializable {
         return _poolConfig._maxCreditLine;
     }
 
-    function onlyEA(address account) public view {
-        if (account != evaluationAgent) revert Errors.notEvaluationAgent();
-    }
-
     function onlyPoolOwnerTreasury(address account) public view {
         if (account != poolOwnerTreasury) revert Errors.notPoolOwnerTreasury();
     }
@@ -617,11 +612,19 @@ contract BasePoolConfig is Ownable, Initializable {
         emit PoolOperatorRemoved(_opeartor, msg.sender);
     }
 
-    function rewardsAndLiquidityRateForEA() external view returns (uint256, uint256) {
+    function rewardsAndLiquidityRateForEA()
+        external
+        view
+        returns (uint256 rewardRateInBpsForEA, uint256 liquidityRateInBpsByEA)
+    {
         return (_poolConfig._rewardRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
     }
 
-    function rewardsAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
+    function rewardsAndLiquidityRateForPoolOwner()
+        external
+        view
+        returns (uint256 rewardRateInBpsForPoolOwner, uint256 liquidityRateInBpsByPoolOwner)
+    {
         return (
             _poolConfig._rewardRateInBpsForPoolOwner,
             _poolConfig._liquidityRateInBpsByPoolOwner

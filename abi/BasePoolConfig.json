@@ -16,11 +16,6 @@
   },
   {
     "inputs": [],
-    "name": "notEvaluationAgent",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "notOperator",
     "type": "error"
   },
@@ -518,6 +513,25 @@
     "inputs": [
       {
         "indexed": false,
+        "internalType": "address",
+        "name": "treasury",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "PoolOwnerTreasuryChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
         "internalType": "uint256",
         "name": "periodInDays",
         "type": "uint256"
@@ -955,19 +969,6 @@
         "type": "address"
       }
     ],
-    "name": "onlyEA",
-    "outputs": [],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
     "name": "onlyOwnerOrHumaMasterAdmin",
     "outputs": [],
     "stateMutability": "view",
@@ -1174,12 +1175,12 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "rewardRateInBpsForEA",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "liquidityRateInBpsByEA",
         "type": "uint256"
       }
     ],
@@ -1192,12 +1193,12 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "rewardRateInBpsForPoolOwner",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "liquidityRateInBpsByPoolOwner",
         "type": "uint256"
       }
     ],

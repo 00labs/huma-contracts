@@ -561,7 +561,6 @@ describe("Invoice Factoring", function () {
 
     describe("Invoice Factoring Funding with ERC20 as receivables", function () {
         beforeEach(async function () {
-            console.log("In JS, ddress=", testTokenContract.address);
             await testTokenContract.connect(borrower).mint(borrower.address, 10_000);
             await testTokenContract.connect(borrower).approve(poolContract.address, 10_000);
 
