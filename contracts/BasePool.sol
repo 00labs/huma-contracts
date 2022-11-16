@@ -64,6 +64,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
     /**
      * @notice LP deposits to the pool to earn interest, and share losses
+     * @notice Warning, deposits should be made by calling this function
+     * No token should be transferred directly to the contract
      * @param amount the number of underlyingToken to be deposited
      */
     function deposit(uint256 amount) external virtual override {

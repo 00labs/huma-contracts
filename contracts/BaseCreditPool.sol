@@ -239,6 +239,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @return amountPaid the actual amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
      * @return paidoff a flag indicating whether the account has been paid off.
+     * @notice Warning, payments should be made by calling this function
+     * No token should be transferred directly to the contract
      */
     function makePayment(address borrower, uint256 amount)
         public
