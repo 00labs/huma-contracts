@@ -174,9 +174,31 @@ describe("Base Credit Pool", function () {
             );
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
         });
+    });
 
+    describe("HDT", async function () {
         it("HDT's decimals shall match with the underlyingtoken's decimals", async function () {
             expect(await hdtContract.decimals()).to.equal(6);
+        });
+        it("Should disallow initialize to be called again", async function () {
+            await expect(
+                hdtContract.initialize("TestHDT", "THDT", testTokenContract.address)
+            ).to.be.revertedWith("Initializable: contract is already initialized");
+        });
+        it("Should reject non-owner to setPool", async function () {
+            await expect(
+                hdtContract.connect(lender).setPool(poolContract.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+        it("Should reject non-owner to call mintAmount()", async function () {
+            await expect(
+                hdtContract.connect(lender).mintAmount(lender.address, 1_000_000)
+            ).to.be.revertedWith("notPool");
+        });
+        it("Should reject non-owner to call burnAmount()", async function () {
+            await expect(
+                hdtContract.connect(lender).burnAmount(lender.address, 1_000_000)
+            ).to.be.revertedWith("notPool");
         });
     });
 
