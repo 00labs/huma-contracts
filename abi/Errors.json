@@ -51,6 +51,11 @@
   },
   {
     "inputs": [],
+    "name": "creditLineNotInApprovedState",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "creditLineNotInGoodStandingState",
     "type": "error"
   },

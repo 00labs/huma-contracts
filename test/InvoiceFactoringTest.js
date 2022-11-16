@@ -202,6 +202,44 @@ describe("Invoice Factoring", function () {
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
 
+        it("Should reject zero address receivable", async function () {
+            await expect(
+                poolContract
+                    .connect(eaServiceAccount)
+                    .functions[
+                        "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                    ](
+                        borrower.address,
+                        1_000_000,
+                        30,
+                        1,
+                        0,
+                        ethers.constants.AddressZero,
+                        invoiceNFTTokenId,
+                        1_500_000
+                    )
+            ).to.be.revertedWith("zeroAddressProvided()");
+        });
+
+        it("Should reject non-ERC20-or-ERC721", async function () {
+            await expect(
+                poolContract
+                    .connect(eaServiceAccount)
+                    .functions[
+                        "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
+                    ](
+                        borrower.address,
+                        1_000_000,
+                        30,
+                        1,
+                        0,
+                        feeManagerContract.address,
+                        invoiceNFTTokenId,
+                        1_500_000
+                    )
+            ).to.be.revertedWith("unsupportedReceivableAsset()");
+        });
+
         it("Should post approved invoice financing successfully", async function () {
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
 
@@ -469,7 +507,7 @@ describe("Invoice Factoring", function () {
                         ethers.constants.AddressZero,
                         invoiceNFTTokenId
                     )
-            ).to.be.revertedWith("receivableAssetMismatch()");
+            ).to.be.revertedWith("zeroAddressProvided()");
         });
 
         it("Shall reject drawdown when receivable param mismatches", async function () {
@@ -516,6 +554,13 @@ describe("Invoice Factoring", function () {
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
             checkResult(dueInfo, 0, 0, 200_000, 0, 0);
+
+            // Only one borrowing is allowed for each invoice
+            await expect(
+                poolContract
+                    .connect(borrower)
+                    .drawdownWithReceivable(200_000, invoiceNFTContract.address, invoiceNFTTokenId)
+            ).to.revertedWith("creditLineNotInApprovedState");
         });
 
         it("Should be able to borrow the full approved amount", async function () {

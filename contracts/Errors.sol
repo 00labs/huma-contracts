@@ -59,6 +59,7 @@ contract Errors {
     error greaterThanMaxCreditLine(); // 0x8a754ae8
     error requestedCreditWithZeroDuration(); // 0xb16dd34d
     error onlyBorrowerOrEACanReduceCreditLine(); // 0xd61dbe31
+    error creditLineNotInApprovedState(); // 0xfc91a989
 
     // pool operation
     error exceededPoolLiquidityCap(); // 0x5642ebd4

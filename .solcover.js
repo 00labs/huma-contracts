@@ -1,3 +1,3 @@
 module.exports = {
-    // skipFiles: ['mock/InvoiceNFT.sol', ],
+    // skipFiles: ['mock/MockBaseCreditPoolV2.sol', 'mock/InvoiceNFT.sol', 'mock/TestToken.sol'],
 };

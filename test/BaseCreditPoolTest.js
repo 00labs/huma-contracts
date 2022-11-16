@@ -174,6 +174,10 @@ describe("Base Credit Pool", function () {
             );
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
         });
+
+        it("HDT's decimals shall match with the underlyingtoken's decimals", async function () {
+            expect(await hdtContract.decimals()).to.equal(6);
+        });
     });
 
     // Borrowing tests are grouped into two suites: Borrowing Request and Funding.

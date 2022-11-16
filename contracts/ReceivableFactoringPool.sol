@@ -77,8 +77,11 @@ contract ReceivableFactoringPool is
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
-        if (cr.state == BS.CreditState.Approved)
-            _transferReceivableAsset(borrower, receivableAsset, receivableParam);
+        if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
+
+        if (cr.state != BS.CreditState.Approved) revert Errors.creditLineNotInApprovedState();
+
+        _transferReceivableAsset(borrower, receivableAsset, receivableParam);
 
         uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
         emit DrawdownMadeWithReceivable(
@@ -169,9 +172,9 @@ contract ReceivableFactoringPool is
         _checkReceivableRequirement(creditLimit, receivableAmount);
 
         // Populates fields related to receivable
-        if (receivableAsset != address(0)) {
-            _setReceivableInfo(borrower, receivableAsset, receivableParam, receivableAmount);
-        }
+        if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
+
+        _setReceivableInfo(borrower, receivableAsset, receivableParam, receivableAmount);
 
         // Pool status and data validation happens within initiate().
         _initiateCredit(borrower, creditLimit, aprInBps, intervalInDays, remainingPeriods, true);
@@ -210,12 +213,11 @@ contract ReceivableFactoringPool is
         virtual
     {
         // Checks to make sure the receivable value satisfies the requirement
-        if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
-            _checkReceivableRequirement(
-                newCreditLimit,
-                _receivableInfoMapping[borrower].receivableAmount
-            );
-        }
+        assert(_receivableInfoMapping[borrower].receivableAsset != address(0));
+        _checkReceivableRequirement(
+            newCreditLimit,
+            _receivableInfoMapping[borrower].receivableAmount
+        );
     }
 
     /**
@@ -283,30 +285,27 @@ contract ReceivableFactoringPool is
     ) internal virtual {
         // Transfer receivable asset.
         BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
-        if (ri.receivableAsset != address(0)) {
-            if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
-            if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
-                // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
-                // for lookup by off-chain payment processers
-                _receivableOwnershipMapping[
-                    keccak256(abi.encode(receivableAsset, receivableParam))
-                ] = borrower;
 
-                // For ERC721, receivableParam is the tokenId
-                if (ri.receivableParam != receivableParam)
-                    revert Errors.receivableAssetParamMismatch();
+        assert(ri.receivableAsset != address(0));
 
-                IERC721(receivableAsset).safeTransferFrom(
-                    borrower,
-                    address(this),
-                    receivableParam
-                );
-            } else if (receivableAsset.supportsInterface(type(IERC20).interfaceId)) {
-                if (receivableParam < ri.receivableParam)
-                    revert Errors.insufficientReceivableAmount();
+        if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
+        if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
+            // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
+            // for lookup by off-chain payment processers
+            _receivableOwnershipMapping[
+                keccak256(abi.encode(receivableAsset, receivableParam))
+            ] = borrower;
 
-                IERC20(receivableAsset).safeTransferFrom(borrower, address(this), receivableParam);
-            }
+            // For ERC721, receivableParam is the tokenId
+            if (ri.receivableParam != receivableParam)
+                revert Errors.receivableAssetParamMismatch();
+
+            IERC721(receivableAsset).safeTransferFrom(borrower, address(this), receivableParam);
+        } else {
+            // This has to be ERC20
+            if (receivableParam < ri.receivableParam) revert Errors.insufficientReceivableAmount();
+
+            IERC20(receivableAsset).safeTransferFrom(borrower, address(this), receivableParam);
         }
     }
 }
