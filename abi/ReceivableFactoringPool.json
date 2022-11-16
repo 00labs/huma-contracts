@@ -21,6 +21,11 @@
   },
   {
     "inputs": [],
+    "name": "creditLineNotInApprovedState",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "creditLineNotInGoodStandingState",
     "type": "error"
   },
@@ -137,6 +142,11 @@
   {
     "inputs": [],
     "name": "withdrawnAmountHigherThanBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "zeroAddressProvided",
     "type": "error"
   },
   {

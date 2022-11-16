@@ -20,6 +20,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
     // Divider to get monthly interest rate from APR BPS. 10000 * 12
     uint256 private constant SECONDS_IN_A_YEAR = 365 days;
     uint256 private constant SECONDS_IN_A_DAY = 1 days;
+    uint256 private constant MAX_PERIODS = 360; // 30 years monthly loan
 
     /// Part of platform fee, charged as a flat amount when a borrow happens
     uint256 public frontLoadingFeeFlat;
@@ -226,9 +227,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
                 (_crStatic.intervalInDays * SECONDS_IN_A_DAY);
             // No credit line has more than 360 periods. If it is longer than that, something
             // is wrong. Set it to 361 so that the non view function can emit an event.
-            if (periodsPassed > 360) {
-                periodsPassed = 361;
-            }
+            assert(periodsPassed <= MAX_PERIODS);
         } else {
             periodsPassed = 1;
         }

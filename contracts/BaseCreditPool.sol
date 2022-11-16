@@ -414,8 +414,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 borrowAmount
     ) internal view {
         _protocolAndPoolOn();
-        ///msg.sender needs to be the borrower themselves or the EA.
-        if (msg.sender != borrower) onlyEAServiceAccount();
 
         if (cr.state != BS.CreditState.GoodStanding && cr.state != BS.CreditState.Approved)
             revert Errors.creditLineNotInStateForDrawdown();
