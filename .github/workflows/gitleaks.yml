@@ -1,0 +1,21 @@
+name: gitleaks
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+    branches: ["master", "CertiK_audit"]
+
+  workflow_dispatch:
+
+jobs:
+  check-secret-leakage:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: get gitleaks
+        run: |
+          git clone https://github.com/zricethezav/gitleaks.git
+          cd gitleaks
+          make build
+      - name: Checking leaks
+        run: ./gitleaks/gitleaks detect
