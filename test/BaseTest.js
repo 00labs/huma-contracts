@@ -143,6 +143,7 @@ async function deployAndSetupPool(
     await poolConfig.connect(poolOwner).setEARewardsAndLiquidity(1875, 10);
 
     await poolConfig.connect(poolOwner).setPoolOwnerTreasury(poolOwnerTreasury.address);
+    await poolConfig.connect(poolOwner).addPoolOperator(poolOwner.address);
     await poolConfig.connect(poolOwner).addPoolOperator(poolOperator.address);
 
     await poolContract.connect(poolOperator).addApprovedLender(poolOwnerTreasury.address);

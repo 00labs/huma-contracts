@@ -26,6 +26,11 @@
   },
   {
     "inputs": [],
+    "name": "notPoolOwnerOrEA",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "notPoolOwnerTreasury",
     "type": "error"
   },
@@ -970,6 +975,19 @@
       }
     ],
     "name": "onlyOwnerOrHumaMasterAdmin",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "onlyPoolOwnerOrEA",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"

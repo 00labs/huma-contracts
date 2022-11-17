@@ -22,7 +22,7 @@ contract Errors {
     error notOperator(); // 0xf67113fe
     error notPoolOwnerTreasury(); // 0x325bf3c2
     error notPoolOwnerOrEA(); // 0xd6ed9384
-    error notPoolOwnerTreasuryOrEA();
+    error notPoolOwnerTreasuryOrEA(); // 0xc74cb44c
     error notPauser(); // 0xdcdea7c8
     error notPool(); // 0x26d29bbf
     error drawdownFunctionUsedInsteadofDrawdownWithReceivable(); // 0x7e737537

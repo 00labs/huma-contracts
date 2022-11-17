@@ -156,6 +156,11 @@
   },
   {
     "inputs": [],
+    "name": "notPoolOwnerOrEA",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "notPoolOwnerTreasury",
     "type": "error"
   },

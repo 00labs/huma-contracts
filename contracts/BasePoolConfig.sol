@@ -420,8 +420,9 @@ contract BasePoolConfig is Ownable, Initializable {
     }
 
     function withdrawEAFee(uint256 amount) external {
-        // Either Pool owner treasury or EA can trigger reward withdraw for EA
-        onlyPoolOwnerTreasuryOrEA(msg.sender);
+        // Either Pool owner or EA can trigger reward withdraw for EA.
+        // When it is triggered by pool owner, the fund still flows to the EA's account.
+        onlyPoolOwnerOrEA(msg.sender);
         if (amount == 0) revert Errors.zeroAmountProvided();
         if (amount + _accuredIncome._eaIncomeWithdrawn > _accuredIncome._eaIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
@@ -572,6 +573,11 @@ contract BasePoolConfig is Ownable, Initializable {
     }
 
     /// "Modifier" function that limits access to pool owner or EA.
+    function onlyPoolOwnerOrEA(address account) public view {
+        if (account != owner() && account != evaluationAgent) revert Errors.notPoolOwnerOrEA();
+    }
+
+    /// "Modifier" function that limits access to pool owner treasury or EA.
     function onlyPoolOwnerTreasuryOrEA(address account) public view {
         if (!isPoolOwnerTreasuryOrEA(account)) revert Errors.notPoolOwnerTreasuryOrEA();
     }
