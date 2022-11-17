@@ -64,8 +64,13 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
     /**
      * @notice LP deposits to the pool to earn interest, and share losses
-     * @notice Warning, deposits should be made by calling this function
-     * No token should be transferred directly to the contract
+     *
+     * @notice All deposits should be made by calling this function and
+     * makeInitialDeposit() (for pool owner and EA's initial deposit) only.
+     * Please do NOT directly transfer any digital assets to the contracts,
+     * which will cause a permanent loss and we cannot help reverse transactions
+     * or retrieve assets from the contracts.
+     *
      * @param amount the number of underlyingToken to be deposited
      */
     function deposit(uint256 amount) external virtual override {
@@ -193,7 +198,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * @notice turns off the pool
      */
     function disablePool() external virtual override {
-        _onlyOwnerOrHumaMasterAdmin();
+        _onlyPoolOperator();
         _status = PoolStatus.Off;
         emit PoolDisabled(msg.sender);
     }
