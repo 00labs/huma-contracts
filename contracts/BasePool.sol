@@ -83,7 +83,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * @param amount the number of `poolToken` to be deposited
      */
     function makeInitialDeposit(uint256 amount) external virtual override {
-        _poolConfig.isPoolOwnerOrEA(msg.sender);
+        _poolConfig.isPoolOwnerTreasuryOrEA(msg.sender);
         return _deposit(msg.sender, amount);
     }
 

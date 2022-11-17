@@ -26,12 +26,12 @@
   },
   {
     "inputs": [],
-    "name": "notPoolOwnerOrEA",
+    "name": "notPoolOwnerTreasury",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "notPoolOwnerTreasury",
+    "name": "notPoolOwnerTreasuryOrEA",
     "type": "error"
   },
   {
@@ -937,7 +937,7 @@
         "type": "address"
       }
     ],
-    "name": "isPoolOwnerOrEA",
+    "name": "isPoolOwnerTreasuryOrEA",
     "outputs": [
       {
         "internalType": "bool",
@@ -982,7 +982,7 @@
         "type": "address"
       }
     ],
-    "name": "onlyPoolOwnerOrEA",
+    "name": "onlyPoolOwnerTreasury",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
@@ -995,7 +995,7 @@
         "type": "address"
       }
     ],
-    "name": "onlyPoolOwnerTreasury",
+    "name": "onlyPoolOwnerTreasuryOrEA",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
