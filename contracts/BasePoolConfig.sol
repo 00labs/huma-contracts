@@ -568,6 +568,10 @@ contract BasePoolConfig is Ownable, Initializable {
         return _poolConfig._maxCreditLine;
     }
 
+    function onlyPoolOwner(address account) public view {
+        if (account != owner()) revert Errors.notPoolOwner();
+    }
+
     function onlyPoolOwnerTreasury(address account) public view {
         if (account != poolOwnerTreasury) revert Errors.notPoolOwnerTreasury();
     }

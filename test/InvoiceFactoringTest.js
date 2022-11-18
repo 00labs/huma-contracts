@@ -1085,11 +1085,11 @@ describe("Invoice Factoring", function () {
 
             // After review, inactivate the paymentId
             await expect(
-                poolContract.processPaymentAfterReview(paymentId, false)
-            ).to.be.revertedWith("poolOperatorRequired()");
+                poolContract.connect(poolOperator).processPaymentAfterReview(paymentId, false)
+            ).to.be.revertedWith("notPoolOwner()");
 
             await expect(
-                poolContract.connect(poolOperator).processPaymentAfterReview(paymentId, false)
+                poolContract.connect(poolOwner).processPaymentAfterReview(paymentId, false)
             )
                 .to.emit(poolContract, "PaymentInvalidated")
                 .withArgs(paymentId);
@@ -1132,18 +1132,16 @@ describe("Invoice Factoring", function () {
 
             let invalidPaymentId = ethers.utils.formatBytes32String("1");
             await expect(
-                poolContract
-                    .connect(poolOperator)
-                    .processPaymentAfterReview(invalidPaymentId, true)
+                poolContract.connect(poolOwner).processPaymentAfterReview(invalidPaymentId, true)
             ).to.be.revertedWith("paymentIdNotUnderReview()");
 
             await expect(
-                poolContract.connect(poolOperator).processPaymentAfterReview(paymentId, true)
+                poolContract.connect(poolOwner).processPaymentAfterReview(paymentId, true)
             )
                 .to.emit(poolContract, "ExtraFundsDispersed")
                 .withArgs(borrower.address, 14_000_000)
                 .to.emit(poolContract, "ReceivedPaymentProcessed")
-                .withArgs(poolOperator.address, borrower.address, 15_000_000, paymentId);
+                .withArgs(poolOwner.address, borrower.address, 15_000_000, paymentId);
 
             expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(true);
             expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(false);
@@ -1212,12 +1210,12 @@ describe("Invoice Factoring", function () {
             await testTokenContract.mint(poolContract.address, 2_000_000);
 
             await expect(
-                poolContract.connect(poolOperator).processPaymentAfterReview(paymentId, true)
+                poolContract.connect(poolOwner).processPaymentAfterReview(paymentId, true)
             )
                 .to.emit(poolContract, "ExtraFundsDispersed")
                 .withArgs(borrower.address, 2_000_000)
                 .to.emit(poolContract, "ReceivedPaymentProcessed")
-                .withArgs(poolOperator.address, borrower.address, 2_000_000, paymentId);
+                .withArgs(poolOwner.address, borrower.address, 2_000_000, paymentId);
 
             expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(true);
             expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(false);

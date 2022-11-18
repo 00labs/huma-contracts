@@ -127,7 +127,7 @@ contract ReceivableFactoringPool is
     }
 
     function processPaymentAfterReview(bytes32 paymentIdHash, bool approved) external {
-        _onlyPoolOperator();
+        _poolConfig.onlyPoolOwner(msg.sender);
         BS.FlagedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
 
         if (fpr.paymentReceiver == address(0)) revert Errors.paymentIdNotUnderReview();
