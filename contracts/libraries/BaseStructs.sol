@@ -40,6 +40,11 @@ library BaseStructs {
         uint256 receivableParam;
     }
 
+    struct FlagedPaymentRecord {
+        address paymentReceiver;
+        uint256 amount;
+    }
+
     enum CreditState {
         Deleted,
         Requested,
@@ -47,5 +52,10 @@ library BaseStructs {
         GoodStanding,
         Delayed,
         Defaulted
+    }
+    enum PaymentStatus {
+        NotReceived,
+        ReceivedNotVerified,
+        ReceivedAndVerified
     }
 }

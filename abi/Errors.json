@@ -191,6 +191,11 @@
   },
   {
     "inputs": [],
+    "name": "paymentIdNotUnderReview",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "permissionDeniedNotAdmin",
     "type": "error"
   },

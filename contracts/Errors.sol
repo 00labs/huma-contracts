@@ -61,6 +61,7 @@ contract Errors {
     error requestedCreditWithZeroDuration(); // 0xb16dd34d
     error onlyBorrowerOrEACanReduceCreditLine(); // 0xd61dbe31
     error creditLineNotInApprovedState(); // 0xfc91a989
+    error paymentIdNotUnderReview(); // 0xd1696aaa
 
     // pool operation
     error exceededPoolLiquidityCap(); // 0x5642ebd4

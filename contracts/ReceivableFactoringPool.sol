@@ -39,6 +39,11 @@ contract ReceivableFactoringPool is
         address receivableAsset,
         uint256 receivableParam
     );
+    event PaymentFlaggedForReview(
+        bytes32 indexed paymentIdHash,
+        address indexed borrower,
+        uint256 amount
+    );
 
     /**
      * @notice changes the limit of the borrower's credit line.
@@ -112,22 +117,32 @@ contract ReceivableFactoringPool is
         uint256 amount,
         bytes32 paymentIdHash
     ) external virtual override {
-        _protocolAndPoolOn();
         onlyPDSServiceAccount();
+        _processReceivedPayment(
+            borrower,
+            amount,
+            paymentIdHash,
+            BS.PaymentStatus.ReceivedNotVerified
+        );
+    }
 
-        // Makes sure no repeated processing of a payment.
-        if (_processedPaymentIds[paymentIdHash]) revert Errors.paymentAlreadyProcessed();
+    function processPaymentAfterReview(bytes32 paymentIdHash, bool approved) external {
+        _onlyPoolOperator();
+        BS.FlagedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
 
-        _processedPaymentIds[paymentIdHash] = true;
+        if (fpr.paymentReceiver == address(0)) revert Errors.paymentIdNotUnderReview();
 
-        (uint256 amountPaid, bool paidoff) = _makePayment(borrower, amount, true);
-
-        if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
-
-        // Removes the receivable information for the borrower.
-        if (paidoff) _setReceivableInfo(borrower, address(0), 0, 0);
-
-        emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
+        delete _paymentsToBeReviewed[paymentIdHash];
+        if (!approved) {
+            _markPaymentInvalid(paymentIdHash);
+        } else {
+            _processReceivedPayment(
+                fpr.paymentReceiver,
+                fpr.amount,
+                paymentIdHash,
+                BS.PaymentStatus.ReceivedAndVerified
+            );
+        }
     }
 
     /**
@@ -139,9 +154,7 @@ contract ReceivableFactoringPool is
      */
     function markPaymentInvalid(bytes32 paymentIdHash) external {
         onlyPDSServiceAccount();
-
-        _processedPaymentIds[paymentIdHash] = true;
-        emit PaymentInvalidated(paymentIdHash);
+        _markPaymentInvalid(paymentIdHash);
     }
 
     /**
@@ -188,6 +201,11 @@ contract ReceivableFactoringPool is
         returns (bool)
     {
         return _processedPaymentIds[paymentIdHash];
+    }
+
+    function isPaymentUnderReview(bytes32 paymentIdHash) external view returns (bool) {
+        BS.FlagedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
+        return fpr.paymentReceiver != address(0);
     }
 
     function receivableInfoMapping(address account)
@@ -244,6 +262,50 @@ contract ReceivableFactoringPool is
             receivableAmount <
             (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
         ) revert Errors.insufficientReceivableAmount();
+    }
+
+    function _flagForReview(
+        bytes32 paymentIdHash,
+        address borrower,
+        uint256 amount
+    ) internal {
+        _paymentsToBeReviewed[paymentIdHash] = BS.FlagedPaymentRecord(borrower, amount);
+        emit PaymentFlaggedForReview(paymentIdHash, borrower, amount);
+    }
+
+    function _markPaymentInvalid(bytes32 paymentIdHash) internal {
+        _processedPaymentIds[paymentIdHash] = true;
+        emit PaymentInvalidated(paymentIdHash);
+    }
+
+    function _processReceivedPayment(
+        address borrower,
+        uint256 amount,
+        bytes32 paymentIdHash,
+        BS.PaymentStatus paymentStatus
+    ) internal {
+        _protocolAndPoolOn();
+        // Makes sure no repeated processing of a payment.
+        if (_processedPaymentIds[paymentIdHash]) revert Errors.paymentAlreadyProcessed();
+
+        (uint256 amountPaid, bool paidoff, bool toReview) = _makePayment(
+            borrower,
+            amount,
+            paymentStatus
+        );
+
+        if (!toReview) {
+            _processedPaymentIds[paymentIdHash] = true;
+
+            if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
+
+            // Removes the receivable information for the borrower.
+            if (paidoff) _setReceivableInfo(borrower, address(0), 0, 0);
+
+            emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
+        } else {
+            _flagForReview(paymentIdHash, borrower, amount);
+        }
     }
 
     /**

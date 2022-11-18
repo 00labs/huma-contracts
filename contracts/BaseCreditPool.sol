@@ -250,7 +250,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     {
         if (msg.sender != borrower) onlyPDSServiceAccount();
 
-        return _makePayment(borrower, amount, false);
+        (amountPaid, paidoff, ) = _makePayment(borrower, amount, BS.PaymentStatus.NotReceived);
     }
 
     /**
@@ -576,7 +576,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * it automatically triggers the payoff process.
      * @param borrower the address of the borrower
      * @param amount the payment amount
-     * @param isPaymentReceived a flag that indicates whether the payment has been received or not
+     * @param paymentStatus a flag that indicates the status the payment.
+     * Ideally, two boolean parameters (isPaymentReceived, isPaymentVerified) are used
+     * instead of paymentStatus. Due to stack too deep issue, one parameter is used.
+     * NotReceived: Payment not received
+     * ReceivedNotVerified: the system thinks the payment has been received but no manul
+     * verification yet. Outier cases might be flagged for manual review.
+     * ReceivedAndVerified: the system thinks the payment has been received and it has been
+     * manually verified after being flagged by the system.
      * @return amountPaid the actuall amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
      * @return paidoff a flag indciating whether the account has been paid off.
@@ -584,8 +591,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     function _makePayment(
         address borrower,
         uint256 amount,
-        bool isPaymentReceived
-    ) internal returns (uint256 amountPaid, bool paidoff) {
+        BS.PaymentStatus paymentStatus
+    )
+        internal
+        returns (
+            uint256 amountPaid,
+            bool paidoff,
+            bool isReviewRequired
+        )
+    {
         _protocolAndPoolOn();
 
         if (amount == 0) revert Errors.zeroAmountProvided();
@@ -597,7 +611,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.state == BS.CreditState.Approved ||
             cr.state == BS.CreditState.Deleted
         ) {
-            revert Errors.creditLineNotInStateForMakingPayment();
+            if (paymentStatus == BS.PaymentStatus.NotReceived)
+                revert Errors.creditLineNotInStateForMakingPayment();
+            else if (paymentStatus == BS.PaymentStatus.ReceivedNotVerified)
+                return (0, false, true);
         }
 
         if (block.timestamp > cr.dueDate) {
@@ -617,6 +634,19 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 payoffAmount = uint256(
             int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
         ) - payoffCorrection;
+
+        // If the reported received payment amount is far higher than the invoice amount,
+        // flags the transaction for review.
+        if (paymentStatus == BS.PaymentStatus.ReceivedNotVerified) {
+            // Check against in-memory payoff amount first is purely for gas consideration.
+            // We expect near 100% of the payments to fail in the first check
+            if (amount > REVIEW_MULTIPLIER * payoffAmount) {
+                if (
+                    amount >
+                    REVIEW_MULTIPLIER * uint256(_getCreditRecordStatic(borrower).creditLimit)
+                ) return (0, false, true);
+            }
+        }
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
@@ -705,7 +735,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         _creditRecordMapping[borrower] = cr;
 
-        if (amountToCollect > 0 && isPaymentReceived == false) {
+        if (amountToCollect > 0 && paymentStatus == BS.PaymentStatus.NotReceived) {
             // Transfer assets from the _borrower to pool locker
             _underlyingToken.safeTransferFrom(borrower, address(this), amountToCollect);
             emit PaymentMade(
@@ -719,7 +749,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         // amountToCollect == payoffAmount indicates whether it is paid off or not.
         // Use >= as a safe practice
-        return (amountToCollect, amountToCollect >= payoffAmount);
+        return (amountToCollect, amountToCollect >= payoffAmount, false);
     }
 
     /**

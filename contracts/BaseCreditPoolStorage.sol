@@ -8,10 +8,16 @@ contract BaseCreditPoolStorage {
     mapping(address => BS.CreditRecord) internal _creditRecordMapping;
     mapping(address => BS.CreditRecordStatic) internal _creditRecordStaticMapping;
 
+    /// A multiplier over the credit limit, which is up to 80% of the invoice amount,
+    /// that determines whether a payment amount should be flagged for review.
+    /// It is possible for the actual invoice payment is higher than the invoice amount,
+    /// however, it is too high, the chance for a fraud is high and thus requires review.
+    uint256 internal constant REVIEW_MULTIPLIER = 5;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[100] private __gap;
+    uint256[99] private __gap;
 }
