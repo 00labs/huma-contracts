@@ -62,6 +62,7 @@ contract Errors {
     error onlyBorrowerOrEACanReduceCreditLine(); // 0xd61dbe31
     error creditLineNotInApprovedState(); // 0xfc91a989
     error paymentIdNotUnderReview(); // 0xd1696aaa
+    error creditLineTooHigh(); // 0x552b8377
 
     // pool operation
     error exceededPoolLiquidityCap(); // 0x5642ebd4

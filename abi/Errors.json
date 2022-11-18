@@ -71,6 +71,11 @@
   },
   {
     "inputs": [],
+    "name": "creditLineTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "defaultGracePeriodLessThanMinAllowed",
     "type": "error"
   },

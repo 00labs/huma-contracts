@@ -6,6 +6,11 @@
   },
   {
     "inputs": [],
+    "name": "creditLineTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "evaluationAgentNotEnoughLiquidity",
     "type": "error"
   },

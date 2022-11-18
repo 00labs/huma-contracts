@@ -34,7 +34,7 @@ contract BasePoolConfig is Ownable, Initializable {
         // Percentage of the _liquidityCap to be contributed by Pool Owner
         uint256 _liquidityRateInBpsByPoolOwner;
         // the maximum credit line for an address in terms of the amount of poolTokens
-        uint256 _maxCreditLine;
+        uint88 _maxCreditLine;
         // the grace period at the pool level before a Default can be triggered
         uint256 _poolDefaultGracePeriodInSeconds;
         // pay period for the pool, measured in number of days
@@ -322,7 +322,8 @@ contract BasePoolConfig is Ownable, Initializable {
     function setMaxCreditLine(uint256 creditLine) external {
         _onlyOwnerOrHumaMasterAdmin();
         if (creditLine == 0) revert Errors.zeroAmountProvided();
-        _poolConfig._maxCreditLine = creditLine;
+        if (creditLine >= 2**89) revert Errors.creditLineTooHigh();
+        _poolConfig._maxCreditLine = uint88(creditLine);
         emit MaxCreditLineChanged(creditLine, msg.sender);
     }
 
