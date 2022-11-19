@@ -241,11 +241,11 @@ describe("Base Pool Config", function () {
                 ).to.be.revertedWith("zeroAmountProvided");
             });
 
-            it("Should reject max credit size equal to or larger than 2^89", async function () {
+            it("Should reject max credit size equal to or larger than 2^88", async function () {
                 await expect(
                     poolConfigContract
                         .connect(poolOwner)
-                        .setMaxCreditLine(BN.from(2).pow(BN.from(89)))
+                        .setMaxCreditLine(BN.from(2).pow(BN.from(88)))
                 ).to.be.revertedWith("creditLineTooHigh");
             });
 
