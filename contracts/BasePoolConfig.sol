@@ -322,7 +322,7 @@ contract BasePoolConfig is Ownable, Initializable {
     function setMaxCreditLine(uint256 creditLine) external {
         _onlyOwnerOrHumaMasterAdmin();
         if (creditLine == 0) revert Errors.zeroAmountProvided();
-        if (creditLine >= 2**89) revert Errors.creditLineTooHigh();
+        if (creditLine >= 2**88) revert Errors.creditLineTooHigh();
         _poolConfig._maxCreditLine = uint88(creditLine);
         emit MaxCreditLineChanged(creditLine, msg.sender);
     }
