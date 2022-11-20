@@ -12,7 +12,6 @@ async function deployContracts() {
     }
     const deployer = await accounts[0];
     console.log("deployer address: " + deployer.address);
-    const proxyOwner = await accounts[1];
 
     const eaService = await accounts[4];
     console.log("ea service address: " + eaService.address);
