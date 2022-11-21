@@ -39,6 +39,47 @@ contract ReceivableFactoringPool is
         address receivableAsset,
         uint256 receivableParam
     );
+    event PaymentFlaggedForReview(
+        bytes32 indexed paymentIdHash,
+        address indexed borrower,
+        uint256 amount
+    );
+
+    /**
+     * @notice After the EA (EvalutionAgent) has approved a factoring, it calls this function
+     * to record the approval on chain and mark as factoring as approved, which will enable
+     * the borrower to drawdown (borrow) from the approved credit.
+     * @param borrower the borrower address
+     * @param creditLimit the limit of the credit
+     * @param receivableAsset the receivable asset used for this credit
+     * @param receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
+     * @param receivableAmount amount of the receivable asset
+     * @param intervalInDays time interval for each payback in units of days
+     * @param remainingPeriods the number of pay periods for this credit
+     * @dev Only Evaluation Agents for this contract can call this function.
+     */
+    function approveCredit(
+        address borrower,
+        uint256 creditLimit,
+        uint256 intervalInDays,
+        uint256 remainingPeriods,
+        uint256 aprInBps,
+        address receivableAsset,
+        uint256 receivableParam,
+        uint256 receivableAmount
+    ) external virtual override(IReceivable) {
+        onlyEAServiceAccount();
+
+        _checkReceivableRequirement(creditLimit, receivableAmount);
+
+        // Populates fields related to receivable
+        if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
+
+        _setReceivableInfo(borrower, receivableAsset, receivableParam, receivableAmount);
+
+        // Pool status and data validation happens within initiate().
+        _initiateCredit(borrower, creditLimit, aprInBps, intervalInDays, remainingPeriods, true);
+    }
 
     /**
      * @notice changes the limit of the borrower's credit line.
@@ -77,8 +118,11 @@ contract ReceivableFactoringPool is
         BS.CreditRecord memory cr = _creditRecordMapping[borrower];
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
-        if (cr.state == BS.CreditState.Approved)
-            _transferReceivableAsset(borrower, receivableAsset, receivableParam);
+        if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
+
+        if (cr.state != BS.CreditState.Approved) revert Errors.creditLineNotInApprovedState();
+
+        _transferReceivableAsset(borrower, receivableAsset, receivableParam);
 
         uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
         emit DrawdownMadeWithReceivable(
@@ -88,6 +132,18 @@ contract ReceivableFactoringPool is
             receivableAsset,
             receivableParam
         );
+    }
+
+    /**
+     * @notice Used by the PDS service account to invalidate a payment and stop automatic
+     * processing services like subgraph from ingesting this payment.
+     * This will be called manually by the pool owner in extremely rare situations
+     * when an SDK bug or payment reaches an invalid state and bookkeeping must be
+     * manually made by the pool owners.
+     */
+    function markPaymentInvalid(bytes32 paymentIdHash) external {
+        onlyPDSServiceAccount();
+        _markPaymentInvalid(paymentIdHash);
     }
 
     function onERC721Received(
@@ -109,72 +165,32 @@ contract ReceivableFactoringPool is
         uint256 amount,
         bytes32 paymentIdHash
     ) external virtual override {
-        _protocolAndPoolOn();
         onlyPDSServiceAccount();
-
-        // Makes sure no repeated processing of a payment.
-        if (_processedPaymentIds[paymentIdHash]) revert Errors.paymentAlreadyProcessed();
-
-        _processedPaymentIds[paymentIdHash] = true;
-
-        (uint256 amountPaid, bool paidoff) = _makePayment(borrower, amount, true);
-
-        if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
-
-        // Removes the receivable information for the borrower.
-        if (paidoff) _setReceivableInfo(borrower, address(0), 0, 0);
-
-        emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
+        _processReceivedPayment(
+            borrower,
+            amount,
+            paymentIdHash,
+            BS.PaymentStatus.ReceivedNotVerified
+        );
     }
 
-    /**
-     * @notice Used by the PDS service account to invalidate a payment and stop automatic
-     * processing services like subgraph from ingesting this payment.
-     * This will be called manually by the pool owner in extremely rare situations
-     * when an SDK bug or payment reaches an invalid state and bookkeeping must be
-     * manually made by the pool owners.
-     */
-    function markPaymentInvalid(bytes32 paymentIdHash) external {
-        onlyPDSServiceAccount();
+    function processPaymentAfterReview(bytes32 paymentIdHash, bool approved) external {
+        _poolConfig.onlyPoolOwner(msg.sender);
+        BS.FlagedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
 
-        _processedPaymentIds[paymentIdHash] = true;
-        emit PaymentInvalidated(paymentIdHash);
-    }
+        if (fpr.paymentReceiver == address(0)) revert Errors.paymentIdNotUnderReview();
 
-    /**
-     * @notice After the EA (EvalutionAgent) has approved a factoring, it calls this function
-     * to record the approval on chain and mark as factoring as approved, which will enable
-     * the borrower to drawdown (borrow) from the approved credit.
-     * @param borrower the borrower address
-     * @param creditLimit the limit of the credit
-     * @param receivableAsset the receivable asset used for this credit
-     * @param receivableParam additional parameter of the receivable asset, e.g. NFT tokenid
-     * @param receivableAmount amount of the receivable asset
-     * @param intervalInDays time interval for each payback in units of days
-     * @param remainingPeriods the number of pay periods for this credit
-     * @dev Only Evaluation Agents for this contract can call this function.
-     */
-    function approveCredit(
-        address borrower,
-        uint256 creditLimit,
-        uint256 intervalInDays,
-        uint256 remainingPeriods,
-        uint256 aprInBps,
-        address receivableAsset,
-        uint256 receivableParam,
-        uint256 receivableAmount
-    ) external virtual override(IReceivable) {
-        onlyEAServiceAccount();
-
-        _checkReceivableRequirement(creditLimit, receivableAmount);
-
-        // Populates fields related to receivable
-        if (receivableAsset != address(0)) {
-            _setReceivableInfo(borrower, receivableAsset, receivableParam, receivableAmount);
+        delete _paymentsToBeReviewed[paymentIdHash];
+        if (!approved) {
+            _markPaymentInvalid(paymentIdHash);
+        } else {
+            _processReceivedPayment(
+                fpr.paymentReceiver,
+                fpr.amount,
+                paymentIdHash,
+                BS.PaymentStatus.ReceivedAndVerified
+            );
         }
-
-        // Pool status and data validation happens within initiate().
-        _initiateCredit(borrower, creditLimit, aprInBps, intervalInDays, remainingPeriods, true);
     }
 
     function isPaymentProcessed(bytes32 paymentIdHash)
@@ -185,6 +201,11 @@ contract ReceivableFactoringPool is
         returns (bool)
     {
         return _processedPaymentIds[paymentIdHash];
+    }
+
+    function isPaymentUnderReview(bytes32 paymentIdHash) external view returns (bool) {
+        BS.FlagedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
+        return fpr.paymentReceiver != address(0);
     }
 
     function receivableInfoMapping(address account)
@@ -200,48 +221,57 @@ contract ReceivableFactoringPool is
     }
 
     /**
-     * @notice Checks if the borrower has enough receivable to back the requested credit line.
-     * @param borrower the borrower addrescredit limit requested
-     * @param newCreditLimit the credit limit requested
-     */
-    function _checkReceivableAssetFor(address borrower, uint256 newCreditLimit)
-        internal
-        view
-        virtual
-    {
-        // Checks to make sure the receivable value satisfies the requirement
-        if (_receivableInfoMapping[borrower].receivableAsset != address(0)) {
-            _checkReceivableRequirement(
-                newCreditLimit,
-                _receivableInfoMapping[borrower].receivableAmount
-            );
-        }
-    }
-
-    /**
      * @notice disperse the remaining funds associated with the factoring to the borrower
      * @param receiver receiver of the funds, namely, the borrower
-     * @param amount the amount of the dispersement
+     * @param amount the amount of the dispursement
      */
     function _disperseRemainingFunds(address receiver, uint256 amount) internal {
         _underlyingToken.safeTransfer(receiver, amount);
         emit ExtraFundsDispersed(receiver, amount);
     }
 
-    /**
-     * @notice Checks if the receivable provided is able fulfill the receivable requirement
-     * for the requested credit line.
-     * @param creditLine the credit limit requested
-     * @param receivableAmount the value of the receivable
-     */
-    function _checkReceivableRequirement(uint256 creditLine, uint256 receivableAmount)
-        internal
-        view
-    {
-        if (
-            receivableAmount <
-            (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
-        ) revert Errors.insufficientReceivableAmount();
+    function _flagForReview(
+        bytes32 paymentIdHash,
+        address borrower,
+        uint256 amount
+    ) internal {
+        _paymentsToBeReviewed[paymentIdHash] = BS.FlagedPaymentRecord(borrower, amount);
+        emit PaymentFlaggedForReview(paymentIdHash, borrower, amount);
+    }
+
+    function _markPaymentInvalid(bytes32 paymentIdHash) internal {
+        _processedPaymentIds[paymentIdHash] = true;
+        emit PaymentInvalidated(paymentIdHash);
+    }
+
+    function _processReceivedPayment(
+        address borrower,
+        uint256 amount,
+        bytes32 paymentIdHash,
+        BS.PaymentStatus paymentStatus
+    ) internal {
+        _protocolAndPoolOn();
+        // Makes sure no repeated processing of a payment.
+        if (_processedPaymentIds[paymentIdHash]) revert Errors.paymentAlreadyProcessed();
+
+        (uint256 amountPaid, bool paidoff, bool toReview) = _makePayment(
+            borrower,
+            amount,
+            paymentStatus
+        );
+
+        if (!toReview) {
+            _processedPaymentIds[paymentIdHash] = true;
+
+            if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
+
+            // Removes the receivable information for the borrower.
+            if (paidoff) _setReceivableInfo(borrower, address(0), 0, 0);
+
+            emit ReceivedPaymentProcessed(msg.sender, borrower, amount, paymentIdHash);
+        } else {
+            _flagForReview(paymentIdHash, borrower, amount);
+        }
     }
 
     /**
@@ -253,6 +283,13 @@ contract ReceivableFactoringPool is
         uint256 receivableParam,
         uint256 receivableAmount
     ) internal virtual {
+        // If receivables are required, they need to be ERC721 or ERC20.
+        if (
+            receivableAsset != address(0) &&
+            !receivableAsset.supportsInterface(type(IERC721).interfaceId) &&
+            !receivableAsset.supportsInterface(type(IERC20).interfaceId)
+        ) revert Errors.unsupportedReceivableAsset();
+
         BS.ReceivableInfo memory ri = BS.ReceivableInfo(
             receivableAsset,
             uint88(receivableAmount),
@@ -274,40 +311,63 @@ contract ReceivableFactoringPool is
         address receivableAsset,
         uint256 receivableParam
     ) internal virtual {
-        // Transfer receivable assset.
+        // Transfer receivable asset.
         BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
-        if (ri.receivableAsset != address(0)) {
-            if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
-            if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
-                // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
-                // for lookup by off-chain payment processers
-                _receivableOwnershipMapping[
-                    keccak256(abi.encode(receivableAsset, receivableParam))
-                ] = borrower;
 
-                // For ERC721, receivableParam is the tokenId
-                if (ri.receivableParam != receivableParam)
-                    revert Errors.receivableAssetParamMismatch();
+        assert(ri.receivableAsset != address(0));
 
-                IERC721(receivableAsset).safeTransferFrom(
-                    borrower,
-                    address(this),
-                    receivableParam
-                );
-            } else if (receivableAsset.supportsInterface(type(IERC20).interfaceId)) {
-                if (receivableParam < ri.receivableParam)
-                    revert Errors.insufficientReceivableAmount();
+        if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
+        if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
+            // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
+            // for lookup by off-chain payment processers
+            _receivableOwnershipMapping[
+                keccak256(abi.encode(receivableAsset, receivableParam))
+            ] = borrower;
 
-                IERC20(receivableAsset).safeTransferFrom(borrower, address(this), receivableParam);
-            } else {
-                revert Errors.unsupportedReceivableAsset();
-            }
+            // For ERC721, receivableParam is the tokenId
+            if (ri.receivableParam != receivableParam)
+                revert Errors.receivableAssetParamMismatch();
+
+            IERC721(receivableAsset).safeTransferFrom(borrower, address(this), receivableParam);
+        } else {
+            // This has to be ERC20
+            if (receivableParam < ri.receivableParam) revert Errors.insufficientReceivableAmount();
+
+            IERC20(receivableAsset).safeTransferFrom(borrower, address(this), receivableParam);
         }
     }
 
-    /// "Modifier" function that limits access to pdsServiceAccount only.
-    function onlyPDSServiceAccount() internal view {
-        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
-            revert Errors.paymentDetectionServiceAccountRequired();
+    /**
+     * @notice Checks if the borrower has enough receivable to back the requested credit line.
+     * @param borrower the borrower address
+     * @param newCreditLimit the credit limit requested
+     */
+    function _checkReceivableAssetFor(address borrower, uint256 newCreditLimit)
+        internal
+        view
+        virtual
+    {
+        // Checks to make sure the receivable value satisfies the requirement
+        assert(_receivableInfoMapping[borrower].receivableAsset != address(0));
+        _checkReceivableRequirement(
+            newCreditLimit,
+            _receivableInfoMapping[borrower].receivableAmount
+        );
+    }
+
+    /**
+     * @notice Checks if the receivable provided is able fulfill the receivable requirement
+     * for the requested credit line.
+     * @param creditLine the credit limit requested
+     * @param receivableAmount the value of the receivable
+     */
+    function _checkReceivableRequirement(uint256 creditLine, uint256 receivableAmount)
+        internal
+        view
+    {
+        if (
+            receivableAmount <
+            (creditLine * _poolConfig.receivableRequiredInBps()) / HUNDRED_PERCENT_IN_BPS
+        ) revert Errors.insufficientReceivableAmount();
     }
 }

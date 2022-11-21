@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "./Errors.sol";
 
 contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
     using Counters for Counters.Counter;
@@ -15,6 +16,12 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
 
     constructor() ERC721("EvaluationAgentNFT", "EANFT") {}
 
+    /**
+     * @notice  Minting an NFT only gets a placeholder for an EA
+     * the NFT has attributes such as "status" that can only be updated by
+     * Huma to indicate whether the corresponding EA is approved or not.
+     * Merely owning an EANFT does NOT mean the owner has any authority
+     */
     function mintNFT(address recipient) external returns (uint256) {
         _tokenIds.increment();
 
@@ -25,7 +32,8 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
         return newItemId;
     }
 
-    function burn(uint256 tokenId) external onlyOwner returns (uint256) {
+    function burn(uint256 tokenId) external returns (uint256) {
+        if (msg.sender != ownerOf(tokenId)) revert Errors.notNFTOwner();
         _burn(tokenId);
         return tokenId;
     }
@@ -35,7 +43,7 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
         address to,
         uint256 tokenId
     ) public virtual override {
-        // Internally disable transfer by doing nothing.
+        // Intentionally disable transfer by doing nothing.
     }
 
     function safeTransferFrom(
@@ -43,7 +51,7 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
         address to,
         uint256 tokenId
     ) public virtual override {
-        // Internally disable transfer by doing nothing.
+        // Intentionally disable transfer by doing nothing.
     }
 
     function safeTransferFrom(
@@ -52,7 +60,7 @@ contract EvaluationAgentNFT is ERC721URIStorage, Ownable {
         uint256 tokenId,
         bytes memory data
     ) public virtual override {
-        // Internally disable transfer by doing nothing.
+        // Intentionally disable transfer by doing nothing.
     }
 
     function setTokenURI(uint256 tokenId, string memory uri) external onlyOwner {

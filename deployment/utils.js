@@ -75,7 +75,7 @@ async function updateContract(type, contractName, value) {
     const oldData = await readFileContent(type);
     let contracts = JSON.parse(oldData);
     contracts[contractName] = value;
-    const newData = JSON.stringify(contracts);
+    const newData = JSON.stringify(contracts).replace(/\,/g,",\n");
     const deployedContractsFile = await getContractAddressFile(type);
     fs.writeFileSync(deployedContractsFile, newData);
 }

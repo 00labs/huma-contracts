@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/Errors.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> Errors.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>0/0</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>0/0</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>0/0</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>0/0</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity ^0.8.0;
+&nbsp;
+contract Errors {
+    // common
+    error sameValue(); // 0x0811ff09
+    error zeroAddressProvided(); // 0x5ff75ab0
+    error zeroAmountProvided(); // 0x71799f2a
+    error amountTooLow(); // 0x5b05bfbf
+    error invalidBasisPointHigherThan10000(); // 0x07982d85
+    error withdrawnAmountHigherThanBalance(); // 0x477c0ab2
+&nbsp;
+    // security
+    error permissionDeniedNotAdmin(); // 0xf2c5b6a7
+    error permissionDeniedNotLender(); // 0x68299b20
+    error evaluationAgentServiceAccountRequired(); // 0x9b3b1ed6
+    error paymentDetectionServiceAccountRequired(); // 0x731b978f
+    error poolOperatorRequired(); // 0xdc2dc6d0
+    error notPoolOwner(); // 0xd39208c9
+    error notProtocolOwner(); // 0x97924c20
+    error notEvaluationAgent(); // 0x66f7b8b7
+    error notOperator(); // 0xf67113fe
+    error notPoolOwnerTreasury(); // 0x325bf3c2
+    error notPoolOwnerOrEA(); // 0xd6ed9384
+    error notPoolOwnerTreasuryOrEA(); // 0xc74cb44c
+    error notPauser(); // 0xdcdea7c8
+    error notPool(); // 0x26d29bbf
+    error drawdownFunctionUsedInsteadofDrawdownWithReceivable(); // 0x7e737537
+    error notNFTOwner(); // 0x091a5762
+&nbsp;
+    // system config
+    error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
+    error treasuryFeeHighThanUpperLimit(); // 0x39cda0d1
+    error alreadyAnOperator(); // 0x75cea0fc
+    error alreadyAPauser(); // 0xfbca9e38
+    error alreadyPoolAdmin(); // 0x7bb356e2
+&nbsp;
+    // fee config
+    error minPrincipalPaymentRateSettingTooHigh(); // 0xc11fc042
+&nbsp;
+    // pool config
+    error proposedEADoesNotOwnProvidedEANFT(); // 0x75b0da3b
+    error underlyingTokenNotApprovedForHumaProtocol(); // 0xce179d6d
+    error poolOwnerNotEnoughLiquidity(); // 0xe95282e2
+    error evaluationAgentNotEnoughLiquidity(); // 0x67e26217
+&nbsp;
+    // pool state
+    error protocolIsPaused(); // 0x8f6fa2d4
+    error poolIsNotOn(); // 0x69b355df
+&nbsp;
+    // pool credit line
+    error creditExpiredDueToFirstDrawdownTooLate(); // 0x9fac7390
+    error creditExpiredDueToMaturity(); // 0xa52f3c3f
+    error creditLineNotInGoodStandingState(); // 0x96e79474
+    error creditLineNotInStateForMakingPayment(); // 0xf023e48b
+    error creditLineNotInStateForDrawdown(); // 0x4ff95a6d
+    error creditLineExceeded(); // 0xef7d66ff
+    error creditLineAlreadyExists(); // 0x6c5805f2
+    error creditLineGreatThanUpperLimit(); // 0xd8c27d2f
+    error greaterThanMaxCreditLine(); // 0x8a754ae8
+    error requestedCreditWithZeroDuration(); // 0xb16dd34d
+    error onlyBorrowerOrEACanReduceCreditLine(); // 0xd61dbe31
+    error creditLineNotInApprovedState(); // 0xfc91a989
+    error paymentIdNotUnderReview(); // 0xd1696aaa
+    error creditLineTooHigh(); // 0x552b8377
+&nbsp;
+    // pool operation
+    error exceededPoolLiquidityCap(); // 0x5642ebd4
+    error receivableAssetMismatch(); // 0x41dbeec1
+    error unsupportedReceivableAsset(); // 0xe60c383e
+    error receivableAssetParamMismatch(); // 0x1400a0b4
+    error insufficientReceivableAmount(); // 0xf7f34854
+    error borrowingAmountLessThanPlatformFees(); // 0x97fde118
+    error withdrawTooSoon(); // 0x67982472
+    error paymentAlreadyProcessed(); // 0xfd6754cf
+&nbsp;
+    error defaultTriggeredTooEarly(); // 0x7872424e
+    error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Mon Nov 21 2022 15:37:39 GMT-0800 (Pacific Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

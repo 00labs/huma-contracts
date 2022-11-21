@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts/HumaConfig.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> HumaConfig.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>36/36</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>60/60</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>18/18</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>52/52</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">135×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">135×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">135×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">92×</span>
+<span class="cline-any cline-yes">91×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">90×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">90×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">47×</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">48×</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">46×</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-yes">45×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">80×</span>
+<span class="cline-any cline-yes">79×</span>
+<span class="cline-any cline-yes">79×</span>
+<span class="cline-any cline-yes">79×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">12×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">146×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity ^0.8.0;
+&nbsp;
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+&nbsp;
+import "./Errors.sol";
+&nbsp;
+import "hardhat/console.sol";
+&nbsp;
+/** @notice HumaConfig maintains all the global configurations supported by Huma protocol.
+ */
+contract HumaConfig is Ownable, Pausable {
+    /// Lower bound of protocol default grace period.
+    uint32 private constant MIN_DEFAULT_GRACE_PERIOD = 1 days;
+&nbsp;
+    /// The initial value for default grace period.
+    uint32 private constant PROTOCOL_DEFAULT_GRACE_PERIOD = 60 days;
+&nbsp;
+    /// The default treasury fee in bps.
+    uint16 private constant DEFAULT_TREASURY_FEE = 1000; // 10%
+&nbsp;
+    /// The treasury fee upper bound in bps.
+    uint16 private constant TREASURY_FEE_UPPER_BOUND = 5000; // 50%
+&nbsp;
+    /// Seconds passed the due date before a default can be triggered
+    uint32 public protocolDefaultGracePeriodInSeconds;
+&nbsp;
+    /// % of platform income that will be reserved in the protocol, measured in basis points
+    uint16 public protocolFee;
+&nbsp;
+    /// Huma protocol treasury
+    address public humaTreasury;
+&nbsp;
+    /// address of EvaluationAgentNFT contract
+    address public eaNFTContractAddress;
+&nbsp;
+    /// service account for Huma's evaluation agent hosting service
+    address public eaServiceAccount;
+&nbsp;
+    /// service account for Huma's payment detection service
+    address public pdsServiceAccount;
+&nbsp;
+    /// pausers can pause the pool.
+    mapping(address =&gt; bool) private pausers;
+&nbsp;
+    // poolAdmins has the list of approved accounts who can create and operate pools
+    mapping(address =&gt; bool) private poolAdmins;
+&nbsp;
+    /// List of assets supported by the protocol for investing and borrowing
+    mapping(address =&gt; bool) private validLiquidityAssets;
+&nbsp;
+    /// Contract address for Evaluation Agent NFT changed
+    event EANFTContractAddressChanged(address eaNFT);
+&nbsp;
+    /// Service account for the Evaluation Agent platform has changed
+    event EAServiceAccountChanged(address eaService);
+&nbsp;
+    /// The treasury address for Huma protocol has changed
+    event HumaTreasuryChanged(address indexed newTreasuryAddress);
+&nbsp;
+    /// New underlying asset supported by the protocol is added
+    event LiquidityAssetAdded(address asset, address by);
+&nbsp;
+    /// Remove the asset that is no longer supported by the protocol
+    event LiquidityAssetRemoved(address asset, address by);
+&nbsp;
+    /// A pauser has been added. A pauser is someone who can pause the protocol.
+    event PauserAdded(address indexed pauser, address by);
+&nbsp;
+    /// A pauser has been removed
+    event PauserRemoved(address indexed pauser, address by);
+&nbsp;
+    /// Service account for Payment Detection Service has been changed
+    event PDSServiceAccountChanged(address pdsService);
+&nbsp;
+    event PoolAdminAdded(address indexed poolAdmin, address by);
+    event PoolAdminRemoved(address indexed poolAdmin, address by);
+    event ProtocolDefaultGracePeriodChanged(uint256 gracePeriod);
+    event ProtocolInitialized(address by);
+    event TreasuryFeeChanged(uint256 oldFee, uint256 newFee);
+&nbsp;
+    /// Makes sure the msg.sender is one of the pausers
+    modifier onlyPausers() {
+        if (!pausers[msg.sender]) revert Errors.notPauser();
+        _;
+    }
+&nbsp;
+    /**
+     * @notice Initiates the config. Only the protocol owner can set the treasury
+     * address, add pausers and pool admins, change the default grace period,
+     * treasury fee, add or remove assets to be supported by the protocol.
+     * @dev Emit ProtocolInitialized event and HumaTreasuryChanged event
+     */
+    constructor() {
+        protocolDefaultGracePeriodInSeconds = PROTOCOL_DEFAULT_GRACE_PERIOD;
+&nbsp;
+        protocolFee = DEFAULT_TREASURY_FEE;
+&nbsp;
+        emit ProtocolInitialized(msg.sender);
+    }
+&nbsp;
+    /**
+     * @notice Adds a pauser, who can pause the entire protocol. Only proto admin can do so.
+     * @param _pauser Address to be added to the pauser list
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev If the address is already a pauser, revert w/ "alreadyAPauser"
+     * @dev Emits a PauserAdded event.
+     */
+    function addPauser(address _pauser) external onlyOwner {
+        if (_pauser == address(0)) revert Errors.zeroAddressProvided();
+        if (pausers[_pauser]) revert Errors.alreadyAPauser();
+&nbsp;
+        pausers[_pauser] = true;
+&nbsp;
+        emit PauserAdded(_pauser, msg.sender);
+    }
+&nbsp;
+    /**
+     * @notice Adds a pool admin.  Only proto admin can do so.
+     * @param _poolAdmin Address to be added as a pool admin
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev If the address is already a poolAdmin, revert w/ "ALREADY_A_POOL_ADMIN"
+     * @dev Emits a PauserAdded event.
+     */
+    function addPoolAdmin(address _poolAdmin) external onlyOwner {
+        if (_poolAdmin == address(0)) revert Errors.zeroAddressProvided();
+        if (poolAdmins[_poolAdmin]) revert Errors.alreadyPoolAdmin();
+&nbsp;
+        poolAdmins[_poolAdmin] = true;
+&nbsp;
+        emit PoolAdminAdded(_poolAdmin, msg.sender);
+    }
+&nbsp;
+    /**
+     * @notice Pauses the entire protocol. Used in extreme cases by the pausers.
+     * @dev This function will not be governed by timelock due to its sensitivity to timing.
+     */
+    function pause() external onlyPausers {
+        _pause();
+    }
+&nbsp;
+    /**
+     * @notice Removes a pauser. Only proto admin can do so.
+     * @param _pauser Address to be removed from the pauser list
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev If the address is not currently a pauser, revert w/ "notPauser()"
+     * @dev Emits a PauserRemoved event.
+     */
+    function removePauser(address _pauser) external onlyOwner {
+        if (_pauser == address(0)) revert Errors.zeroAddressProvided();
+        if (!pausers[_pauser]) revert Errors.notPauser();
+&nbsp;
+        pausers[_pauser] = false;
+&nbsp;
+        emit PauserRemoved(_pauser, msg.sender);
+    }
+&nbsp;
+    /**
+     * @notice Removes a poolAdmin. Only proto admin can do so.
+     * @param _poolAdmin Address to be removed from the poolAdmin list
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev If the address is not currently a poolAdmin, revert w/ "notPoolOwner()"
+     * @dev Emits a PauserRemoved event.
+     */
+    function removePoolAdmin(address _poolAdmin) external onlyOwner {
+        if (_poolAdmin == address(0)) revert Errors.zeroAddressProvided();
+        if (!poolAdmins[_poolAdmin]) revert Errors.notPoolOwner();
+&nbsp;
+        poolAdmins[_poolAdmin] = false;
+&nbsp;
+        emit PoolAdminRemoved(_poolAdmin, msg.sender);
+    }
+&nbsp;
+    /**
+     * @notice Sets the contract address for Evaluation Agent NFT contract. Only proto admin can do so.
+     */
+    function setEANFTContractAddress(address contractAddress) external onlyOwner {
+        if (contractAddress == address(0)) revert Errors.zeroAddressProvided();
+        eaNFTContractAddress = contractAddress;
+        emit EANFTContractAddressChanged(contractAddress);
+    }
+&nbsp;
+    /**
+     * @notice Sets the service account for Evaluation Agent service. This is the account
+     * that can approve credit requests. Only proto admin can make the change.
+     */
+    function setEAServiceAccount(address accountAddress) external onlyOwner {
+        if (accountAddress == address(0)) revert Errors.zeroAddressProvided();
+        eaServiceAccount = accountAddress;
+        emit EAServiceAccountChanged(accountAddress);
+    }
+&nbsp;
+    /**
+     * @notice Sets the address of Huma Treasury. Only proto admin can do so.
+     * @param treasury the new Huma Treasury address
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev emit HumaTreasuryChanged(address newTreasury) event
+     */
+    function setHumaTreasury(address treasury) external onlyOwner {
+        if (treasury == address(0)) revert Errors.zeroAddressProvided();
+        if (treasury != humaTreasury) {
+            humaTreasury = treasury;
+            emit HumaTreasuryChanged(treasury);
+        }
+    }
+&nbsp;
+    /**
+     * @notice Sets the validity of an asset for liquidity in Huma. Only proto admin can do so.
+     * @param asset Address of the valid asset.
+     * @param valid The new validity status of a Liquidity Asset in Pools.
+     * @dev Emits a LiquidityAssetAdded event when the asset is set to be valid
+     * Emits a LiquidityAssetRemoved event when the asset is set to be invalid
+     */
+    function setLiquidityAsset(address asset, bool valid) external onlyOwner {
+        if (valid) {
+            validLiquidityAssets[asset] = true;
+            emit LiquidityAssetAdded(asset, msg.sender);
+        } else {
+            validLiquidityAssets[asset] = false;
+            emit LiquidityAssetRemoved(asset, msg.sender);
+        }
+    }
+&nbsp;
+    /**
+     * @notice Sets the service account for Payment Detection Service. Only proto admin can do so.
+     * This is the account that can report to the contract that a payment has been received.
+     */
+    function setPDSServiceAccount(address accountAddress) external onlyOwner {
+        if (accountAddress == address(0)) revert Errors.zeroAddressProvided();
+        pdsServiceAccount = accountAddress;
+        emit PDSServiceAccountChanged(accountAddress);
+    }
+&nbsp;
+    /**
+     * @notice Sets the default grace period at the protocol level. Only proto admin can do so.
+     * @param gracePeriod new default grace period in seconds
+     * @dev Rejects any grace period shorter than 1 day to guard against fat finger or attack.
+     * @dev Emits ProtocolDefaultGracePeriodChanged(uint256 newGracePeriod) event
+     */
+    function setProtocolDefaultGracePeriod(uint256 gracePeriod) external onlyOwner {
+        if (gracePeriod &lt; MIN_DEFAULT_GRACE_PERIOD)
+            revert Errors.defaultGracePeriodLessThanMinAllowed();
+        protocolDefaultGracePeriodInSeconds = uint32(gracePeriod);
+        emit ProtocolDefaultGracePeriodChanged(gracePeriod);
+    }
+&nbsp;
+    /**
+     * @notice Sets the treasury fee (in basis points). Only proto admin can do so.
+     * @param fee the new treasury fee (in bps)
+     * @dev Treasury fee cannot exceed 5000 bps, i.e. 50%
+     * @dev Emits a TreasuryFeeChanged event
+     */
+    function setTreasuryFee(uint256 fee) external onlyOwner {
+        if (fee &gt; TREASURY_FEE_UPPER_BOUND) revert Errors.treasuryFeeHighThanUpperLimit();
+        uint256 oldFee = protocolFee;
+        protocolFee = uint16(fee);
+        emit TreasuryFeeChanged(oldFee, fee);
+    }
+&nbsp;
+    /**
+     * @notice Unpause the entire protocol. Only the protocol owner can do so.
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+&nbsp;
+    /// Reports if the asset is supported by the protocol or not
+    function isAssetValid(address asset) external view returns (bool) {
+        return validLiquidityAssets[asset];
+    }
+&nbsp;
+    /// Reports if a given user account is an approved pauser or not
+    function isPauser(address account) external view returns (bool) {
+        return pausers[account];
+    }
+&nbsp;
+    /// Reports ia given user account is an approved pool admin
+    function isPoolAdmin(address account) external view returns (bool) {
+        return poolAdmins[account];
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Mon Nov 21 2022 15:37:39 GMT-0800 (Pacific Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

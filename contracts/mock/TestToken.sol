@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
-contract TestToken is ERC20 {
+contract TestToken is ERC20, IERC165 {
     constructor() ERC20("TestToken", "USDC") {
         _mint(msg.sender, 1000 * 10**decimals());
     }
@@ -26,5 +27,9 @@ contract TestToken is ERC20 {
 
     function decimals() public view virtual override returns (uint8) {
         return 6;
+    }
+
+    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
+        return interfaceId == 0x36372b07 || interfaceId == 0x01ffc9a7;
     }
 }

@@ -78,7 +78,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     /**
      * @notice Burns HDTs when LPs withdraw from the pool
      * @param account the address of the account to burn
-     * @param amount the amount of underlyingTokens used to brun HDTs with equivalent value
+     * @param amount the amount of underlyingTokens used to burn HDTs with equivalent value
      */
     function burnAmount(address account, uint256 amount)
         external
@@ -108,7 +108,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     /**
      * @notice Gets the amount of funds (in units of underlyingToken) that an address can withdraw
      * @param account The address of a token holder.
-     * @return The amount funds that `_owner` can withdraw.
+     * @return The amount funds that the account can withdraw.
      */
     function withdrawableFundsOf(address account)
         external

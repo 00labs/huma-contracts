@@ -46,7 +46,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @param aprInBps interest rate (APR) expressed in basis points, 1% is 100, 100% is 10000
      * @param payPeriodInDays the number of days in each pay cycle
      * @param remainingPeriods how many cycles are there before the credit line expires
-     * @param approved flag that shwos if the credit line has been approved or not
+     * @param approved flag that shows if the credit line has been approved or not
      */
     event CreditInitiated(
         address indexed borrower,
@@ -118,7 +118,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     );
 
     /**
-     * @notice Approves the credit request with the terms on record.
+     * @notice Approves the credit request with the terms provided.
      * @param borrower the address of the borrower
      * @param creditLimit the credit limit of the credit line
      * @param intervalInDays the number of days in each pay cycle
@@ -135,6 +135,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     ) public virtual override {
         _protocolAndPoolOn();
         onlyEAServiceAccount();
+        _maxCreditLineCheck(creditLimit);
         BS.CreditRecordStatic memory crs = _getCreditRecordStatic(borrower);
         crs.creditLimit = uint96(creditLimit);
         crs.aprInBps = uint16(aprInBps);
@@ -232,11 +233,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     }
 
     /**
-     * @notice Borrower makes one payment. If this is the final payment,
-     * it automatically triggers the payoff process.
-     * @return amountPaid the actuall amount paid to the contract. When the tendered
+     * @notice Makes one payment for the borrower. This can be initiated by the borrower
+     * or by PDSServiceAccount with the allowance approval from the borrower.
+     * If this is the final payment, it automatically triggers the payoff process.
+     * @return amountPaid the actual amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
-     * @return paidoff a flag indciating whether the account has been paid off.
+     * @return paidoff a flag indicating whether the account has been paid off.
+     * @notice Warning, payments should be made by calling this function
+     * No token should be transferred directly to the contract
      */
     function makePayment(address borrower, uint256 amount)
         public
@@ -244,7 +248,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         override
         returns (uint256 amountPaid, bool paidoff)
     {
-        return _makePayment(borrower, amount, false);
+        if (msg.sender != borrower) onlyPDSServiceAccount();
+
+        (amountPaid, paidoff, ) = _makePayment(borrower, amount, BS.PaymentStatus.NotReceived);
     }
 
     /**
@@ -347,7 +353,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     }
 
     /**
-     * @notice checks if the credit line is ready to be triggered as deaulted
+     * @notice checks if the credit line is ready to be triggered as defaulted
      */
     function isDefaultReady(address borrower) public view virtual override returns (bool) {
         uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
@@ -384,7 +390,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         // drawdown to happen, otherwise, the credit line expires.
         // Decided to use this field in this way to save one field for the struct.
         // Although we have room in the struct after split struct creditRecord and
-        // struct creditRecrodStatic, we keep it unchanged to leave room for the struct
+        // struct creditRecordStatic, we keep it unchanged to leave room for the struct
         // to expand in the future (note Solidity has limit on 13 fields in a struct)
         uint256 validPeriod = _poolConfig.creditApprovalExpirationInSeconds();
         if (validPeriod > 0) cr.dueDate = uint64(block.timestamp + validPeriod);
@@ -410,8 +416,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 borrowAmount
     ) internal view {
         _protocolAndPoolOn();
-        ///msg.sender needs to be the borrower themselvers or the EA.
-        if (msg.sender != borrower) onlyEAServiceAccount();
 
         if (cr.state != BS.CreditState.GoodStanding && cr.state != BS.CreditState.Approved)
             revert Errors.creditLineNotInStateForDrawdown();
@@ -445,7 +449,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             _creditRecordMapping[borrower].unbilledPrincipal = uint96(borrowAmount);
 
             // Generates the first bill
-            // Note: the interest is calcuated at the beginning of each pay period
+            // Note: the interest is calculated at the beginning of each pay period
             cr = _updateDueInfo(borrower, true, true);
 
             // Set account status in good standing
@@ -473,7 +477,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             if (cr.remainingPeriods == 0) revert Errors.creditExpiredDueToMaturity();
 
             // For non-first bill, we do not update the current bill, the interest for the rest of
-            // this pay period is accrued in correction and be add to the next bill.
+            // this pay period is accrued in correction and will be added to the next bill.
             cr.correction += int96(
                 uint96(
                     _feeManager.calcCorrection(
@@ -522,7 +526,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         if (cr.state != BS.CreditState.Deleted) {
             // If the user has an existing line, but there is no balance, close the old one
-            // and initate the new one automatically.
+            // and initiate the new one automatically.
             cr = _updateDueInfo(borrower, false, true);
             if (cr.totalDue == 0 && cr.unbilledPrincipal == 0) {
                 cr.state = BS.CreditState.Deleted;
@@ -572,7 +576,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * it automatically triggers the payoff process.
      * @param borrower the address of the borrower
      * @param amount the payment amount
-     * @param isPaymentReceived a flag that indicates whether the payment has been received or not
+     * @param paymentStatus a flag that indicates the status the payment.
+     * Ideally, two boolean parameters (isPaymentReceived, isPaymentVerified) are used
+     * instead of paymentStatus. Due to stack too deep issue, one parameter is used.
+     * NotReceived: Payment not received
+     * ReceivedNotVerified: the system thinks the payment has been received but no manul
+     * verification yet. Outier cases might be flagged for manual review.
+     * ReceivedAndVerified: the system thinks the payment has been received and it has been
+     * manually verified after being flagged by the system.
      * @return amountPaid the actuall amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
      * @return paidoff a flag indciating whether the account has been paid off.
@@ -580,8 +591,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     function _makePayment(
         address borrower,
         uint256 amount,
-        bool isPaymentReceived
-    ) internal returns (uint256 amountPaid, bool paidoff) {
+        BS.PaymentStatus paymentStatus
+    )
+        internal
+        returns (
+            uint256 amountPaid,
+            bool paidoff,
+            bool isReviewRequired
+        )
+    {
         _protocolAndPoolOn();
 
         if (amount == 0) revert Errors.zeroAmountProvided();
@@ -593,7 +611,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.state == BS.CreditState.Approved ||
             cr.state == BS.CreditState.Deleted
         ) {
-            revert Errors.creditLineNotInStateForMakingPayment();
+            if (paymentStatus == BS.PaymentStatus.NotReceived)
+                revert Errors.creditLineNotInStateForMakingPayment();
+            else if (paymentStatus == BS.PaymentStatus.ReceivedNotVerified)
+                return (0, false, true);
         }
 
         if (block.timestamp > cr.dueDate) {
@@ -613,6 +634,19 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 payoffAmount = uint256(
             int256(int96(cr.totalDue + cr.unbilledPrincipal)) + int256(cr.correction)
         ) - payoffCorrection;
+
+        // If the reported received payment amount is far higher than the invoice amount,
+        // flags the transaction for review.
+        if (paymentStatus == BS.PaymentStatus.ReceivedNotVerified) {
+            // Check against in-memory payoff amount first is purely for gas consideration.
+            // We expect near 100% of the payments to fail in the first check
+            if (amount > REVIEW_MULTIPLIER * payoffAmount) {
+                if (
+                    amount >
+                    REVIEW_MULTIPLIER * uint256(_getCreditRecordStatic(borrower).creditLimit)
+                ) return (0, false, true);
+            }
+        }
 
         // The amount to be collected from the borrower. When _amount is more than what is needed
         // for payoff, only the payoff amount will be transferred
@@ -649,7 +683,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
             // Gets the correction.
             if (principalPayment > 0) {
-                // If there is principal payment, calcuate new correction
+                // If there is principal payment, calculate new correction
                 cr.correction -= int96(
                     uint96(
                         _feeManager.calcCorrection(
@@ -674,12 +708,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 _recoverDefaultedAmount(borrower, amountToCollect);
             } else {
                 // Distribut or reverse income to consume outstanding correction.
-                // Positive correction is generated becasue of a drawdown within this period,
-                // it is not booked or distributed yet, needs to be distributed.
+                // Positive correction is generated because of a drawdown within this period.
+                // It is not booked or distributed yet, needs to be distributed.
                 // Negative correction is generated because of a payment including principal
-                // within this period, the extra interest paid is not accounted for yet, thus
+                // within this period. The extra interest paid is not accounted for yet, thus
                 // a reversal.
-                // Note: For defaulted account, we do not distributed fees and interests
+                // Note: For defaulted account, we do not distribute fees and interests
                 // until they are paid. It is handled in _recoverDefaultedAmount().
                 cr.correction = cr.correction - int96(int256(payoffCorrection));
                 if (cr.correction > 0) distributeIncome(uint256(uint96(cr.correction)));
@@ -701,9 +735,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         _creditRecordMapping[borrower] = cr;
 
-        if (amountToCollect > 0 && isPaymentReceived == false) {
+        if (amountToCollect > 0 && paymentStatus == BS.PaymentStatus.NotReceived) {
             // Transfer assets from the _borrower to pool locker
-            _underlyingToken.safeTransferFrom(msg.sender, address(this), amountToCollect);
+            _underlyingToken.safeTransferFrom(borrower, address(this), amountToCollect);
             emit PaymentMade(
                 borrower,
                 amountToCollect,
@@ -715,7 +749,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         // amountToCollect == payoffAmount indicates whether it is paid off or not.
         // Use >= as a safe practice
-        return (amountToCollect, amountToCollect >= payoffAmount);
+        return (amountToCollect, amountToCollect >= payoffAmount, false);
     }
 
     /**
@@ -843,6 +877,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         returns (BS.CreditRecordStatic memory)
     {
         return _creditRecordStaticMapping[account];
+    }
+
+    /// "Modifier" function that limits access to pdsServiceAccount only.
+    function onlyPDSServiceAccount() internal view {
+        if (msg.sender != HumaConfig(_humaConfig).pdsServiceAccount())
+            revert Errors.paymentDetectionServiceAccountRequired();
     }
 
     /// "Modifier" function that limits access to eaServiceAccount only

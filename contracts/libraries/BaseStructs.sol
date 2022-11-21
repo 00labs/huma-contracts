@@ -6,7 +6,7 @@ import "hardhat/console.sol";
 
 library BaseStructs {
     /**
-     * @notice CreditRecord stores the overall info and status about a credit originated.
+     * @notice CreditRecord stores the overall info and status about a credit.
      * @dev amounts are stored in uint96, all counts are stored in uint16
      * @dev each struct can have no more than 13 elements.
      */
@@ -40,6 +40,11 @@ library BaseStructs {
         uint256 receivableParam;
     }
 
+    struct FlagedPaymentRecord {
+        address paymentReceiver;
+        uint256 amount;
+    }
+
     enum CreditState {
         Deleted,
         Requested,
@@ -47,5 +52,10 @@ library BaseStructs {
         GoodStanding,
         Delayed,
         Defaulted
+    }
+    enum PaymentStatus {
+        NotReceived,
+        ReceivedNotVerified,
+        ReceivedAndVerified
     }
 }

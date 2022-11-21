@@ -15,17 +15,24 @@ contract Errors {
     error permissionDeniedNotLender(); // 0x68299b20
     error evaluationAgentServiceAccountRequired(); // 0x9b3b1ed6
     error paymentDetectionServiceAccountRequired(); // 0x731b978f
+    error poolOperatorRequired(); // 0xdc2dc6d0
     error notPoolOwner(); // 0xd39208c9
     error notProtocolOwner(); // 0x97924c20
     error notEvaluationAgent(); // 0x66f7b8b7
+    error notOperator(); // 0xf67113fe
+    error notPoolOwnerTreasury(); // 0x325bf3c2
+    error notPoolOwnerOrEA(); // 0xd6ed9384
+    error notPoolOwnerTreasuryOrEA(); // 0xc74cb44c
     error notPauser(); // 0xdcdea7c8
     error notPool(); // 0x26d29bbf
-    error drawdownFunctionUsedInsteadofDrawdownWithReceivable();
+    error drawdownFunctionUsedInsteadofDrawdownWithReceivable(); // 0x7e737537
+    error notNFTOwner(); // 0x091a5762
 
     // system config
     error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
     error treasuryFeeHighThanUpperLimit(); // 0x39cda0d1
-    error alreayAPauser(); // 0xfbca9e38
+    error alreadyAnOperator(); // 0x75cea0fc
+    error alreadyAPauser(); // 0xfbca9e38
     error alreadyPoolAdmin(); // 0x7bb356e2
 
     // fee config
@@ -53,6 +60,9 @@ contract Errors {
     error greaterThanMaxCreditLine(); // 0x8a754ae8
     error requestedCreditWithZeroDuration(); // 0xb16dd34d
     error onlyBorrowerOrEACanReduceCreditLine(); // 0xd61dbe31
+    error creditLineNotInApprovedState(); // 0xfc91a989
+    error paymentIdNotUnderReview(); // 0xd1696aaa
+    error creditLineTooHigh(); // 0x552b8377
 
     // pool operation
     error exceededPoolLiquidityCap(); // 0x5642ebd4

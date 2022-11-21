@@ -64,6 +64,13 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
     /**
      * @notice LP deposits to the pool to earn interest, and share losses
+     *
+     * @notice All deposits should be made by calling this function and
+     * makeInitialDeposit() (for pool owner and EA's initial deposit) only.
+     * Please do NOT directly transfer any digital assets to the contracts,
+     * which will cause a permanent loss and we cannot help reverse transactions
+     * or retrieve assets from the contracts.
+     *
      * @param amount the number of underlyingToken to be deposited
      */
     function deposit(uint256 amount) external virtual override {
@@ -76,14 +83,14 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * @param amount the number of `poolToken` to be deposited
      */
     function makeInitialDeposit(uint256 amount) external virtual override {
-        _poolConfig.onlyOwnerOrEA(msg.sender);
+        _poolConfig.onlyPoolOwnerTreasuryOrEA(msg.sender);
         return _deposit(msg.sender, amount);
     }
 
     /**
      * @notice Withdraw capital from the pool in the unit of underlyingToken
      * @dev Withdrawals are not allowed when 1) the pool withdraw is paused or
-     *      2) the LP has not reached lockout period since their last depisit
+     *      2) the LP has not reached lockout period since their last depsit
      *      3) the requested amount is higher than the LP's remaining principal
      * @dev the `amount` is total amount to withdraw, not the number of HDT shares,
      * which will be computed based on the current price per share
@@ -105,7 +112,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
         if (msg.sender == _poolConfig.evaluationAgent())
             _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
-        else if (msg.sender == _poolConfig.owner())
+        else if (msg.sender == _poolConfig.poolOwnerTreasury())
             _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
@@ -168,7 +175,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      */
     function reverseIncome(uint256 value) internal virtual {
         uint256 poolIncome = _poolConfig.reverseIncome(value);
-        _totalPoolValue -= poolIncome;
+        if (_totalPoolValue > poolIncome) _totalPoolValue -= poolIncome;
+        else _totalPoolValue = 0;
     }
 
     //********************************************/
@@ -176,12 +184,12 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
 
     /**
-     * @notice Lenders need to pass compliance reqirements. Pool owner will administer off-chain
+     * @notice Lenders need to pass compliance requirements. Pool owner will administer off-chain
      * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
      * call this function to mark a lender as approved.
      */
     function addApprovedLender(address lender) external virtual override {
-        _onlyOwnerOrHumaMasterAdmin();
+        _onlyPoolOperator();
         _approvedLenders[lender] = true;
         emit AddApprovedLender(lender, msg.sender);
     }
@@ -190,7 +198,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * @notice turns off the pool
      */
     function disablePool() external virtual override {
-        _onlyOwnerOrHumaMasterAdmin();
+        _onlyPoolOperator();
         _status = PoolStatus.Off;
         emit PoolDisabled(msg.sender);
     }
@@ -212,7 +220,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * The capital that the lender has contributed can continue to work as normal.
      */
     function removeApprovedLender(address lender) external virtual override {
-        _onlyOwnerOrHumaMasterAdmin();
+        _onlyPoolOperator();
         _approvedLenders[lender] = false;
         emit RemoveApprovedLender(lender, msg.sender);
     }
@@ -225,13 +233,14 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         address oldConfig = address(_poolConfig);
         if (poolConfigAddr == oldConfig) revert Errors.sameValue();
 
+        // note set old pool config allowance to 0
+        _safeApproveForPoolConfig(0);
+
         BasePoolConfig newPoolConfig = BasePoolConfig(poolConfigAddr);
         newPoolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
 
         _poolConfig = newPoolConfig;
 
-        // note set old pool config allowance to 0
-        _safeApproveForPoolConfig(0);
         // note approve max amount to pool config for admin withdraw functions
         _safeApproveForPoolConfig(type(uint256).max);
 
@@ -332,7 +341,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     /// "Modifier" function that limits access only when both protocol and pool are on.
     /// Did not use modifier for contract size consideration.
     function _protocolAndPoolOn() internal view {
-        if (_humaConfig.isProtocolPaused()) revert Errors.protocolIsPaused();
+        if (_humaConfig.paused()) revert Errors.protocolIsPaused();
         if (_status != PoolStatus.On) revert Errors.poolIsNotOn();
     }
 
@@ -344,5 +353,10 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     /// "Modifier" function that limits access to pool owner or protocol owner
     function _onlyOwnerOrHumaMasterAdmin() internal view {
         _poolConfig.onlyOwnerOrHumaMasterAdmin(msg.sender);
+    }
+
+    /// "Modifier" function that limits access to pool operators only
+    function _onlyPoolOperator() internal view {
+        if (!_poolConfig.isOperator(msg.sender)) revert Errors.poolOperatorRequired();
     }
 }

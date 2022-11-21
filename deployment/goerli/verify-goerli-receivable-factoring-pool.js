@@ -3,11 +3,14 @@ const {
     getDeployedContracts,
     getVerifiedContract,
     updateVerifiedContract,
-} = require("./utils.js");
+} = require("../utils.js");
 
 const fs = require("fs");
 
-const VERIFY_ARGS_PATH = "./deployment/verify_args/"
+const VERIFY_ARGS_PATH = "./deployment/goerli/verify_args/";
+
+const HUMA_OWNER_MULTI_SIG='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
+const POOL_OWNER_MULTI_SIG='0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA';
 
 let deployedContracts, proxyOwner, network, deployer;
 
@@ -106,38 +109,54 @@ async function verifyContracts() {
     const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
         [
             0,
-            `'${deployer.address}'`,
-            `'${deployer.address}'`,
+            `['${HUMA_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
-    const verifyFeeManager = await verifyContract('BaseCreditPoolFeeManager');
+    const verifyReceivableFactoringPoolTL = await verifyContract('ReceivableFactoringPoolTimelock',
+        [
+            0,
+            `['${POOL_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
+        ]);
+    console.log(`Verify ReceivableFactoringPoolTimelock result: ${verifyReceivableFactoringPoolTL}`);
+
+    const verifyrRceivableFactoringPoolProxyAdminTL = await verifyContract('ReceivableFactoringPoolProxyAdminTimelock',
+        [
+            0,
+            `['${POOL_OWNER_MULTI_SIG}']`,
+            `['${deployer.address}']`,
+        ]);
+    console.log(`Verify ReceivableFactoringPoolProxyAdminTimelock result: ${verifyrRceivableFactoringPoolProxyAdminTL}`);
+
+    const verifyFeeManager = await verifyContract('ReceivableFactoringPoolFeeManager');
     console.log(`Verify FeeManager result: ${verifyFeeManager}`);
 
-    const verifyHDTImpl = await verifyContract('BaseCreditHDTImpl');
+    const verifyHDTImpl = await verifyContract('HDTImpl');
     console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
 
-    const verifyHDT = await verifyContract('BaseCreditHDT',
+    const verifyHDT = await verifyContract('HDT',
         [
-            `'${deployedContracts['BaseCreditHDTImpl']}'`,
-            `'${proxyOwner.address}'`,
+            `'${deployedContracts['HDTImpl']}'`,
+            `'${deployedContracts['ReceivableFactoringPoolProxyAdminTimelock']}'`,
             '[]'
         ]);
     console.log(`Verify HDT result: ${verifyHDT}`);
 
-    const verifyPoolConfig = await verifyContract('BaseCreditPoolConfig');
+    const verifyPoolConfig = await verifyContract('ReceivableFactoringPoolConfig');
     console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
 
-    const verifyPoolImpl = await verifyContract('BaseCreditPoolImpl');
+    const verifyPoolImpl = await verifyContract('ReceivableFactoringPoolImpl');
     console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
 
-    const verifyPool = await verifyContract('BaseCreditPool',
+    const verifyPool = await verifyContract('ReceivableFactoringPool',
         [
-            `'${deployedContracts['BaseCreditPoolImpl']}'`,
-            `'${proxyOwner.address}'`,
+            `'${deployedContracts['ReceivableFactoringPoolImpl']}'`,
+            `'${deployedContracts['ReceivableFactoringPoolProxyAdminTimelock']}'`,
             '[]',
         ]);
-    console.log(`Verify PoolImpl result: ${verifyPool}`);
+    console.log(`Verify Pool result: ${verifyPool}`);
 }
 
 verifyContracts()

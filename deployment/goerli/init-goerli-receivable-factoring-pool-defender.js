@@ -4,9 +4,39 @@ const {
     updateInitilizedContract,
     getDeployedContracts,
     sendTransaction,
-} = require("./utils.js");
+} = require("../utils.js");
 
-let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp, invoicePayer;
+let deployer, deployedContracts, lender, ea, eaService;
+let pdsService, treasury, ea_bcp, bcpOperator, rfpOperator;
+let bcpOwnerTreasury, rfpOwnerTreasury;
+let invoicePayer;
+
+const HUMA_OWNER_MULTI_SIG='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
+const POOL_OWNER_MULTI_SIG='0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA';
+
+async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
+    if (!deployedContracts[timeLockKey]) {
+        throw new Error(`${timeLockKey} not deployed yet!`);
+    }
+
+    if (!deployedContracts[contractKey]) {
+        throw new Error(`${contractKey} not deployed yet!`);
+    }
+
+    const TimeLockController = await hre.ethers.getContractFactory("TimelockController");
+    const timeLockController = TimeLockController.attach(deployedContracts[timeLockKey]);
+
+    const Contract = await hre.ethers.getContractFactory(contractName);
+    const contract = Contract.attach(deployedContracts[contractKey]);
+
+    await sendTransaction(contractKey, contract, "transferOwnership", [timeLockController.address]);
+
+    const adminRole = await timeLockController.TIMELOCK_ADMIN_ROLE();
+    await sendTransaction(contractKey, timeLockController, "renounceRole", [
+        adminRole,
+        deployer.address,
+    ]);
+}
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -19,10 +49,6 @@ async function initHumaConfig() {
         throw new Error("HumaConfig not deployed yet!");
     }
 
-    if (!deployedContracts["HumaConfigTimelock"]) {
-        throw new Error("HumaConfigTimelock not deployed yet!");
-    }
-
     if (!deployedContracts["EANFT"]) {
         throw new Error("EANFT not deployed yet!");
     }
@@ -33,9 +59,6 @@ async function initHumaConfig() {
 
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
-
-    const TimelockController = await hre.ethers.getContractFactory("TimelockController");
-    const humaConfigTL = TimelockController.attach(deployedContracts["HumaConfigTimelock"]);
 
     await sendTransaction("HumaConfig", humaConfig, "setProtocolDefaultGracePeriod", [
         30 * 24 * 3600,
@@ -57,12 +80,7 @@ async function initHumaConfig() {
     // Set treasury for the protocol
     await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasury.address]);
 
-    await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
-    const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
-    await sendTransaction("HumaConfigTimelock", humaConfigTL, "renounceRole", [
-        adminRole,
-        deployer.address,
-    ]);
+    await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock")
 
     await updateInitilizedContract("HumaConfig");
 }
@@ -90,6 +108,8 @@ async function initFeeManager() {
         [0, 1000, 0, 1000, 0]
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
+
+    await transferOwnershipToTL("BaseFeeManager", "ReceivableFactoringPoolFeeManager", "ReceivableFactoringPoolTimelock");
 
     await updateInitilizedContract("ReceivableFactoringPoolFeeManager");
 }
@@ -123,6 +143,8 @@ async function initHDT() {
     ]);
 
     await sendTransaction("HDT", hdt, "setPool", [deployedContracts["ReceivableFactoringPool"]]);
+
+    await transferOwnershipToTL("HDT", "HDT", "ReceivableFactoringPoolTimelock");
 
     await updateInitilizedContract("HDT");
 }
@@ -237,22 +259,27 @@ async function initPoolConfig() {
         "setReceivableRequiredInBps",
         [12500]
     );
-    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setPoolPayPeriod", [30]);
-    await sendTransaction("ReceivableFactoringpoolConfig", poolConfig, "setPoolToken", [
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolPayPeriod", [30]);
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolToken", [
         deployedContracts["HDT"],
     ]);
     await sendTransaction(
-        "ReceivableFactoringpoolConfig",
+        "ReceivableFactoringPoolConfig",
         poolConfig,
         "setWithdrawalLockoutPeriod",
         [90]
     );
     await sendTransaction(
-        "ReceivableFactoringpoolConfig",
+        "ReceivableFactoringPoolConfig",
         poolConfig,
         "setPoolDefaultGracePeriod",
         [60]
     );
+
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "addPoolOperator", [rfpOperator.address]);
+    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolOwnerTreasury", [rfpOwnerTreasury.address]);
+
+    await transferOwnershipToTL("BasePoolConfig", "ReceivableFactoringPoolConfig", "ReceivableFactoringPoolTimelock");
 
     await updateInitilizedContract("ReceivableFactoringPoolConfig");
 }
@@ -291,23 +318,28 @@ async function prepare() {
     }
 
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
-    const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
+    const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"])
+    const poolFromrfpOperator = pool.connect(rfpOperator);
 
-    await sendTransaction("ReceivableFactoringPool", pool, "addApprovedLender", [
+    await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [
         deployer.address,
     ]);
-    await sendTransaction("ReceivableFactoringPool", pool, "addApprovedLender", [ea.address]);
-    await sendTransaction("ReceivableFactoringPool", pool, "addApprovedLender", [lender.address]);
+    await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [ea.address]);
+    await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [lender.address]);
+    await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [rfpOwnerTreasury.address]);
 
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
     const decimals = await usdc.decimals();
 
     // Owner
+    const usdcFromPoolOwnerTreasury = await usdc.connect(rfpOwnerTreasury);
+    const poolFromPoolOwnerTreasury = await pool.connect(rfpOwnerTreasury);
     const amountOwner = BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)));
-    await sendTransaction("TestToken", usdc, "mint", [deployer.address, amountOwner]);
-    await sendTransaction("TestToken", usdc, "approve", [pool.address, amountOwner]);
-    await sendTransaction("ReceivableFactoringPool", pool, "makeInitialDeposit", [amountOwner]);
+    console.log("owner to deposit: " + amountOwner);
+    await sendTransaction("TestToken", usdc, "mint", [rfpOwnerTreasury.address, amountOwner]);
+    await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [pool.address, amountOwner]);
+    await sendTransaction("ReceivableFactoringPool", poolFromPoolOwnerTreasury, "makeInitialDeposit", [amountOwner]);
 
     // EA
     const usdcFromEA = await usdc.connect(ea);
@@ -317,7 +349,7 @@ async function prepare() {
     await sendTransaction("TestToken", usdcFromEA, "approve", [pool.address, amountEA]);
     await sendTransaction("ReceivableFactoringPool", poolFromEA, "makeInitialDeposit", [amountEA]);
 
-    await sendTransaction("ReceivableFactoringPool", pool, "enablePool", []);
+    // await sendTransaction("ReceivableFactoringPool", pool, "enablePool", []);
 
     //invoicePayer
     const amountInvoicePayer = BN.from(10_000_000_000).mul(BN.from(10).pow(BN.from(decimals)));
@@ -328,22 +360,26 @@ async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury, ea_bcp, invoicePayer] =
-        await accounts;
+    [
+        deployer, proxyOwner, lender, ea, 
+        eaService, pdsService, treasury, ea_bcp,
+        invoicePayer, bcpOperator, rfpOperator,
+        bcpOwnerTreasury, rfpOwnerTreasury
+    ] = await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);
     console.log("ea address: " + ea.address);
 
     deployedContracts = await getDeployedContracts();
 
-    // await initHumaConfig();
+    await initHumaConfig();
     await initFeeManager();
-    // await initHDT();
-    // await initEA();
-    // await initPoolConfig();
-    // await initPool();
+    await initHDT();
+    await initEA();
+    await initPoolConfig();
+    await initPool();
 
-    // await prepare();
+    await prepare();
 }
 
 initContracts()

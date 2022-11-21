@@ -1,12 +1,17 @@
 [
   {
     "inputs": [],
-    "name": "alreadyPoolAdmin",
+    "name": "alreadyAPauser",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "alreayAPauser",
+    "name": "alreadyAnOperator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "alreadyPoolAdmin",
     "type": "error"
   },
   {
@@ -46,6 +51,11 @@
   },
   {
     "inputs": [],
+    "name": "creditLineNotInApprovedState",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "creditLineNotInGoodStandingState",
     "type": "error"
   },
@@ -57,6 +67,11 @@
   {
     "inputs": [],
     "name": "creditLineNotInStateForMakingPayment",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineTooHigh",
     "type": "error"
   },
   {
@@ -121,6 +136,16 @@
   },
   {
     "inputs": [],
+    "name": "notNFTOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notOperator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "notPauser",
     "type": "error"
   },
@@ -132,6 +157,21 @@
   {
     "inputs": [],
     "name": "notPoolOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPoolOwnerOrEA",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPoolOwnerTreasury",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPoolOwnerTreasuryOrEA",
     "type": "error"
   },
   {
@@ -156,6 +196,11 @@
   },
   {
     "inputs": [],
+    "name": "paymentIdNotUnderReview",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "permissionDeniedNotAdmin",
     "type": "error"
   },
@@ -167,6 +212,11 @@
   {
     "inputs": [],
     "name": "poolIsNotOn",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "poolOperatorRequired",
     "type": "error"
   },
   {

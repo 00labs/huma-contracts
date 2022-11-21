@@ -35,6 +35,8 @@ let protocolOwner;
 let eaNFTContract;
 let eaServiceAccount;
 let pdsServiceAccount;
+let poolOperator;
+let poolOwnerTreasury;
 
 describe("Credit Line Integration Test", async function () {
     before(async function () {
@@ -49,6 +51,8 @@ describe("Credit Line Integration Test", async function () {
             protocolOwner,
             eaServiceAccount,
             pdsServiceAccount,
+            poolOperator,
+            poolOwnerTreasury,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -71,7 +75,9 @@ describe("Credit Line Integration Test", async function () {
             testTokenContract,
             500,
             eaNFTContract,
-            false
+            false,
+            poolOperator,
+            poolOwnerTreasury
         );
 
         await feeManagerContract.connect(poolOwner).setFees(10, 100, 20, 500, 0);

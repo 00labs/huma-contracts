@@ -4,9 +4,11 @@ const {
     updateInitilizedContract,
     getDeployedContracts,
     sendTransaction,
-} = require("./utils.js");
+} = require("../utils.js");
 
 let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp;
+
+const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -306,14 +308,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    // await initHumaConfig();
-    // await initEA();
+    await initHumaConfig();
+    await initEA();
     await initBaseCreditPoolFeeManager();
-    // await initBaseCreditPoolHDT();
-    // await initBaseCreditPoolConfig();
-    // await initBaseCreditPool();
-    //
-    // await prepareBaseCreditPool();
+    await initBaseCreditPoolHDT();
+    await initBaseCreditPoolConfig();
+    await initBaseCreditPool();
+
+    await prepareBaseCreditPool();
 }
 
 initContracts()

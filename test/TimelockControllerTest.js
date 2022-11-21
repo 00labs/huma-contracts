@@ -22,6 +22,8 @@ describe("TimelockController Test", function () {
     let eaNFTContract;
     let eaServiceAccount;
     let pdsServiceAccount;
+    let poolOperator;
+    let poolOwnerTreasury;
 
     async function advanceClock(seconds) {
         await ethers.provider.send("evm_increaseTime", [seconds]);
@@ -60,6 +62,8 @@ describe("TimelockController Test", function () {
             protocolOwner,
             eaServiceAccount,
             pdsServiceAccount,
+            poolOperator,
+            poolOwnerTreasury,
         ] = await ethers.getSigners();
     });
 
@@ -84,7 +88,9 @@ describe("TimelockController Test", function () {
             testTokenContract,
             0,
             eaNFTContract,
-            true // ReceivableFacotringPool
+            true, // ReceivableFacotringPool
+            poolOperator,
+            poolOwnerTreasury
         );
 
         const TimelockController = await ethers.getContractFactory("TimelockController");

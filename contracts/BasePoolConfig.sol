@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -13,14 +14,13 @@ import "./Errors.sol";
 
 import "hardhat/console.sol";
 
-contract BasePoolConfig is Ownable {
+contract BasePoolConfig is Ownable, Initializable {
     using SafeERC20 for IERC20;
 
     /**
      * @notice Stores required liquidity rate and rewards rate for Pool Owner and EA
      */
     struct PoolConfig {
-        // The first 6 fields are IP-related, optimized for one storage slot.
         // The max liquidity allowed for the pool.
         uint256 _liquidityCap;
         // How long a lender has to wait after the last deposit before they can withdraw
@@ -33,14 +33,13 @@ contract BasePoolConfig is Ownable {
         uint256 _liquidityRateInBpsByEA;
         // Percentage of the _liquidityCap to be contributed by Pool Owner
         uint256 _liquidityRateInBpsByPoolOwner;
-        // Below fields are borrowing related. Optimized for one storage slot.
         // the maximum credit line for an address in terms of the amount of poolTokens
-        uint256 _maxCreditLine;
+        uint88 _maxCreditLine;
         // the grace period at the pool level before a Default can be triggered
         uint256 _poolDefaultGracePeriodInSeconds;
         // pay period for the pool, measured in number of days
         uint256 _payPeriodInDays;
-        // Percentage of receivable required for credits in this pool in terms of bais points
+        // Percentage of receivable required for credits in this pool in terms of basis points
         // For over receivableization, use more than 100%, for no receivable, use 0.
         uint256 _receivableRequiredInBps;
         // the default APR for the pool in terms of basis points.
@@ -59,8 +58,8 @@ contract BasePoolConfig is Ownable {
     }
 
     uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
-    uint256 private constant SECONDS_IN_A_DAY = 86400;
-    uint256 private constant SECONDS_IN_180_DAYS = 15552000;
+    uint256 private constant SECONDS_IN_A_DAY = 1 days;
+    uint256 private constant SECONDS_IN_180_DAYS = 180 days;
     uint256 private constant WITHDRAWAL_LOCKOUT_PERIOD_IN_SECONDS = SECONDS_IN_180_DAYS;
 
     string public poolName;
@@ -85,6 +84,13 @@ contract BasePoolConfig is Ownable {
     PoolConfig internal _poolConfig;
 
     AccruedIncome internal _accuredIncome;
+
+    /// Pool operators can add or remove lenders.
+    mapping(address => bool) private poolOperators;
+
+    // Address for the account that handles the treasury functions for the pool owner:
+    // liquidity deposits, liquidity withdrawls, and reward withdrawals
+    address public poolOwnerTreasury;
 
     event APRChanged(uint256 aprInBps, address by);
     event CreditApprovalExpirationChanged(uint256 durationInSeconds, address by);
@@ -121,18 +127,25 @@ contract BasePoolConfig is Ownable {
         uint256 liquidityRate,
         address indexed by
     );
+    event PoolOwnerTreasuryChanged(address treasury, address indexed by);
     event PoolPayPeriodChanged(uint256 periodInDays, address by);
-    event PoolRewardsWithdrawn(address receiver, uint256 amount, address by);
+    event PoolRewardsWithdrawn(address receiver, uint256 amount);
     event ProtocolRewardsWithdrawn(address receiver, uint256 amount, address by);
     event ReceivableRequiredInBpsChanged(uint256 receivableInBps, address by);
     event WithdrawalLockoutPeriodChanged(uint256 lockoutPeriodInDays, address by);
+
+    /// An operator has been added. An operator is someone who can add or remove approved lenders.
+    event PoolOperatorAdded(address indexed operator, address by);
+
+    /// A operator has been removed
+    event PoolOperatorRemoved(address indexed operator, address by);
 
     function initialize(
         string memory _poolName,
         address _poolToken,
         address _humaConfig,
         address _feeManager
-    ) external onlyOwner {
+    ) external onlyOwner initializer {
         poolName = _poolName;
         if (_poolToken == address(0)) revert Errors.zeroAddressProvided();
         if (_humaConfig == address(0)) revert Errors.zeroAddressProvided();
@@ -151,6 +164,34 @@ contract BasePoolConfig is Ownable {
         _poolConfig._withdrawalLockoutPeriodInSeconds = WITHDRAWAL_LOCKOUT_PERIOD_IN_SECONDS;
         _poolConfig._poolDefaultGracePeriodInSeconds = HumaConfig(humaConfig)
             .protocolDefaultGracePeriodInSeconds();
+
+        // Default values for the pool configurations. The pool owners are expected to reset
+        // these values when setting up the pools. Setting these default values to avoid
+        // strange behaviors when the pool owner missed setting up these configurations.
+        // _liquidityCap, _maxCreditLine, _creditApprovalExpirationInSeconds are left at 0.
+        _poolConfig._rewardRateInBpsForEA = 100;
+        _poolConfig._rewardRateInBpsForPoolOwner = 100;
+        _poolConfig._liquidityRateInBpsByEA = 200;
+        _poolConfig._liquidityRateInBpsByPoolOwner = 200;
+        _poolConfig._payPeriodInDays = 30;
+        _poolConfig._receivableRequiredInBps = 10000;
+        _poolConfig._poolAprInBps = 1500;
+    }
+
+    /**
+     * @notice Adds a operator, who can add or remove approved lenders.
+     * @param _opeartor Address to be added to the operator list
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev If the address is already an operator, revert w/ "alreadyAnOperator"
+     * @dev Emits a PoolOperatorAdded event.
+     */
+    function addPoolOperator(address _opeartor) external onlyOwner {
+        if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
+        if (poolOperators[_opeartor]) revert Errors.alreadyAnOperator();
+
+        poolOperators[_opeartor] = true;
+
+        emit PoolOperatorAdded(_opeartor, msg.sender);
     }
 
     function distributeIncome(uint256 value) external returns (uint256 poolIncome) {
@@ -218,6 +259,9 @@ contract BasePoolConfig is Ownable {
 
     function setEARewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external {
         _onlyOwnerOrHumaMasterAdmin();
+
+        if (rewardsRate > HUNDRED_PERCENT_IN_BPS || liquidityRate > HUNDRED_PERCENT_IN_BPS)
+            revert Errors.invalidBasisPointHigherThan10000();
         _poolConfig._rewardRateInBpsForEA = rewardsRate;
         _poolConfig._liquidityRateInBpsByEA = liquidityRate;
         emit EARewardsAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
@@ -266,6 +310,7 @@ contract BasePoolConfig is Ownable {
 
     function setHumaConfig(address _humaConfig) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (_humaConfig == address(0)) revert Errors.zeroAddressProvided();
         humaConfig = HumaConfig(_humaConfig);
         emit HumaConfigChanged(_humaConfig, msg.sender);
     }
@@ -277,7 +322,8 @@ contract BasePoolConfig is Ownable {
     function setMaxCreditLine(uint256 creditLine) external {
         _onlyOwnerOrHumaMasterAdmin();
         if (creditLine == 0) revert Errors.zeroAmountProvided();
-        _poolConfig._maxCreditLine = creditLine;
+        if (creditLine >= 2**88) revert Errors.creditLineTooHigh();
+        _poolConfig._maxCreditLine = uint88(creditLine);
         emit MaxCreditLineChanged(creditLine, msg.sender);
     }
 
@@ -300,16 +346,20 @@ contract BasePoolConfig is Ownable {
 
     /**
      * @notice Sets the cap of the pool liquidity.
-     * @param liquidityCap the upper bound that the pool accepts liquidity from the depositers
+     * @param liquidityCap the upper bound that the pool accepts liquidity from the depositors
      */
     function setPoolLiquidityCap(uint256 liquidityCap) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (liquidityCap == 0) revert Errors.zeroAmountProvided();
         _poolConfig._liquidityCap = liquidityCap;
         emit PoolLiquidityCapChanged(liquidityCap, msg.sender);
     }
 
     function setPoolOwnerRewardsAndLiquidity(uint256 rewardsRate, uint256 liquidityRate) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (rewardsRate > HUNDRED_PERCENT_IN_BPS || liquidityRate > HUNDRED_PERCENT_IN_BPS)
+            revert Errors.invalidBasisPointHigherThan10000();
+
         _poolConfig._rewardRateInBpsForPoolOwner = rewardsRate;
         _poolConfig._liquidityRateInBpsByPoolOwner = liquidityRate;
         emit PoolOwnerRewardsAndLiquidityChanged(rewardsRate, liquidityRate, msg.sender);
@@ -317,6 +367,7 @@ contract BasePoolConfig is Ownable {
 
     function setPoolPayPeriod(uint256 periodInDays) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (periodInDays == 0) revert Errors.zeroAmountProvided();
         _poolConfig._payPeriodInDays = periodInDays;
         emit PoolPayPeriodChanged(periodInDays, msg.sender);
     }
@@ -330,8 +381,16 @@ contract BasePoolConfig is Ownable {
         emit PoolNameChanged(newName, msg.sender);
     }
 
+    function setPoolOwnerTreasury(address _poolOwnerTreasury) external {
+        _onlyOwnerOrHumaMasterAdmin();
+        if (_poolOwnerTreasury == address(0)) revert Errors.zeroAddressProvided();
+        poolOwnerTreasury = _poolOwnerTreasury;
+        emit PoolOwnerTreasuryChanged(_poolOwnerTreasury, msg.sender);
+    }
+
     function setPoolToken(address _poolToken) external {
         _onlyOwnerOrHumaMasterAdmin();
+        if (_poolToken == address(0)) revert Errors.zeroAddressProvided();
         poolToken = HDT(_poolToken);
         address assetToken = poolToken.assetToken();
         underlyingToken = IERC20(poolToken.assetToken());
@@ -362,21 +421,24 @@ contract BasePoolConfig is Ownable {
     }
 
     function withdrawEAFee(uint256 amount) external {
-        address ea = evaluationAgent;
-        if (msg.sender != ea) revert Errors.notEvaluationAgent();
+        // Either Pool owner or EA can trigger reward withdraw for EA.
+        // When it is triggered by pool owner, the fund still flows to the EA's account.
+        onlyPoolOwnerOrEA(msg.sender);
+        if (amount == 0) revert Errors.zeroAmountProvided();
         if (amount + _accuredIncome._eaIncomeWithdrawn > _accuredIncome._eaIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
-        _withdrawEAFee(ea, ea, amount);
+        // Note: the transfer can only goes to evaluationAgent
+        _withdrawEAFee(msg.sender, evaluationAgent, amount);
     }
 
     function withdrawPoolOwnerFee(uint256 amount) external {
-        address poolOwner = owner();
-        if (msg.sender != poolOwner) revert Errors.notPoolOwner();
+        onlyPoolOwnerTreasury(msg.sender);
+        if (amount == 0) revert Errors.zeroAmountProvided();
         if (amount + _accuredIncome._poolOwnerIncomeWithdrawn > _accuredIncome._poolOwnerIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
         _accuredIncome._poolOwnerIncomeWithdrawn += amount;
-        underlyingToken.safeTransferFrom(pool, poolOwner, amount);
-        emit PoolRewardsWithdrawn(poolOwner, amount, msg.sender);
+        underlyingToken.safeTransferFrom(pool, msg.sender, amount);
+        emit PoolRewardsWithdrawn(msg.sender, amount);
     }
 
     function withdrawProtocolFee(uint256 amount) external {
@@ -385,10 +447,12 @@ contract BasePoolConfig is Ownable {
             revert Errors.withdrawnAmountHigherThanBalance();
         _accuredIncome._protocolIncomeWithdrawn += amount;
         address treasuryAddress = humaConfig.humaTreasury();
-        if (treasuryAddress != address(0)) {
-            underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
-            emit ProtocolRewardsWithdrawn(treasuryAddress, amount, msg.sender);
-        }
+        // It is possible that Huma protocolTreasury is missed in the setup. If that happens,
+        // the transaction is reverted. The protocol owner can still withdraw protocol fee
+        // after protocolTreasury is configured in HumaConfig.
+        assert(treasuryAddress != address(0));
+        underlyingToken.safeTransferFrom(pool, treasuryAddress, amount);
+        emit ProtocolRewardsWithdrawn(treasuryAddress, amount, msg.sender);
     }
 
     function accruedIncome()
@@ -430,7 +494,7 @@ contract BasePoolConfig is Ownable {
     }
 
     function checkLiquidityRequirement() public view {
-        checkLiquidityRequirementForPoolOwner(poolToken.withdrawableFundsOf(owner()));
+        checkLiquidityRequirementForPoolOwner(poolToken.withdrawableFundsOf(poolOwnerTreasury));
         checkLiquidityRequirementForEA(poolToken.withdrawableFundsOf(evaluationAgent));
     }
 
@@ -492,12 +556,35 @@ contract BasePoolConfig is Ownable {
         );
     }
 
-    function isOwnerOrEA(address account) public view returns (bool) {
-        return (account == owner() || account == evaluationAgent);
+    function isPoolOwnerTreasuryOrEA(address account) public view returns (bool) {
+        return (account == poolOwnerTreasury || account == evaluationAgent);
+    }
+
+    /// Reports if a given user account is an approved operator or not
+    function isOperator(address account) external view returns (bool) {
+        return poolOperators[account];
     }
 
     function maxCreditLine() external view returns (uint256) {
         return _poolConfig._maxCreditLine;
+    }
+
+    function onlyPoolOwner(address account) public view {
+        if (account != owner()) revert Errors.notPoolOwner();
+    }
+
+    function onlyPoolOwnerTreasury(address account) public view {
+        if (account != poolOwnerTreasury) revert Errors.notPoolOwnerTreasury();
+    }
+
+    /// "Modifier" function that limits access to pool owner or EA.
+    function onlyPoolOwnerOrEA(address account) public view {
+        if (account != owner() && account != evaluationAgent) revert Errors.notPoolOwnerOrEA();
+    }
+
+    /// "Modifier" function that limits access to pool owner treasury or EA.
+    function onlyPoolOwnerTreasuryOrEA(address account) public view {
+        if (!isPoolOwnerTreasuryOrEA(account)) revert Errors.notPoolOwnerTreasuryOrEA();
     }
 
     function payPeriodInDays() external view returns (uint256) {
@@ -520,11 +607,35 @@ contract BasePoolConfig is Ownable {
         return _poolConfig._receivableRequiredInBps;
     }
 
-    function rewardsAndLiquidityRateForEA() external view returns (uint256, uint256) {
+    /**
+     * @notice Removes a pool operator.
+     * @param _opeartor Address to be removed from the operator list
+     * @dev If address(0) is provided, revert with "zeroAddressProvided()"
+     * @dev If the address is not currently a operator, revert w/ "notOperator()"
+     * @dev Emits a PoolOperatorRemoved event.
+     */
+    function removePoolOperator(address _opeartor) external onlyOwner {
+        if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
+        if (!poolOperators[_opeartor]) revert Errors.notOperator();
+
+        poolOperators[_opeartor] = false;
+
+        emit PoolOperatorRemoved(_opeartor, msg.sender);
+    }
+
+    function rewardsAndLiquidityRateForEA()
+        external
+        view
+        returns (uint256 rewardRateInBpsForEA, uint256 liquidityRateInBpsByEA)
+    {
         return (_poolConfig._rewardRateInBpsForEA, _poolConfig._liquidityRateInBpsByEA);
     }
 
-    function rewardsAndLiquidityRateForPoolOwner() external view returns (uint256, uint256) {
+    function rewardsAndLiquidityRateForPoolOwner()
+        external
+        view
+        returns (uint256 rewardRateInBpsForPoolOwner, uint256 liquidityRateInBpsByPoolOwner)
+    {
         return (
             _poolConfig._rewardRateInBpsForPoolOwner,
             _poolConfig._liquidityRateInBpsByPoolOwner
@@ -554,12 +665,7 @@ contract BasePoolConfig is Ownable {
         emit EvaluationAgentRewardsWithdrawn(receiver, amount, caller);
     }
 
-    /// "Modifier" function that limits access to pool owner or EA.
-    function onlyOwnerOrEA(address account) public view {
-        if (!isOwnerOrEA(account)) revert Errors.permissionDeniedNotAdmin();
-    }
-
-    /// "MOdifier" function that limits access to pool owner or Huma protocol owner
+    /// "Modifier" function that limits access to pool owner or Huma protocol owner
     function _onlyOwnerOrHumaMasterAdmin() internal view {
         onlyOwnerOrHumaMasterAdmin(msg.sender);
     }

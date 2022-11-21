@@ -8,7 +8,12 @@ import "./BaseFeeManager.sol";
 
 contract BasePoolStorage {
     uint256 internal constant HUNDRED_PERCENT_IN_BPS = 10000;
-    uint256 internal constant SECONDS_IN_A_DAY = 86400;
+    uint256 internal constant SECONDS_IN_A_DAY = 1 days;
+    /// A multiplier over the credit limit, which is up to 80% of the invoice amount,
+    /// that determines whether a payment amount should be flagged for review.
+    /// It is possible for the actual invoice payment is higher than the invoice amount,
+    /// however, it is too high, the chance for a fraud is high and thus requires review.
+    uint256 internal constant REVIEW_MULTIPLIER = 5;
 
     enum PoolStatus {
         Off,
@@ -36,7 +41,7 @@ contract BasePoolStorage {
     // Tracks the last deposit time for each lender in this pool
     mapping(address => uint256) internal _lastDepositTime;
 
-    // whether the pool is ON or OFF
+    // Whether the pool is ON or OFF
     PoolStatus internal _status;
 
     // The addresses that are allowed to lend to this pool. Configurable only by the pool owner
