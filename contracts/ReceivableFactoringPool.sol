@@ -221,11 +221,11 @@ contract ReceivableFactoringPool is
     }
 
     /**
-     * @notice disperse the remaining funds associated with the factoring to the borrower
+     * @notice disburse the remaining funds associated with the factoring to the borrower
      * @param receiver receiver of the funds, namely, the borrower
      * @param amount the amount of the dispursement
      */
-    function _disperseRemainingFunds(address receiver, uint256 amount) internal {
+    function _disburseRemainingFunds(address receiver, uint256 amount) internal {
         _underlyingToken.safeTransfer(receiver, amount);
         emit ExtraFundsDispersed(receiver, amount);
     }
@@ -263,7 +263,7 @@ contract ReceivableFactoringPool is
         if (!toReview) {
             _processedPaymentIds[paymentIdHash] = true;
 
-            if (amount > amountPaid) _disperseRemainingFunds(borrower, amount - amountPaid);
+            if (amount > amountPaid) _disburseRemainingFunds(borrower, amount - amountPaid);
 
             // Removes the receivable information for the borrower.
             if (paidoff) _setReceivableInfo(borrower, address(0), 0, 0);
