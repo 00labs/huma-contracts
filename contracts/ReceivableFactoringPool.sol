@@ -115,7 +115,7 @@ contract ReceivableFactoringPool is
         uint256 receivableParam
     ) external virtual override {
         address borrower = msg.sender;
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
         if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();

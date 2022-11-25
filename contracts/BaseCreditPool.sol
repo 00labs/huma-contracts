@@ -144,7 +144,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
         cr.remainingPeriods = uint16(remainingPeriods);
-        _creditRecordMapping[borrower] = _approveCredit(cr);
+        _setCreditRecord(borrower, _approveCredit(cr));
 
         emit CreditApproved(borrower, creditLimit, intervalInDays, remainingPeriods, aprInBps);
     }
@@ -201,7 +201,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         address borrower = msg.sender;
         // Open access to the borrower
         if (borrowAmount == 0) revert Errors.zeroAmountProvided();
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
 
         _checkDrawdownEligibility(borrower, cr, borrowAmount);
         uint256 netAmountToBorrower = _drawdown(borrower, cr, borrowAmount);
@@ -480,7 +480,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // this pay period is accrued in correction and will be added to the next bill.
             cr.correction += int96(
                 uint96(
-                    _feeManager.calcCorrection(
+                    _calcCorrection(
                         cr.dueDate,
                         _creditRecordStaticMapping[borrower].aprInBps,
                         borrowAmount
@@ -491,7 +491,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.unbilledPrincipal = uint96(cr.unbilledPrincipal + borrowAmount);
         }
 
-        _creditRecordMapping[borrower] = cr;
+        _setCreditRecord(borrower, cr);
 
         (uint256 netAmountToBorrower, uint256 platformFees) = _feeManager.distBorrowingAmount(
             borrowAmount
@@ -559,7 +559,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             emit CreditApproved(borrower, creditLimit, intervalInDays, remainingPeriods, aprInBps);
         } else ncr.state = BS.CreditState.Requested;
 
-        _creditRecordMapping[borrower] = ncr;
+        _setCreditRecord(borrower, ncr);
 
         emit CreditInitiated(
             borrower,
@@ -625,7 +625,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         // Computes the final payoff amount. Needs to consider the correction associated with
         // all outstanding principals.
-        uint256 payoffCorrection = _feeManager.calcCorrection(
+        uint256 payoffCorrection = _calcCorrection(
             cr.dueDate,
             _creditRecordStaticMapping[borrower].aprInBps,
             cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
@@ -686,7 +686,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 // If there is principal payment, calculate new correction
                 cr.correction -= int96(
                     uint96(
-                        _feeManager.calcCorrection(
+                        _calcCorrection(
                             cr.dueDate,
                             _creditRecordStaticMapping[borrower].aprInBps,
                             principalPayment
@@ -733,7 +733,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             } else cr.state = BS.CreditState.GoodStanding;
         }
 
-        _creditRecordMapping[borrower] = cr;
+        _setCreditRecord(borrower, cr);
 
         if (amountToCollect > 0 && paymentStatus == BS.PaymentStatus.NotReceived) {
             // Transfer assets from the _borrower to pool locker
@@ -830,19 +830,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 else if (newCharges < 0) reverseIncome(uint256(uint96(0 - newCharges)));
             }
 
+            uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
             if (cr.dueDate > 0)
                 cr.dueDate = uint64(
-                    cr.dueDate +
-                        periodsPassed *
-                        _creditRecordStaticMapping[borrower].intervalInDays *
-                        SECONDS_IN_A_DAY
+                    cr.dueDate + periodsPassed * intervalInDays * SECONDS_IN_A_DAY
                 );
-            else
-                cr.dueDate = uint64(
-                    block.timestamp +
-                        _creditRecordStaticMapping[borrower].intervalInDays *
-                        SECONDS_IN_A_DAY
-                );
+            else cr.dueDate = uint64(block.timestamp + intervalInDays * SECONDS_IN_A_DAY);
 
             // Adjusts remainingPeriods, special handling when reached the maturity of the credit line
             if (cr.remainingPeriods > periodsPassed) {
@@ -859,20 +852,34 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 if (cr.state != BS.CreditState.Defaulted) cr.state = BS.CreditState.Delayed;
             } else cr.state = BS.CreditState.GoodStanding;
 
-            _creditRecordMapping[borrower] = cr;
+            _setCreditRecord(borrower, cr);
 
             emit BillRefreshed(borrower, cr.dueDate, msg.sender);
         }
     }
 
+    /// Shared setter to the credit record mapping for contract size consideration
+    function _setCreditRecord(address borrower, BS.CreditRecord memory cr) internal {
+        _creditRecordMapping[borrower] = cr;
+    }
+
+    /// Shared accessor for contract size consideration
+    function _calcCorrection(
+        uint256 dueDate,
+        uint256 aprInBps,
+        uint256 amount
+    ) internal view returns (uint256) {
+        return _feeManager.calcCorrection(dueDate, aprInBps, amount);
+    }
+
     /// Shared accessor to the credit record mapping for contract size consideration
-    function _getCreditRecord(address account) private view returns (BS.CreditRecord memory) {
+    function _getCreditRecord(address account) internal view returns (BS.CreditRecord memory) {
         return _creditRecordMapping[account];
     }
 
     /// Shared accessor to the credit record static mapping for contract size consideration
     function _getCreditRecordStatic(address account)
-        private
+        internal
         view
         returns (BS.CreditRecordStatic memory)
     {
