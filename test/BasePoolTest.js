@@ -343,25 +343,31 @@ describe("Base Pool - LP and Admin functions", function () {
             await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
             await ethers.provider.send("evm_mine", []);
 
+            console.log("0");
             await expect(poolContract.connect(poolOwnerTreasury).withdraw(10)).to.be.revertedWith(
                 "poolOwnerNotEnoughLiquidity()"
             );
+            console.log("1");
 
             // Should succeed
             await poolContract.connect(evaluationAgent).withdraw(10);
+            console.log("2");
             // Should fail
             await expect(
                 poolContract.connect(evaluationAgent).withdraw(1_000_000)
             ).to.be.revertedWith("evaluationAgentNotEnoughLiquidity");
+            console.log("3");
             // Update liquidity rate for EA to be lower
             await poolConfigContract.connect(poolOwner).setEARewardsAndLiquidity(625, 5);
             // Should succeed
             await poolContract.connect(evaluationAgent).withdraw(1_000_000);
+            console.log("4");
 
             // Update liquidity rate for pool owner to be lower
             await poolConfigContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 1);
             // Should succeed
             await poolContract.connect(poolOwnerTreasury).withdraw(10);
+            console.log("5");
         });
     });
 });

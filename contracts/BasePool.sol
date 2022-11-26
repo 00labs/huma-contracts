@@ -106,14 +106,16 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
         if (amount > withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
 
+        _poolConfig.checkWithdrawLiquidityRequirement(msg.sender, withdrawableAmount - amount);
+
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
-        if (msg.sender == _poolConfig.evaluationAgent())
-            _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
-        else if (msg.sender == _poolConfig.poolOwnerTreasury())
-            _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
+        // if (msg.sender == _poolConfig.evaluationAgent())
+        //     _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
+        // else if (msg.sender == _poolConfig.poolOwnerTreasury())
+        //     _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }

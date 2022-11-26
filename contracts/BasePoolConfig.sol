@@ -493,9 +493,21 @@ contract BasePoolConfig is Ownable, Initializable {
         ) revert Errors.evaluationAgentNotEnoughLiquidity();
     }
 
+    /// Checks to make sure both EA and pool owner treasury meet the pool's liquidity requirements
     function checkLiquidityRequirement() public view {
         checkLiquidityRequirementForPoolOwner(poolToken.withdrawableFundsOf(poolOwnerTreasury));
         checkLiquidityRequirementForEA(poolToken.withdrawableFundsOf(evaluationAgent));
+    }
+
+    /// When the pool owner treasury or EA wants to withdraw liquidity from the pool,
+    /// checks to make sure the remaining liquidity meets the pool's requirements
+    function checkWithdrawLiquidityRequirement(address lender, uint256 newBalance) public view {
+        if (lender == evaluationAgent) {
+            checkLiquidityRequirementForEA(newBalance);
+        } else if (lender == poolOwnerTreasury) {
+            // note poolOwnerTreasury handles all thing financial-related for pool owner
+            checkLiquidityRequirementForPoolOwner(newBalance);
+        }
     }
 
     function creditApprovalExpirationInSeconds() external view returns (uint256) {
