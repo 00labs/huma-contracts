@@ -112,11 +112,6 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
 
-        // if (msg.sender == _poolConfig.evaluationAgent())
-        //     _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
-        // else if (msg.sender == _poolConfig.poolOwnerTreasury())
-        //     _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
-
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
 
