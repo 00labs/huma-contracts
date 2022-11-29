@@ -49,12 +49,15 @@ contract BasePoolConfig is Ownable, Initializable {
     }
 
     struct AccruedIncome {
-        uint256 _protocolIncome;
-        uint256 _protocolIncomeWithdrawn;
-        uint256 _poolOwnerIncome;
-        uint256 _poolOwnerIncomeWithdrawn;
-        uint256 _eaIncome;
-        uint256 _eaIncomeWithdrawn;
+        uint128 _protocolIncome;
+        uint128 _poolOwnerIncome;
+        uint128 _eaIncome;
+    }
+
+    struct AccruedWithdrawn {
+        uint128 _eaIncomeWithdrawn;
+        uint128 _protocolIncomeWithdrawn;
+        uint128 _poolOwnerIncomeWithdrawn;
     }
 
     uint256 private constant HUNDRED_PERCENT_IN_BPS = 10000;
@@ -84,6 +87,8 @@ contract BasePoolConfig is Ownable, Initializable {
     PoolConfig internal _poolConfig;
 
     AccruedIncome internal _accuredIncome;
+
+    AccruedWithdrawn internal _accuredWithdrawn;
 
     /// Pool operators can add or remove lenders.
     mapping(address => bool) private poolOperators;
@@ -180,18 +185,18 @@ contract BasePoolConfig is Ownable, Initializable {
 
     /**
      * @notice Adds a operator, who can add or remove approved lenders.
-     * @param _opeartor Address to be added to the operator list
+     * @param _operator Address to be added to the operator list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is already an operator, revert w/ "alreadyAnOperator"
      * @dev Emits a PoolOperatorAdded event.
      */
-    function addPoolOperator(address _opeartor) external onlyOwner {
-        if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
-        if (poolOperators[_opeartor]) revert Errors.alreadyAnOperator();
+    function addPoolOperator(address _operator) external onlyOwner {
+        if (_operator == address(0)) revert Errors.zeroAddressProvided();
+        if (poolOperators[_operator]) revert Errors.alreadyAnOperator();
 
-        poolOperators[_opeartor] = true;
+        poolOperators[_operator] = true;
 
-        emit PoolOperatorAdded(_opeartor, msg.sender);
+        emit PoolOperatorAdded(_operator, msg.sender);
     }
 
     function distributeIncome(uint256 value) external returns (uint256 poolIncome) {
@@ -199,18 +204,22 @@ contract BasePoolConfig is Ownable, Initializable {
             revert Errors.notPool();
         }
 
+        AccruedIncome memory tempIncome = _accuredIncome;
+
         uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / HUNDRED_PERCENT_IN_BPS;
-        _accuredIncome._protocolIncome += protocolFee;
+        tempIncome._protocolIncome += uint128(protocolFee);
 
         uint256 valueForPool = value - protocolFee;
 
         uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
             HUNDRED_PERCENT_IN_BPS;
-        _accuredIncome._poolOwnerIncome += ownerIncome;
+        tempIncome._poolOwnerIncome += uint128(ownerIncome);
 
         uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) /
             HUNDRED_PERCENT_IN_BPS;
-        _accuredIncome._eaIncome += eaIncome;
+        tempIncome._eaIncome += uint128(eaIncome);
+
+        _accuredIncome = tempIncome;
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
 
@@ -222,18 +231,22 @@ contract BasePoolConfig is Ownable, Initializable {
             revert Errors.notPool();
         }
 
+        AccruedIncome memory tempIncome = _accuredIncome;
+
         uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / HUNDRED_PERCENT_IN_BPS;
-        _accuredIncome._protocolIncome -= protocolFee;
+        tempIncome._protocolIncome -= uint128(protocolFee);
 
         uint256 valueForPool = value - protocolFee;
 
         uint256 ownerIncome = (valueForPool * _poolConfig._rewardRateInBpsForPoolOwner) /
             HUNDRED_PERCENT_IN_BPS;
-        _accuredIncome._poolOwnerIncome -= ownerIncome;
+        tempIncome._poolOwnerIncome -= uint128(ownerIncome);
 
         uint256 eaIncome = (valueForPool * _poolConfig._rewardRateInBpsForEA) /
             HUNDRED_PERCENT_IN_BPS;
-        _accuredIncome._eaIncome -= eaIncome;
+        tempIncome._eaIncome -= uint128(eaIncome);
+
+        _accuredIncome = tempIncome;
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
 
@@ -292,7 +305,8 @@ contract BasePoolConfig is Ownable, Initializable {
         evaluationAgentId = eaId;
 
         if (oldEA != address(0)) {
-            uint256 rewardsToPayout = _accuredIncome._eaIncome - _accuredIncome._eaIncomeWithdrawn;
+            uint256 rewardsToPayout = _accuredIncome._eaIncome -
+                _accuredWithdrawn._eaIncomeWithdrawn;
             if (rewardsToPayout > 0) {
                 _withdrawEAFee(msg.sender, oldEA, rewardsToPayout);
             }
@@ -425,7 +439,7 @@ contract BasePoolConfig is Ownable, Initializable {
         // When it is triggered by pool owner, the fund still flows to the EA's account.
         onlyPoolOwnerOrEA(msg.sender);
         if (amount == 0) revert Errors.zeroAmountProvided();
-        if (amount + _accuredIncome._eaIncomeWithdrawn > _accuredIncome._eaIncome)
+        if (amount + _accuredWithdrawn._eaIncomeWithdrawn > _accuredIncome._eaIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
         // Note: the transfer can only goes to evaluationAgent
         _withdrawEAFee(msg.sender, evaluationAgent, amount);
@@ -434,18 +448,18 @@ contract BasePoolConfig is Ownable, Initializable {
     function withdrawPoolOwnerFee(uint256 amount) external {
         onlyPoolOwnerTreasury(msg.sender);
         if (amount == 0) revert Errors.zeroAmountProvided();
-        if (amount + _accuredIncome._poolOwnerIncomeWithdrawn > _accuredIncome._poolOwnerIncome)
+        if (amount + _accuredWithdrawn._poolOwnerIncomeWithdrawn > _accuredIncome._poolOwnerIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
-        _accuredIncome._poolOwnerIncomeWithdrawn += amount;
+        _accuredWithdrawn._poolOwnerIncomeWithdrawn += uint128(amount);
         underlyingToken.safeTransferFrom(pool, msg.sender, amount);
         emit PoolRewardsWithdrawn(msg.sender, amount);
     }
 
     function withdrawProtocolFee(uint256 amount) external {
         if (msg.sender != humaConfig.owner()) revert Errors.notProtocolOwner();
-        if (amount + _accuredIncome._protocolIncomeWithdrawn > _accuredIncome._protocolIncome)
+        if (amount + _accuredWithdrawn._protocolIncomeWithdrawn > _accuredIncome._protocolIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
-        _accuredIncome._protocolIncomeWithdrawn += amount;
+        _accuredWithdrawn._protocolIncomeWithdrawn += uint128(amount);
         address treasuryAddress = humaConfig.humaTreasury();
         // It is possible that Huma protocolTreasury is missed in the setup. If that happens,
         // the transaction is reverted. The protocol owner can still withdraw protocol fee
@@ -471,9 +485,9 @@ contract BasePoolConfig is Ownable, Initializable {
             _accuredIncome._protocolIncome,
             _accuredIncome._poolOwnerIncome,
             _accuredIncome._eaIncome,
-            _accuredIncome._protocolIncomeWithdrawn,
-            _accuredIncome._poolOwnerIncomeWithdrawn,
-            _accuredIncome._eaIncomeWithdrawn
+            _accuredWithdrawn._protocolIncomeWithdrawn,
+            _accuredWithdrawn._poolOwnerIncomeWithdrawn,
+            _accuredWithdrawn._eaIncomeWithdrawn
         );
     }
 
@@ -493,9 +507,21 @@ contract BasePoolConfig is Ownable, Initializable {
         ) revert Errors.evaluationAgentNotEnoughLiquidity();
     }
 
+    /// Checks to make sure both EA and pool owner treasury meet the pool's liquidity requirements
     function checkLiquidityRequirement() public view {
         checkLiquidityRequirementForPoolOwner(poolToken.withdrawableFundsOf(poolOwnerTreasury));
         checkLiquidityRequirementForEA(poolToken.withdrawableFundsOf(evaluationAgent));
+    }
+
+    /// When the pool owner treasury or EA wants to withdraw liquidity from the pool,
+    /// checks to make sure the remaining liquidity meets the pool's requirements
+    function checkWithdrawLiquidityRequirement(address lender, uint256 newBalance) public view {
+        if (lender == evaluationAgent) {
+            checkLiquidityRequirementForEA(newBalance);
+        } else if (lender == poolOwnerTreasury) {
+            // note poolOwnerTreasury handles all thing financial-related for pool owner
+            checkLiquidityRequirementForPoolOwner(newBalance);
+        }
     }
 
     function creditApprovalExpirationInSeconds() external view returns (uint256) {
@@ -609,18 +635,18 @@ contract BasePoolConfig is Ownable, Initializable {
 
     /**
      * @notice Removes a pool operator.
-     * @param _opeartor Address to be removed from the operator list
+     * @param _operator Address to be removed from the operator list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is not currently a operator, revert w/ "notOperator()"
      * @dev Emits a PoolOperatorRemoved event.
      */
-    function removePoolOperator(address _opeartor) external onlyOwner {
-        if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
-        if (!poolOperators[_opeartor]) revert Errors.notOperator();
+    function removePoolOperator(address _operator) external onlyOwner {
+        if (_operator == address(0)) revert Errors.zeroAddressProvided();
+        if (!poolOperators[_operator]) revert Errors.notOperator();
 
-        poolOperators[_opeartor] = false;
+        poolOperators[_operator] = false;
 
-        emit PoolOperatorRemoved(_opeartor, msg.sender);
+        emit PoolOperatorRemoved(_operator, msg.sender);
     }
 
     function rewardsAndLiquidityRateForEA()
@@ -659,7 +685,7 @@ contract BasePoolConfig is Ownable, Initializable {
         address receiver,
         uint256 amount
     ) internal {
-        _accuredIncome._eaIncomeWithdrawn += amount;
+        _accuredWithdrawn._eaIncomeWithdrawn += uint96(amount);
         underlyingToken.safeTransferFrom(pool, receiver, amount);
 
         emit EvaluationAgentRewardsWithdrawn(receiver, amount, caller);

@@ -685,7 +685,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_opeartor",
+        "name": "_operator",
         "type": "address"
       }
     ],
@@ -723,6 +723,24 @@
       }
     ],
     "name": "checkLiquidityRequirementForPoolOwner",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "lender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "newBalance",
+        "type": "uint256"
+      }
+    ],
+    "name": "checkWithdrawLiquidityRequirement",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
@@ -1175,7 +1193,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_opeartor",
+        "name": "_operator",
         "type": "address"
       }
     ],

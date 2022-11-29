@@ -106,14 +106,11 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
         if (amount > withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
 
+        _poolConfig.checkWithdrawLiquidityRequirement(msg.sender, withdrawableAmount - amount);
+
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
-
-        if (msg.sender == _poolConfig.evaluationAgent())
-            _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
-        else if (msg.sender == _poolConfig.poolOwnerTreasury())
-            _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
@@ -184,8 +181,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
 
     /**
-     * @notice Lenders need to pass compliance requirements. Pool owner will administer off-chain
-     * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
+     * @notice Lenders need to pass compliance requirements. Pool operator will administer off-chain
+     * to make sure potential lenders meet the requirements. Afterwords, the pool operator will
      * call this function to mark a lender as approved.
      */
     function addApprovedLender(address lender) external virtual override {
@@ -195,7 +192,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 
     /**
-     * @notice turns off the pool
+     * @notice turns off the pool. Any pool operator can do so when they see abnormalities.
      */
     function disablePool() external virtual override {
         _onlyPoolOperator();
@@ -204,7 +201,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 
     /**
-     * @notice turns on the pool
+     * @notice turns on the pool. Only the pool owner or protocol owner can enable a pool.
      */
     function enablePool() external virtual override {
         _onlyOwnerOrHumaMasterAdmin();
