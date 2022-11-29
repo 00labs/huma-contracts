@@ -685,7 +685,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_opeartor",
+        "name": "_operator",
         "type": "address"
       }
     ],
@@ -1193,7 +1193,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_opeartor",
+        "name": "_operator",
         "type": "address"
       }
     ],

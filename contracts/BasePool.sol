@@ -181,8 +181,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
 
     /**
-     * @notice Lenders need to pass compliance requirements. Pool owner will administer off-chain
-     * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
+     * @notice Lenders need to pass compliance requirements. Pool operator will administer off-chain
+     * to make sure potential lenders meet the requirements. Afterwords, the pool operator will
      * call this function to mark a lender as approved.
      */
     function addApprovedLender(address lender) external virtual override {
@@ -192,7 +192,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 
     /**
-     * @notice turns off the pool
+     * @notice turns off the pool. Any pool operator can do so when they see abnormalities.
      */
     function disablePool() external virtual override {
         _onlyPoolOperator();
@@ -201,7 +201,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 
     /**
-     * @notice turns on the pool
+     * @notice turns on the pool. Only the pool owner or protocol owner can enable a pool.
      */
     function enablePool() external virtual override {
         _onlyOwnerOrHumaMasterAdmin();

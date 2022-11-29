@@ -180,18 +180,18 @@ contract BasePoolConfig is Ownable, Initializable {
 
     /**
      * @notice Adds a operator, who can add or remove approved lenders.
-     * @param _opeartor Address to be added to the operator list
+     * @param _operator Address to be added to the operator list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is already an operator, revert w/ "alreadyAnOperator"
      * @dev Emits a PoolOperatorAdded event.
      */
-    function addPoolOperator(address _opeartor) external onlyOwner {
-        if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
-        if (poolOperators[_opeartor]) revert Errors.alreadyAnOperator();
+    function addPoolOperator(address _operator) external onlyOwner {
+        if (_operator == address(0)) revert Errors.zeroAddressProvided();
+        if (poolOperators[_operator]) revert Errors.alreadyAnOperator();
 
-        poolOperators[_opeartor] = true;
+        poolOperators[_operator] = true;
 
-        emit PoolOperatorAdded(_opeartor, msg.sender);
+        emit PoolOperatorAdded(_operator, msg.sender);
     }
 
     function distributeIncome(uint256 value) external returns (uint256 poolIncome) {
@@ -621,18 +621,18 @@ contract BasePoolConfig is Ownable, Initializable {
 
     /**
      * @notice Removes a pool operator.
-     * @param _opeartor Address to be removed from the operator list
+     * @param _operator Address to be removed from the operator list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is not currently a operator, revert w/ "notOperator()"
      * @dev Emits a PoolOperatorRemoved event.
      */
-    function removePoolOperator(address _opeartor) external onlyOwner {
-        if (_opeartor == address(0)) revert Errors.zeroAddressProvided();
-        if (!poolOperators[_opeartor]) revert Errors.notOperator();
+    function removePoolOperator(address _operator) external onlyOwner {
+        if (_operator == address(0)) revert Errors.zeroAddressProvided();
+        if (!poolOperators[_operator]) revert Errors.notOperator();
 
-        poolOperators[_opeartor] = false;
+        poolOperators[_operator] = false;
 
-        emit PoolOperatorRemoved(_opeartor, msg.sender);
+        emit PoolOperatorRemoved(_operator, msg.sender);
     }
 
     function rewardsAndLiquidityRateForEA()

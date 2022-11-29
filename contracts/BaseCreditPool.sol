@@ -106,8 +106,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @notice A payment has been made against the credit line
      * @param borrower the address of the borrower
      * @param amount the payback amount
-     * @param by the address that has made the payment. It is possible for someone to make payment
-     * on behalf of the borrower.
+     * @param by the address that has triggered the process of marking the payment made.
+     * In most cases, it is the borrower. In receivable factoring, it is PDSServiceAccount.
      */
     event PaymentMade(
         address indexed borrower,
@@ -580,13 +580,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * Ideally, two boolean parameters (isPaymentReceived, isPaymentVerified) are used
      * instead of paymentStatus. Due to stack too deep issue, one parameter is used.
      * NotReceived: Payment not received
-     * ReceivedNotVerified: the system thinks the payment has been received but no manul
-     * verification yet. Outier cases might be flagged for manual review.
+     * ReceivedNotVerified: the system thinks the payment has been received but no manual
+     * verification yet. Outlier cases might be flagged for manual review.
      * ReceivedAndVerified: the system thinks the payment has been received and it has been
      * manually verified after being flagged by the system.
-     * @return amountPaid the actuall amount paid to the contract. When the tendered
+     * @return amountPaid the actual amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
      * @return paidoff a flag indciating whether the account has been paid off.
+     * @return isReviewRequired a flag indicating whether this payment transaction has been
+     * flagged for review.
      */
     function _makePayment(
         address borrower,
