@@ -176,7 +176,7 @@ module.exports = {
                 baseCreditPoolOperator,
                 receivableFactoringPoolOperator,
                 baseCreditPoolOwnerTreasury,
-                receivableFactoringPoolOwnerTreasury
+                receivableFactoringPoolOwnerTreasury,
             ],
         },
         xdai: {
@@ -204,14 +204,8 @@ module.exports = {
             url: polygonUrl,
             accounts: [
                 deployer,
-                proxyOwner,
-                lender,
-                ea,
                 eaService,
                 pdsService,
-                treasury,
-                ea_bcp,
-                invoicePayer,
             ],
         },
         mumbai: {
@@ -371,7 +365,7 @@ module.exports = {
     },
 
     etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY || null
+        apiKey: process.env.ETHERSCAN_API_KEY || null,
     },
     contractSizer: {
         alphaSort: true,
