@@ -5,8 +5,8 @@ const fs = require("fs");
 
 const VERIFY_ARGS_PATH = "./deployment/polygon/verify_args/";
 
-const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
-const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
+const HUMA_OWNER_MULTI_SIG = "0x7E13931931d59f2199fE0b499534412FCD28b7Ed";
+const POOL_OWNER_MULTI_SIG = "0xD252073bF424bb13B474004bf9F52195d54aEDb6";
 
 let deployedContracts, proxyOwner, network, deployer;
 
@@ -93,60 +93,60 @@ async function verifyContracts() {
     const verifyEANFT = await verifyContract("EANFT");
     console.log(`Verify EANFT result: ${verifyEANFT}`);
 
-    // const verifyRNNFT = await verifyContract("RNNFT", [`'${deployedContracts["USDC"]}'`]);
-    // console.log(`Verify RNNFT result: ${verifyRNNFT}`);
+    const verifyRNNFT = await verifyContract("RNNFT", [`'0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174'`]);
+    console.log(`Verify RNNFT result: ${verifyRNNFT}`);
 
-    // const verifyHumaConfig = await verifyContract("HumaConfig");
-    // console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
+    const verifyHumaConfig = await verifyContract("HumaConfig");
+    console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
 
-    // const verifyHumaConfigTL = await verifyContract("HumaConfigTimelock", [
-    //     0,
-    //     `['${HUMA_OWNER_MULTI_SIG}']`,
-    //     `['${deployer.address}']`,
-    // ]);
-    // console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+    const verifyHumaConfigTL = await verifyContract("HumaConfigTimelock", [
+        0,
+        `['${HUMA_OWNER_MULTI_SIG}']`,
+        `['${deployer.address}']`,
+    ]);
+    console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
-    // const verifyReceivableFactoringPoolTL = await verifyContract(
-    //     "ReceivableFactoringPoolTimelock",
-    //     [0, `['${POOL_OWNER_MULTI_SIG}']`, `['${deployer.address}']`]
-    // );
-    // console.log(
-    //     `Verify ReceivableFactoringPoolTimelock result: ${verifyReceivableFactoringPoolTL}`
-    // );
+    const verifyReceivableFactoringPoolTL = await verifyContract(
+        "ReceivableFactoringPoolTimelock",
+        [0, `['${POOL_OWNER_MULTI_SIG}']`, `['${deployer.address}']`]
+    );
+    console.log(
+        `Verify ReceivableFactoringPoolTimelock result: ${verifyReceivableFactoringPoolTL}`
+    );
 
-    // const verifyrRceivableFactoringPoolProxyAdminTL = await verifyContract(
-    //     "ReceivableFactoringPoolProxyAdminTimelock",
-    //     [0, `['${POOL_OWNER_MULTI_SIG}']`, `['${deployer.address}']`]
-    // );
-    // console.log(
-    //     `Verify ReceivableFactoringPoolProxyAdminTimelock result: ${verifyrRceivableFactoringPoolProxyAdminTL}`
-    // );
+    const verifyrRceivableFactoringPoolProxyAdminTL = await verifyContract(
+        "ReceivableFactoringPoolProxyAdminTimelock",
+        [0, `['${POOL_OWNER_MULTI_SIG}']`, `['${deployer.address}']`]
+    );
+    console.log(
+        `Verify ReceivableFactoringPoolProxyAdminTimelock result: ${verifyrRceivableFactoringPoolProxyAdminTL}`
+    );
 
-    // const verifyFeeManager = await verifyContract("ReceivableFactoringPoolFeeManager");
-    // console.log(`Verify FeeManager result: ${verifyFeeManager}`);
+    const verifyFeeManager = await verifyContract("ReceivableFactoringPoolFeeManager");
+    console.log(`Verify FeeManager result: ${verifyFeeManager}`);
 
-    // const verifyHDTImpl = await verifyContract("HDTImpl");
-    // console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
+    const verifyHDTImpl = await verifyContract("HDTImpl");
+    console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
 
-    // const verifyHDT = await verifyContract("HDT", [
-    //     `'${deployedContracts["HDTImpl"]}'`,
-    //     `'${deployedContracts["ReceivableFactoringPoolProxyAdminTimelock"]}'`,
-    //     "[]",
-    // ]);
-    // console.log(`Verify HDT result: ${verifyHDT}`);
+    const verifyHDT = await verifyContract("HDT", [
+        `'${deployedContracts["HDTImpl"]}'`,
+        `'${deployedContracts["ReceivableFactoringPoolProxyAdminTimelock"]}'`,
+        "[]",
+    ]);
+    console.log(`Verify HDT result: ${verifyHDT}`);
 
-    // const verifyPoolConfig = await verifyContract("ReceivableFactoringPoolConfig");
-    // console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
+    const verifyPoolConfig = await verifyContract("ReceivableFactoringPoolConfig");
+    console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
 
-    // const verifyPoolImpl = await verifyContract("ReceivableFactoringPoolImpl");
-    // console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
+    const verifyPoolImpl = await verifyContract("ReceivableFactoringPoolImpl");
+    console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
 
-    // const verifyPool = await verifyContract("ReceivableFactoringPool", [
-    //     `'${deployedContracts["ReceivableFactoringPoolImpl"]}'`,
-    //     `'${deployedContracts["ReceivableFactoringPoolProxyAdminTimelock"]}'`,
-    //     "[]",
-    // ]);
-    // console.log(`Verify Pool result: ${verifyPool}`);
+    const verifyPool = await verifyContract("ReceivableFactoringPool", [
+        `'${deployedContracts["ReceivableFactoringPoolImpl"]}'`,
+        `'${deployedContracts["ReceivableFactoringPoolProxyAdminTimelock"]}'`,
+        "[]",
+    ]);
+    console.log(`Verify Pool result: ${verifyPool}`);
 }
 
 verifyContracts()
