@@ -202,11 +202,7 @@ module.exports = {
         },
         polygon: {
             url: polygonUrl,
-            accounts: [
-                deployer,
-                eaService,
-                pdsService,
-            ],
+            accounts: [deployer, eaService, pdsService],
         },
         mumbai: {
             url: mumbaiUrl,
@@ -223,11 +219,8 @@ module.exports = {
             ],
         },
         matic: {
-            url: "https://rpc-mainnet.maticvigil.com/",
-            gasPrice: 1000000000,
-            accounts: {
-                mnemonic: mnemonic(),
-            },
+            url: polygonUrl,
+            accounts: [deployer, eaService, pdsService],
         },
         optimism: {
             url: "https://mainnet.optimism.io",
@@ -365,7 +358,10 @@ module.exports = {
     },
 
     etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY || null,
+        apiKey: {
+            goerli: process.env.ETHERSCAN_API_KEY || null,
+            polygon: process.env.POLYGONSCAN_API_KEY || null,
+        },
     },
     contractSizer: {
         alphaSort: true,
