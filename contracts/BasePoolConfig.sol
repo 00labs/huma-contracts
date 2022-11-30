@@ -184,7 +184,10 @@ contract BasePoolConfig is Ownable, Initializable {
     }
 
     /**
-     * @notice Adds a operator, who can add or remove approved lenders.
+     * @notice Adds a pool operator, who can perform operational tasks for the pool, such as
+     * add or remove approved lenders, and disable the pool in eurgent situations. All signers
+     * in the pool owner multisig are expected to be pool operators.
+     * owner is expected to be a when observed abnominity.
      * @param _operator Address to be added to the operator list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
      * @dev If the address is already an operator, revert w/ "alreadyAnOperator"
