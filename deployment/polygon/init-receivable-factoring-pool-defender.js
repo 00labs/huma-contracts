@@ -131,8 +131,8 @@ async function initHDT() {
     }
 
     await sendTransaction("HDT", hdt, "initialize", [
-        "Base HDT",
-        "BHDT",
+        "Receivable HDT",
+        "RHDT",
         USDC_ADDRESS,
     ]);
 

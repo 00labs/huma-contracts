@@ -9,4 +9,8 @@
 "HDT":"Done",
 "ReceivableFactoringPoolConfig":"Done",
 "ReceivableFactoringPoolImpl":"Done",
-"ReceivableFactoringPool":"Done"}
+"ReceivableFactoringPool":"Done",
+"BaseCreditPoolImpl":"Done",
+"BaseCreditPool":"Done",
+"BaseCreditHDTImpl":"Done",
+"BaseCreditHDT":"Done"}
