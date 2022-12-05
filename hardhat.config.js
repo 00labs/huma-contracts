@@ -31,6 +31,10 @@ let polygonUrl = process.env["POLYGON_URL"];
 if (!polygonUrl) {
     polygonUrl = EMPTY_URL;
 }
+let mainnetUrl = process.env["MAINNET_URL"];
+if (!mainnetUrl) {
+    mainnetUrl = EMPTY_URL;
+}
 let deployer = process.env["DEPLOYER"];
 if (!deployer) {
     deployer = EMPTY_PRIVATE_KEY;
@@ -147,12 +151,8 @@ module.exports = {
             },
         },
         mainnet: {
-            url: "https://mainnet.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
-            //      url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXXXX/eth/mainnet", // <---- YOUR MORALIS ID! (not limited to infura)
-            gasPrice: mainnetGwei * 1000000000,
-            accounts: {
-                mnemonic: mnemonic(),
-            },
+            url: mainnetUrl,
+            accounts: [deployer, eaService, pdsService],
         },
         ropsten: {
             url: "https://ropsten.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
