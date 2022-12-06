@@ -11,9 +11,10 @@ let deployer, deployedContracts, lender, ea, eaService;
 let pdsService, treasury, ea_bcp, bcpOperator, rfpOperator;
 let bcpOwnerTreasury, rfpOwnerTreasury;
 
-const HUMA_OWNER_MULTI_SIG = "0x7E13931931d59f2199fE0b499534412FCD28b7Ed";
-const POOL_OWNER_MULTI_SIG = "0xD252073bF424bb13B474004bf9F52195d54aEDb6";
-const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+const HUMA_OWNER_MULTI_SIG = "0x1eCD14504885ADfF674842F6b805e202c7C05B75";
+const POOL_OWNER_MULTI_SIG = "0x608c2DEA3C90849b0182DBD0F1008240881f3C90";
+const POOL_OWNER_TREASURY = "0x999d64075f5d194e163D62035abbaA3E8BF2c7C6";
+const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const EA_ADDRESS = '0xdB59787549cA50faF9Bd2679856B668eDDBf0A44';
 
 async function renounceTLAdminRole(timeLockKey, account) {
@@ -265,7 +266,7 @@ async function initBaseCreditPoolConfig() {
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", ['0x60758B3A6933192D0Ac28Fc1f675364bb4dFAb1d']); // Shan
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [deployer.address]);
 
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolOwnerTreasury", ['0x062E4fa7b23518B24B6D18F8FAf06dA455D768E2']);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolOwnerTreasury", [POOL_OWNER_TREASURY]);
 
     await transferOwnershipToTL("BasePoolConfig", "BaseCreditPoolConfig", "BaseCreditPoolTimelock");
 
@@ -312,7 +313,7 @@ async function prepareBaseCreditPool() {
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
     const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"])
 
-    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", ["0x062E4fa7b23518B24B6D18F8FAf06dA455D768E2"]);
+    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [POOL_OWNER_TREASURY]);
     await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [EA_ADDRESS]);
 }
 
