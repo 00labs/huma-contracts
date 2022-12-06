@@ -16,6 +16,20 @@ const POOL_OWNER_MULTI_SIG = "0xD252073bF424bb13B474004bf9F52195d54aEDb6";
 const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
 const EA_ADDRESS = '0xdB59787549cA50faF9Bd2679856B668eDDBf0A44';
 
+async function renounceTLAdminRole(timeLockKey, account) {
+    if (!deployedContracts[timeLockKey]) {
+        throw new Error(`${timeLockKey} not deployed yet!`);
+    }
+    const TimeLockController = await hre.ethers.getContractFactory("TimelockController");
+    const timeLockController = TimeLockController.attach(deployedContracts[timeLockKey]);
+    
+    const adminRole = await timeLockController.TIMELOCK_ADMIN_ROLE();
+    await sendTransaction("TimelockController", timeLockController, "renounceRole", [
+        adminRole,
+        account,
+    ]);
+}
+
 async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
     if (!deployedContracts[timeLockKey]) {
         throw new Error(`${timeLockKey} not deployed yet!`);
@@ -33,11 +47,7 @@ async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
 
     await sendTransaction(contractKey, contract, "transferOwnership", [timeLockController.address]);
 
-    const adminRole = await timeLockController.TIMELOCK_ADMIN_ROLE();
-    await sendTransaction(contractKey, timeLockController, "renounceRole", [
-        adminRole,
-        deployer.address,
-    ]);
+    await renounceTLAdminRole(timeLockKey, deployer.address);
 }
 
 async function initHumaConfig() {
@@ -304,54 +314,57 @@ async function initPool() {
         deployedContracts["ReceivableFactoringPoolConfig"],
     ]);
 
+    await renounceTLAdminRole("ReceivableFactoringPoolProxyAdminTimelock", deployer.address);
+
     await updateInitilizedContract("ReceivableFactoringPool");
 }
 
 async function prepare() {
-    if (!deployedContracts["ReceivableFactoringPool"]) {
-        throw new Error("ReceivableFactoringPool not deployed yet!");
-    }
-    if (!deployedContracts["USDC"]) {
-        throw new Error("USDC not deployed yet!");
-    }
+    await renounceTLAdminRole("ReceivableFactoringPoolProxyAdminTimelock", deployer.address);
+    // if (!deployedContracts["ReceivableFactoringPool"]) {
+    //     throw new Error("ReceivableFactoringPool not deployed yet!");
+    // }
+    // if (!deployedContracts["USDC"]) {
+    //     throw new Error("USDC not deployed yet!");
+    // }
 
-    const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
-    const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"])
-    const poolFromrfpOperator = pool.connect(rfpOperator);
+    // const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
+    // const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"])
+    // const poolFromrfpOperator = pool.connect(rfpOperator);
 
-    await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [
-        deployer.address,
-    ]);
-    await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [ea.address]);
-    await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [lender.address]);
-    await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [rfpOwnerTreasury.address]);
+    // await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [
+    //     deployer.address,
+    // ]);
+    // await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [ea.address]);
+    // await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [lender.address]);
+    // await sendTransaction("ReceivableFactoringPool", poolFromrfpOperator, "addApprovedLender", [rfpOwnerTreasury.address]);
 
-    const USDC = await hre.ethers.getContractFactory("TestToken");
-    const usdc = USDC.attach(deployedContracts["USDC"]);
-    const decimals = await usdc.decimals();
+    // const USDC = await hre.ethers.getContractFactory("TestToken");
+    // const usdc = USDC.attach(deployedContracts["USDC"]);
+    // const decimals = await usdc.decimals();
 
-    // Owner
-    const usdcFromPoolOwnerTreasury = await usdc.connect(rfpOwnerTreasury);
-    const poolFromPoolOwnerTreasury = await pool.connect(rfpOwnerTreasury);
-    const amountOwner = BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)));
-    console.log("owner to deposit: " + amountOwner);
-    await sendTransaction("TestToken", usdc, "mint", [rfpOwnerTreasury.address, amountOwner]);
-    await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [pool.address, amountOwner]);
-    await sendTransaction("ReceivableFactoringPool", poolFromPoolOwnerTreasury, "makeInitialDeposit", [amountOwner]);
+    // // Owner
+    // const usdcFromPoolOwnerTreasury = await usdc.connect(rfpOwnerTreasury);
+    // const poolFromPoolOwnerTreasury = await pool.connect(rfpOwnerTreasury);
+    // const amountOwner = BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)));
+    // console.log("owner to deposit: " + amountOwner);
+    // await sendTransaction("TestToken", usdc, "mint", [rfpOwnerTreasury.address, amountOwner]);
+    // await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [pool.address, amountOwner]);
+    // await sendTransaction("ReceivableFactoringPool", poolFromPoolOwnerTreasury, "makeInitialDeposit", [amountOwner]);
 
-    // EA
-    const usdcFromEA = await usdc.connect(ea);
-    const poolFromEA = await pool.connect(ea);
-    const amountEA = BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)));
-    await sendTransaction("TestToken", usdc, "mint", [ea.address, amountEA]);
-    await sendTransaction("TestToken", usdcFromEA, "approve", [pool.address, amountEA]);
-    await sendTransaction("ReceivableFactoringPool", poolFromEA, "makeInitialDeposit", [amountEA]);
+    // // EA
+    // const usdcFromEA = await usdc.connect(ea);
+    // const poolFromEA = await pool.connect(ea);
+    // const amountEA = BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)));
+    // await sendTransaction("TestToken", usdc, "mint", [ea.address, amountEA]);
+    // await sendTransaction("TestToken", usdcFromEA, "approve", [pool.address, amountEA]);
+    // await sendTransaction("ReceivableFactoringPool", poolFromEA, "makeInitialDeposit", [amountEA]);
 
-    // await sendTransaction("ReceivableFactoringPool", pool, "enablePool", []);
+    // // await sendTransaction("ReceivableFactoringPool", pool, "enablePool", []);
 
-    //invoicePayer
-    const amountInvoicePayer = BN.from(10_000_000_000).mul(BN.from(10).pow(BN.from(decimals)));
-    await sendTransaction("TestToken", usdc, "mint", [invoicePayer.address, amountInvoicePayer]);
+    // //invoicePayer
+    // const amountInvoicePayer = BN.from(10_000_000_000).mul(BN.from(10).pow(BN.from(decimals)));
+    // await sendTransaction("TestToken", usdc, "mint", [invoicePayer.address, amountInvoicePayer]);
 }
 
 async function initContracts() {
@@ -367,14 +380,14 @@ async function initContracts() {
 
     deployedContracts = await getDeployedContracts();
 
-    await initHumaConfig();
-    await initFeeManager();
-    await initHDT();
-    // await initEA();
-    await initPoolConfig();
-    await initPool();
+    // await initHumaConfig();
+    // await initFeeManager();
+    // await initHDT();
+    // // await initEA();
+    // await initPoolConfig();
+    // await initPool();
 
-    // await prepare();
+    await prepare();
 }
 
 initContracts()
