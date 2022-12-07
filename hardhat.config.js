@@ -152,7 +152,7 @@ module.exports = {
         },
         mainnet: {
             url: mainnetUrl,
-            accounts: [deployer, eaService, pdsService],
+            accounts: [deployer, eaService],
         },
         ropsten: {
             url: "https://ropsten.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
@@ -202,7 +202,7 @@ module.exports = {
         },
         polygon: {
             url: polygonUrl,
-            accounts: [deployer, eaService, pdsService],
+            accounts: [deployer, eaService],
         },
         mumbai: {
             url: mumbaiUrl,
@@ -361,6 +361,7 @@ module.exports = {
         apiKey: {
             goerli: process.env.ETHERSCAN_API_KEY || null,
             polygon: process.env.POLYGONSCAN_API_KEY || null,
+            mainnet: process.env.ETHERSCAN_API_KEY || null,
         },
     },
     contractSizer: {

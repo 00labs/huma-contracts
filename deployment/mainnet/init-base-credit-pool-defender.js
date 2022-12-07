@@ -15,7 +15,7 @@ const HUMA_OWNER_MULTI_SIG = "0x1eCD14504885ADfF674842F6b805e202c7C05B75";
 const POOL_OWNER_MULTI_SIG = "0x608c2DEA3C90849b0182DBD0F1008240881f3C90";
 const POOL_OWNER_TREASURY = "0x999d64075f5d194e163D62035abbaA3E8BF2c7C6";
 const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-const EA_ADDRESS = '0xdB59787549cA50faF9Bd2679856B668eDDBf0A44';
+const EA_ADDRESS = "0xdB59787549cA50faF9Bd2679856B668eDDBf0A44";
 
 async function renounceTLAdminRole(timeLockKey, account) {
     if (!deployedContracts[timeLockKey]) {
@@ -23,14 +23,13 @@ async function renounceTLAdminRole(timeLockKey, account) {
     }
     const TimeLockController = await hre.ethers.getContractFactory("TimelockController");
     const timeLockController = TimeLockController.attach(deployedContracts[timeLockKey]);
-    
+
     const adminRole = await timeLockController.TIMELOCK_ADMIN_ROLE();
     await sendTransaction("TimelockController", timeLockController, "renounceRole", [
         adminRole,
         account,
     ]);
 }
-
 
 async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
     if (!deployedContracts[timeLockKey]) {
@@ -47,7 +46,9 @@ async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
     const Contract = await hre.ethers.getContractFactory(contractName);
     const contract = Contract.attach(deployedContracts[contractKey]);
 
-    await sendTransaction(contractKey, contract, "transferOwnership", [timeLockController.address]);
+    await sendTransaction(contractKey, contract, "transferOwnership", [
+        timeLockController.address,
+    ]);
 
     await renounceTLAdminRole(timeLockKey, deployer.address);
 }
@@ -79,18 +80,17 @@ async function initHumaConfig() {
     ]);
 
     await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [eaService.address]);
-    await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [pdsService.address]);
-
-    const USDC = await hre.ethers.getContractFactory("TestToken");
-    const usdc = USDC.attach(deployedContracts["USDC"]);
+    await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [
+        "0x5C7284BD9a0df4cDEF323D180273244dc77e69f2",
+    ]);
 
     // Add usdc as an asset supported by the protocol
-    await sendTransaction("HumaConfig", humaConfig, "setLiquidityAsset", [usdc.address, true]);
+    await sendTransaction("HumaConfig", humaConfig, "setLiquidityAsset", [USDC_ADDRESS, true]);
 
     // Set treasury for the protocol
-    await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasury.address]);
+    await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [HUMA_OWNER_MULTI_SIG]);
 
-    await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock")
+    //await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock");
 
     await updateInitilizedContract("HumaConfig");
 }
@@ -109,10 +109,15 @@ async function initEA() {
     const EANFT = await hre.ethers.getContractFactory("EvaluationAgentNFT");
     const eaNFT = EANFT.attach(deployedContracts["EANFT"]);
 
-    const eaNFTFromEA = eaNFT.connect(ea);
-    await sendTransaction("EvaluationAgentNFT", eaNFTFromEA, "mintNFT", [ea.address]);
-    const eaNFTFromEA_bcp = eaNFT.connect(ea);
-    await sendTransaction("EvaluationAgentNFT", eaNFTFromEA_bcp, "mintNFT", [ea_bcp.address]);
+    //const eaNFTFromEA = eaNFT.connect(ea);
+    await sendTransaction("EvaluationAgentNFT", eaNFT, "mintNFT", [
+        "0xdB59787549cA50faF9Bd2679856B668eDDBf0A44",
+    ]);
+    await sendTransaction("EvaluationAgentNFT", eaNFT, "mintNFT", [
+        "0xdB59787549cA50faF9Bd2679856B668eDDBf0A44",
+    ]);
+    //const eaNFTFromEA_bcp = eaNFT.connect(ea);
+    //await sendTransaction("EvaluationAgentNFT", eaNFTFromEA_bcp, "mintNFT", [ea_bcp.address]);
     await updateInitilizedContract("EANFT");
 }
 
@@ -137,8 +142,12 @@ async function initBaseCreditPoolFeeManager() {
         [0, 0, 20_000_000, 0, 0]
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
-    
-    await transferOwnershipToTL("BaseFeeManager", "BaseCreditPoolFeeManager", "BaseCreditPoolTimelock");
+
+    // await transferOwnershipToTL(
+    //     "BaseFeeManager",
+    //     "BaseCreditPoolFeeManager",
+    //     "BaseCreditPoolTimelock"
+    // );
 
     await updateInitilizedContract("BaseCreditPoolFeeManager");
 }
@@ -161,15 +170,11 @@ async function initBaseCreditPoolHDT() {
         throw new Error("BaseCreditPool not deployed yet!");
     }
 
-    await sendTransaction("HDT", hdt, "initialize", [
-        "Credit line HDT",
-        "BHDT",
-        USDC_ADDRESS,
-    ]);
+    await sendTransaction("HDT", hdt, "initialize", ["Credit line HDT", "CLHDT", USDC_ADDRESS]);
 
     await sendTransaction("HDT", hdt, "setPool", [deployedContracts["BaseCreditPool"]]);
-    
-    await transferOwnershipToTL("HDT", "BaseCreditHDT", "BaseCreditPoolTimelock");
+
+    //await transferOwnershipToTL("HDT", "BaseCreditHDT", "BaseCreditPoolTimelock");
 
     await updateInitilizedContract("BaseCreditHDT");
 }
@@ -247,28 +252,52 @@ async function initBaseCreditPoolConfig() {
         "setEARewardsAndLiquidity",
         [500, 200]
     );
-    const maxCL = BN.from(2_000).mul(BN.from(10).pow(BN.from(decimals)));
+    const maxCL = BN.from(1_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("maxCL: " + maxCL);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setMaxCreditLine", [maxCL]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setAPR", [1000]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setReceivableRequiredInBps", [0]);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolPayPeriod", [15]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolPayPeriod", [30]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolToken", [
         deployedContracts["BaseCreditHDT"],
     ]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [90]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
 
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", ['0x76C89c2d8cDB9299EE32673026faB8a2A177dCa4']); // Richard-pool
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", ['0x1BACF76592Be393610cA422D7DDED282330CaED8']); // Erbil-pool
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", ['0xEC5c04192A251f6ffD42a48ad3Ee8250F7757D08']); // Ji-pool
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", ['0x5870C74d8644DAE4Fe2a393e496B1671a5CC7481']); // Bin
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", ['0x60758B3A6933192D0Ac28Fc1f675364bb4dFAb1d']); // Shan
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [deployer.address]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [
+        "0x76C89c2d8cDB9299EE32673026faB8a2A177dCa4",
+    ]); // Richard-pool
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [
+        "0x1BACF76592Be393610cA422D7DDED282330CaED8",
+    ]); // Erbil-pool
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [
+        "0xEC5c04192A251f6ffD42a48ad3Ee8250F7757D08",
+    ]); // Ji-pool
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [
+        "0x5870C74d8644DAE4Fe2a393e496B1671a5CC7481",
+    ]); // Bin
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [
+        "0x60758B3A6933192D0Ac28Fc1f675364bb4dFAb1d",
+    ]); // Shan
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [
+        "0xE5834DF0cA8F1BbCECFb4E9455eCc5f5E0Dfe8bD",
+    ]); // Lei
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [
+        "0x54035aa4a295bf909485fcA4B170b53eAe21E560",
+    ]); // Michael
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [
+        deployer.address,
+    ]);
 
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolOwnerTreasury", [POOL_OWNER_TREASURY]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolOwnerTreasury", [
+        POOL_OWNER_TREASURY,
+    ]);
 
-    await transferOwnershipToTL("BasePoolConfig", "BaseCreditPoolConfig", "BaseCreditPoolTimelock");
+    // await transferOwnershipToTL(
+    //     "BasePoolConfig",
+    //     "BaseCreditPoolConfig",
+    //     "BaseCreditPoolTimelock"
+    // );
 
     await updateInitilizedContract("BaseCreditPoolConfig");
 }
@@ -311,10 +340,20 @@ async function prepareBaseCreditPool() {
     }
 
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
-    const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"])
+    const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]);
 
     await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [POOL_OWNER_TREASURY]);
     await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [EA_ADDRESS]);
+
+    if (!deployedContracts["BaseCreditPoolConfig"]) {
+        throw new Error("BaseCreditPoolConfig not deployed yet!");
+    }
+
+    const BaseCreditPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
+    const poolConfig = BaseCreditPoolConfig.attach(deployedContracts["BaseCreditPoolConfig"]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "removePoolOperator", [
+        deployer.address,
+    ]);
 }
 
 async function initContracts() {
@@ -322,22 +361,20 @@ async function initContracts() {
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
     let invoicePayer;
-    [
-        deployer, eaService, pdsService,
-    ] = await accounts;
+    [deployer, eaService, pdsService] = await accounts;
     console.log("deployer address: " + deployer.address);
-    
+
     deployedContracts = await getDeployedContracts();
-    
-    // await initHumaConfig();
-    // // await initEA();
-    // await initBaseCreditPoolFeeManager();
-    // await initBaseCreditPoolHDT();
-    // await initBaseCreditPoolConfig();
-    // await initBaseCreditPool();
+
+    await initHumaConfig();
+    await initEA();
+
+    await initBaseCreditPoolFeeManager();
+    await initBaseCreditPoolHDT();
+    await initBaseCreditPoolConfig();
+    await initBaseCreditPool();
 
     await prepareBaseCreditPool();
-    
 }
 
 initContracts()

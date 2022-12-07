@@ -33,11 +33,11 @@ async function deployContracts() {
         [deployer.address],
     ]);
 
-    const baseCreditPoolProxyAdminTL = await deploy("TimelockController", "BaseCreditPoolProxyAdminTimelock", [
-        0,
-        [POOL_OWNER_MULTI_SIG],
-        [deployer.address],
-    ]);
+    const baseCreditPoolProxyAdminTL = await deploy(
+        "TimelockController",
+        "BaseCreditPoolProxyAdminTimelock",
+        [0, [POOL_OWNER_MULTI_SIG], [deployer.address]]
+    );
 
     const bc_feeManager = await deploy("BaseFeeManager", "BaseCreditPoolFeeManager");
     const bc_hdtImpl = await deploy("HDT", "BaseCreditHDTImpl");
@@ -55,7 +55,6 @@ async function deployContracts() {
         [],
     ]);
     // End of deploying base credit pool
-
 }
 
 deployContracts()
