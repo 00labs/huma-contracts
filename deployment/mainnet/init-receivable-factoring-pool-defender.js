@@ -337,24 +337,24 @@ async function cleanupReceivablePool() {
         "ReceivableFactoringPoolConfig",
     ]);
 
-    const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
-    const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
+    // const ReceivableFactoringPool = await hre.ethers.getContractFactory("ReceivableFactoringPool");
+    // const pool = ReceivableFactoringPool.attach(deployedContracts["ReceivableFactoringPool"]);
 
-    await sendTransaction("ReceivableFactoringPool", pool, "enablePool", []);
+    // await sendTransaction("ReceivableFactoringPool", pool, "enablePool", []);
 
-    // await transferOwnershipToTL(
-    //     "BaseFeeManager",
-    //     "ReceivableFactoringPoolFeeManager",
-    //     "ReceivableFactoringPoolTimelock"
-    // );
+    await transferOwnershipToTL(
+        "BaseFeeManager",
+        "ReceivableFactoringPoolFeeManager",
+        "ReceivableFactoringPoolTimelock"
+    );
 
-    // await transferOwnershipToTL("HDT", "HDT", "ReceivableFactoringPoolTimelock");
+    await transferOwnershipToTL("HDT", "HDT", "ReceivableFactoringPoolTimelock");
 
-    // await transferOwnershipToTL(
-    //     "BasePoolConfig",
-    //     "ReceivableFactoringPoolConfig",
-    //     "ReceivableFactoringPoolTimelock"
-    // );
+    await transferOwnershipToTL(
+        "BasePoolConfig",
+        "ReceivableFactoringPoolConfig",
+        "ReceivableFactoringPoolTimelock"
+    );
 }
 
 async function initContracts() {
