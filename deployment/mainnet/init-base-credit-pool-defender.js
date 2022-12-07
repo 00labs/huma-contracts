@@ -1,5 +1,5 @@
 const {BigNumber: BN} = require("ethers");
-const { check } = require("prettier");
+const {check} = require("prettier");
 const {
     getInitilizedContract,
     updateInitilizedContract,
@@ -19,7 +19,9 @@ const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 const EA_ADDRESS = "0xdB59787549cA50faF9Bd2679856B668eDDBf0A44";
 
 async function checkContractsDeployed(contractKeys) {
-    for (contract in contractKeys) {
+    console.log(contractKeys);
+    for (contract of contractKeys) {
+        console.log(contract);
         checkContractDeployed(contract);
     }
 }
@@ -106,12 +108,8 @@ async function initEA() {
     const eaNFT = EANFT.attach(deployedContracts["EANFT"]);
 
     //const eaNFTFromEA = eaNFT.connect(ea);
-    await sendTransaction("EvaluationAgentNFT", eaNFT, "mintNFT", [
-        EA_ADDRESS,
-    ]);
-    await sendTransaction("EvaluationAgentNFT", eaNFT, "mintNFT", [
-        EA_ADDRESS,
-    ]);
+    await sendTransaction("EvaluationAgentNFT", eaNFT, "mintNFT", [EA_ADDRESS]);
+    await sendTransaction("EvaluationAgentNFT", eaNFT, "mintNFT", [EA_ADDRESS]);
 
     await updateInitilizedContract("EANFT");
 }
@@ -133,7 +131,7 @@ async function initBaseCreditPoolFeeManager() {
         "setFees",
         [0, 0, 20_000_000, 0, 0]
     );
-    await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
+    await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [500]);
 
     await updateInitilizedContract("BaseCreditPoolFeeManager");
 }
@@ -144,7 +142,7 @@ async function initBaseCreditPoolHDT() {
         console.log("BaseCreditHDT is already initialized!");
         return;
     }
-    checkContractsDeployed(["BaseCreditHDT", "BaseCreditPool"]);    
+    checkContractsDeployed(["BaseCreditHDT", "BaseCreditPool"]);
 
     const HDT = await hre.ethers.getContractFactory("HDT");
     const hdt = HDT.attach(deployedContracts["BaseCreditHDT"]);
@@ -163,8 +161,13 @@ async function initBaseCreditPoolConfig() {
         return;
     }
 
-    checkContractsDeployed(["BaseCreditPoolConfig", "BaseCreditPool", "BaseCreditHDT",
-                            "HumaConfig", "BaseCreditPoolFeeManager"]);    
+    checkContractsDeployed([
+        "BaseCreditPoolConfig",
+        "BaseCreditPool",
+        "BaseCreditHDT",
+        "HumaConfig",
+        "BaseCreditPoolFeeManager",
+    ]);
 
     const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
     const poolConfig = ReceivableFactoringPoolConfig.attach(
@@ -263,7 +266,7 @@ async function initBaseCreditPool() {
         return;
     }
 
-    checkContractsDeployed(["BaseCreditPool", "BaseCreditPoolConfig", "BaseCreditPoolTimelock"])
+    checkContractsDeployed(["BaseCreditPool", "BaseCreditPoolConfig", "BaseCreditPoolTimelock"]);
 
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("BaseCreditPool");
     const pool = ReceivableFactoringPool.attach(deployedContracts["BaseCreditPool"]);
@@ -279,7 +282,7 @@ async function initBaseCreditPool() {
 
 async function prepareBaseCreditPool() {
     // The operations commented off need to run with TL on Defender
-    checkContractsDeployed(["BaseCreditPool", "BaseCreditPoolConfig"])
+    checkContractsDeployed(["BaseCreditPool", "BaseCreditPoolConfig"]);
 
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
     const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]);
@@ -289,32 +292,23 @@ async function prepareBaseCreditPool() {
 
     const BaseCreditPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
     const poolConfig = BaseCreditPoolConfig.attach(deployedContracts["BaseCreditPoolConfig"]);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "removePoolOperator", [
-        deployer.address,
-    ]);
+    await sendTransaction("BasePoolConfig", poolConfig, "removePoolOperator", [deployer.address]);
 }
 
-
 async function cleanupBaseCreditPool() {
-    checkContractDeployed("BaseCreditPoolFeeManager");
-
-    const BaseFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
-    const feeManager = BaseFeeManager.attach(deployedContracts["BaseCreditPoolFeeManager"]);
-
-    await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
-
     // enable pool after initial deposits and transfer ownerships to TLs
-    checkContractsDeployed(
-        [
-        "HumaConfig", "HumaConfigTimelock",
-        "BaseCreditPoolFeeManager", "BaseCreditPoolTimelock",
-        "BaseCreditHDT", "BaseCreditPoolTimelock",
-        "BaseCreditPoolConfig", "BaseCreditPoolTimelock",
-    ])
-    
+    checkContractsDeployed([
+        "HumaConfig",
+        "HumaConfigTimelock",
+        "BaseCreditPoolFeeManager",
+        "BaseCreditPoolTimelock",
+        "BaseCreditHDT",
+        "BaseCreditPoolConfig",
+    ]);
+
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
     const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]);
-    await sendTransaction("BaseCreditPool", pool, "enablePool", []);
+    // await sendTransaction("BaseCreditPool", pool, "enablePool", []);
 
     await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock");
 
@@ -335,25 +329,22 @@ async function cleanupBaseCreditPool() {
 
 async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
-    console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
     let invoicePayer;
     [deployer, eaService, pdsService] = await accounts;
-    console.log("deployer address: " + deployer.address);
 
     deployedContracts = await getDeployedContracts();
 
-    await initHumaConfig();
-    await initEA();
+    // await initHumaConfig();
+    // await initEA();
 
-    await initBaseCreditPoolFeeManager();
-    await initBaseCreditPoolHDT();
-    await initBaseCreditPoolConfig();
-    await initBaseCreditPool();
+    // await initBaseCreditPoolFeeManager();
+    // await initBaseCreditPoolHDT();
+    // await initBaseCreditPoolConfig();
+    // await initBaseCreditPool();
 
-    await prepareBaseCreditPool();
+    // await prepareBaseCreditPool();
     // make initial deposits from EA and pool owner treasury on Defender
-    // enable pool on Defender
     await cleanupBaseCreditPool();
 }
 
