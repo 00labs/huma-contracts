@@ -1,6 +1,16 @@
 [
   {
     "inputs": [],
+    "name": "alreadyAnOperator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "evaluationAgentNotEnoughLiquidity",
     "type": "error"
   },
@@ -11,7 +21,7 @@
   },
   {
     "inputs": [],
-    "name": "notEvaluationAgent",
+    "name": "notOperator",
     "type": "error"
   },
   {
@@ -22,6 +32,21 @@
   {
     "inputs": [],
     "name": "notPoolOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPoolOwnerOrEA",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPoolOwnerTreasury",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notPoolOwnerTreasuryOrEA",
     "type": "error"
   },
   {
@@ -313,6 +338,19 @@
     "inputs": [
       {
         "indexed": false,
+        "internalType": "uint8",
+        "name": "version",
+        "type": "uint8"
+      }
+    ],
+    "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
         "internalType": "uint256",
         "name": "maxCreditLine",
         "type": "uint256"
@@ -426,6 +464,44 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "PoolOperatorAdded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "PoolOperatorRemoved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "uint256",
         "name": "rewardsRate",
@@ -445,6 +521,25 @@
       }
     ],
     "name": "PoolOwnerRewardsAndLiquidityChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "treasury",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "by",
+        "type": "address"
+      }
+    ],
+    "name": "PoolOwnerTreasuryChanged",
     "type": "event"
   },
   {
@@ -480,12 +575,6 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
       }
     ],
     "name": "PoolRewardsWithdrawn",
@@ -593,6 +682,19 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_operator",
+        "type": "address"
+      }
+    ],
+    "name": "addPoolOperator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "checkLiquidityRequirement",
     "outputs": [],
@@ -621,6 +723,24 @@
       }
     ],
     "name": "checkLiquidityRequirementForPoolOwner",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "lender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "newBalance",
+        "type": "uint256"
+      }
+    ],
+    "name": "checkWithdrawLiquidityRequirement",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
@@ -831,7 +951,26 @@
         "type": "address"
       }
     ],
-    "name": "isOwnerOrEA",
+    "name": "isOperator",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "isPoolOwnerTreasuryOrEA",
     "outputs": [
       {
         "internalType": "bool",
@@ -863,7 +1002,7 @@
         "type": "address"
       }
     ],
-    "name": "onlyOwnerOrEA",
+    "name": "onlyOwnerOrHumaMasterAdmin",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
@@ -876,7 +1015,46 @@
         "type": "address"
       }
     ],
-    "name": "onlyOwnerOrHumaMasterAdmin",
+    "name": "onlyPoolOwner",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "onlyPoolOwnerOrEA",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "onlyPoolOwnerTreasury",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "onlyPoolOwnerTreasuryOrEA",
     "outputs": [],
     "stateMutability": "view",
     "type": "function"
@@ -974,6 +1152,19 @@
   },
   {
     "inputs": [],
+    "name": "poolOwnerTreasury",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "poolToken",
     "outputs": [
       {
@@ -996,6 +1187,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_operator",
+        "type": "address"
+      }
+    ],
+    "name": "removePoolOperator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1030,12 +1234,12 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "rewardRateInBpsForEA",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "liquidityRateInBpsByEA",
         "type": "uint256"
       }
     ],
@@ -1048,12 +1252,12 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "rewardRateInBpsForPoolOwner",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "liquidityRateInBpsByPoolOwner",
         "type": "uint256"
       }
     ],
@@ -1227,6 +1431,19 @@
       }
     ],
     "name": "setPoolOwnerRewardsAndLiquidity",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_poolOwnerTreasury",
+        "type": "address"
+      }
+    ],
+    "name": "setPoolOwnerTreasury",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

@@ -1,0 +1,24 @@
+name: gitleaks
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+    branches: ["main", "CertiK_audit"]
+
+  workflow_dispatch:
+
+jobs:
+  check-secret-leakage:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "1.19"
+      - name: get gitleaks
+        run: |
+          git clone https://github.com/zricethezav/gitleaks.git
+          cd gitleaks
+          make build
+      - name: Checking leaks
+        run: ./gitleaks/gitleaks detect

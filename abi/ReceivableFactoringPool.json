@@ -21,6 +21,11 @@
   },
   {
     "inputs": [],
+    "name": "creditLineNotInApprovedState",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "creditLineNotInGoodStandingState",
     "type": "error"
   },
@@ -86,12 +91,22 @@
   },
   {
     "inputs": [],
+    "name": "paymentIdNotUnderReview",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "permissionDeniedNotLender",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "poolIsNotOn",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "poolOperatorRequired",
     "type": "error"
   },
   {
@@ -132,6 +147,11 @@
   {
     "inputs": [],
     "name": "withdrawnAmountHigherThanBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "zeroAddressProvided",
     "type": "error"
   },
   {
@@ -530,6 +550,31 @@
       }
     ],
     "name": "LossesDistributed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "paymentIdHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "PaymentFlaggedForReview",
     "type": "event"
   },
   {
@@ -1146,6 +1191,25 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "paymentIdHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "isPaymentUnderReview",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "isPoolOn",
     "outputs": [
@@ -1300,6 +1364,24 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "paymentIdHash",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "bool",
+        "name": "approved",
+        "type": "bool"
+      }
+    ],
+    "name": "processPaymentAfterReview",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

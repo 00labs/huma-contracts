@@ -36,6 +36,10 @@ let eaServiceAccount;
 let pdsServiceAccount;
 let newNFTTokenId;
 let evaluationAgent2;
+let poolOperator;
+let lender2;
+let poolOwnerTreasury;
+let poolConfigContract2;
 
 describe("Base Pool - LP and Admin functions", function () {
     before(async function () {
@@ -51,6 +55,9 @@ describe("Base Pool - LP and Admin functions", function () {
             eaServiceAccount,
             pdsServiceAccount,
             evaluationAgent2,
+            poolOperator,
+            lender2,
+            poolOwnerTreasury,
         ] = await ethers.getSigners();
     });
 
@@ -75,17 +82,131 @@ describe("Base Pool - LP and Admin functions", function () {
             testTokenContract,
             0,
             eaNFTContract,
-            false
+            false,
+            poolOperator,
+            poolOwnerTreasury
         );
+    });
+
+    describe("Approve lenders", function () {
+        it("Non-operator shall not be able to approve lenders ", async function () {
+            await expect(
+                poolContract.connect(borrower).addApprovedLender(lender2.address)
+            ).to.be.revertedWith("poolOperatorRequired()");
+        });
+        it("Shall be able to approve lenders successfully ", async function () {
+            await expect(poolContract.connect(poolOperator).addApprovedLender(lender2.address))
+                .to.emit(poolContract, "AddApprovedLender")
+                .withArgs(lender2.address, poolOperator.address);
+            expect(
+                await poolContract.connect(poolOperator).isApprovedLender(lender2.address)
+            ).to.equal(true);
+        });
+        it("Non-operator shall not be able to remove approved lenders ", async function () {
+            await expect(
+                poolContract.connect(borrower).removeApprovedLender(lender2.address)
+            ).to.be.revertedWith("poolOperatorRequired()");
+        });
+        it("Shall be able to remove approved lenders successfully ", async function () {
+            await expect(poolContract.connect(poolOperator).removeApprovedLender(lender2.address))
+                .to.emit(poolContract, "RemoveApprovedLender")
+                .withArgs(lender2.address, poolOperator.address);
+            expect(
+                await poolContract.connect(poolOperator).isApprovedLender(lender2.address)
+            ).to.equal(false);
+        });
+    });
+
+    describe("Update and query core data", function () {
+        it("Non-owner shall not be able to call updateCoreData", async function () {
+            await expect(
+                poolContract.connect(evaluationAgent).updateCoreData()
+            ).to.be.revertedWith("permissionDeniedNotAdmin()");
+        });
+        it("Pool owner shall be able to call updateCoreData", async function () {
+            await expect(poolContract.connect(poolOwner).updateCoreData())
+                .to.emit(poolContract, "PoolCoreDataChanged")
+                .withArgs(
+                    poolOwner.address,
+                    testTokenContract.address,
+                    hdtContract.address,
+                    humaConfigContract.address,
+                    feeManagerContract.address
+                );
+            let result = await poolContract.connect(poolOwner).getCoreData();
+            expect(result.underlyingToken_).to.equal(testTokenContract.address);
+            expect(result.poolToken_).to.equal(hdtContract.address);
+            expect(result.humaConfig_).to.equal(humaConfigContract.address);
+            expect(result.feeManager_).to.equal(feeManagerContract.address);
+        });
+        it("Protocol owner shall be able to call updateCoreData", async function () {
+            await expect(poolContract.connect(protocolOwner).updateCoreData())
+                .to.emit(poolContract, "PoolCoreDataChanged")
+                .withArgs(
+                    protocolOwner.address,
+                    testTokenContract.address,
+                    hdtContract.address,
+                    humaConfigContract.address,
+                    feeManagerContract.address
+                );
+            let result = await poolContract.connect(protocolOwner).getCoreData();
+            expect(result.underlyingToken_).to.equal(testTokenContract.address);
+            expect(result.poolToken_).to.equal(hdtContract.address);
+            expect(result.humaConfig_).to.equal(humaConfigContract.address);
+            expect(result.feeManager_).to.equal(feeManagerContract.address);
+        });
+    });
+
+    describe("Update and query Pool Config", function () {
+        beforeEach(async function () {
+            const BasePoolConfig = await ethers.getContractFactory("BasePoolConfig");
+            poolConfigContract2 = await BasePoolConfig.connect(poolOwner).deploy();
+            await poolConfigContract2.deployed();
+            await poolConfigContract2.initialize(
+                "Base Credit Pool2",
+                hdtContract.address,
+                humaConfigContract.address,
+                feeManagerContract.address
+            );
+            await poolConfigContract2.connect(poolOwner).setAPR(1217);
+        });
+        it("Non-owner shall not be able to call pool config", async function () {
+            await expect(
+                poolContract.connect(evaluationAgent).setPoolConfig(poolConfigContract2.address)
+            ).to.be.revertedWith("permissionDeniedNotAdmin()");
+        });
+        it("Shall reject setting pool config to the current value", async function () {
+            await expect(
+                poolContract.connect(poolOwner).setPoolConfig(poolConfigContract.address)
+            ).to.be.revertedWith("sameValue()");
+        });
+
+        it("Pool owner shall be able to call setPoolConfig", async function () {
+            await expect(
+                poolContract.connect(poolOwner).setPoolConfig(poolConfigContract2.address)
+            )
+                .to.emit(poolContract, "PoolConfigChanged")
+                .withArgs(poolOwner.address, poolConfigContract2.address);
+            expect(await poolContract.poolConfig()).to.equal(poolConfigContract2.address);
+        });
+        it("Protocol owner shall be able to call setPoolConfig", async function () {
+            await expect(
+                poolContract.connect(protocolOwner).setPoolConfig(poolConfigContract2.address)
+            )
+                .to.emit(poolContract, "PoolConfigChanged")
+                .withArgs(protocolOwner.address, poolConfigContract2.address);
+            expect(await poolContract.poolConfig()).to.equal(poolConfigContract2.address);
+        });
     });
 
     describe("Deposit", function () {
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Cannot deposit while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
                 "protocolIsPaused()"
             );
@@ -108,6 +229,13 @@ describe("Base Pool - LP and Admin functions", function () {
             );
         });
 
+        it("Cannot deposit zero amount", async function () {
+            await testTokenContract.connect(lender).approve(poolContract.address, 1_000_000);
+            await expect(poolContract.connect(lender).deposit(0)).to.be.revertedWith(
+                "zeroAmountProvided()"
+            );
+        });
+
         it("Pool deposit works correctly", async function () {
             await testTokenContract.connect(lender).approve(poolContract.address, 1_000_000);
             await poolContract.connect(lender).deposit(1_000_000);
@@ -116,7 +244,7 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(6_000_000);
 
             expect(await hdtContract.balanceOf(lender.address)).to.equal(3_000_000);
-            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
+            expect(await hdtContract.balanceOf(poolOwnerTreasury.address)).to.equal(1_000_000);
             expect(await hdtContract.totalSupply()).to.equal(6_000_000);
         });
 
@@ -127,7 +255,7 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Removed lenders cannot deposit", async function () {
-            await poolContract.connect(poolOwner).removeApprovedLender(lender.address);
+            await poolContract.connect(poolOperator).removeApprovedLender(lender.address);
             await expect(poolContract.connect(lender).deposit(1_000_000)).to.be.revertedWith(
                 "permissionDeniedNotLender"
             );
@@ -137,11 +265,12 @@ describe("Base Pool - LP and Admin functions", function () {
     // In beforeEach() of Withdraw, we make sure there is 100 liquidity provided.
     describe("Withdraw", function () {
         afterEach(async function () {
-            await humaConfigContract.connect(protocolOwner).unpauseProtocol();
+            if (await humaConfigContract.connect(protocolOwner).paused())
+                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not withdraw while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pauseProtocol();
+            await humaConfigContract.connect(poolOwner).pause();
             await expect(poolContract.connect(lender).withdraw(1_000_000)).to.be.revertedWith(
                 "protocolIsPaused()"
             );
@@ -189,8 +318,23 @@ describe("Base Pool - LP and Admin functions", function () {
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_000_000);
 
             expect(await hdtContract.balanceOf(lender.address)).to.equal(1_000_000);
-            expect(await hdtContract.balanceOf(poolOwner.address)).to.equal(1_000_000);
+            expect(await hdtContract.balanceOf(poolOwnerTreasury.address)).to.equal(1_000_000);
             expect(await hdtContract.totalSupply()).to.equal(4_000_000);
+        });
+
+        it("Shall withdraw all balance successfully", async function () {
+            const loanWithdrawalLockout =
+                await poolConfigContract.withdrawalLockoutPeriodInSeconds();
+            await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
+            await ethers.provider.send("evm_mine", []);
+
+            await poolContract.connect(lender).withdrawAll();
+
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(3_000_000);
+
+            expect(await hdtContract.balanceOf(lender.address)).to.equal(0);
+            expect(await hdtContract.balanceOf(poolOwnerTreasury.address)).to.equal(1_000_000);
+            expect(await hdtContract.totalSupply()).to.equal(3_000_000);
         });
 
         it("Minimum liquidity requirements for pool owner and EA", async function () {
@@ -199,7 +343,7 @@ describe("Base Pool - LP and Admin functions", function () {
             await ethers.provider.send("evm_increaseTime", [loanWithdrawalLockout.toNumber()]);
             await ethers.provider.send("evm_mine", []);
 
-            await expect(poolContract.connect(poolOwner).withdraw(10)).to.be.revertedWith(
+            await expect(poolContract.connect(poolOwnerTreasury).withdraw(10)).to.be.revertedWith(
                 "poolOwnerNotEnoughLiquidity()"
             );
 
@@ -217,7 +361,7 @@ describe("Base Pool - LP and Admin functions", function () {
             // Update liquidity rate for pool owner to be lower
             await poolConfigContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 1);
             // Should succeed
-            await poolContract.connect(poolOwner).withdraw(10);
+            await poolContract.connect(poolOwnerTreasury).withdraw(10);
         });
     });
 });

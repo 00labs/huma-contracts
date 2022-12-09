@@ -20,6 +20,8 @@ describe("Upgradability Test", function () {
     let eaNFTContract;
     let eaServiceAccount;
     let pdsServiceAccount;
+    let poolOperator;
+    let poolOwnerTreasury;
 
     before(async function () {
         [
@@ -33,6 +35,8 @@ describe("Upgradability Test", function () {
             protocolOwner,
             eaServiceAccount,
             pdsServiceAccount,
+            poolOperator,
+            poolOwnerTreasury,
         ] = await ethers.getSigners();
     });
 
@@ -57,7 +61,10 @@ describe("Upgradability Test", function () {
                 feeManagerContract,
                 testTokenContract,
                 0,
-                eaNFTContract
+                eaNFTContract,
+                false,
+                poolOperator,
+                poolOwnerTreasury
             );
 
         const TimelockController = await ethers.getContractFactory("TimelockController");

@@ -15,7 +15,8 @@ describe("Huma Config", function () {
         newTreasury,
         pdsServiceAccount,
         eaServiceAccount,
-        randomUser;
+        randomUser,
+        eaNFTContract;
 
     before(async function () {
         [
@@ -29,6 +30,10 @@ describe("Huma Config", function () {
             eaServiceAccount,
             randomUser,
         ] = await ethers.getSigners();
+
+        // Deploy EvaluationAgentNFT
+        const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
+        eaNFTContract = await EvaluationAgentNFT.deploy();
 
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         configContract = await HumaConfig.deploy();
@@ -98,6 +103,18 @@ describe("Huma Config", function () {
                 newTreasury.address
             );
         });
+
+        it("Should not emit event if try to set treasury to the existing treasury address", async function () {
+            expect(await configContract.connect(origOwner).humaTreasury()).to.equal(
+                newTreasury.address
+            );
+            expect(
+                await configContract.connect(origOwner).setHumaTreasury(newTreasury.address)
+            ).to.not.emit(configContract, "HumaTreasuryChanged");
+            expect(await configContract.connect(origOwner).humaTreasury()).to.equal(
+                newTreasury.address
+            );
+        });
     });
 
     describe("Add and Remove Pausers", function () {
@@ -126,7 +143,7 @@ describe("Huma Config", function () {
         it("Should reject add-pauser request if it is already a pauser", async function () {
             await expect(
                 configContract.connect(origOwner).addPauser(pauser.address)
-            ).to.be.revertedWith("alreayAPauser()");
+            ).to.be.revertedWith("alreadyAPauser()");
         });
 
         it("Should disallow non-owner to remove a pauser", async function () {
@@ -178,33 +195,33 @@ describe("Huma Config", function () {
 
     describe("Pause and Unpause Protocol", function () {
         it("Should disallow non-pauser to pause the protocol", async function () {
-            await expect(configContract.connect(randomUser).pauseProtocol()).to.be.revertedWith(
+            await expect(configContract.connect(randomUser).pause()).to.be.revertedWith(
                 "notPauser()"
             );
-            await expect(configContract.connect(treasury).pauseProtocol()).to.be.revertedWith(
+            await expect(configContract.connect(treasury).pause()).to.be.revertedWith(
                 "notPauser()"
             );
         });
 
         it("Should be able to pause the protocol", async function () {
-            await expect(configContract.connect(pauser).pauseProtocol())
-                .to.emit(configContract, "ProtocolPaused")
+            await expect(configContract.connect(pauser).pause())
+                .to.emit(configContract, "Paused")
                 .withArgs(pauser.address);
-            expect(await configContract.isProtocolPaused()).to.equal(true);
+            expect(await configContract.paused()).to.equal(true);
         });
 
         it("Should disallow non-owner to unpause", async function () {
-            await expect(configContract.connect(pauser).unpauseProtocol()).to.be.revertedWith(
+            await expect(configContract.connect(pauser).unpause()).to.be.revertedWith(
                 "Ownable: caller is not the owner"
             );
         });
 
         it("Should allow owner to unpause", async function () {
-            expect(await configContract.connect(origOwner).unpauseProtocol())
-                .to.emit(configContract, "ProtocolUnpaused")
+            expect(await configContract.connect(origOwner).unpause())
+                .to.emit(configContract, "Unpaused")
                 .withArgs(origOwner.address);
 
-            expect(await configContract.isProtocolPaused()).to.equal(false);
+            expect(await configContract.paused()).to.equal(false);
         });
     });
 
@@ -425,6 +442,31 @@ describe("Huma Config", function () {
                 .to.emit(configContract, "LiquidityAssetRemoved")
                 .withArgs(testTokenContract.address, origOwner.address);
             expect(await configContract.isAssetValid(testTokenContract.address)).to.equal(false);
+        });
+    });
+
+    describe("Change EA NFT Contract Address", function () {
+        it("Should disallow non-proto-admin to change EANFT Address", async function () {
+            await expect(
+                configContract.connect(randomUser).setEANFTContractAddress(eaNFTContract.address)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("Should reject zero address EANFT contract address", async function () {
+            await expect(
+                configContract
+                    .connect(origOwner)
+                    .setEANFTContractAddress(ethers.constants.AddressZero)
+            ).to.be.revertedWith("zeroAddressProvided()");
+        });
+
+        it("Should be able to change EANFT Address", async function () {
+            await expect(
+                configContract.connect(origOwner).setEANFTContractAddress(eaNFTContract.address)
+            )
+                .to.emit(configContract, "EANFTContractAddressChanged")
+                .withArgs(eaNFTContract.address);
+            expect(await configContract.eaNFTContractAddress()).to.equal(eaNFTContract.address);
         });
     });
 });

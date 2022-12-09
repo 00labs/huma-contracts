@@ -66,12 +66,22 @@
   },
   {
     "inputs": [],
+    "name": "paymentDetectionServiceAccountRequired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "permissionDeniedNotLender",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "poolIsNotOn",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "poolOperatorRequired",
     "type": "error"
   },
   {

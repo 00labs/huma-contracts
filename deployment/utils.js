@@ -2,8 +2,8 @@ const {BigNumber: BN, ethers} = require("ethers");
 const fs = require("fs");
 const DEPLOYED_PATH = "./deployment/";
 
-const MAX_FEE_PER_GAS = 100_000000000;
-const MAX_PRIORITY_FEE_PER_GAS = 10_000000000;
+const MAX_FEE_PER_GAS = 30_000_000_000;
+const MAX_PRIORITY_FEE_PER_GAS = 2_000_000_000;
 
 const getContractAddressFile = async function (fileType = "deployed") {
     let network = (await hre.ethers.provider.getNetwork()).name;
@@ -75,7 +75,7 @@ async function updateContract(type, contractName, value) {
     const oldData = await readFileContent(type);
     let contracts = JSON.parse(oldData);
     contracts[contractName] = value;
-    const newData = JSON.stringify(contracts);
+    const newData = JSON.stringify(contracts).replace(/\,/g, ",\n");
     const deployedContractsFile = await getContractAddressFile(type);
     fs.writeFileSync(deployedContractsFile, newData);
 }
@@ -169,5 +169,5 @@ module.exports = {
     deploy,
     toFixedDecimal,
     getVerifiedContract,
-    updateVerifiedContract
+    updateVerifiedContract,
 };
