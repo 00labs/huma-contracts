@@ -1,17 +1,32 @@
-## Huma contract repo
-To run
+# Welcome to Huma Finance EVM contracts
+## Setup development environment
+
+Prerequisites: You need node.js v16+ and yarn installed.
+
+### Checkout this repository
+```
+git clone https://github.com/00labs/huma-contracts
+cd huma-contracts
+```
+
+### Install the dependencies
 ```
 yarn install
+```
+
+### Compile and test
+```
 yarn compile
 yarn test
 ```
+### Other useful commands
 
 To lint
 ```
 yarn lint-solidity
 ```
 
-### Deploy and initiate on goerli
+## Deploy and initiate on goerli
 Put `DEPLOYER`, `GOERLI_URL` and `PROXY_OWNER` in `.env`.
 ```
 yarn hardhat run --network goerli deployment/deploy-goerli.js
