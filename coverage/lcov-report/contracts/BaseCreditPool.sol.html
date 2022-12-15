@@ -22,7 +22,7 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>141/141</span>
+        <span class='fraction'>148/148</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">98.53% </span>
@@ -32,12 +32,12 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Functions</span>
-        <span class='fraction'>25/25</span>
+        <span class='fraction'>27/27</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>202/202</span>
+        <span class='fraction'>204/204</span>
       </div>
     </div>
   </div>
@@ -936,7 +936,16 @@
 891
 892
 893
-894</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+894
+895
+896
+897
+898
+899
+900
+901
+902
+903</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1538,6 +1547,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">46×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">44×</span>
@@ -1769,15 +1780,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">82×</span>
+<span class="cline-any cline-yes">82×</span>
 <span class="cline-any cline-yes">29×</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">53×</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1805,7 +1809,21 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">259×</span>
+<span class="cline-any cline-yes">285×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">60×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">328×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1937,8 +1955,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @notice A payment has been made against the credit line
      * @param borrower the address of the borrower
      * @param amount the payback amount
-     * @param by the address that has made the payment. It is possible for someone to make payment
-     * on behalf of the borrower.
+     * @param by the address that has triggered the process of marking the payment made.
+     * In most cases, it is the borrower. In receivable factoring, it is PDSServiceAccount.
      */
     event PaymentMade(
         address indexed borrower,
@@ -1975,7 +1993,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 &nbsp;
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
         cr.remainingPeriods = uint16(remainingPeriods);
-        _creditRecordMapping[borrower] = _approveCredit(cr);
+        _setCreditRecord(borrower, _approveCredit(cr));
 &nbsp;
         emit CreditApproved(borrower, creditLimit, intervalInDays, remainingPeriods, aprInBps);
     }
@@ -2032,7 +2050,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         address borrower = msg.sender;
         // Open access to the borrower
         if (borrowAmount == 0) revert Errors.zeroAmountProvided();
-        BS.CreditRecord memory cr = _creditRecordMapping[borrower];
+        BS.CreditRecord memory cr = _getCreditRecord(borrower);
 &nbsp;
         _checkDrawdownEligibility(borrower, cr, borrowAmount);
         uint256 netAmountToBorrower = _drawdown(borrower, cr, borrowAmount);
@@ -2311,7 +2329,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             // this pay period is accrued in correction and will be added to the next bill.
             cr.correction += int96(
                 uint96(
-                    _feeManager.calcCorrection(
+                    _calcCorrection(
                         cr.dueDate,
                         _creditRecordStaticMapping[borrower].aprInBps,
                         borrowAmount
@@ -2322,7 +2340,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.unbilledPrincipal = uint96(cr.unbilledPrincipal + borrowAmount);
         }
 &nbsp;
-        _creditRecordMapping[borrower] = cr;
+        _setCreditRecord(borrower, cr);
 &nbsp;
         (uint256 netAmountToBorrower, uint256 platformFees) = _feeManager.distBorrowingAmount(
             borrowAmount
@@ -2390,7 +2408,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             emit CreditApproved(borrower, creditLimit, intervalInDays, remainingPeriods, aprInBps);
         } else ncr.state = BS.CreditState.Requested;
 &nbsp;
-        _creditRecordMapping[borrower] = ncr;
+        _setCreditRecord(borrower, ncr);
 &nbsp;
         emit CreditInitiated(
             borrower,
@@ -2411,13 +2429,15 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * Ideally, two boolean parameters (isPaymentReceived, isPaymentVerified) are used
      * instead of paymentStatus. Due to stack too deep issue, one parameter is used.
      * NotReceived: Payment not received
-     * ReceivedNotVerified: the system thinks the payment has been received but no manul
-     * verification yet. Outier cases might be flagged for manual review.
+     * ReceivedNotVerified: the system thinks the payment has been received but no manual
+     * verification yet. Outlier cases might be flagged for manual review.
      * ReceivedAndVerified: the system thinks the payment has been received and it has been
      * manually verified after being flagged by the system.
-     * @return amountPaid the actuall amount paid to the contract. When the tendered
+     * @return amountPaid the actual amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
      * @return paidoff a flag indciating whether the account has been paid off.
+     * @return isReviewRequired a flag indicating whether this payment transaction has been
+     * flagged for review.
      */
     function _makePayment(
         address borrower,
@@ -2456,7 +2476,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 &nbsp;
         // Computes the final payoff amount. Needs to consider the correction associated with
         // all outstanding principals.
-        uint256 payoffCorrection = _feeManager.calcCorrection(
+        uint256 payoffCorrection = _calcCorrection(
             cr.dueDate,
             _creditRecordStaticMapping[borrower].aprInBps,
             cr.unbilledPrincipal + cr.totalDue - cr.feesAndInterestDue
@@ -2517,7 +2537,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 // If there is principal payment, calculate new correction
                 cr.correction -= int96(
                     uint96(
-                        _feeManager.calcCorrection(
+                        _calcCorrection(
                             cr.dueDate,
                             _creditRecordStaticMapping[borrower].aprInBps,
                             principalPayment
@@ -2564,7 +2584,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             } else cr.state = BS.CreditState.GoodStanding;
         }
 &nbsp;
-        _creditRecordMapping[borrower] = cr;
+        _setCreditRecord(borrower, cr);
 &nbsp;
         if (amountToCollect &gt; 0 &amp;&amp; paymentStatus == BS.PaymentStatus.NotReceived) {
             // Transfer assets from the _borrower to pool locker
@@ -2661,19 +2681,12 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 else if (newCharges &lt; 0) reverseIncome(uint256(uint96(0 - newCharges)));
             }
 &nbsp;
+            uint16 intervalInDays = _creditRecordStaticMapping[borrower].intervalInDays;
             if (cr.dueDate &gt; 0)
                 cr.dueDate = uint64(
-                    cr.dueDate +
-                        periodsPassed *
-                        _creditRecordStaticMapping[borrower].intervalInDays *
-                        SECONDS_IN_A_DAY
+                    cr.dueDate + periodsPassed * intervalInDays * SECONDS_IN_A_DAY
                 );
-            else
-                cr.dueDate = uint64(
-                    block.timestamp +
-                        _creditRecordStaticMapping[borrower].intervalInDays *
-                        SECONDS_IN_A_DAY
-                );
+            else cr.dueDate = uint64(block.timestamp + intervalInDays * SECONDS_IN_A_DAY);
 &nbsp;
             // Adjusts remainingPeriods, special handling when reached the maturity of the credit line
             if (cr.remainingPeriods &gt; periodsPassed) {
@@ -2690,20 +2703,34 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
                 if (cr.state != BS.CreditState.Defaulted) cr.state = BS.CreditState.Delayed;
             } else cr.state = BS.CreditState.GoodStanding;
 &nbsp;
-            _creditRecordMapping[borrower] = cr;
+            _setCreditRecord(borrower, cr);
 &nbsp;
             emit BillRefreshed(borrower, cr.dueDate, msg.sender);
         }
     }
 &nbsp;
+    /// Shared setter to the credit record mapping for contract size consideration
+    function _setCreditRecord(address borrower, BS.CreditRecord memory cr) internal {
+        _creditRecordMapping[borrower] = cr;
+    }
+&nbsp;
+    /// Shared accessor for contract size consideration
+    function _calcCorrection(
+        uint256 dueDate,
+        uint256 aprInBps,
+        uint256 amount
+    ) internal view returns (uint256) {
+        return _feeManager.calcCorrection(dueDate, aprInBps, amount);
+    }
+&nbsp;
     /// Shared accessor to the credit record mapping for contract size consideration
-    function _getCreditRecord(address account) private view returns (BS.CreditRecord memory) {
+    function _getCreditRecord(address account) internal view returns (BS.CreditRecord memory) {
         return _creditRecordMapping[account];
     }
 &nbsp;
     /// Shared accessor to the credit record static mapping for contract size consideration
     function _getCreditRecordStatic(address account)
-        private
+        internal
         view
         returns (BS.CreditRecordStatic memory)
     {
@@ -2728,7 +2755,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Mon Nov 21 2022 15:37:39 GMT-0800 (Pacific Standard Time)
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Dec 14 2022 17:00:31 GMT-0800 (Pacific Standard Time)
 </div>
 </div>
 <script src="../prettify.js"></script>
