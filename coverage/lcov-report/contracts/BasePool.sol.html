@@ -22,12 +22,12 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>68/68</span>
+        <span class='fraction'>65/65</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">91.67% </span>
+        <span class="strong">90.63% </span>
         <span class="quiet">Branches</span>
-        <span class='fraction'>33/36</span>
+        <span class='fraction'>29/32</span>
       </div>
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
@@ -37,7 +37,7 @@
       <div class='fl pad1y space-right2'>
         <span class="strong">100% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>85/85</span>
+        <span class='fraction'>83/83</span>
       </div>
     </div>
   </div>
@@ -402,10 +402,7 @@
 357
 358
 359
-360
-361
-362
-363</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+360</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -514,13 +511,10 @@
 <span class="cline-any cline-yes">8×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">7×</span>
-<span class="cline-any cline-yes">7×</span>
-<span class="cline-any cline-yes">7×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7×</span>
-<span class="cline-any cline-yes">3×</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">5×</span>
+<span class="cline-any cline-yes">5×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">5×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -706,7 +700,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">777×</span>
+<span class="cline-any cline-yes">775×</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -875,14 +869,11 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         uint256 withdrawableAmount = _poolToken.withdrawableFundsOf(msg.sender);
         if (amount &gt; withdrawableAmount) revert Errors.withdrawnAmountHigherThanBalance();
 &nbsp;
+        _poolConfig.checkWithdrawLiquidityRequirement(msg.sender, withdrawableAmount - amount);
+&nbsp;
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
         _totalPoolValue -= amount;
         _underlyingToken.safeTransfer(msg.sender, amount);
-&nbsp;
-        if (msg.sender == _poolConfig.evaluationAgent())
-            _poolConfig.checkLiquidityRequirementForEA(withdrawableAmount - amount);
-        else if (msg.sender == _poolConfig.poolOwnerTreasury())
-            _poolConfig.checkLiquidityRequirementForPoolOwner(withdrawableAmount - amount);
 &nbsp;
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
@@ -953,8 +944,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     //********************************************/
 &nbsp;
     /**
-     * @notice Lenders need to pass compliance requirements. Pool owner will administer off-chain
-     * to make sure potential lenders meet the requirements. Afterwords, the pool owner will
+     * @notice Lenders need to pass compliance requirements. Pool operator will administer off-chain
+     * to make sure potential lenders meet the requirements. Afterwords, the pool operator will
      * call this function to mark a lender as approved.
      */
     function addApprovedLender(address lender) external virtual override {
@@ -964,7 +955,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 &nbsp;
     /**
-     * @notice turns off the pool
+     * @notice turns off the pool. Any pool operator can do so when they see abnormalities.
      */
     function disablePool() external virtual override {
         _onlyPoolOperator();
@@ -973,7 +964,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     }
 &nbsp;
     /**
-     * @notice turns on the pool
+     * @notice turns on the pool. Only the pool owner or protocol owner can enable a pool.
      */
     function enablePool() external virtual override {
         _onlyOwnerOrHumaMasterAdmin();
@@ -1135,7 +1126,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Mon Nov 21 2022 15:37:39 GMT-0800 (Pacific Standard Time)
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Dec 14 2022 17:00:31 GMT-0800 (Pacific Standard Time)
 </div>
 </div>
 <script src="../prettify.js"></script>
