@@ -1,6 +1,14 @@
 const {ethers} = require("hardhat");
-const {use, expect} = require("chai");
-const {solidity} = require("ethereum-waffle");
+const {expect} = require("chai");
+const {BigNumber: BN} = require("ethers");
+
+function toBN(number, decimals) {
+    return BN.from(number).mul(BN.from(10).pow(BN.from(decimals)));
+}
+
+function toTKN(number) {
+    return toBN(number, 6);
+}
 
 async function deployContracts(
     poolOwner,
@@ -9,7 +17,7 @@ async function deployContracts(
     protocolOwner,
     eaServiceAccount,
     pdsServiceAccount,
-    fees = [1000, 100, 2000, 100, 0]
+    fees = [toTKN(1000), 100, toTKN(2000), 100, 0]
 ) {
     // Deploy EvaluationAgentNFT
     const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
@@ -64,9 +72,9 @@ async function deployAndSetupPool(
     poolOperator,
     poolOwnerTreasury
 ) {
-    await testTokenContract.give1000To(lender.address);
-    await testTokenContract.give1000To(poolOwnerTreasury.address);
-    await testTokenContract.give1000To(evaluationAgent.address);
+    await testTokenContract.mint(lender.address, toTKN(10_000_000));
+    await testTokenContract.mint(poolOwnerTreasury.address, toTKN(10_000_000));
+    await testTokenContract.mint(evaluationAgent.address, toTKN(10_000_000));
 
     await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(principalRateInBps);
 
@@ -124,7 +132,7 @@ async function deployAndSetupPool(
     await poolConfig.transferOwnership(poolOwner.address);
 
     // Config rewards and requirements for poolOwner and EA, make initial deposit, and enable pool
-    await poolConfig.connect(poolOwner).setPoolLiquidityCap(1_000_000_000);
+    await poolConfig.connect(poolOwner).setPoolLiquidityCap(toTKN(1_000_000_000));
     await poolConfig.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 10);
 
     let eaNFTTokenId;
@@ -150,11 +158,15 @@ async function deployAndSetupPool(
     await poolContract.connect(poolOperator).addApprovedLender(evaluationAgent.address);
     await poolContract.connect(poolOperator).addApprovedLender(lender.address);
 
-    await testTokenContract.connect(poolOwnerTreasury).approve(poolContract.address, 1_000_000);
-    await poolContract.connect(poolOwnerTreasury).makeInitialDeposit(1_000_000);
+    await testTokenContract
+        .connect(poolOwnerTreasury)
+        .approve(poolContract.address, toTKN(1_000_000));
+    await poolContract.connect(poolOwnerTreasury).makeInitialDeposit(toTKN(1_000_000));
 
-    await testTokenContract.connect(evaluationAgent).approve(poolContract.address, 2_000_000);
-    await poolContract.connect(evaluationAgent).makeInitialDeposit(2_000_000);
+    await testTokenContract
+        .connect(evaluationAgent)
+        .approve(poolContract.address, toTKN(2_000_000));
+    await poolContract.connect(evaluationAgent).makeInitialDeposit(toTKN(2_000_000));
 
     await expect(poolContract.connect(poolOwner).enablePool()).to.emit(
         poolContract,
@@ -162,10 +174,10 @@ async function deployAndSetupPool(
     );
 
     await poolConfig.connect(poolOwner).setAPR(1217);
-    await poolConfig.connect(poolOwner).setMaxCreditLine(10_000_000);
+    await poolConfig.connect(poolOwner).setMaxCreditLine(toTKN(10_000_000));
 
-    await testTokenContract.connect(lender).approve(poolContract.address, 2_000_000);
-    await poolContract.connect(lender).deposit(2_000_000);
+    await testTokenContract.connect(lender).approve(poolContract.address, toTKN(2_000_000));
+    await poolContract.connect(lender).deposit(toTKN(2_000_000));
 
     return [hdtContract, poolConfig, poolContract, poolImpl, poolProxy];
 }
@@ -197,7 +209,7 @@ async function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, 
     if (v12 != "SKIP") expect(rs.defaultAmount).to.equal(v12);
 }
 
-async function checkResult(r, v1, v2, v3, v4, v5) {
+function checkResult(r, v1, v2, v3, v4, v5) {
     expect(r.periodsPassed).to.equal(v1);
     expect(r.feesAndInterestDue).to.equal(v2);
     expect(r.totalDue).to.equal(v3);
@@ -205,7 +217,7 @@ async function checkResult(r, v1, v2, v3, v4, v5) {
     expect(r.totalCharges).to.equal(v5);
 }
 
-async function checkArruedIncome(r, v1, v2, v3) {
+function checkArruedIncome(r, v1, v2, v3) {
     expect(r.protocolIncome).to.equal(v1);
     expect(r.eaIncome).to.equal(v2);
     expect(r.poolOwnerIncome).to.equal(v3);
@@ -219,4 +231,5 @@ module.exports = {
     checkResult,
     checkArruedIncome,
     getCreditInfo,
+    toTKN,
 };

@@ -129,8 +129,7 @@ describe("Upgradability Test", function () {
                 .connect(eaServiceAccount)
                 .changeCreditLine(protocolOwner.address, 100);
             poolContract = MockBaseCreditPoolV2.attach(poolContract.address);
-            const cl = await poolContract.getCreditLine(protocolOwner.address);
-            expect(cl).equals(200);
+            expect(await poolContract.getCreditLine(protocolOwner.address)).to.equal(200n);
         });
     });
 });

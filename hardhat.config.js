@@ -2,6 +2,7 @@ require("dotenv").config();
 require("hardhat-contract-sizer");
 
 require("@nomiclabs/hardhat-waffle");
+require("@nomicfoundation/hardhat-chai-matchers");
 require("@tenderly/hardhat-tenderly");
 
 require("hardhat-gas-reporter");
