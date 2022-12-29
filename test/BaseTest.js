@@ -194,7 +194,7 @@ async function advanceClock(days) {
     await ethers.provider.send("evm_mine", []);
 }
 
-async function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) {
+function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) {
     if (v1 != "SKIP") expect(rs.creditLimit).to.equal(v1);
     if (v2 != "SKIP") expect(r.unbilledPrincipal).to.equal(v2);
     if (v3 != "SKIP") expect(r.dueDate).to.be.within(v3 - 60, v3 + 60);

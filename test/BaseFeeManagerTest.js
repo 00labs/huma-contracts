@@ -5,7 +5,6 @@ const {
     deployContracts,
     deployAndSetupPool,
     advanceClock,
-    checkRecord,
     checkResult,
     checkArruedIncome,
     toTKN,
@@ -189,7 +188,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 2 periods", async function () {
                     before(async function () {
-                        advanceClock(30);
+                        await advanceClock(30);
                     });
                     it("IntOnly", async function () {
                         let r = await feeManagerContract.getDueInfo(record, recordStatic);
@@ -198,7 +197,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 3 periods", async function () {
                     before(async function () {
-                        advanceClock(30);
+                        await advanceClock(30);
                     });
                     it("IntOnly", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
@@ -266,7 +265,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 2 periods", async function () {
                     before(async function () {
-                        advanceClock(30);
+                        await advanceClock(30);
                     });
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
@@ -276,7 +275,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 3 periods", async function () {
                     before(async function () {
-                        advanceClock(30);
+                        await advanceClock(30);
                     });
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
@@ -344,7 +343,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 2 periods", async function () {
                     before(async function () {
-                        advanceClock(30);
+                        await advanceClock(30);
                     });
                     it("IntOnly", async function () {
                         let r = await feeManagerContract.getDueInfo(record, recordStatic);
@@ -353,7 +352,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 3 periods", async function () {
                     before(async function () {
-                        advanceClock(30);
+                        await advanceClock(30);
                     });
                     it("IntOnly", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
@@ -423,7 +422,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 2 periods", async function () {
                     before(async function () {
-                        advanceClock(30);
+                        await advanceClock(30);
                     });
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
@@ -433,7 +432,7 @@ describe("Base Fee Manager", function () {
                 });
                 describe("Late for 3 periods", async function () {
                     before(async function () {
-                        advanceClock(30);
+                        await advanceClock(30);
                     });
                     it("WithMinPrincipal", async function () {
                         await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
