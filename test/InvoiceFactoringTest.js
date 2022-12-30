@@ -1,7 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 const {ethers} = require("hardhat");
-const {use, expect} = require("chai");
-const {solidity} = require("ethereum-waffle");
+const {expect} = require("chai");
 const {BigNumber: BN} = require("ethers");
 const {
     deployContracts,
@@ -11,9 +10,8 @@ const {
     checkResult,
     checkArruedIncome,
     getCreditInfo,
+    toTKN,
 } = require("./BaseTest");
-
-use(solidity);
 
 const getInvoiceContractFromAddress = async function (address, signer) {
     return ethers.getContractAt("ReceivableFactoringPool", address, signer);
@@ -83,7 +81,7 @@ describe("Invoice Factoring", function () {
             }
         }
 
-        await testTokenContract.give1000To(payer.address);
+        await testTokenContract.mint(payer.address, toTKN(10_000_000));
     });
 
     beforeEach(async function () {
@@ -104,9 +102,9 @@ describe("Invoice Factoring", function () {
 
         await poolConfigContract.connect(poolOwner).setWithdrawalLockoutPeriod(90);
         await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
-        await feeManagerContract.connect(poolOwner).setFees(1000, 100, 2000, 100, 0);
+        await feeManagerContract.connect(poolOwner).setFees(toTKN(1000), 100, toTKN(2000), 100, 0);
         await poolConfigContract.connect(poolOwner).setAPR(0);
-        await poolConfigContract.connect(poolOwner).setMaxCreditLine(1_000_000);
+        await poolConfigContract.connect(poolOwner).setMaxCreditLine(toTKN(1_000_000));
         await humaConfigContract.connect(protocolOwner).setTreasuryFee(2000);
         await poolConfigContract.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 0);
         await poolConfigContract.connect(poolOwner).setEARewardsAndLiquidity(1875, 0);
@@ -131,15 +129,15 @@ describe("Invoice Factoring", function () {
                         "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                     ](
                         borrower.address,
-                        1_000_000,
+                        toTKN(1_000_000),
                         30,
                         1,
                         0,
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
-                        1_500_000
+                        toTKN(1_500_000)
                     )
-            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
+            ).to.be.revertedWithCustomError(poolContract, "evaluationAgentServiceAccountRequired");
         });
 
         it("Should not allow posting approved loans while protocol is paused", async function () {
@@ -152,13 +150,13 @@ describe("Invoice Factoring", function () {
                         "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                     ](
                         borrower.address,
-                        1_000_000,
+                        toTKN(1_000_000),
                         30,
                         1,
                         0,
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
-                        1_500_000
+                        toTKN(1_500_000)
                     )
             ).to.be.revertedWith("protocolIsPaused()");
         });
@@ -173,13 +171,13 @@ describe("Invoice Factoring", function () {
                         "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                     ](
                         borrower.address,
-                        1_000_000,
+                        toTKN(1_000_000),
                         30,
                         1,
                         0,
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
-                        1_500_000
+                        toTKN(1_500_000)
                     )
             ).to.be.revertedWith("poolIsNotOn()");
         });
@@ -192,13 +190,13 @@ describe("Invoice Factoring", function () {
                         "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                     ](
                         borrower.address,
-                        1_200_000,
+                        toTKN(1_200_000),
                         30,
                         1,
                         0,
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
-                        1_500_000
+                        toTKN(1_500_000)
                     )
             ).to.be.revertedWith("greaterThanMaxCreditLine()");
         });
@@ -211,13 +209,13 @@ describe("Invoice Factoring", function () {
                         "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                     ](
                         borrower.address,
-                        1_000_000,
+                        toTKN(1_000_000),
                         30,
                         1,
                         0,
                         ethers.constants.AddressZero,
                         invoiceNFTTokenId,
-                        1_500_000
+                        toTKN(1_500_000)
                     )
             ).to.be.revertedWith("zeroAddressProvided()");
         });
@@ -230,13 +228,13 @@ describe("Invoice Factoring", function () {
                         "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                     ](
                         borrower.address,
-                        1_000_000,
+                        toTKN(1_000_000),
                         30,
                         1,
                         0,
                         feeManagerContract.address,
                         invoiceNFTTokenId,
-                        1_500_000
+                        toTKN(1_500_000)
                     )
             ).to.be.revertedWith("unsupportedReceivableAsset()");
         });
@@ -252,18 +250,18 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    1_000_000,
+                    toTKN(1_000_000),
                     30,
                     1,
                     1000,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
-                    1_500_000
+                    toTKN(1_500_000)
                 );
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
 
-            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.creditLimit).to.equal(toTKN(1_000_000));
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
             expect(creditInfo.aprInBps).to.equal(1000);
@@ -281,13 +279,13 @@ describe("Invoice Factoring", function () {
                         "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                     ](
                         borrower.address,
-                        1_000_000,
+                        toTKN(1_000_000),
                         30,
                         1,
                         0,
                         invoiceNFTContract.address,
                         invoiceNFTTokenId,
-                        1_000_000
+                        toTKN(1_000_000)
                     )
             ).to.be.revertedWith("insufficientReceivableAmount()");
         });
@@ -301,18 +299,18 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    1_000_000,
+                    toTKN(1_000_000),
                     30,
                     1,
                     0,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
-                    1_500_000
+                    toTKN(1_500_000)
                 );
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
 
-            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.creditLimit).to.equal(toTKN(1_000_000));
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
         });
@@ -326,23 +324,23 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    1_000_000,
+                    toTKN(1_000_000),
                     30,
                     1,
                     0,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
-                    1_500_000
+                    toTKN(1_500_000)
                 );
 
             let creditInfo = await getCreditInfo(poolContract, borrower.address);
 
-            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.creditLimit).to.equal(toTKN(1_000_000));
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
 
             let receivableInfo = await poolContract.receivableInfoMapping(borrower.address);
-            expect(receivableInfo.receivableAmount).to.equal(1_500_000);
+            expect(receivableInfo.receivableAmount).to.equal(toTKN(1_500_000));
             expect(receivableInfo.receivableParam).to.equal(invoiceNFTTokenId);
             expect(receivableInfo.receivableAsset).to.equal(invoiceNFTContract.address);
 
@@ -360,23 +358,23 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    1_000_000,
+                    toTKN(1_000_000),
                     60,
                     1,
                     0,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
-                    2_500_000
+                    toTKN(2_500_000)
                 );
             creditInfo = await getCreditInfo(poolContract, borrower.address);
-            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.creditLimit).to.equal(toTKN(1_000_000));
             expect(creditInfo.unbilledPrincipal).to.equal(0);
             expect(creditInfo.remainingPeriods).to.equal(1);
 
             receivableInfo = await poolContract.receivableInfoMapping(borrower.address);
             expect(receivableInfo.receivableAsset).to.equal(invoiceNFTContract.address);
             expect(receivableInfo.receivableParam).to.equal(invoiceNFTTokenId);
-            expect(receivableInfo.receivableAmount).to.equal(2_500_000);
+            expect(receivableInfo.receivableAmount).to.equal(toTKN(2_500_000));
         });
     });
 
@@ -388,13 +386,13 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    800_000,
+                    toTKN(800_000),
                     30,
                     1,
                     0,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
-                    1_500_000
+                    toTKN(1_500_000)
                 );
         });
         it("Should prevent non-EA-borrower to change the limit for an approved invoice factoring record", async function () {
@@ -403,10 +401,10 @@ describe("Invoice Factoring", function () {
             ).to.be.revertedWith("onlyBorrowerOrEACanReduceCreditLine()");
         });
         it("Should allow borrower to reduce the limit for an approved invoice factoring record", async function () {
-            await poolContract.connect(borrower).changeCreditLine(borrower.address, 1000);
+            await poolContract.connect(borrower).changeCreditLine(borrower.address, toTKN(1000));
 
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
-            expect(creditInfo.creditLimit).to.equal(1000);
+            expect(creditInfo.creditLimit).to.equal(toTKN(1000));
 
             // await poolContract.connect(borrower).changeCreditLine(borrower.address, 0);
             // expect(creditInfo.creditLimit).to.equal(0); // Means "Deleted"
@@ -414,23 +412,25 @@ describe("Invoice Factoring", function () {
         });
         it("Should disallow borrower to increase the limit for an approved invoice factoring record", async function () {
             await expect(
-                poolContract.connect(borrower).changeCreditLine(borrower.address, 1_000_000)
+                poolContract.connect(borrower).changeCreditLine(borrower.address, toTKN(1_000_000))
             ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
         });
         it("Should allow evaluation agent to increase an approved invoice factoring record", async function () {
             await poolContract
                 .connect(eaServiceAccount)
-                .changeCreditLine(borrower.address, 1_000_000);
+                .changeCreditLine(borrower.address, toTKN(1_000_000));
 
             //await poolContract.printDetailStatus(borrower.address);
             const creditInfo = await getCreditInfo(poolContract, borrower.address);
 
-            expect(creditInfo.creditLimit).to.equal(1_000_000);
+            expect(creditInfo.creditLimit).to.equal(toTKN(1_000_000));
         });
         it("Should allow evaluation agent to decrease an approved invoice factoring record", async function () {
-            await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 1000);
+            await poolContract
+                .connect(eaServiceAccount)
+                .changeCreditLine(borrower.address, toTKN(1000));
             let creditInfo = await getCreditInfo(poolContract, borrower.address);
-            expect(creditInfo.creditLimit).to.equal(1000);
+            expect(creditInfo.creditLimit).to.equal(toTKN(1000));
 
             await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
             creditInfo = await getCreditInfo(poolContract, borrower.address);
@@ -461,17 +461,17 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    1_000_000,
+                    toTKN(1_000_000),
                     30,
                     1,
                     0,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
-                    1_500_0000
+                    toTKN(1_500_0000)
                 );
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(record, recordStatic, 1_000_000, 0, 0, 0, 0, 0, 0, 1, 0, 30, 2, 0);
+            checkRecord(record, recordStatic, toTKN(1_000_000), 0, 0, 0, 0, 0, 0, 1, 0, 30, 2, 0);
         });
 
         afterEach(async function () {
@@ -481,9 +481,9 @@ describe("Invoice Factoring", function () {
 
         it("Should not allow calling to drawdown()", async function () {
             await humaConfigContract.connect(poolOwner).pause();
-            await expect(poolContract.connect(borrower).drawdown(1_000_000)).to.be.revertedWith(
-                "drawdownFunctionUsedInsteadofDrawdownWithReceivable"
-            );
+            await expect(
+                poolContract.connect(borrower).drawdown(toTKN(1_000_000))
+            ).to.be.revertedWith("drawdownFunctionUsedInsteadofDrawdownWithReceivable");
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
@@ -492,7 +492,7 @@ describe("Invoice Factoring", function () {
                 poolContract
                     .connect(borrower)
                     .drawdownWithReceivable(
-                        1_000_000,
+                        toTKN(1_000_000),
                         invoiceNFTContract.address,
                         invoiceNFTTokenId
                     )
@@ -504,7 +504,7 @@ describe("Invoice Factoring", function () {
                 poolContract
                     .connect(borrower)
                     .drawdownWithReceivable(
-                        1_000_000,
+                        toTKN(1_000_000),
                         ethers.constants.AddressZero,
                         invoiceNFTTokenId
                     )
@@ -515,7 +515,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .drawdownWithReceivable(1_000_000, invoiceNFTContract.address, 12345)
+                    .drawdownWithReceivable(toTKN(1_000_000), invoiceNFTContract.address, 12345)
             ).to.be.revertedWith("receivableAssetParamMismatch()");
         });
 
@@ -523,13 +523,17 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .drawdownWithReceivable(200_000, invoiceNFTContract.address, invoiceNFTTokenId)
+                    .drawdownWithReceivable(
+                        toTKN(200_000),
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId
+                    )
             )
                 .to.emit(poolContract, "DrawdownMadeWithReceivable")
                 .withArgs(
                     borrower.address,
-                    200_000,
-                    197_000,
+                    toTKN(200_000),
+                    toTKN(197_000),
                     invoiceNFTContract.address,
                     invoiceNFTTokenId
                 );
@@ -544,30 +548,55 @@ describe("Invoice Factoring", function () {
             dueDate = blockBefore.timestamp + 2592000;
 
             let accruedIncome = await poolConfigContract.accruedIncome();
-            checkArruedIncome(accruedIncome, 600, 450, 150);
+            checkArruedIncome(accruedIncome, toTKN(600), toTKN(450), toTKN(150));
 
-            expect(await poolContract.totalPoolValue()).to.equal(5_001_800);
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_803_000);
+            expect(await poolContract.totalPoolValue()).to.equal(toTKN(5_001_800));
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                toTKN(4_803_000)
+            );
 
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 200_000, 0, 0, 0, 0, 30, 3, 0);
+            checkRecord(
+                r,
+                rs,
+                toTKN(1_000_000),
+                0,
+                dueDate,
+                0,
+                toTKN(200_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
-            checkResult(dueInfo, 0, 0, 200_000, 0, 0);
+            checkResult(dueInfo, 0, 0, toTKN(200_000), 0, 0);
 
             // Only one borrowing is allowed for each invoice
             await expect(
                 poolContract
                     .connect(borrower)
-                    .drawdownWithReceivable(200_000, invoiceNFTContract.address, invoiceNFTTokenId)
+                    .drawdownWithReceivable(
+                        toTKN(200_000),
+                        invoiceNFTContract.address,
+                        invoiceNFTTokenId
+                    )
             ).to.revertedWith("creditLineNotInApprovedState");
         });
 
         it("Should be able to borrow the full approved amount", async function () {
             await poolContract
                 .connect(borrower)
-                .drawdownWithReceivable(1_000_000, invoiceNFTContract.address, invoiceNFTTokenId);
+                .drawdownWithReceivable(
+                    toTKN(1_000_000),
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId
+                );
 
             // Keccack hash is properly computed
             expect(
@@ -591,24 +620,41 @@ describe("Invoice Factoring", function () {
             dueDate = blockBefore.timestamp + 2592000;
 
             let accruedIncome = await poolConfigContract.accruedIncome();
-            checkArruedIncome(accruedIncome, 2200, 1650, 550);
+            checkArruedIncome(accruedIncome, toTKN(2200), toTKN(1650), toTKN(550));
 
-            expect(await poolContract.totalPoolValue()).to.equal(5_006_600);
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_011_000);
+            expect(await poolContract.totalPoolValue()).to.equal(toTKN(5_006_600));
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                toTKN(4_011_000)
+            );
 
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 1_000_000, 0, 0, 0, 0, 30, 3, 0);
+            checkRecord(
+                r,
+                rs,
+                toTKN(1_000_000),
+                0,
+                dueDate,
+                0,
+                toTKN(1_000_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
-            checkResult(dueInfo, 0, 0, 1_000_000, 0, 0);
+            checkResult(dueInfo, 0, 0, toTKN(1_000_000), 0, 0);
         });
     });
 
     describe("Invoice Factoring Funding with ERC20 as receivables", function () {
         beforeEach(async function () {
-            await testTokenContract.connect(borrower).mint(borrower.address, 10_000);
-            await testTokenContract.connect(borrower).approve(poolContract.address, 10_000);
+            await testTokenContract.connect(borrower).mint(borrower.address, toTKN(10_000));
+            await testTokenContract.connect(borrower).approve(poolContract.address, toTKN(10_000));
 
             await poolContract
                 .connect(eaServiceAccount)
@@ -616,17 +662,17 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    1_000_000,
+                    toTKN(1_000_000),
                     30,
                     1,
                     0,
                     testTokenContract.address,
-                    10_000,
-                    10_000
+                    toTKN(10_000),
+                    toTKN(10_000)
                 );
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(record, recordStatic, 1_000_000, 0, 0, 0, 0, 0, 0, 1, 0, 30, 2, 0);
+            checkRecord(record, recordStatic, toTKN(1_000_000), 0, 0, 0, 0, 0, 0, 1, 0, 30, 2, 0);
         });
 
         afterEach(async function () {
@@ -638,7 +684,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .drawdownWithReceivable(200_000, testTokenContract.address, 5_000)
+                    .drawdownWithReceivable(200_000, testTokenContract.address, toTKN(5_000))
             ).to.be.revertedWith("insufficientReceivableAmount()");
         });
 
@@ -646,7 +692,7 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .drawdownWithReceivable(200_000, hdtContract.address, 5_000)
+                    .drawdownWithReceivable(200_000, hdtContract.address, toTKN(5_000))
             ).to.be.revertedWith("receivableAssetMismatch()");
         });
 
@@ -654,10 +700,20 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(borrower)
-                    .drawdownWithReceivable(200_000, testTokenContract.address, 10_000)
+                    .drawdownWithReceivable(
+                        toTKN(200_000),
+                        testTokenContract.address,
+                        toTKN(10_000)
+                    )
             )
                 .to.emit(poolContract, "DrawdownMadeWithReceivable")
-                .withArgs(borrower.address, 200_000, 197_000, testTokenContract.address, 10_000);
+                .withArgs(
+                    borrower.address,
+                    toTKN(200_000),
+                    toTKN(197_000),
+                    testTokenContract.address,
+                    toTKN(10_000)
+                );
 
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
@@ -665,24 +721,43 @@ describe("Invoice Factoring", function () {
             dueDate = blockBefore.timestamp + 2592000;
 
             let accruedIncome = await poolConfigContract.accruedIncome();
-            checkArruedIncome(accruedIncome, 600, 450, 150);
+            checkArruedIncome(accruedIncome, toTKN(600), toTKN(450), toTKN(150));
 
-            expect(await poolContract.totalPoolValue()).to.equal(5_001_800);
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(4_813_000);
+            expect(await poolContract.totalPoolValue()).to.equal(toTKN(5_001_800));
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                toTKN(4_813_000)
+            );
 
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 200_000, 0, 0, 0, 0, 30, 3, 0);
+            checkRecord(
+                r,
+                rs,
+                toTKN(1_000_000),
+                0,
+                dueDate,
+                0,
+                toTKN(200_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
-            checkResult(dueInfo, 0, 0, 200_000, 0, 0);
+            checkResult(dueInfo, 0, 0, toTKN(200_000), 0, 0);
         });
     });
 
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", async function () {
         beforeEach(async function () {
-            await feeManagerContract.connect(poolOwner).setFees(1000, 100, 2000, 100, 0);
+            await feeManagerContract
+                .connect(poolOwner)
+                .setFees(toTKN(1000), 100, toTKN(2000), 100, 0);
             await poolConfigContract.connect(poolOwner).setAPR(0);
 
             // Mint InvoiceNFT to the borrower
@@ -704,18 +779,22 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    1_000_000,
+                    toTKN(1_000_000),
                     30,
                     1,
                     0,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
-                    1_500_000
+                    toTKN(1_500_000)
                 );
 
             await poolContract
                 .connect(borrower)
-                .drawdownWithReceivable(1_000_000, invoiceNFTContract.address, invoiceNFTTokenId);
+                .drawdownWithReceivable(
+                    toTKN(1_000_000),
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId
+                );
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
 
@@ -731,7 +810,7 @@ describe("Invoice Factoring", function () {
             await humaConfigContract.connect(poolOwner).pause();
 
             await expect(
-                poolContract.connect(borrower).makePayment(borrower.address, 5)
+                poolContract.connect(borrower).makePayment(borrower.address, toTKN(5))
             ).to.be.revertedWith("protocolIsPaused()");
         });
 
@@ -743,7 +822,7 @@ describe("Invoice Factoring", function () {
                     .connect(pdsServiceAccount)
                     .onReceivedPayment(
                         borrower.address,
-                        1_500_000,
+                        toTKN(1_500_000),
                         ethers.utils.formatBytes32String("1")
                     )
             ).to.be.revertedWith("poolIsNotOn()");
@@ -756,7 +835,7 @@ describe("Invoice Factoring", function () {
                     .connect(borrower)
                     .onReceivedPayment(
                         borrower.address,
-                        1_500_000,
+                        toTKN(1_500_000),
                         ethers.utils.formatBytes32String("1")
                     )
             ).to.be.revertedWith("paymentDetectionServiceAccountRequired()");
@@ -764,18 +843,20 @@ describe("Invoice Factoring", function () {
 
         it("Process payback", async function () {
             let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
-            await testTokenContract.burn(borrower.address, borrowerBalance - 890000);
-            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(890000);
+            await testTokenContract.burn(borrower.address, borrowerBalance.sub(toTKN(890000)));
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(toTKN(890000));
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
 
             // simulates payments from payer.
-            await testTokenContract.connect(payer).transfer(poolContract.address, 1_500_000);
+            await testTokenContract
+                .connect(payer)
+                .transfer(poolContract.address, toTKN(1_500_000));
 
             await poolContract
                 .connect(pdsServiceAccount)
                 .onReceivedPayment(
                     borrower.address,
-                    1_500_000,
+                    toTKN(1_500_000),
                     ethers.utils.formatBytes32String("1")
                 );
 
@@ -788,29 +869,31 @@ describe("Invoice Factoring", function () {
                     .connect(pdsServiceAccount)
                     .onReceivedPayment(
                         borrower.address,
-                        1_500_000,
+                        toTKN(1_500_000),
                         ethers.utils.formatBytes32String("1")
                     )
             ).to.be.revertedWith("paymentAlreadyProcessed()");
 
-            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(1_390_000);
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(toTKN(1_390_000));
 
             let accruedIncome = await poolConfigContract.accruedIncome();
-            checkArruedIncome(accruedIncome, 2200, 1650, 550);
+            checkArruedIncome(accruedIncome, toTKN(2200), toTKN(1650), toTKN(550));
 
-            expect(await poolContract.totalPoolValue()).to.equal(5_006_600);
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(5_011_000);
+            expect(await poolContract.totalPoolValue()).to.equal(toTKN(5_006_600));
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                toTKN(5_011_000)
+            );
 
             expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                1_001_320
+                toTKN(1_001_320)
             );
             expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-                2_002_640
+                toTKN(2_002_640)
             );
 
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
+            checkRecord(r, rs, toTKN(1_000_000), 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
 
             let dueInfo = await feeManagerContract.getDueInfo(r, rs);
             checkResult(dueInfo, 0, 0, 0, 0, 0);
@@ -823,12 +906,14 @@ describe("Invoice Factoring", function () {
 
         it("Invalidate payback", async function () {
             let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
-            await testTokenContract.burn(borrower.address, borrowerBalance - 890000);
-            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(890000);
+            await testTokenContract.burn(borrower.address, borrowerBalance.sub(toTKN(890000)));
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(toTKN(890000));
             await ethers.provider.send("evm_increaseTime", [30 * 24 * 3600 - 10]);
 
             // simulates payments from payer.
-            await testTokenContract.connect(payer).transfer(poolContract.address, 1_500_000);
+            await testTokenContract
+                .connect(payer)
+                .transfer(poolContract.address, toTKN(1_500_000));
 
             await poolContract
                 .connect(pdsServiceAccount)
@@ -839,7 +924,7 @@ describe("Invoice Factoring", function () {
                     .connect(pdsServiceAccount)
                     .onReceivedPayment(
                         borrower.address,
-                        1_500_000,
+                        toTKN(1_500_000),
                         ethers.utils.formatBytes32String("1")
                     )
             ).to.be.revertedWith("paymentAlreadyProcessed()");
@@ -852,17 +937,19 @@ describe("Invoice Factoring", function () {
                 );
                 // post withdraw
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                    1_001_320
+                    toTKN(1_001_320)
                 );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_002_640);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    toTKN(2_002_640)
+                );
 
                 let accruedIncome = await poolConfigContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(2200);
-                expect(accruedIncome.eaIncome).to.equal(1650);
-                expect(accruedIncome.poolOwnerIncome).to.equal(550);
+                expect(accruedIncome.protocolIncome).to.equal(toTKN(2200));
+                expect(accruedIncome.eaIncome).to.equal(toTKN(1650));
+                expect(accruedIncome.poolOwnerIncome).to.equal(toTKN(550));
 
                 // pay period 1
-                advanceClock(30);
+                await advanceClock(30);
                 await ethers.provider.send("evm_mine", []);
                 await poolContract.refreshAccount(borrower.address);
 
@@ -870,53 +957,59 @@ describe("Invoice Factoring", function () {
                     "defaultTriggeredTooEarly()"
                 );
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                    1_002_760
+                    toTKN(1_002_760)
                 );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_005_520);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    toTKN(2_005_520)
+                );
 
                 accruedIncome = await poolConfigContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(4600);
-                expect(accruedIncome.eaIncome).to.equal(3450);
-                expect(accruedIncome.poolOwnerIncome).to.equal(1150);
+                expect(accruedIncome.protocolIncome).to.equal(toTKN(4600));
+                expect(accruedIncome.eaIncome).to.equal(toTKN(3450));
+                expect(accruedIncome.poolOwnerIncome).to.equal(toTKN(1150));
 
                 // pay period 2
-                advanceClock(30);
+                await advanceClock(30);
                 await poolContract.refreshAccount(borrower.address);
 
                 await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                     "defaultTriggeredTooEarly()"
                 );
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                    1_004_214
+                    1004214400000
                 );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_008_428);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    2008428800000
+                );
 
                 accruedIncome = await poolConfigContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(7024);
-                expect(accruedIncome.eaIncome).to.equal(5268);
-                expect(accruedIncome.poolOwnerIncome).to.equal(1756);
+                expect(accruedIncome.protocolIncome).to.equal(toTKN(7024));
+                expect(accruedIncome.eaIncome).to.equal(toTKN(5268));
+                expect(accruedIncome.poolOwnerIncome).to.equal(toTKN(1756));
 
                 // Pay period 3
-                advanceClock(30);
+                await advanceClock(30);
 
                 await expect(
                     poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 )
                     .to.emit(poolContract, "DefaultTriggered")
-                    .withArgs(borrower.address, 1_024_120, eaServiceAccount.address);
+                    .withArgs(borrower.address, toTKN(1_024_120), eaServiceAccount.address);
 
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                    799_390
+                    799390400000
                 );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_598_780);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    1598780800000
+                );
 
                 accruedIncome = await poolConfigContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(7024);
-                expect(accruedIncome.eaIncome).to.equal(5268);
-                expect(accruedIncome.poolOwnerIncome).to.equal(1756);
+                expect(accruedIncome.protocolIncome).to.equal(toTKN(7024));
+                expect(accruedIncome.eaIncome).to.equal(toTKN(5268));
+                expect(accruedIncome.poolOwnerIncome).to.equal(toTKN(1756));
 
                 expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    4_011_000
+                    toTKN(4_011_000)
                 );
             });
 
@@ -925,83 +1018,93 @@ describe("Invoice Factoring", function () {
                     "defaultTriggeredTooEarly()"
                 );
 
-                advanceClock(30);
-                advanceClock(30);
+                await advanceClock(30);
+                await advanceClock(30);
                 await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
                     "defaultTriggeredTooEarly()"
                 );
 
-                advanceClock(30);
+                await advanceClock(30);
 
                 await expect(
                     poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 )
                     .to.emit(poolContract, "DefaultTriggered")
-                    .withArgs(borrower.address, 1_024_120, eaServiceAccount.address);
+                    .withArgs(borrower.address, toTKN(1_024_120), eaServiceAccount.address);
 
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                    799_390
+                    799390400000
                 );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_598_780);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    1598780800000
+                );
 
                 accruedIncome = await poolConfigContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(7024);
-                expect(accruedIncome.eaIncome).to.equal(5268);
-                expect(accruedIncome.poolOwnerIncome).to.equal(1756);
+                expect(accruedIncome.protocolIncome).to.equal(toTKN(7024));
+                expect(accruedIncome.eaIncome).to.equal(toTKN(5268));
+                expect(accruedIncome.poolOwnerIncome).to.equal(toTKN(1756));
 
                 expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    4_011_000
+                    toTKN(4_011_000)
                 );
 
                 // simulates partial payback
-                advanceClock(10);
-                await testTokenContract.connect(payer).transfer(poolContract.address, 1_000_000);
+                await advanceClock(10);
+                await testTokenContract
+                    .connect(payer)
+                    .transfer(poolContract.address, toTKN(1_000_000));
 
                 await poolContract
                     .connect(pdsServiceAccount)
                     .onReceivedPayment(
                         borrower.address,
-                        1_000_000,
+                        toTKN(1_000_000),
                         ethers.utils.formatBytes32String("1")
                     );
 
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                    999_390
+                    999390400000
                 );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1_998_780);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    1998780800000
+                );
 
                 accruedIncome = await poolConfigContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(7024);
-                expect(accruedIncome.eaIncome).to.equal(5268);
-                expect(accruedIncome.poolOwnerIncome).to.equal(1756);
+                expect(accruedIncome.protocolIncome).to.equal(toTKN(7024));
+                expect(accruedIncome.eaIncome).to.equal(toTKN(5268));
+                expect(accruedIncome.poolOwnerIncome).to.equal(toTKN(1756));
 
                 expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    5_011_000
+                    toTKN(5_011_000)
                 );
 
-                advanceClock(10);
-                await testTokenContract.connect(payer).transfer(poolContract.address, 36_361);
+                await advanceClock(10);
+                await testTokenContract
+                    .connect(payer)
+                    .transfer(poolContract.address, 36_361_200000);
 
                 await poolContract
                     .connect(pdsServiceAccount)
                     .onReceivedPayment(
                         borrower.address,
-                        36_361,
+                        36_361_200000,
                         ethers.utils.formatBytes32String("2")
                     );
 
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                    1_005_683
+                    1005683344000
                 );
-                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2_011_366);
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    2011366688000
+                );
 
                 accruedIncome = await poolConfigContract.accruedIncome();
-                expect(accruedIncome.protocolIncome).to.equal(9472);
-                expect(accruedIncome.eaIncome).to.equal(7104);
-                expect(accruedIncome.poolOwnerIncome).to.equal(2368);
+                expect(accruedIncome.protocolIncome).to.equal(9472240000);
+                expect(accruedIncome.eaIncome).to.equal(7104180000);
+                expect(accruedIncome.poolOwnerIncome).to.equal(2368060000);
 
                 expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    5_047_361
+                    5047361200000
                 );
             });
         });
@@ -1009,7 +1112,9 @@ describe("Invoice Factoring", function () {
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Manual Review", async function () {
         beforeEach(async function () {
-            await feeManagerContract.connect(poolOwner).setFees(1000, 100, 2000, 100, 0);
+            await feeManagerContract
+                .connect(poolOwner)
+                .setFees(toTKN(1000), 100, toTKN(2000), 100, 0);
             await poolConfigContract.connect(poolOwner).setAPR(0);
 
             // Mint InvoiceNFT to the borrower
@@ -1031,18 +1136,22 @@ describe("Invoice Factoring", function () {
                     "approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"
                 ](
                     borrower.address,
-                    1_000_000,
+                    toTKN(1_000_000),
                     30,
                     1,
                     0,
                     invoiceNFTContract.address,
                     invoiceNFTTokenId,
-                    1_500_000
+                    toTKN(1_500_000)
                 );
 
             await poolContract
                 .connect(borrower)
-                .drawdownWithReceivable(1_000_000, invoiceNFTContract.address, invoiceNFTTokenId);
+                .drawdownWithReceivable(
+                    toTKN(1_000_000),
+                    invoiceNFTContract.address,
+                    invoiceNFTTokenId
+                );
             let blockNumBefore = await ethers.provider.getBlockNumber();
             let blockBefore = await ethers.provider.getBlock(blockNumBefore);
 
@@ -1057,7 +1166,22 @@ describe("Invoice Factoring", function () {
         it("Invalidate payment after review", async function () {
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 1_000_000, 0, 0, 0, 0, 30, 3, 0);
+            checkRecord(
+                r,
+                rs,
+                toTKN(1_000_000),
+                0,
+                dueDate,
+                0,
+                toTKN(1_000_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
 
             let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
             let poolValue = await poolContract.totalPoolValue();
@@ -1067,16 +1191,31 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(pdsServiceAccount)
-                    .onReceivedPayment(borrower.address, 15_000_000, paymentId)
+                    .onReceivedPayment(borrower.address, toTKN(15_000_000), paymentId)
             )
                 .to.emit(poolContract, "PaymentFlaggedForReview")
-                .withArgs(paymentId, borrower.address, 15_000_000);
+                .withArgs(paymentId, borrower.address, toTKN(15_000_000));
 
             expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(false);
             expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(true);
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 1_000_000, 0, 0, 0, 0, 30, 3, 0);
+            checkRecord(
+                r,
+                rs,
+                toTKN(1_000_000),
+                0,
+                dueDate,
+                0,
+                toTKN(1_000_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(borrowerBalance);
             expect(await poolContract.totalPoolValue()).to.equal(poolValue);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
@@ -1102,7 +1241,22 @@ describe("Invoice Factoring", function () {
         it("Proceed with payment after review", async function () {
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 1_000_000, 0, 0, 0, 0, 30, 3, 0);
+            checkRecord(
+                r,
+                rs,
+                toTKN(1_000_000),
+                0,
+                dueDate,
+                0,
+                toTKN(1_000_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
 
             let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
             let poolValue = await poolContract.totalPoolValue();
@@ -1112,23 +1266,38 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(pdsServiceAccount)
-                    .onReceivedPayment(borrower.address, 15_000_000, paymentId)
+                    .onReceivedPayment(borrower.address, toTKN(15_000_000), paymentId)
             )
                 .to.emit(poolContract, "PaymentFlaggedForReview")
-                .withArgs(paymentId, borrower.address, 15_000_000);
+                .withArgs(paymentId, borrower.address, toTKN(15_000_000));
 
             expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(false);
             expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(true);
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 1_000_000, 0, 0, 0, 0, 30, 3, 0);
+            checkRecord(
+                r,
+                rs,
+                toTKN(1_000_000),
+                0,
+                dueDate,
+                0,
+                toTKN(1_000_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(borrowerBalance);
             expect(await poolContract.totalPoolValue()).to.equal(poolValue);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
                 poolLiquidity
             );
 
-            await testTokenContract.mint(poolContract.address, 15_000_000);
+            await testTokenContract.mint(poolContract.address, toTKN(15_000_000));
 
             let invalidPaymentId = ethers.utils.formatBytes32String("1");
             await expect(
@@ -1139,17 +1308,17 @@ describe("Invoice Factoring", function () {
                 poolContract.connect(poolOwner).processPaymentAfterReview(paymentId, true)
             )
                 .to.emit(poolContract, "ExtraFundsDispersed")
-                .withArgs(borrower.address, 14_000_000)
+                .withArgs(borrower.address, toTKN(14_000_000))
                 .to.emit(poolContract, "ReceivedPaymentProcessed")
-                .withArgs(poolOwner.address, borrower.address, 15_000_000, paymentId);
+                .withArgs(poolOwner.address, borrower.address, toTKN(15_000_000), paymentId);
 
             expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(true);
             expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(false);
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
-            borrowerBalance = BN.from(borrowerBalance).add(BN.from(14000000));
-            poolLiquidity = BN.from(poolLiquidity).add(BN.from(1000000));
+            checkRecord(r, rs, toTKN(1_000_000), 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
+            borrowerBalance = borrowerBalance.add(toTKN(14000000));
+            poolLiquidity = poolLiquidity.add(toTKN(1000000));
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(borrowerBalance);
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(borrowerBalance);
             expect(await poolContract.totalPoolValue()).to.equal(poolValue);
@@ -1160,32 +1329,52 @@ describe("Invoice Factoring", function () {
         it("Additional payments received after payoff", async function () {
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 1_000_000, 0, 0, 0, 0, 30, 3, 0);
+            checkRecord(
+                r,
+                rs,
+                toTKN(1_000_000),
+                0,
+                dueDate,
+                0,
+                toTKN(1_000_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
 
             let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
             let poolValue = await poolContract.totalPoolValue();
             let poolLiquidity = await testTokenContract.balanceOf(poolContract.address);
 
-            await testTokenContract.mint(poolContract.address, 1_500_000);
+            await testTokenContract.mint(poolContract.address, toTKN(1_500_000));
 
             let paymentId = ethers.utils.formatBytes32String("3");
             await expect(
                 poolContract
                     .connect(pdsServiceAccount)
-                    .onReceivedPayment(borrower.address, 1_500_000, paymentId)
+                    .onReceivedPayment(borrower.address, toTKN(1_500_000), paymentId)
             )
                 .to.emit(poolContract, "ExtraFundsDispersed")
-                .withArgs(borrower.address, 500_000)
+                .withArgs(borrower.address, toTKN(500_000))
                 .to.emit(poolContract, "ReceivedPaymentProcessed")
-                .withArgs(pdsServiceAccount.address, borrower.address, 1_500_000, paymentId);
+                .withArgs(
+                    pdsServiceAccount.address,
+                    borrower.address,
+                    toTKN(1_500_000),
+                    paymentId
+                );
 
             expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(true);
             expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(false);
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
-            borrowerBalance = BN.from(borrowerBalance).add(BN.from(500000));
-            poolLiquidity = BN.from(poolLiquidity).add(BN.from(1000000));
+            checkRecord(r, rs, toTKN(1_000_000), 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
+            borrowerBalance = borrowerBalance.add(toTKN(500000));
+            poolLiquidity = poolLiquidity.add(toTKN(1000000));
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(borrowerBalance);
             expect(await poolContract.totalPoolValue()).to.equal(poolValue);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
@@ -1196,33 +1385,33 @@ describe("Invoice Factoring", function () {
             await expect(
                 poolContract
                     .connect(pdsServiceAccount)
-                    .onReceivedPayment(borrower.address, 2_000_000, paymentId)
+                    .onReceivedPayment(borrower.address, toTKN(2_000_000), paymentId)
             )
                 .to.emit(poolContract, "PaymentFlaggedForReview")
-                .withArgs(paymentId, borrower.address, 2_000_000);
+                .withArgs(paymentId, borrower.address, toTKN(2_000_000));
 
             expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(false);
             expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(true);
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
+            checkRecord(r, rs, toTKN(1_000_000), 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
 
-            await testTokenContract.mint(poolContract.address, 2_000_000);
+            await testTokenContract.mint(poolContract.address, toTKN(2_000_000));
 
             await expect(
                 poolContract.connect(poolOwner).processPaymentAfterReview(paymentId, true)
             )
                 .to.emit(poolContract, "ExtraFundsDispersed")
-                .withArgs(borrower.address, 2_000_000)
+                .withArgs(borrower.address, toTKN(2_000_000))
                 .to.emit(poolContract, "ReceivedPaymentProcessed")
-                .withArgs(poolOwner.address, borrower.address, 2_000_000, paymentId);
+                .withArgs(poolOwner.address, borrower.address, toTKN(2_000_000), paymentId);
 
             expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(true);
             expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(false);
             r = await poolContract.creditRecordMapping(borrower.address);
             rs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(r, rs, 1_000_000, 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
-            borrowerBalance = BN.from(borrowerBalance).add(BN.from(2000000));
+            checkRecord(r, rs, toTKN(1_000_000), 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
+            borrowerBalance = borrowerBalance.add(toTKN(2000000));
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(borrowerBalance);
             expect(await poolContract.totalPoolValue()).to.equal(poolValue);
             expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(

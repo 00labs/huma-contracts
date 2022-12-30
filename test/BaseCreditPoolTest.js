@@ -1239,7 +1239,7 @@ describe("Base Credit Pool", function () {
                 toTKN(1_000_000),
                 1076514442977,
                 dueDate,
-                -9589240,
+                "SKIP",
                 0,
                 0,
                 0,
@@ -1249,6 +1249,8 @@ describe("Base Credit Pool", function () {
                 5,
                 1029852500843
             );
+            // correction is 100% precise because it depends on actual running time
+            expect(record.correction).to.be.within(-9589250, -9589230);
             expect(await poolContract.totalPoolValue()).to.equal(4009658999667);
             expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                 801931799933
@@ -1288,7 +1290,7 @@ describe("Base Credit Pool", function () {
                 toTKN(1_000_000),
                 26514442977,
                 dueDate,
-                -3510511675,
+                "SKIP",
                 0,
                 0,
                 0,
@@ -1298,6 +1300,8 @@ describe("Base Credit Pool", function () {
                 5,
                 0
             );
+            // correction is 100% precise because it depends on actual running time
+            expect(record.correction).to.be.within(-3510515000, -3510500000);
             expect(await poolContract.totalPoolValue()).to.equal(5051600000006);
             expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                 1010320000001
