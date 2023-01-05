@@ -385,6 +385,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         view
         returns (BS.CreditRecord memory)
     {
+        if (cr.state > BS.CreditState.Approved) revert Errors.creditLineOutstanding();
+
         // Note: Special logic. dueDate is normally used to track the next bill due.
         // Before the first drawdown, it is also used to set the deadline for the first
         // drawdown to happen, otherwise, the credit line expires.
