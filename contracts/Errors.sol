@@ -63,7 +63,6 @@ contract Errors {
     error creditLineNotInApprovedState(); // 0xfc91a989
     error paymentIdNotUnderReview(); // 0xd1696aaa
     error creditLineTooHigh(); // 0x552b8377
-    error creditLineOutstanding(); // 0x2901939a
 
     // pool operation
     error exceededPoolLiquidityCap(); // 0x5642ebd4
