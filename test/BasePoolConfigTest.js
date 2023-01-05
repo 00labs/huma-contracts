@@ -2,7 +2,7 @@
 const {ethers} = require("hardhat");
 const {expect} = require("chai");
 const {BigNumber: BN} = require("ethers");
-const {deployContracts, deployAndSetupPool, toTKN} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, toToken} = require("./BaseTest");
 
 let poolContract;
 let poolConfigContract;
@@ -199,15 +199,15 @@ describe("Base Pool Config", function () {
                     0
                 );
                 expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                    toTKN(5_000_000)
+                    toToken(5_000_000)
                 );
                 expect(await hdtContract.balanceOf(poolOwnerTreasury.address)).to.equal(
-                    toTKN(1_000_000)
+                    toToken(1_000_000)
                 );
                 const fees = await feeManagerContract.getFees();
-                expect(fees._frontLoadingFeeFlat).to.equal(toTKN(1000));
+                expect(fees._frontLoadingFeeFlat).to.equal(toToken(1000));
                 expect(fees._frontLoadingFeeBps).to.equal(100);
-                expect(fees._lateFeeFlat).to.equal(toTKN(2000));
+                expect(fees._lateFeeFlat).to.equal(toToken(2000));
                 expect(fees._lateFeeBps).to.equal(100);
             });
 
@@ -221,10 +221,10 @@ describe("Base Pool Config", function () {
                 it("Should be able to change pool liquidity cap", async function () {
                     await poolConfigContract
                         .connect(poolOwner)
-                        .setPoolLiquidityCap(toTKN(10_000_000));
+                        .setPoolLiquidityCap(toToken(10_000_000));
                     var [, , , , cap] = await poolConfigContract.getPoolSummary();
 
-                    expect(cap).to.equal(toTKN(10_000_000));
+                    expect(cap).to.equal(toToken(10_000_000));
                 });
             });
 
@@ -254,10 +254,10 @@ describe("Base Pool Config", function () {
             });
 
             it("Should be able to set max credit size", async function () {
-                await poolConfigContract.connect(poolOwner).setMaxCreditLine(toTKN(1_000_000));
+                await poolConfigContract.connect(poolOwner).setMaxCreditLine(toToken(1_000_000));
                 var [, , , max] = await poolConfigContract.getPoolSummary();
 
-                expect(max).to.equal(toTKN(1_000_000));
+                expect(max).to.equal(toToken(1_000_000));
             });
 
             it("Shall have the protocol-level default-grace-period", async function () {
@@ -359,15 +359,15 @@ describe("Base Pool Config", function () {
                     }
                 }
 
-                await testTokenContract.mint(evaluationAgent2.address, toTKN(2_000_000));
+                await testTokenContract.mint(evaluationAgent2.address, toToken(2_000_000));
                 await testTokenContract
                     .connect(evaluationAgent2)
-                    .approve(poolContract.address, toTKN(2_000_000));
+                    .approve(poolContract.address, toToken(2_000_000));
                 await poolContract
                     .connect(poolOperator)
                     .addApprovedLender(evaluationAgent2.address);
                 await expect(
-                    poolContract.connect(evaluationAgent2).deposit(toTKN(2_000_000))
+                    poolContract.connect(evaluationAgent2).deposit(toToken(2_000_000))
                 ).to.emit(poolContract, "LiquidityDeposited");
                 await expect(
                     poolConfigContract
@@ -377,13 +377,13 @@ describe("Base Pool Config", function () {
             });
 
             it("Should allow evaluation agent to be replaced when the old EA has rewards", async function () {
-                await poolContract.connect(borrower).requestCredit(toTKN(1_000_000), 30, 12);
+                await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
                 console.log("done");
                 await poolContract
                     .connect(eaServiceAccount)
-                    .approveCredit(borrower.address, toTKN(1_000_000), 30, 12, 1217);
+                    .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
                 console.log("done");
-                await poolContract.connect(borrower).drawdown(toTKN(1_000_000));
+                await poolContract.connect(borrower).drawdown(toToken(1_000_000));
                 console.log("done");
                 // origination fee: 11000000000
                 // first month interest: 10002739726
@@ -394,15 +394,15 @@ describe("Base Pool Config", function () {
                 expect(accruedIncome.poolOwnerIncome).to.equal(1050136986);
                 let oldBalance = await testTokenContract.balanceOf(evaluationAgent.address);
 
-                await testTokenContract.mint(evaluationAgent2.address, toTKN(2_000_000));
+                await testTokenContract.mint(evaluationAgent2.address, toToken(2_000_000));
                 await testTokenContract
                     .connect(evaluationAgent2)
-                    .approve(poolContract.address, toTKN(2_000_000));
+                    .approve(poolContract.address, toToken(2_000_000));
                 await poolContract
                     .connect(poolOperator)
                     .addApprovedLender(evaluationAgent2.address);
                 await expect(
-                    poolContract.connect(evaluationAgent2).deposit(toTKN(2_000_000))
+                    poolContract.connect(evaluationAgent2).deposit(toToken(2_000_000))
                 ).to.emit(poolContract, "LiquidityDeposited");
                 await expect(
                     poolConfigContract

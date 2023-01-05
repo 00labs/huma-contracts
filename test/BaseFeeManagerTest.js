@@ -7,7 +7,7 @@ const {
     advanceClock,
     checkResult,
     checkArruedIncome,
-    toTKN,
+    toToken,
 } = require("./BaseTest");
 
 let eaNFTContract;
@@ -83,18 +83,18 @@ describe("Base Fee Manager", function () {
                 await expect(
                     feeManagerContract
                         .connect(treasury)
-                        .setFees(toTKN(10), 100, toTKN(20), 10000, 0)
+                        .setFees(toToken(10), 100, toToken(20), 10000, 0)
                 ).to.be.revertedWith("caller is not the owner"); // open zeppelin default error message
             });
 
             it("Should set the fees correctly", async function () {
                 await feeManagerContract
                     .connect(poolOwner)
-                    .setFees(toTKN(15), 150, toTKN(25), 250, 10);
+                    .setFees(toToken(15), 150, toToken(25), 250, 10);
                 var [f1, f2, f3, f4, f5] = await feeManagerContract.getFees();
-                expect(f1).to.equal(toTKN(15));
+                expect(f1).to.equal(toToken(15));
                 expect(f2).to.equal(150);
-                expect(f3).to.equal(toTKN(25));
+                expect(f3).to.equal(toToken(25));
                 expect(f4).to.equal(250);
                 expect(f5).to.equal(10);
             });
@@ -102,11 +102,11 @@ describe("Base Fee Manager", function () {
             it("Should allow owner to change the fees again", async function () {
                 await feeManagerContract
                     .connect(poolOwner)
-                    .setFees(toTKN(10), 100, toTKN(20), 500, 0);
+                    .setFees(toToken(10), 100, toToken(20), 500, 0);
                 var [f1, f2, f3, f4, f5] = await feeManagerContract.getFees();
-                expect(f1).to.equal(toTKN(10));
+                expect(f1).to.equal(toToken(10));
                 expect(f2).to.equal(100);
-                expect(f3).to.equal(toTKN(20));
+                expect(f3).to.equal(toToken(20));
                 expect(f4).to.equal(500);
                 expect(f5).to.equal(0);
             });
@@ -136,7 +136,9 @@ describe("Base Fee Manager", function () {
 
     describe("getDueInfo(), IntOnly", async function () {
         before(async function () {
-            await feeManagerContract.connect(poolOwner).setFees(toTKN(10), 100, toTKN(20), 500, 0);
+            await feeManagerContract
+                .connect(poolOwner)
+                .setFees(toToken(10), 100, toToken(20), 500, 0);
             [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
                 poolOwner,
                 proxyOwner,
@@ -152,19 +154,19 @@ describe("Base Fee Manager", function () {
                 poolOwnerTreasury
             );
 
-            await poolContract.connect(borrower).requestCredit(toTKN(400), 30, 12);
+            await poolContract.connect(borrower).requestCredit(toToken(400), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
-                .approveCredit(borrower.address, toTKN(400), 30, 12, 1217);
-            await testTokenContract.connect(lender).approve(poolContract.address, toTKN(300));
-            await poolContract.connect(borrower).drawdown(toTKN(400));
+                .approveCredit(borrower.address, toToken(400), 30, 12, 1217);
+            await testTokenContract.connect(lender).approve(poolContract.address, toToken(300));
+            await poolContract.connect(borrower).drawdown(toToken(400));
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
             let r = await feeManagerContract.getDueInfo(record, recordStatic);
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
-            checkResult(r, 0, 4001095, 4001095, toTKN(400), 0);
+            checkResult(r, 0, 4001095, 4001095, toToken(400), 0);
 
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
         });
@@ -172,7 +174,7 @@ describe("Base Fee Manager", function () {
             describe("No late fee", async function () {
                 it("IntOnly", async function () {
                     let r = await feeManagerContract.getDueInfo(record, recordStatic);
-                    checkResult(r, 0, 4001095, 4001095, toTKN(400), 0);
+                    checkResult(r, 0, 4001095, 4001095, toToken(400), 0);
                 });
             });
             describe("Late fee scenarios", async function () {
@@ -226,30 +228,34 @@ describe("Base Fee Manager", function () {
                 poolOwnerTreasury
             );
 
-            await feeManagerContract.connect(poolOwner).setFees(toTKN(10), 100, toTKN(20), 100, 0);
+            await feeManagerContract
+                .connect(poolOwner)
+                .setFees(toToken(10), 100, toToken(20), 100, 0);
             await poolConfigContract.connect(poolOwner).setAPR(1217);
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
 
             // Create a borrowing record
-            await poolContract.connect(borrower).requestCredit(toTKN(5000), 30, 12);
+            await poolContract.connect(borrower).requestCredit(toToken(5000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
-                .approveCredit(borrower.address, toTKN(5000), 30, 12, 1217);
-            await testTokenContract.connect(poolOwner).approve(poolContract.address, toTKN(4000));
-            await poolContract.connect(borrower).drawdown(toTKN(4000));
+                .approveCredit(borrower.address, toToken(5000), 30, 12, 1217);
+            await testTokenContract
+                .connect(poolOwner)
+                .approve(poolContract.address, toToken(4000));
+            await poolContract.connect(borrower).drawdown(toToken(4000));
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
             let r = await feeManagerContract.getDueInfo(record, recordStatic);
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
-            checkResult(r, 0, 40010958, 240010958, toTKN(3800), 0);
+            checkResult(r, 0, 40010958, 240010958, toToken(3800), 0);
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("WithMinPrincipal", async function () {
                     let r = await feeManagerContract.getDueInfo(record, recordStatic);
-                    checkResult(r, 0, 40010958, 240010958, toTKN(3800), 0);
+                    checkResult(r, 0, 40010958, 240010958, toToken(3800), 0);
                 });
             });
             describe("Late fee scenarios", async function () {
@@ -306,20 +312,20 @@ describe("Base Fee Manager", function () {
 
             await feeManagerContract
                 .connect(poolOwner)
-                .setFees(toTKN(10), 100, toTKN(20), 500, toTKN(10));
-            await poolContract.connect(borrower).requestCredit(toTKN(400), 30, 12);
+                .setFees(toToken(10), 100, toToken(20), 500, toToken(10));
+            await poolContract.connect(borrower).requestCredit(toToken(400), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
-                .approveCredit(borrower.address, toTKN(400), 30, 12, 1217);
-            await testTokenContract.connect(lender).approve(poolContract.address, toTKN(300));
-            await poolContract.connect(borrower).drawdown(toTKN(400));
+                .approveCredit(borrower.address, toToken(400), 30, 12, 1217);
+            await testTokenContract.connect(lender).approve(poolContract.address, toToken(300));
+            await poolContract.connect(borrower).drawdown(toToken(400));
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
             let r = await feeManagerContract.getDueInfo(record, recordStatic);
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
-            checkResult(r, 0, 14001095, 14001095, toTKN(400), 0);
+            checkResult(r, 0, 14001095, 14001095, toToken(400), 0);
 
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
         });
@@ -327,7 +333,7 @@ describe("Base Fee Manager", function () {
             describe("No late fee", async function () {
                 it("IntOnly", async function () {
                     let r = await feeManagerContract.getDueInfo(record, recordStatic);
-                    checkResult(r, 0, 14001095, 14001095, toTKN(400), 0);
+                    checkResult(r, 0, 14001095, 14001095, toToken(400), 0);
                 });
             });
             describe("Late fee scenarios", async function () {
@@ -383,30 +389,32 @@ describe("Base Fee Manager", function () {
 
             await feeManagerContract
                 .connect(poolOwner)
-                .setFees(toTKN(10), 100, toTKN(20), 100, toTKN(10));
+                .setFees(toToken(10), 100, toToken(20), 100, toToken(10));
             await poolConfigContract.connect(poolOwner).setAPR(1217);
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
 
             // Create a borrowing record
-            await poolContract.connect(borrower).requestCredit(toTKN(5000), 30, 12);
+            await poolContract.connect(borrower).requestCredit(toToken(5000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
-                .approveCredit(borrower.address, toTKN(5000), 30, 12, 1217);
-            await testTokenContract.connect(poolOwner).approve(poolContract.address, toTKN(4000));
-            await poolContract.connect(borrower).drawdown(toTKN(4000));
+                .approveCredit(borrower.address, toToken(5000), 30, 12, 1217);
+            await testTokenContract
+                .connect(poolOwner)
+                .approve(poolContract.address, toToken(4000));
+            await poolContract.connect(borrower).drawdown(toToken(4000));
 
             record = await poolContract.creditRecordMapping(borrower.address);
             recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
             let r = await feeManagerContract.getDueInfo(record, recordStatic);
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
-            checkResult(r, 0, 50010958, 250010958, toTKN(3800), 0);
+            checkResult(r, 0, 50010958, 250010958, toToken(3800), 0);
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("WithMinPrincipal", async function () {
                     let r = await feeManagerContract.getDueInfo(record, recordStatic);
-                    checkResult(r, 0, 50010958, 250010958, toTKN(3800), 0);
+                    checkResult(r, 0, 50010958, 250010958, toToken(3800), 0);
                 });
             });
             describe("Late fee scenarios", async function () {
