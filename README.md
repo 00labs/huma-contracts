@@ -10,7 +10,11 @@
   <a href="https://twitter.com/humafinance" target="_blank">
     <img alt="Twitter: humafinance" src="https://img.shields.io/twitter/follow/humafinance.svg?style=social" />
   </a>
+  <a href="https://discord.gg/7e2fdMSCZr" target="_blank">
+    <img alt="Join Discord" src="https://badgen.net/badge/Join/HUMAnity/cyan?icon=discord" />
+  </a>
 </p>
+
 
 > Huma Finance EVM contracts
 
