@@ -71,6 +71,11 @@
   },
   {
     "inputs": [],
+    "name": "creditLineOutstanding",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "creditLineTooHigh",
     "type": "error"
   },
