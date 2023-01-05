@@ -41,6 +41,11 @@
   },
   {
     "inputs": [],
+    "name": "creditLineOutstanding",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "defaultHasAlreadyBeenTriggered",
     "type": "error"
   },
