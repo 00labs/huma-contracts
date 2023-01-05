@@ -19,7 +19,6 @@
   </a>
 </p>
 
-
 > Huma Finance EVM contracts
 
 ### 🏠 [Homepage](https://huma.finance)
