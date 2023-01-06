@@ -453,15 +453,15 @@ describe("Base Credit Pool", function () {
         it("Shall reject new approval after a drawdown has happened", async function () {
             await poolContract
                 .connect(eaServiceAccount)
-                .approveCredit(borrower.address, 1_000_000, 30, 12, 1217);
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
             expect(await poolContract.isApproved(borrower.address)).to.equal(true);
 
-            await poolContract.connect(borrower).drawdown(1_000_000);
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
 
             await expect(
                 poolContract
                     .connect(eaServiceAccount)
-                    .approveCredit(borrower.address, 500_000, 30, 12, 1217)
+                    .approveCredit(borrower.address, toToken(500_000), 30, 12, 1217)
             ).to.be.revertedWith("creditLineOutstanding()");
         });
 
