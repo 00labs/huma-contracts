@@ -160,7 +160,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         toToken(1_500_000)
                     )
-            ).to.be.revertedWith("protocolIsPaused()");
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
         });
 
         it("Should not allow posting approved laons while pool is off", async function () {
@@ -181,7 +181,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         toToken(1_500_000)
                     )
-            ).to.be.revertedWith("poolIsNotOn()");
+            ).to.be.revertedWithCustomError(poolContract, "poolIsNotOn");
         });
 
         it("Cannot post approved loan with amount greater than limit", async function () {
@@ -200,7 +200,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         toToken(1_500_000)
                     )
-            ).to.be.revertedWith("greaterThanMaxCreditLine()");
+            ).to.be.revertedWithCustomError(poolContract, "greaterThanMaxCreditLine");
         });
 
         it("Should reject zero address receivable", async function () {
@@ -219,7 +219,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         toToken(1_500_000)
                     )
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(poolContract, "zeroAddressProvided");
         });
 
         it("Should reject non-ERC20-or-ERC721", async function () {
@@ -238,7 +238,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         toToken(1_500_000)
                     )
-            ).to.be.revertedWith("unsupportedReceivableAsset()");
+            ).to.be.revertedWithCustomError(poolContract, "unsupportedReceivableAsset");
         });
 
         it("Should post approved invoice financing successfully", async function () {
@@ -289,7 +289,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTTokenId,
                         toToken(1_000_000)
                     )
-            ).to.be.revertedWith("insufficientReceivableAmount()");
+            ).to.be.revertedWithCustomError(poolContract, "insufficientReceivableAmount");
         });
 
         it("Should approve invoice with amount equals to or high than the receivable requirement", async function () {
@@ -400,7 +400,7 @@ describe("Invoice Factoring", function () {
         it("Should prevent non-EA-borrower to change the limit for an approved invoice factoring record", async function () {
             await expect(
                 poolContract.connect(payer).changeCreditLine(borrower.address, 0)
-            ).to.be.revertedWith("onlyBorrowerOrEACanReduceCreditLine()");
+            ).to.be.revertedWithCustomError(poolContract, "onlyBorrowerOrEACanReduceCreditLine");
         });
         it("Should allow borrower to reduce the limit for an approved invoice factoring record", async function () {
             await poolContract.connect(borrower).changeCreditLine(borrower.address, toToken(1000));
@@ -417,7 +417,7 @@ describe("Invoice Factoring", function () {
                 poolContract
                     .connect(borrower)
                     .changeCreditLine(borrower.address, toToken(1_000_000))
-            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
+            ).to.be.revertedWithCustomError(poolContract, "evaluationAgentServiceAccountRequired");
         });
         it("Should allow evaluation agent to increase an approved invoice factoring record", async function () {
             await poolContract
@@ -502,7 +502,10 @@ describe("Invoice Factoring", function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract.connect(borrower).drawdown(toToken(1_000_000))
-            ).to.be.revertedWith("drawdownFunctionUsedInsteadofDrawdownWithReceivable");
+            ).to.be.revertedWithCustomError(
+                poolContract,
+                "drawdownFunctionUsedInsteadofDrawdownWithReceivable"
+            );
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
@@ -515,7 +518,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTContract.address,
                         invoiceNFTTokenId
                     )
-            ).to.be.revertedWith("protocolIsPaused()");
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
         });
 
         it("Shall reject drawdown without receivable", async function () {
@@ -527,7 +530,7 @@ describe("Invoice Factoring", function () {
                         ethers.constants.AddressZero,
                         invoiceNFTTokenId
                     )
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(poolContract, "zeroAddressProvided");
         });
 
         it("Shall reject drawdown when receivable param mismatches", async function () {
@@ -535,7 +538,7 @@ describe("Invoice Factoring", function () {
                 poolContract
                     .connect(borrower)
                     .drawdownWithReceivable(toToken(1_000_000), invoiceNFTContract.address, 12345)
-            ).to.be.revertedWith("receivableAssetParamMismatch()");
+            ).to.be.revertedWithCustomError(poolContract, "receivableAssetParamMismatch");
         });
 
         it("Should be able to borrow amount less than approved", async function () {
@@ -602,7 +605,7 @@ describe("Invoice Factoring", function () {
                         invoiceNFTContract.address,
                         invoiceNFTTokenId
                     )
-            ).to.revertedWith("creditLineNotInApprovedState");
+            ).to.revertedWithCustomError(poolContract, "creditLineNotInApprovedState");
         });
 
         it("Should be able to borrow the full approved amount", async function () {
@@ -716,7 +719,7 @@ describe("Invoice Factoring", function () {
                 poolContract
                     .connect(borrower)
                     .drawdownWithReceivable(200_000, testTokenContract.address, toToken(5_000))
-            ).to.be.revertedWith("insufficientReceivableAmount()");
+            ).to.be.revertedWithCustomError(poolContract, "insufficientReceivableAmount");
         });
 
         it("Should reject since the receivable is either IERC721 or IERC20", async function () {
@@ -724,7 +727,7 @@ describe("Invoice Factoring", function () {
                 poolContract
                     .connect(borrower)
                     .drawdownWithReceivable(200_000, hdtContract.address, toToken(5_000))
-            ).to.be.revertedWith("receivableAssetMismatch()");
+            ).to.be.revertedWithCustomError(poolContract, "receivableAssetMismatch");
         });
 
         it("Should be able to borrow amount less than approved", async function () {
@@ -838,7 +841,7 @@ describe("Invoice Factoring", function () {
 
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, toToken(5))
-            ).to.be.revertedWith("protocolIsPaused()");
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
         });
 
         it("Should reject payback when pool is off", async function () {
@@ -852,7 +855,7 @@ describe("Invoice Factoring", function () {
                         toToken(1_500_000),
                         ethers.utils.formatBytes32String("1")
                     )
-            ).to.be.revertedWith("poolIsNotOn()");
+            ).to.be.revertedWithCustomError(poolContract, "poolIsNotOn");
         });
 
         it("Should reject if non-PDS calls to report payments received", async function () {
@@ -865,7 +868,10 @@ describe("Invoice Factoring", function () {
                         toToken(1_500_000),
                         ethers.utils.formatBytes32String("1")
                     )
-            ).to.be.revertedWith("paymentDetectionServiceAccountRequired()");
+            ).to.be.revertedWithCustomError(
+                poolContract,
+                "paymentDetectionServiceAccountRequired"
+            );
         });
 
         it("Process payback", async function () {
@@ -899,7 +905,7 @@ describe("Invoice Factoring", function () {
                         toToken(1_500_000),
                         ethers.utils.formatBytes32String("1")
                     )
-            ).to.be.revertedWith("paymentAlreadyProcessed()");
+            ).to.be.revertedWithCustomError(poolContract, "paymentAlreadyProcessed");
 
             expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
                 toToken(1_390_000)
@@ -956,14 +962,14 @@ describe("Invoice Factoring", function () {
                         toToken(1_500_000),
                         ethers.utils.formatBytes32String("1")
                     )
-            ).to.be.revertedWith("paymentAlreadyProcessed()");
+            ).to.be.revertedWithCustomError(poolContract, "paymentAlreadyProcessed");
         });
 
         describe("Default flow", async function () {
             it("Writeoff less than pool value", async function () {
-                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "defaultTriggeredTooEarly()"
-                );
+                await expect(
+                    poolContract.triggerDefault(borrower.address)
+                ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
                 // post withdraw
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     toToken(1_001_320)
@@ -982,9 +988,9 @@ describe("Invoice Factoring", function () {
                 await ethers.provider.send("evm_mine", []);
                 await poolContract.refreshAccount(borrower.address);
 
-                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "defaultTriggeredTooEarly()"
-                );
+                await expect(
+                    poolContract.triggerDefault(borrower.address)
+                ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     toToken(1_002_760)
                 );
@@ -1001,9 +1007,9 @@ describe("Invoice Factoring", function () {
                 await advanceClock(30);
                 await poolContract.refreshAccount(borrower.address);
 
-                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "defaultTriggeredTooEarly()"
-                );
+                await expect(
+                    poolContract.triggerDefault(borrower.address)
+                ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     1004214400000
                 );
@@ -1043,15 +1049,15 @@ describe("Invoice Factoring", function () {
             });
 
             it("Multiple partial payments after default", async function () {
-                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "defaultTriggeredTooEarly()"
-                );
+                await expect(
+                    poolContract.triggerDefault(borrower.address)
+                ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
 
                 await advanceClock(30);
                 await advanceClock(30);
-                await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                    "defaultTriggeredTooEarly()"
-                );
+                await expect(
+                    poolContract.triggerDefault(borrower.address)
+                ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
 
                 await advanceClock(30);
 
@@ -1252,7 +1258,7 @@ describe("Invoice Factoring", function () {
             // After review, inactivate the paymentId
             await expect(
                 poolContract.connect(poolOperator).processPaymentAfterReview(paymentId, false)
-            ).to.be.revertedWith("notPoolOwner()");
+            ).to.be.revertedWithCustomError(poolConfigContract, "notPoolOwner");
 
             await expect(
                 poolContract.connect(poolOwner).processPaymentAfterReview(paymentId, false)
@@ -1329,7 +1335,7 @@ describe("Invoice Factoring", function () {
             let invalidPaymentId = ethers.utils.formatBytes32String("1");
             await expect(
                 poolContract.connect(poolOwner).processPaymentAfterReview(invalidPaymentId, true)
-            ).to.be.revertedWith("paymentIdNotUnderReview()");
+            ).to.be.revertedWithCustomError(poolContract, "paymentIdNotUnderReview");
 
             await expect(
                 poolContract.connect(poolOwner).processPaymentAfterReview(paymentId, true)

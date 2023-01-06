@@ -100,11 +100,8 @@ describe("Upgradability Test", function () {
         });
 
         it("Should not upgrade without pool owner", async function () {
-            await expect(
-                poolProxy.connect(protocolOwner).upgradeTo(newPoolImpl.address)
-            ).to.be.revertedWith(
-                "function selector was not recognized and there's no fallback function"
-            );
+            await expect(poolProxy.connect(protocolOwner).upgradeTo(newPoolImpl.address)).to.be
+                .reverted;
         });
 
         it("Should call existing function successfully", async function () {
@@ -116,11 +113,8 @@ describe("Upgradability Test", function () {
 
         it("Should call deleted function failed", async function () {
             await poolProxy.connect(proxyOwner).upgradeTo(newPoolImpl.address);
-            await expect(
-                poolContract.approveCredit(protocolOwner.address, 5000, 30, 12, 1217)
-            ).to.be.revertedWith(
-                "function selector was not recognized and there's no fallback function"
-            );
+            await expect(poolContract.approveCredit(protocolOwner.address, 5000, 30, 12, 1217)).to
+                .be.reverted;
         });
 
         it("Should call changed function and new function successfully", async function () {

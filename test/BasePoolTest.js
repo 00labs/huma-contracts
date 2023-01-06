@@ -89,7 +89,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Non-operator shall not be able to approve lenders ", async function () {
             await expect(
                 poolContract.connect(borrower).addApprovedLender(lender2.address)
-            ).to.be.revertedWith("poolOperatorRequired()");
+            ).to.be.revertedWithCustomError(poolContract, "poolOperatorRequired");
         });
         it("Shall be able to approve lenders successfully ", async function () {
             await expect(poolContract.connect(poolOperator).addApprovedLender(lender2.address))
@@ -102,7 +102,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Non-operator shall not be able to remove approved lenders ", async function () {
             await expect(
                 poolContract.connect(borrower).removeApprovedLender(lender2.address)
-            ).to.be.revertedWith("poolOperatorRequired()");
+            ).to.be.revertedWithCustomError(poolContract, "poolOperatorRequired");
         });
         it("Shall be able to remove approved lenders successfully ", async function () {
             await expect(poolContract.connect(poolOperator).removeApprovedLender(lender2.address))
@@ -118,7 +118,7 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Non-owner shall not be able to call updateCoreData", async function () {
             await expect(
                 poolContract.connect(evaluationAgent).updateCoreData()
-            ).to.be.revertedWith("permissionDeniedNotAdmin()");
+            ).to.be.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
         });
         it("Pool owner shall be able to call updateCoreData", async function () {
             await expect(poolContract.connect(poolOwner).updateCoreData())
@@ -170,12 +170,12 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Non-owner shall not be able to call pool config", async function () {
             await expect(
                 poolContract.connect(evaluationAgent).setPoolConfig(poolConfigContract2.address)
-            ).to.be.revertedWith("permissionDeniedNotAdmin()");
+            ).to.be.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
         });
         it("Shall reject setting pool config to the current value", async function () {
             await expect(
                 poolContract.connect(poolOwner).setPoolConfig(poolConfigContract.address)
-            ).to.be.revertedWith("sameValue()");
+            ).to.be.revertedWithCustomError(poolContract, "sameValue");
         });
 
         it("Pool owner shall be able to call setPoolConfig", async function () {
@@ -206,14 +206,14 @@ describe("Base Pool - LP and Admin functions", function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract.connect(lender).deposit(toToken(1_000_000))
-            ).to.be.revertedWith("protocolIsPaused()");
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
         });
 
         it("Cannot deposit while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(
                 poolContract.connect(lender).deposit(toToken(1_000_000))
-            ).to.be.revertedWith("poolIsNotOn()");
+            ).to.be.revertedWithCustomError(poolContract, "poolIsNotOn");
         });
 
         it("Cannot deposit when pool max liquidity has been reached", async function () {
@@ -221,17 +221,18 @@ describe("Base Pool - LP and Admin functions", function () {
             let poolValue = await poolContract.totalPoolValue();
             let additionalCap = poolLiquidityCap - poolValue + 1;
             await testTokenContract.connect(lender).approve(poolContract.address, additionalCap);
-            await expect(poolContract.connect(lender).deposit(additionalCap)).to.be.revertedWith(
-                "exceededPoolLiquidityCap"
-            );
+            await expect(
+                poolContract.connect(lender).deposit(additionalCap)
+            ).to.be.revertedWithCustomError(poolContract, "exceededPoolLiquidityCap");
         });
 
         it("Cannot deposit zero amount", async function () {
             await testTokenContract
                 .connect(lender)
                 .approve(poolContract.address, toToken(1_000_000));
-            await expect(poolContract.connect(lender).deposit(0)).to.be.revertedWith(
-                "zeroAmountProvided()"
+            await expect(poolContract.connect(lender).deposit(0)).to.be.revertedWithCustomError(
+                poolContract,
+                "zeroAmountProvided"
             );
         });
 
@@ -256,14 +257,14 @@ describe("Base Pool - LP and Admin functions", function () {
         it("Unapproved lenders cannot deposit", async function () {
             await expect(
                 poolContract.connect(borrower).deposit(toToken(1_000_000))
-            ).to.be.revertedWith("permissionDeniedNotLender");
+            ).to.be.revertedWithCustomError(poolContract, "permissionDeniedNotLender");
         });
 
         it("Removed lenders cannot deposit", async function () {
             await poolContract.connect(poolOperator).removeApprovedLender(lender.address);
             await expect(
                 poolContract.connect(lender).deposit(toToken(1_000_000))
-            ).to.be.revertedWith("permissionDeniedNotLender");
+            ).to.be.revertedWithCustomError(poolContract, "permissionDeniedNotLender");
         });
     });
 
@@ -278,7 +279,7 @@ describe("Base Pool - LP and Admin functions", function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract.connect(lender).withdraw(toToken(1_000_000))
-            ).to.be.revertedWith("protocolIsPaused()");
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
         });
 
         it("Should reject if the protocol is off", async function () {
@@ -290,15 +291,16 @@ describe("Base Pool - LP and Admin functions", function () {
         });
 
         it("Should reject when withdraw amount is 0", async function () {
-            await expect(poolContract.connect(lender).withdraw(0)).to.be.revertedWith(
-                "zeroAmountProvided()"
+            await expect(poolContract.connect(lender).withdraw(0)).to.be.revertedWithCustomError(
+                poolContract,
+                "zeroAmountProvided"
             );
         });
 
         it("Should reject when withdraw too early", async function () {
             await expect(
                 poolContract.connect(lender).withdraw(toToken(1_000_000))
-            ).to.be.revertedWith("withdrawTooSoon()");
+            ).to.be.revertedWithCustomError(poolContract, "withdrawTooSoon");
         });
 
         it("Should reject if the withdraw amount is higher than deposit", async function () {
@@ -309,7 +311,7 @@ describe("Base Pool - LP and Admin functions", function () {
 
             await expect(
                 poolContract.connect(lender).withdraw(toToken(3_000_000))
-            ).to.be.revertedWith("withdrawnAmountHigherThanBalance()");
+            ).to.be.revertedWithCustomError(poolContract, "withdrawnAmountHigherThanBalance");
         });
 
         it("Pool withdrawal works correctly", async function () {
@@ -358,14 +360,17 @@ describe("Base Pool - LP and Admin functions", function () {
 
             await expect(
                 poolContract.connect(poolOwnerTreasury).withdraw(toToken(10))
-            ).to.be.revertedWith("poolOwnerNotEnoughLiquidity()");
+            ).to.be.revertedWithCustomError(poolConfigContract, "poolOwnerNotEnoughLiquidity");
 
             // Should succeed
             await poolContract.connect(evaluationAgent).withdraw(toToken(10));
             // Should fail
             await expect(
                 poolContract.connect(evaluationAgent).withdraw(toToken(1_000_000))
-            ).to.be.revertedWith("evaluationAgentNotEnoughLiquidity");
+            ).to.be.revertedWithCustomError(
+                poolConfigContract,
+                "evaluationAgentNotEnoughLiquidity"
+            );
             // Update liquidity rate for EA to be lower
             await poolConfigContract.connect(poolOwner).setEARewardsAndLiquidity(625, 5);
             // Should succeed
