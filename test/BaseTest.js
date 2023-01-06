@@ -1,6 +1,15 @@
-const {ethers} = require("hardhat");
-const {use, expect} = require("chai");
-const {solidity} = require("ethereum-waffle");
+const {ethers, network} = require("hardhat");
+const {expect} = require("chai");
+const {BigNumber: BN} = require("ethers");
+const {hasRestParameter} = require("typescript");
+
+function toBN(number, decimals) {
+    return BN.from(number).mul(BN.from(10).pow(BN.from(decimals)));
+}
+
+function toToken(number) {
+    return toBN(number, 6);
+}
 
 async function deployContracts(
     poolOwner,
@@ -9,7 +18,7 @@ async function deployContracts(
     protocolOwner,
     eaServiceAccount,
     pdsServiceAccount,
-    fees = [1000, 100, 2000, 100, 0]
+    fees = [toToken(1000), 100, toToken(2000), 100, 0]
 ) {
     // Deploy EvaluationAgentNFT
     const EvaluationAgentNFT = await ethers.getContractFactory("EvaluationAgentNFT");
@@ -64,9 +73,9 @@ async function deployAndSetupPool(
     poolOperator,
     poolOwnerTreasury
 ) {
-    await testTokenContract.give1000To(lender.address);
-    await testTokenContract.give1000To(poolOwnerTreasury.address);
-    await testTokenContract.give1000To(evaluationAgent.address);
+    await testTokenContract.mint(lender.address, toToken(10_000_000));
+    await testTokenContract.mint(poolOwnerTreasury.address, toToken(10_000_000));
+    await testTokenContract.mint(evaluationAgent.address, toToken(10_000_000));
 
     await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(principalRateInBps);
 
@@ -124,7 +133,7 @@ async function deployAndSetupPool(
     await poolConfig.transferOwnership(poolOwner.address);
 
     // Config rewards and requirements for poolOwner and EA, make initial deposit, and enable pool
-    await poolConfig.connect(poolOwner).setPoolLiquidityCap(1_000_000_000);
+    await poolConfig.connect(poolOwner).setPoolLiquidityCap(toToken(1_000_000_000));
     await poolConfig.connect(poolOwner).setPoolOwnerRewardsAndLiquidity(625, 10);
 
     let eaNFTTokenId;
@@ -150,11 +159,15 @@ async function deployAndSetupPool(
     await poolContract.connect(poolOperator).addApprovedLender(evaluationAgent.address);
     await poolContract.connect(poolOperator).addApprovedLender(lender.address);
 
-    await testTokenContract.connect(poolOwnerTreasury).approve(poolContract.address, 1_000_000);
-    await poolContract.connect(poolOwnerTreasury).makeInitialDeposit(1_000_000);
+    await testTokenContract
+        .connect(poolOwnerTreasury)
+        .approve(poolContract.address, toToken(1_000_000));
+    await poolContract.connect(poolOwnerTreasury).makeInitialDeposit(toToken(1_000_000));
 
-    await testTokenContract.connect(evaluationAgent).approve(poolContract.address, 2_000_000);
-    await poolContract.connect(evaluationAgent).makeInitialDeposit(2_000_000);
+    await testTokenContract
+        .connect(evaluationAgent)
+        .approve(poolContract.address, toToken(2_000_000));
+    await poolContract.connect(evaluationAgent).makeInitialDeposit(toToken(2_000_000));
 
     await expect(poolContract.connect(poolOwner).enablePool()).to.emit(
         poolContract,
@@ -162,10 +175,10 @@ async function deployAndSetupPool(
     );
 
     await poolConfig.connect(poolOwner).setAPR(1217);
-    await poolConfig.connect(poolOwner).setMaxCreditLine(10_000_000);
+    await poolConfig.connect(poolOwner).setMaxCreditLine(toToken(10_000_000));
 
-    await testTokenContract.connect(lender).approve(poolContract.address, 2_000_000);
-    await poolContract.connect(lender).deposit(2_000_000);
+    await testTokenContract.connect(lender).approve(poolContract.address, toToken(2_000_000));
+    await poolContract.connect(lender).deposit(toToken(2_000_000));
 
     return [hdtContract, poolConfig, poolContract, poolImpl, poolProxy];
 }
@@ -182,10 +195,25 @@ async function advanceClock(days) {
     await ethers.provider.send("evm_mine", []);
 }
 
-async function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) {
+async function setNextBlockTimestamp(nextTS) {
+    await network.provider.request({
+        method: "evm_setNextBlockTimestamp",
+        params: [nextTS],
+    });
+}
+
+async function mineNextBlockWithTimestamp(nextTS) {
+    await network.provider.request({
+        method: "evm_setNextBlockTimestamp",
+        params: [nextTS],
+    });
+    await network.provider.send("evm_mine", []);
+}
+
+function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) {
     if (v1 != "SKIP") expect(rs.creditLimit).to.equal(v1);
     if (v2 != "SKIP") expect(r.unbilledPrincipal).to.equal(v2);
-    if (v3 != "SKIP") expect(r.dueDate).to.be.within(v3 - 60, v3 + 60);
+    if (v3 != "SKIP") expect(r.dueDate).to.be.equal(v3);
     if (v4 != "SKIP") expect(r.correction).to.equal(v4); //be.within(v4 - 1, v4 + 1);
     if (v5 != "SKIP") expect(r.totalDue).to.equal(v5);
     if (v6 != "SKIP") expect(r.feesAndInterestDue).to.equal(v6);
@@ -197,7 +225,7 @@ async function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, 
     if (v12 != "SKIP") expect(rs.defaultAmount).to.equal(v12);
 }
 
-async function checkResult(r, v1, v2, v3, v4, v5) {
+function checkResult(r, v1, v2, v3, v4, v5) {
     expect(r.periodsPassed).to.equal(v1);
     expect(r.feesAndInterestDue).to.equal(v2);
     expect(r.totalDue).to.equal(v3);
@@ -205,7 +233,7 @@ async function checkResult(r, v1, v2, v3, v4, v5) {
     expect(r.totalCharges).to.equal(v5);
 }
 
-async function checkArruedIncome(r, v1, v2, v3) {
+function checkArruedIncome(r, v1, v2, v3) {
     expect(r.protocolIncome).to.equal(v1);
     expect(r.eaIncome).to.equal(v2);
     expect(r.poolOwnerIncome).to.equal(v3);
@@ -219,4 +247,7 @@ module.exports = {
     checkResult,
     checkArruedIncome,
     getCreditInfo,
+    toToken,
+    setNextBlockTimestamp,
+    mineNextBlockWithTimestamp,
 };
