@@ -100,14 +100,14 @@ describe("Base Credit Pool", function () {
                 poolContract
                     .connect(eaServiceAccount)
                     .changeCreditLine(borrower.address, toToken(1000000))
-            ).to.be.revertedWith("protocolIsPaused()");
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
             await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow non-EA to change credit line", async function () {
             await expect(
                 poolContract.connect(borrower).changeCreditLine(borrower.address, toToken(1000000))
-            ).to.be.revertedWith("evaluationAgentServiceAccountRequired()");
+            ).to.be.revertedWithCustomError(poolContract, "evaluationAgentServiceAccountRequired");
         });
 
         it("Should not allow credit line to be changed to above maximal credit line", async function () {
@@ -115,7 +115,7 @@ describe("Base Credit Pool", function () {
                 poolContract
                     .connect(eaServiceAccount)
                     .changeCreditLine(borrower.address, toToken(50000000))
-            ).to.be.revertedWith("greaterThanMaxCreditLine()");
+            ).to.be.revertedWithCustomError(poolContract, "greaterThanMaxCreditLine");
         });
 
         it("Should allow credit limit to be changed", async function () {
@@ -197,12 +197,12 @@ describe("Base Credit Pool", function () {
         it("Should reject non-owner to call mintAmount()", async function () {
             await expect(
                 hdtContract.connect(lender).mintAmount(lender.address, toToken(1_000_000))
-            ).to.be.revertedWith("notPool");
+            ).to.be.revertedWithCustomError(hdtContract, "notPool");
         });
         it("Should reject non-owner to call burnAmount()", async function () {
             await expect(
                 hdtContract.connect(lender).burnAmount(lender.address, toToken(1_000_000))
-            ).to.be.revertedWith("notPool");
+            ).to.be.revertedWithCustomError(hdtContract, "notPool");
         });
     });
 
@@ -218,26 +218,26 @@ describe("Base Credit Pool", function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 0)
-            ).to.be.revertedWith("requestedCreditWithZeroDuration()");
+            ).to.be.revertedWithCustomError(poolContract, "requestedCreditWithZeroDuration");
         });
         it("Should reject loan requests while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12)
-            ).to.be.revertedWith("protocolIsPaused()");
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
         });
 
         it("Shall reject request loan while pool is off", async function () {
             await poolContract.connect(poolOwner).disablePool();
             await expect(
                 poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12)
-            ).to.be.revertedWith("poolIsNotOn()");
+            ).to.be.revertedWithCustomError(poolContract, "poolIsNotOn");
         });
 
         it("Shall reject request loan greater than limit", async function () {
             await expect(
                 poolContract.connect(borrower).requestCredit(toToken(10_000_001), 30, 12)
-            ).to.be.revertedWith("greaterThanMaxCreditLine()");
+            ).to.be.revertedWithCustomError(poolContract, "greaterThanMaxCreditLine");
         });
 
         it("Shall allow loan request", async function () {
@@ -274,21 +274,21 @@ describe("Base Credit Pool", function () {
 
             await expect(
                 poolContract.connect(borrower).requestCredit(toToken(1_000), 30, 12)
-            ).to.be.revertedWith("creditLineAlreadyExists()");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineAlreadyExists");
         });
 
         it("Shall allow new request if existing loan has been paid off", async function () {
             await poolContract.connect(borrower).requestCredit(toToken(3_000), 30, 12);
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, toToken(3_000))
-            ).to.be.revertedWith("creditLineNotInStateForMakingPayment()");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineNotInStateForMakingPayment");
 
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(3000), 30, 12, 1217);
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, toToken(3_000))
-            ).to.be.revertedWith("creditLineNotInStateForMakingPayment()");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineNotInStateForMakingPayment");
 
             await poolContract.connect(borrower).drawdown(toToken(3_000));
             await testTokenContract.connect(borrower).mint(borrower.address, toToken(2_000));
@@ -321,22 +321,22 @@ describe("Base Credit Pool", function () {
 
         it("Should not allow loan funding while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pause();
-            await expect(poolContract.connect(borrower).drawdown(toToken(400))).to.be.revertedWith(
-                "protocolIsPaused()"
-            );
+            await expect(
+                poolContract.connect(borrower).drawdown(toToken(400))
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
         });
 
         it("Should reject drawdown before approval", async function () {
             await expect(
                 poolContract.connect(borrower).drawdown(toToken(1_000_000))
-            ).to.be.revertedWith("creditLineNotInStateForDrawdown()");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineNotInStateForDrawdown");
         });
 
         it("Should reject drawdown when account is deleted", async function () {
             await poolContract.connect(eaServiceAccount).changeCreditLine(borrower.address, 0);
-            await expect(poolContract.connect(borrower).drawdown(toToken(400))).to.be.revertedWith(
-                "creditLineNotInStateForDrawdown()"
-            );
+            await expect(
+                poolContract.connect(borrower).drawdown(toToken(400))
+            ).to.be.revertedWithCustomError(poolContract, "creditLineNotInStateForDrawdown");
         });
 
         it("Should reject drawdown if the combined balance is higher than the credit limit", async function () {
@@ -347,7 +347,7 @@ describe("Base Credit Pool", function () {
 
             await expect(
                 poolContract.connect(borrower).drawdown(toToken(4000))
-            ).to.be.revertedWith("creditLineExceeded()");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineExceeded");
             await testTokenContract.mint(borrower.address, toToken(11000));
             await testTokenContract
                 .connect(borrower)
@@ -359,8 +359,9 @@ describe("Base Credit Pool", function () {
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
-            await expect(poolContract.connect(borrower).drawdown(0)).to.be.revertedWith(
-                "zeroAmountProvided()"
+            await expect(poolContract.connect(borrower).drawdown(0)).to.be.revertedWithCustomError(
+                poolContract,
+                "zeroAmountProvided"
             );
         });
 
@@ -368,8 +369,11 @@ describe("Base Credit Pool", function () {
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(3_000), 30, 12, 1217);
-            await expect(poolContract.connect(borrower).drawdown(toToken(100))).to.be.revertedWith(
-                "borrowingAmountLessThanPlatformFees()"
+            await expect(
+                poolContract.connect(borrower).drawdown(toToken(100))
+            ).to.be.revertedWithCustomError(
+                feeManagerContract,
+                "borrowingAmountLessThanPlatformFees"
             );
         });
 
@@ -379,7 +383,7 @@ describe("Base Credit Pool", function () {
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
             await expect(
                 poolContract.connect(borrower).drawdown(toToken(1_100_000))
-            ).to.be.revertedWith("creditLineExceeded()");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineExceeded");
         });
 
         it("Borrow less than approved amount", async function () {
@@ -462,7 +466,7 @@ describe("Base Credit Pool", function () {
                 poolContract
                     .connect(eaServiceAccount)
                     .approveCredit(borrower.address, toToken(500_000), 30, 12, 1217)
-            ).to.be.revertedWith("creditLineOutstanding()");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineOutstanding");
         });
 
         it("Should reject drawdown in the final pay period of the credit line", async function () {
@@ -483,7 +487,7 @@ describe("Base Credit Pool", function () {
             await advanceClock(330);
             await expect(
                 poolContract.connect(borrower).drawdown(toToken(4000))
-            ).to.be.revertedWith("creditExpiredDueToMaturity()");
+            ).to.be.revertedWithCustomError(poolContract, "creditExpiredDueToMaturity");
         });
 
         it("Should reject drawdown when account is late in payments", async function () {
@@ -494,7 +498,7 @@ describe("Base Credit Pool", function () {
             await advanceClock(90);
             await expect(
                 poolContract.connect(borrower).drawdown(toToken(4000))
-            ).to.be.revertedWith("creditLineNotInGoodStandingState()");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineNotInGoodStandingState");
         });
     });
 
@@ -538,7 +542,7 @@ describe("Base Credit Pool", function () {
 
             await expect(
                 poolContract.connect(borrower).drawdown(toToken(1_000_000))
-            ).to.revertedWith("creditExpiredDueToFirstDrawdownTooLate()");
+            ).to.revertedWithCustomError(poolContract, "creditExpiredDueToFirstDrawdownTooLate");
         });
 
         it("Can borrow if no credit expiration has been setup for the pool", async function () {
@@ -725,14 +729,14 @@ describe("Base Credit Pool", function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, toToken(5))
-            ).to.be.revertedWith("protocolIsPaused()");
+            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
         });
 
         it("Should reject if payback amount is zero", async function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, toToken(1000));
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, 0)
-            ).to.be.revertedWith("zeroAmountProvided()");
+            ).to.be.revertedWithCustomError(poolContract, "zeroAmountProvided");
         });
 
         it("Process payback", async function () {
@@ -966,7 +970,7 @@ describe("Base Credit Pool", function () {
             // Additional payment after payoff
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, toToken(1000))
-            ).to.be.revertedWith("creditLineNotInStateForMakingPayment");
+            ).to.be.revertedWithCustomError(poolContract, "creditLineNotInStateForMakingPayment");
         });
     });
 
@@ -1118,9 +1122,9 @@ describe("Base Credit Pool", function () {
 
             await poolContract.refreshAccount(borrower.address);
             let creditInfo = await poolContract.creditRecordMapping(borrower.address);
-            await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                "defaultTriggeredTooEarly()"
-            );
+            await expect(
+                poolContract.triggerDefault(borrower.address)
+            ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
 
             expect(creditInfo.unbilledPrincipal).to.equal(1010002739726);
             expect(creditInfo.feesAndInterestDue).to.equal(22202821925);
@@ -1136,9 +1140,9 @@ describe("Base Credit Pool", function () {
 
             await poolContract.refreshAccount(borrower.address);
             creditInfo = await poolContract.creditRecordMapping(borrower.address);
-            await expect(poolContract.triggerDefault(borrower.address)).to.be.revertedWith(
-                "defaultTriggeredTooEarly()"
-            );
+            await expect(
+                poolContract.triggerDefault(borrower.address)
+            ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
 
             expect(creditInfo.unbilledPrincipal).to.equal(1032205561651);
             expect(creditInfo.feesAndInterestDue).to.equal(22646939192);
@@ -1192,7 +1196,7 @@ describe("Base Credit Pool", function () {
             // Should not call triggerDefault() again after an account is defaulted
             await expect(
                 poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
-            ).to.be.revertedWith("defaultHasAlreadyBeenTriggered()");
+            ).to.be.revertedWithCustomError(poolContract, "defaultHasAlreadyBeenTriggered");
         });
 
         it("Post-default payment", async function () {
@@ -1399,40 +1403,49 @@ describe("Base Credit Pool", function () {
 
     describe("Protocol/Pool Owner/EA fee", function () {
         it("Should not allow non-protocol-owner to withdraw protocol", async function () {
-            await expect(poolConfigContract.withdrawProtocolFee(toToken(1))).to.be.revertedWith(
-                "notProtocolOwner"
-            );
+            await expect(
+                poolConfigContract.withdrawProtocolFee(toToken(1))
+            ).to.be.revertedWithCustomError(poolConfigContract, "notProtocolOwner");
         });
 
         it("Should not allow non-pool-owner to withdraw pool owner fee", async function () {
-            await expect(poolConfigContract.withdrawPoolOwnerFee(toToken(1))).to.be.revertedWith(
-                "notPoolOwnerTreasury"
-            );
+            await expect(
+                poolConfigContract.withdrawPoolOwnerFee(toToken(1))
+            ).to.be.revertedWithCustomError(poolConfigContract, "notPoolOwnerTreasury");
         });
 
         it("Should not allow non-poolOwner or EA withdraw EA fee", async function () {
-            await expect(poolConfigContract.withdrawEAFee(toToken(1))).to.be.revertedWith(
-                "notPoolOwnerOrEA"
-            );
+            await expect(
+                poolConfigContract.withdrawEAFee(toToken(1))
+            ).to.be.revertedWithCustomError(poolConfigContract, "notPoolOwnerOrEA");
         });
 
         it("Should not withdraw protocol fee while amount > withdrawable", async function () {
             const poolConfigFromProtocolOwner = await poolConfigContract.connect(protocolOwner);
             await expect(
                 poolConfigFromProtocolOwner.withdrawProtocolFee(toToken(1))
-            ).to.be.revertedWith("withdrawnAmountHigherThanBalance");
+            ).to.be.revertedWithCustomError(
+                poolConfigContract,
+                "withdrawnAmountHigherThanBalance"
+            );
         });
 
         it("Should not withdraw pool owner fee if amount > withdrawable", async function () {
             const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwnerTreasury);
             await expect(
                 poolConfigFromPoolOwner.withdrawPoolOwnerFee(toToken(1))
-            ).to.be.revertedWith("withdrawnAmountHigherThanBalance");
+            ).to.be.revertedWithCustomError(
+                poolConfigContract,
+                "withdrawnAmountHigherThanBalance"
+            );
         });
 
         it("Should not withdraw ea fee while amount > withdrawable", async function () {
             const poolConfigFromPoolOwner = await poolConfigContract.connect(evaluationAgent);
-            await expect(poolConfigFromPoolOwner.withdrawEAFee(toToken(1))).to.be.revertedWith(
+            await expect(
+                poolConfigFromPoolOwner.withdrawEAFee(toToken(1))
+            ).to.be.revertedWithCustomError(
+                poolConfigContract,
                 "withdrawnAmountHigherThanBalance"
             );
         });
@@ -1455,7 +1468,10 @@ describe("Base Credit Pool", function () {
             const afterBalance = await testTokenContract.balanceOf(treasury.address);
             expect(amount).equals(afterBalance.sub(beforeBalance));
 
-            await expect(poolConfigFromProtocolOwner.withdrawProtocolFee(1)).to.be.revertedWith(
+            await expect(
+                poolConfigFromProtocolOwner.withdrawProtocolFee(1)
+            ).to.be.revertedWithCustomError(
+                poolConfigContract,
                 "withdrawnAmountHigherThanBalance"
             );
         });
@@ -1478,7 +1494,10 @@ describe("Base Credit Pool", function () {
             const afterBalance = await testTokenContract.balanceOf(poolOwnerTreasury.address);
             expect(amount).equals(afterBalance.sub(beforeBalance));
 
-            await expect(poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)).to.be.revertedWith(
+            await expect(
+                poolConfigFromPoolOwner.withdrawPoolOwnerFee(1)
+            ).to.be.revertedWithCustomError(
+                poolConfigContract,
                 "withdrawnAmountHigherThanBalance"
             );
         });
@@ -1501,7 +1520,8 @@ describe("Base Credit Pool", function () {
             const afterBalance = await testTokenContract.balanceOf(evaluationAgent.address);
             expect(amount).equals(afterBalance.sub(beforeBalance));
 
-            await expect(poolConfigFromEA.withdrawEAFee(1)).to.be.revertedWith(
+            await expect(poolConfigFromEA.withdrawEAFee(1)).to.be.revertedWithCustomError(
+                poolConfigContract,
                 "withdrawnAmountHigherThanBalance"
             );
         });

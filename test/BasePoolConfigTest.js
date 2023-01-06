@@ -103,7 +103,7 @@ describe("Base Pool Config", function () {
                         humaConfigContract.address,
                         feeManagerContract.address
                     )
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(poolConfig2, "zeroAddressProvided");
         });
         it("Shall reject zero address for pool config", async function () {
             await expect(
@@ -115,7 +115,7 @@ describe("Base Pool Config", function () {
                         ethers.constants.AddressZero,
                         feeManagerContract.address
                     )
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(poolConfig2, "zeroAddressProvided");
         });
         it("Shall reject zero address for fee manager", async function () {
             await expect(
@@ -127,7 +127,7 @@ describe("Base Pool Config", function () {
                         humaConfigContract.address,
                         ethers.constants.AddressZero
                     )
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(poolConfig2, "zeroAddressProvided");
         });
         it("Shall reject if the pool token is not supported by the protocol", async function () {
             await humaConfigContract
@@ -142,7 +142,10 @@ describe("Base Pool Config", function () {
                         humaConfigContract.address,
                         feeManagerContract.address
                     )
-            ).to.be.revertedWith("underlyingTokenNotApprovedForHumaProtocol()");
+            ).to.be.revertedWithCustomError(
+                poolConfig2,
+                "underlyingTokenNotApprovedForHumaProtocol"
+            );
             await humaConfigContract
                 .connect(protocolOwner)
                 .setLiquidityAsset(testTokenContract.address, true);
@@ -216,7 +219,7 @@ describe("Base Pool Config", function () {
                 it("Should reject 0 pool liquidity cap", async function () {
                     await expect(
                         poolConfigContract.connect(poolOwner).setPoolLiquidityCap(0)
-                    ).to.be.revertedWith("zeroAmountProvided");
+                    ).to.be.revertedWithCustomError(poolConfigContract, "zeroAmountProvided");
                 });
                 it("Should be able to change pool liquidity cap", async function () {
                     await poolConfigContract
@@ -242,7 +245,7 @@ describe("Base Pool Config", function () {
             it("Should reject zaro amount as the max credit size", async function () {
                 await expect(
                     poolConfigContract.connect(poolOwner).setMaxCreditLine(0)
-                ).to.be.revertedWith("zeroAmountProvided");
+                ).to.be.revertedWithCustomError(poolConfigContract, "zeroAmountProvided");
             });
 
             it("Should reject max credit size equal to or larger than 2^88", async function () {
@@ -250,7 +253,7 @@ describe("Base Pool Config", function () {
                     poolConfigContract
                         .connect(poolOwner)
                         .setMaxCreditLine(BN.from(2).pow(BN.from(88)))
-                ).to.be.revertedWith("creditLineTooHigh");
+                ).to.be.revertedWithCustomError(poolConfigContract, "creditLineTooHigh");
             });
 
             it("Should be able to set max credit size", async function () {
@@ -280,12 +283,15 @@ describe("Base Pool Config", function () {
                 it("Shall disallow non-admin to change pool pay period", async function () {
                     await expect(
                         poolConfigContract.connect(lender).setPoolPayPeriod(5)
-                    ).to.be.revertedWith("permissionDeniedNotAdmin");
+                    ).to.be.revertedWithCustomError(
+                        poolConfigContract,
+                        "permissionDeniedNotAdmin"
+                    );
                 });
                 it("Shall disallow zero-day pool pay period", async function () {
                     await expect(
                         poolConfigContract.connect(poolOwner).setPoolPayPeriod(0)
-                    ).to.be.revertedWith("zeroAmountProvided");
+                    ).to.be.revertedWithCustomError(poolConfigContract, "zeroAmountProvided");
                 });
                 it("Shall be able to set the pay period for the pool", async function () {
                     await poolConfigContract.connect(poolOwner).setPoolPayPeriod(20);
@@ -296,7 +302,10 @@ describe("Base Pool Config", function () {
             });
 
             it("Should reject setting APR higher than 10000", async function () {
-                await expect(poolConfigContract.connect(poolOwner).setAPR(12170)).to.revertedWith(
+                await expect(
+                    poolConfigContract.connect(poolOwner).setAPR(12170)
+                ).to.revertedWithCustomError(
+                    poolConfigContract,
                     "invalidBasisPointHigherThan10000"
                 );
             });
@@ -304,7 +313,7 @@ describe("Base Pool Config", function () {
             it("Should not allow non-pool-owner-or-huma-admin to change credit expiration before first drawdown", async function () {
                 await expect(
                     poolConfigContract.connect(lender).setCreditApprovalExpiration(5)
-                ).to.be.revertedWith("permissionDeniedNotAdmin");
+                ).to.be.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
 
             it("Should allow pool owner to change credit expiration before first drawdown", async function () {
@@ -330,7 +339,7 @@ describe("Base Pool Config", function () {
                     poolConfigContract
                         .connect(poolOwner)
                         .setEvaluationAgent(newNFTTokenId, ethers.constants.AddressZero)
-                ).to.be.revertedWith("zeroAddressProvided()");
+                ).to.be.revertedWithCustomError(poolConfigContract, "zeroAddressProvided");
             });
 
             it("Should reject when non-poolOwner requests to change EA", async function () {
@@ -338,7 +347,7 @@ describe("Base Pool Config", function () {
                     poolConfigContract
                         .connect(treasury)
                         .setEvaluationAgent(newNFTTokenId, evaluationAgent2.address)
-                ).to.be.revertedWith("permissionDeniedNotAdmin()");
+                ).to.be.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
 
             it("Should reject when the new evaluation agent has not met the liquidity requirements", async function () {
@@ -346,7 +355,10 @@ describe("Base Pool Config", function () {
                     poolConfigContract
                         .connect(poolOwner)
                         .setEvaluationAgent(newNFTTokenId, evaluationAgent2.address)
-                ).to.be.revertedWith("evaluationAgentNotEnoughLiquidity()");
+                ).to.be.revertedWithCustomError(
+                    poolConfigContract,
+                    "evaluationAgentNotEnoughLiquidity"
+                );
             });
 
             it("Should reject when the proposed new EA does not own the EANFT", async function () {
@@ -373,7 +385,10 @@ describe("Base Pool Config", function () {
                     poolConfigContract
                         .connect(poolOwner)
                         .setEvaluationAgent(yetAnotherNFTTokenId, evaluationAgent2.address)
-                ).to.revertedWith("proposedEADoesNotOwnProvidedEANFT");
+                ).to.revertedWithCustomError(
+                    poolConfigContract,
+                    "proposedEADoesNotOwnProvidedEANFT"
+                );
             });
 
             it("Should allow evaluation agent to be replaced when the old EA has rewards", async function () {
@@ -434,7 +449,7 @@ describe("Base Pool Config", function () {
                         poolConfigContract
                             .connect(poolOwner)
                             .addPoolOperator(ethers.constants.AddressZero)
-                    ).to.be.revertedWith("zeroAddressProvided()");
+                    ).to.be.revertedWithCustomError(poolConfigContract, "zeroAddressProvided");
                 });
 
                 it("Should allow operator to be added", async function () {
@@ -458,7 +473,7 @@ describe("Base Pool Config", function () {
                         poolConfigContract
                             .connect(poolOwner)
                             .addPoolOperator(poolOperator2.address)
-                    ).to.be.revertedWith("alreadyAnOperator()");
+                    ).to.be.revertedWithCustomError(poolConfigContract, "alreadyAnOperator");
                 });
 
                 it("Should disallow non-owner to remove a operator", async function () {
@@ -488,13 +503,13 @@ describe("Base Pool Config", function () {
                         poolConfigContract
                             .connect(poolOwner)
                             .removePoolOperator(ethers.constants.AddressZero)
-                    ).to.be.revertedWith("zeroAddressProvided()");
+                    ).to.be.revertedWithCustomError(poolConfigContract, "zeroAddressProvided");
                 });
 
                 it("Should reject attemp to removal a operator who is not a operator", async function () {
                     await expect(
                         poolConfigContract.connect(poolOwner).removePoolOperator(treasury.address)
-                    ).to.be.revertedWith("notOperator()");
+                    ).to.be.revertedWithCustomError(poolConfigContract, "notOperator");
                 });
 
                 it("Should remove a operator successfully", async function () {
@@ -532,29 +547,38 @@ describe("Base Pool Config", function () {
         });
         describe("Distribute and reverse income outside pool contract", async function () {
             it("Shall reject distributeIncome call if not from the pool contract", async function () {
-                await expect(poolConfigContract.distributeIncome(10000)).to.revertedWith(
-                    "notPool()"
-                );
+                await expect(
+                    poolConfigContract.distributeIncome(10000)
+                ).to.revertedWithCustomError(poolConfigContract, "notPool");
             });
             it("Shall reject reverseIncome call if not from the pool contract", async function () {
-                await expect(poolConfigContract.reverseIncome(10000)).to.revertedWith("notPool()");
+                await expect(poolConfigContract.reverseIncome(10000)).to.revertedWithCustomError(
+                    poolConfigContract,
+                    "notPool"
+                );
             });
         });
         describe("setEARewardsAndLiquidity", async function () {
             it("Shall reject non-admin call setEARewardsAndLiquidity", async function () {
                 await expect(
                     poolConfigContract.connect(lender).setEARewardsAndLiquidity(1000, 1000)
-                ).to.revertedWith("permissionDeniedNotAdmin");
+                ).to.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
             it("Shall reject high than 10000 bps EA reward rate", async function () {
                 await expect(
                     poolConfigContract.connect(poolOwner).setEARewardsAndLiquidity(15000, 1000)
-                ).to.revertedWith("invalidBasisPointHigherThan10000");
+                ).to.revertedWithCustomError(
+                    poolConfigContract,
+                    "invalidBasisPointHigherThan10000"
+                );
             });
             it("Shall reject high than 10000 bps EA liquidity rate", async function () {
                 await expect(
                     poolConfigContract.connect(poolOwner).setEARewardsAndLiquidity(1000, 15000)
-                ).to.revertedWith("invalidBasisPointHigherThan10000");
+                ).to.revertedWithCustomError(
+                    poolConfigContract,
+                    "invalidBasisPointHigherThan10000"
+                );
             });
 
             it("Shall set reward rate and liquidity rate successfully", async function () {
@@ -573,21 +597,27 @@ describe("Base Pool Config", function () {
             it("Shall reject non-admin call setPoolOwnerRewardsAndLiquidity", async function () {
                 await expect(
                     poolConfigContract.connect(lender).setPoolOwnerRewardsAndLiquidity(1000, 1000)
-                ).to.revertedWith("permissionDeniedNotAdmin");
+                ).to.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
             it("Shall reject high than 10000 bps pool owner reward rate", async function () {
                 await expect(
                     poolConfigContract
                         .connect(poolOwner)
                         .setPoolOwnerRewardsAndLiquidity(15000, 1000)
-                ).to.revertedWith("invalidBasisPointHigherThan10000");
+                ).to.revertedWithCustomError(
+                    poolConfigContract,
+                    "invalidBasisPointHigherThan10000"
+                );
             });
             it("Shall reject high than 10000 bps pool owner liquidity rate", async function () {
                 await expect(
                     poolConfigContract
                         .connect(poolOwner)
                         .setPoolOwnerRewardsAndLiquidity(1000, 15000)
-                ).to.revertedWith("invalidBasisPointHigherThan10000");
+                ).to.revertedWithCustomError(
+                    poolConfigContract,
+                    "invalidBasisPointHigherThan10000"
+                );
             });
 
             it("Shall set reward rate and liquidity rate successfully", async function () {
@@ -608,14 +638,14 @@ describe("Base Pool Config", function () {
             it("Shall reject non-admin call seeFeeManager", async function () {
                 await expect(
                     poolConfigContract.connect(lender).setFeeManager(feeManagerContract.address)
-                ).to.revertedWith("permissionDeniedNotAdmin");
+                ).to.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
             it("Shall reject fee manager with zero address", async function () {
                 await expect(
                     poolConfigContract
                         .connect(poolOwner)
                         .setFeeManager(ethers.constants.AddressZero)
-                ).to.revertedWith("zeroAddressProvided()");
+                ).to.revertedWithCustomError(poolConfigContract, "zeroAddressProvided");
             });
             it("Shall allow pool owner to set fee manager successfully", async function () {
                 await expect(
@@ -638,14 +668,14 @@ describe("Base Pool Config", function () {
             it("Shall reject non-admin call setHumaConfig", async function () {
                 await expect(
                     poolConfigContract.connect(lender).setHumaConfig(humaConfigContract.address)
-                ).to.revertedWith("permissionDeniedNotAdmin");
+                ).to.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
             it("Shall reject huma config with zero address", async function () {
                 await expect(
                     poolConfigContract
                         .connect(poolOwner)
                         .setHumaConfig(ethers.constants.AddressZero)
-                ).to.revertedWith("zeroAddressProvided()");
+                ).to.revertedWithCustomError(poolConfigContract, "zeroAddressProvided");
             });
             it("Shall allow pool owner to set Huma config", async function () {
                 await expect(
@@ -668,7 +698,7 @@ describe("Base Pool Config", function () {
             it("Shall reject non-admin to call setPoolName", async function () {
                 await expect(
                     poolConfigContract.connect(lender).setPoolName("NewName")
-                ).to.revertedWith("permissionDeniedNotAdmin");
+                ).to.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
             it("Shall allow pool owner to set pool name", async function () {
                 await expect(poolConfigContract.connect(poolOwner).setPoolName("NewName"))
@@ -682,14 +712,14 @@ describe("Base Pool Config", function () {
                     poolConfigContract
                         .connect(lender)
                         .setPoolOwnerTreasury(poolOwnerTreasury.address)
-                ).to.revertedWith("permissionDeniedNotAdmin");
+                ).to.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
             it("Shall disallow zero address for pool owner treasury", async function () {
                 await expect(
                     poolConfigContract
                         .connect(poolOwner)
                         .setPoolOwnerTreasury(ethers.constants.AddressZero)
-                ).to.revertedWith("zeroAddressProvided");
+                ).to.revertedWithCustomError(poolConfigContract, "zeroAddressProvided");
             });
             it("Shall allow pool owner to call setPoolOwnerTreasury", async function () {
                 await expect(
@@ -705,14 +735,14 @@ describe("Base Pool Config", function () {
             it("Shall reject non-admin to call setPoolToken", async function () {
                 await expect(
                     poolConfigContract.connect(lender).setPoolToken(hdtContract.address)
-                ).to.revertedWith("permissionDeniedNotAdmin");
+                ).to.revertedWithCustomError(poolConfigContract, "permissionDeniedNotAdmin");
             });
             it("Shall disallow zero address for pool token", async function () {
                 await expect(
                     poolConfigContract
                         .connect(poolOwner)
                         .setPoolToken(ethers.constants.AddressZero)
-                ).to.revertedWith("zeroAddressProvided");
+                ).to.revertedWithCustomError(poolConfigContract, "zeroAddressProvided");
             });
             it("Shall allow pool owner to call setPoolToken", async function () {
                 await expect(

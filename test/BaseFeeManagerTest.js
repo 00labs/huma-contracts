@@ -84,7 +84,7 @@ describe("Base Fee Manager", function () {
                     feeManagerContract
                         .connect(treasury)
                         .setFees(toToken(10), 100, toToken(20), 10000, 0)
-                ).to.be.revertedWith("caller is not the owner"); // open zeppelin default error message
+                ).to.be.revertedWith("Ownable: caller is not the owner"); // open zeppelin default error message
             });
 
             it("Should set the fees correctly", async function () {
@@ -116,13 +116,16 @@ describe("Base Fee Manager", function () {
             it("Should disallow non-poolOwner to set min principal rate", async function () {
                 await expect(
                     feeManagerContract.connect(treasury).setMinPrincipalRateInBps(6000)
-                ).to.be.revertedWith("caller is not the owner");
+                ).to.be.revertedWith("Ownable: caller is not the owner");
             });
 
             it("Should reject if the rate is too high", async function () {
                 await expect(
                     feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(6000)
-                ).to.be.revertedWith("minPrincipalPaymentRateSettingTooHigh()");
+                ).to.be.revertedWithCustomError(
+                    feeManagerContract,
+                    "minPrincipalPaymentRateSettingTooHigh"
+                );
             });
 
             it("Should be able to set min principal payment rate", async function () {

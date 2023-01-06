@@ -89,7 +89,7 @@ describe("Huma Config", function () {
         it("Should disallow previous protocol owner to change huma treasury", async function () {
             await expect(
                 configContract.connect(origOwner).setHumaTreasury(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(configContract, "zeroAddressProvided");
         });
 
         it("Should allow treasury to be changed", async function () {
@@ -124,7 +124,7 @@ describe("Huma Config", function () {
         it("Should reject 0 address pauser", async function () {
             await expect(
                 configContract.connect(origOwner).addPauser(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(configContract, "zeroAddressProvided");
         });
 
         it("Should allow pauser to be added", async function () {
@@ -140,7 +140,7 @@ describe("Huma Config", function () {
         it("Should reject add-pauser request if it is already a pauser", async function () {
             await expect(
                 configContract.connect(origOwner).addPauser(pauser.address)
-            ).to.be.revertedWith("alreadyAPauser()");
+            ).to.be.revertedWithCustomError(configContract, "alreadyAPauser");
         });
 
         it("Should disallow non-owner to remove a pauser", async function () {
@@ -160,13 +160,13 @@ describe("Huma Config", function () {
         it("Should disallow removal of pauser using zero address", async function () {
             await expect(
                 configContract.connect(origOwner).removePauser(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(configContract, "zeroAddressProvided");
         });
 
         it("Should reject attemp to removal a pauser who is not a pauser", async function () {
             await expect(
                 configContract.connect(origOwner).removePauser(treasury.address)
-            ).to.be.revertedWith("notPauser()");
+            ).to.be.revertedWithCustomError(configContract, "notPauser");
         });
 
         it("Should remove a pauser successfully", async function () {
@@ -192,11 +192,13 @@ describe("Huma Config", function () {
 
     describe("Pause and Unpause Protocol", function () {
         it("Should disallow non-pauser to pause the protocol", async function () {
-            await expect(configContract.connect(randomUser).pause()).to.be.revertedWith(
-                "notPauser()"
+            await expect(configContract.connect(randomUser).pause()).to.be.revertedWithCustomError(
+                configContract,
+                "notPauser"
             );
-            await expect(configContract.connect(treasury).pause()).to.be.revertedWith(
-                "notPauser()"
+            await expect(configContract.connect(treasury).pause()).to.be.revertedWithCustomError(
+                configContract,
+                "notPauser"
             );
         });
 
@@ -232,7 +234,7 @@ describe("Huma Config", function () {
         it("Should reject 0 address pool admin", async function () {
             await expect(
                 configContract.connect(origOwner).addPoolAdmin(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(configContract, "zeroAddressProvided");
         });
 
         it("Should allow pool admin to be added", async function () {
@@ -248,7 +250,7 @@ describe("Huma Config", function () {
         it("Should reject add-pool-admin request if it is already a pool admin", async function () {
             await expect(
                 configContract.connect(origOwner).addPoolAdmin(poolAdmin.address)
-            ).to.be.revertedWith("alreadyPoolAdmin()");
+            ).to.be.revertedWithCustomError(configContract, "alreadyPoolAdmin");
         });
 
         it("Should disallow non-owner to remove a pool admin", async function () {
@@ -264,13 +266,13 @@ describe("Huma Config", function () {
         it("Should disallow removal of pool admin using zero address", async function () {
             await expect(
                 configContract.connect(origOwner).removePoolAdmin(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(configContract, "zeroAddressProvided");
         });
 
         it("Should reject attempt to remove a pool admin who is not a pool admin", async function () {
             await expect(
                 configContract.connect(origOwner).removePoolAdmin(treasury.address)
-            ).to.be.revertedWith("notPoolOwner()");
+            ).to.be.revertedWithCustomError(configContract, "notPoolOwner");
         });
 
         it("Should remove a pool admin successfully", async function () {
@@ -308,10 +310,16 @@ describe("Huma Config", function () {
         it("Should disallow default grace period to be shorten than one day", async function () {
             await expect(
                 configContract.connect(origOwner).setProtocolDefaultGracePeriod(12 * 3600)
-            ).to.be.revertedWith("defaultGracePeriodLessThanMinAllowed()");
+            ).to.be.revertedWithCustomError(
+                configContract,
+                "defaultGracePeriodLessThanMinAllowed"
+            );
             await expect(
                 configContract.connect(origOwner).setProtocolDefaultGracePeriod(0)
-            ).to.be.revertedWith("defaultGracePeriodLessThanMinAllowed()");
+            ).to.be.revertedWithCustomError(
+                configContract,
+                "defaultGracePeriodLessThanMinAllowed"
+            );
         });
 
         it("Should be able to reset default grace period", async function () {
@@ -340,7 +348,7 @@ describe("Huma Config", function () {
         it("Should disallow treasury fee to be higher than 5000 bps, i.e. 50%", async function () {
             await expect(
                 configContract.connect(origOwner).setTreasuryFee(6000)
-            ).to.be.revertedWith("treasuryFeeHighThanUpperLimit()");
+            ).to.be.revertedWithCustomError(configContract, "treasuryFeeHighThanUpperLimit");
         });
 
         it("Should be able to change treasury fee", async function () {
@@ -364,7 +372,7 @@ describe("Huma Config", function () {
                 configContract
                     .connect(origOwner)
                     .setPDSServiceAccount(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(configContract, "zeroAddressProvided");
         });
 
         it("Should allow pdsServiceAccount to be changed", async function () {
@@ -392,7 +400,7 @@ describe("Huma Config", function () {
         it("Should reject 0 address eaServiceAccount", async function () {
             await expect(
                 configContract.connect(origOwner).setEAServiceAccount(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(configContract, "zeroAddressProvided");
         });
 
         it("Should allow eaServiceAccount to be changed", async function () {
@@ -454,7 +462,7 @@ describe("Huma Config", function () {
                 configContract
                     .connect(origOwner)
                     .setEANFTContractAddress(ethers.constants.AddressZero)
-            ).to.be.revertedWith("zeroAddressProvided()");
+            ).to.be.revertedWithCustomError(configContract, "zeroAddressProvided");
         });
 
         it("Should be able to change EANFT Address", async function () {
