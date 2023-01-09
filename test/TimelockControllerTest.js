@@ -1,6 +1,6 @@
 const {ethers} = require("hardhat");
 const {expect} = require("chai");
-const {deployContracts, deployAndSetupPool, advanceClock} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, evmSnapshot, evmRevert} = require("./BaseTest");
 
 describe("TimelockController Test", function () {
     const salt = ethers.utils.formatBytes32String("salt");
@@ -65,9 +65,7 @@ describe("TimelockController Test", function () {
             poolOperator,
             poolOwnerTreasury,
         ] = await ethers.getSigners();
-    });
 
-    beforeEach(async function () {
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
             await deployContracts(
                 poolOwner,
@@ -107,6 +105,16 @@ describe("TimelockController Test", function () {
         // deployer renounces admin role
         const adminRole = await timelockContract.TIMELOCK_ADMIN_ROLE();
         await timelockContract.renounceRole(adminRole, defaultDeployer.address);
+    });
+
+    beforeEach(async function () {
+        sId = await evmSnapshot();
+    });
+
+    afterEach(async function () {
+        if (sId) {
+            const res = await evmRevert(sId);
+        }
     });
 
     it("Deployer doesn't have admin role", async function () {
