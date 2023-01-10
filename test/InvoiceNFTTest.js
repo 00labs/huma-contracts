@@ -1,16 +1,17 @@
 const {ethers} = require("hardhat");
 const {expect} = require("chai");
+const {evmSnapshot, evmRevert} = require("./BaseTest");
 
 describe("InvoiceNFT Test", function () {
     let deployer, user1, user2, user3;
 
     let testToken, nft;
 
+    let sId;
+
     before(async function () {
         [deployer, user1, user2, user3] = await ethers.getSigners();
-    });
 
-    beforeEach(async function () {
         const TestToken = await ethers.getContractFactory("TestToken");
         testToken = await TestToken.deploy();
         await testToken.deployed();
@@ -18,6 +19,16 @@ describe("InvoiceNFT Test", function () {
         const InvoiceNFT = await ethers.getContractFactory("InvoiceNFT");
         nft = await InvoiceNFT.deploy(testToken.address);
         await nft.deployed();
+    });
+
+    beforeEach(async function () {
+        sId = await evmSnapshot();
+    });
+
+    afterEach(async function () {
+        if (sId) {
+            const res = await evmRevert(sId);
+        }
     });
 
     async function verifyNFTs(user, nftIds) {

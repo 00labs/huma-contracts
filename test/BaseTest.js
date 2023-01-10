@@ -210,6 +210,24 @@ async function mineNextBlockWithTimestamp(nextTS) {
     await network.provider.send("evm_mine", []);
 }
 
+async function evmSnapshot() {
+    return await network.provider.request({
+        method: "evm_snapshot",
+        params: [],
+    });
+}
+
+async function evmRevert(sId) {
+    const res = await network.provider.request({
+        method: "evm_revert",
+        params: [sId],
+    });
+    if (!res) {
+        console.log(`emvRevert failed: ${sId}`);
+    }
+    return res;
+}
+
 function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) {
     if (v1 != "SKIP") expect(rs.creditLimit).to.equal(v1);
     if (v2 != "SKIP") expect(r.unbilledPrincipal).to.equal(v2);
@@ -250,4 +268,6 @@ module.exports = {
     toToken,
     setNextBlockTimestamp,
     mineNextBlockWithTimestamp,
+    evmSnapshot,
+    evmRevert,
 };

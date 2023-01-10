@@ -1,6 +1,6 @@
 const {ethers} = require("hardhat");
 const {expect} = require("chai");
-const {deployContracts, deployAndSetupPool} = require("./BaseTest");
+const {deployContracts, deployAndSetupPool, evmSnapshot, evmRevert} = require("./BaseTest");
 
 describe("Upgradability Test", function () {
     let poolContract;
@@ -23,6 +23,8 @@ describe("Upgradability Test", function () {
     let poolOperator;
     let poolOwnerTreasury;
 
+    let sId;
+
     before(async function () {
         [
             defaultDeployer,
@@ -38,9 +40,7 @@ describe("Upgradability Test", function () {
             poolOperator,
             poolOwnerTreasury,
         ] = await ethers.getSigners();
-    });
 
-    beforeEach(async function () {
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
             await deployContracts(
                 poolOwner,
@@ -81,6 +81,16 @@ describe("Upgradability Test", function () {
         // deployer renounces admin role
         const adminRole = await timelockContract.TIMELOCK_ADMIN_ROLE();
         await timelockContract.renounceRole(adminRole, defaultDeployer.address);
+    });
+
+    beforeEach(async function () {
+        sId = await evmSnapshot();
+    });
+
+    afterEach(async function () {
+        if (sId) {
+            const res = await evmRevert(sId);
+        }
     });
 
     describe("V1", async function () {

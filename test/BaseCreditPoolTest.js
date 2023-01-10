@@ -11,6 +11,8 @@ const {
     toToken,
     setNextBlockTimestamp,
     mineNextBlockWithTimestamp,
+    evmSnapshot,
+    evmRevert,
 } = require("./BaseTest");
 
 const getLoanContractFromAddress = async function (address, signer) {
@@ -42,6 +44,7 @@ describe("Base Credit Pool", function () {
     let recordStatic;
     let poolOperator;
     let poolOwnerTreasury;
+    let sId;
 
     before(async function () {
         [
@@ -68,9 +71,7 @@ describe("Base Credit Pool", function () {
                 eaServiceAccount,
                 pdsServiceAccount
             );
-    });
 
-    beforeEach(async function () {
         [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
             poolOwner,
             proxyOwner,
@@ -90,7 +91,15 @@ describe("Base Credit Pool", function () {
         await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
     });
 
-    afterEach(async function () {});
+    beforeEach(async function () {
+        sId = await evmSnapshot();
+    });
+
+    afterEach(async function () {
+        if (sId) {
+            const res = await evmRevert(sId);
+        }
+    });
 
     describe("BaseCreditPool settings", function () {
         it("Should not allow credit line to be changed when protocol is paused", async function () {
@@ -312,11 +321,6 @@ describe("Base Credit Pool", function () {
     describe("Drawdown", function () {
         beforeEach(async function () {
             await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
-        });
-
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
@@ -709,8 +713,6 @@ describe("Base Credit Pool", function () {
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", function () {
         beforeEach(async function () {
-            let lenderBalance = await testTokenContract.balanceOf(lender.address);
-
             await poolConfigContract.connect(poolOwner).setAPR(1217);
             await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
 
@@ -718,11 +720,6 @@ describe("Base Credit Pool", function () {
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
             await poolContract.connect(borrower).drawdown(toToken(1_000_000));
-        });
-
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow payback while protocol is paused", async function () {
@@ -1099,8 +1096,6 @@ describe("Base Credit Pool", function () {
     describe("Default", function () {
         let dueDate, nextDate;
         beforeEach(async function () {
-            let lenderBalance = await testTokenContract.balanceOf(lender.address);
-
             await poolConfigContract.connect(poolOwner).setAPR(1217);
             await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
 

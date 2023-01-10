@@ -11,6 +11,8 @@ const {
     checkArruedIncome,
     getCreditInfo,
     toToken,
+    evmSnapshot,
+    evmRevert,
 } = require("./BaseTest");
 
 const getInvoiceContractFromAddress = async function (address, signer) {
@@ -42,6 +44,8 @@ describe("Invoice Factoring", function () {
     let invoiceNFTContract;
     let invoiceNFTTokenId;
     let dueDate;
+
+    let sId;
 
     before(async function () {
         [
@@ -82,9 +86,7 @@ describe("Invoice Factoring", function () {
         }
 
         await testTokenContract.mint(payer.address, toToken(10_000_000));
-    });
 
-    beforeEach(async function () {
         [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
             poolOwner,
             proxyOwner,
@@ -113,14 +115,19 @@ describe("Invoice Factoring", function () {
         await poolConfigContract.connect(poolOwner).setReceivableRequiredInBps(100);
     });
 
+    beforeEach(async function () {
+        sId = await evmSnapshot();
+    });
+
+    afterEach(async function () {
+        if (sId) {
+            const res = await evmRevert(sId);
+        }
+    });
+
     describe("Post Approved Invoice Factoring", function () {
         beforeEach(async function () {
             await testTokenContract.connect(borrower).approve(poolContract.address, 1_000_000);
-        });
-
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should only allow evaluation agents to post approved loan requests", async function () {
@@ -493,11 +500,6 @@ describe("Invoice Factoring", function () {
             );
         });
 
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
-        });
-
         it("Should not allow calling to drawdown()", async function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
@@ -709,11 +711,6 @@ describe("Invoice Factoring", function () {
             );
         });
 
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
-        });
-
         it("Should reject since the receivable amount is less than approved", async function () {
             await expect(
                 poolContract
@@ -829,11 +826,6 @@ describe("Invoice Factoring", function () {
                 );
             let blockBefore = await ethers.provider.getBlock();
             dueDate = blockBefore.timestamp + 2592000;
-        });
-
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Should not allow payback while protocol is paused", async function () {
@@ -1189,11 +1181,6 @@ describe("Invoice Factoring", function () {
                 );
             let blockBefore = await ethers.provider.getBlock();
             dueDate = blockBefore.timestamp + 2592000;
-        });
-
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
         });
 
         it("Invalidate payment after review", async function () {

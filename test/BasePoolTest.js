@@ -1,7 +1,13 @@
 /* eslint-disable no-underscore-dangle */
 const {ethers} = require("hardhat");
 const {expect} = require("chai");
-const {deployContracts, deployAndSetupPool, toToken} = require("./BaseTest");
+const {
+    deployContracts,
+    deployAndSetupPool,
+    toToken,
+    evmSnapshot,
+    evmRevert,
+} = require("./BaseTest");
 
 const getLoanContractFromAddress = async function (address, signer) {
     return ethers.getContractAt("HumaLoan", address, signer);
@@ -37,6 +43,7 @@ let poolOperator;
 let lender2;
 let poolOwnerTreasury;
 let poolConfigContract2;
+let sId;
 
 describe("Base Pool - LP and Admin functions", function () {
     before(async function () {
@@ -56,9 +63,7 @@ describe("Base Pool - LP and Admin functions", function () {
             lender2,
             poolOwnerTreasury,
         ] = await ethers.getSigners();
-    });
 
-    beforeEach(async function () {
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
             await deployContracts(
                 poolOwner,
@@ -83,6 +88,16 @@ describe("Base Pool - LP and Admin functions", function () {
             poolOperator,
             poolOwnerTreasury
         );
+    });
+
+    beforeEach(async function () {
+        sId = await evmSnapshot();
+    });
+
+    afterEach(async function () {
+        if (sId) {
+            const res = await evmRevert(sId);
+        }
     });
 
     describe("Approve lenders", function () {
@@ -197,11 +212,6 @@ describe("Base Pool - LP and Admin functions", function () {
     });
 
     describe("Deposit", function () {
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
-        });
-
         it("Cannot deposit while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
@@ -270,11 +280,6 @@ describe("Base Pool - LP and Admin functions", function () {
 
     // In beforeEach() of Withdraw, we make sure there is 100 liquidity provided.
     describe("Withdraw", function () {
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
-        });
-
         it("Should not withdraw while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(
