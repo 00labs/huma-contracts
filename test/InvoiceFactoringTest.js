@@ -1438,5 +1438,65 @@ describe("Invoice Factoring", function () {
                 poolLiquidity
             );
         });
+        it("Proceed with middle payment (amount > REVIEW_MULTIPLIER * payoffAmount && amount < REVIEW_MULTIPLIER * creditLine)", async function () {
+            await poolConfigContract.connect(poolOwner).setMaxCreditLine(toToken(10_000_000));
+            await poolContract
+                .connect(eaServiceAccount)
+                .changeCreditLine(borrower.address, toToken(10_000_000));
+
+            r = await poolContract.creditRecordMapping(borrower.address);
+            rs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(
+                r,
+                rs,
+                toToken(10_000_000),
+                0,
+                dueDate,
+                0,
+                toToken(1_000_000),
+                0,
+                0,
+                0,
+                0,
+                30,
+                3,
+                0
+            );
+
+            let borrowerBalance = await testTokenContract.balanceOf(borrower.address);
+            let poolValue = await poolContract.totalPoolValue();
+            let poolLiquidity = await testTokenContract.balanceOf(poolContract.address);
+
+            await testTokenContract.mint(poolContract.address, toToken(8_000_000));
+
+            let paymentId = ethers.utils.formatBytes32String("5");
+            await expect(
+                poolContract
+                    .connect(pdsServiceAccount)
+                    .onReceivedPayment(borrower.address, toToken(8_000_000), paymentId)
+            )
+                .to.emit(poolContract, "ExtraFundsDispersed")
+                .withArgs(borrower.address, toToken(7_000_000))
+                .to.emit(poolContract, "ReceivedPaymentProcessed")
+                .withArgs(
+                    pdsServiceAccount.address,
+                    borrower.address,
+                    toToken(8_000_000),
+                    paymentId
+                );
+
+            expect(await poolContract.isPaymentProcessed(paymentId)).to.equal(true);
+            expect(await poolContract.isPaymentUnderReview(paymentId)).to.equal(false);
+            r = await poolContract.creditRecordMapping(borrower.address);
+            rs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(r, rs, toToken(10_000_000), 0, dueDate, 0, 0, 0, 0, 0, 0, 30, 0, 0);
+            borrowerBalance = borrowerBalance.add(toToken(7000000));
+            poolLiquidity = poolLiquidity.add(toToken(1000000));
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(borrowerBalance);
+            expect(await poolContract.totalPoolValue()).to.equal(poolValue);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                poolLiquidity
+            );
+        });
     });
 });

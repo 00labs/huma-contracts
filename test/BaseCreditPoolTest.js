@@ -458,6 +458,36 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(borrower).makePayment(borrower.address, toToken(1_000_000));
         });
 
+        it("Borrow full amount that has been approved without platform fees", async function () {
+            await feeManagerContract.connect(poolOwner).setFees(0, 0, 0, 0, 0);
+            let oldBalance = await testTokenContract.balanceOf(borrower.address);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
+
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
+                oldBalance.add(toToken(1_000_000))
+            );
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(2000547945);
+            expect(accruedIncome.poolOwnerIncome).to.equal(500136986);
+            expect(accruedIncome.eaIncome).to.equal(1500410958);
+            expect(await poolContract.totalPoolValue()).to.equal(5006001643837);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                4000000000000
+            );
+
+            await testTokenContract.mint(borrower.address, toToken(11000));
+            await testTokenContract
+                .connect(borrower)
+                .approve(poolContract.address, toToken(1_000_000));
+            await poolContract.connect(borrower).makePayment(borrower.address, toToken(1_000_000));
+        });
+
         it("Shall reject new approval after a drawdown has happened", async function () {
             await poolContract
                 .connect(eaServiceAccount)
