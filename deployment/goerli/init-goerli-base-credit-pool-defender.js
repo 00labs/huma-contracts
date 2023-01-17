@@ -208,25 +208,21 @@ async function initBaseCreditPoolConfig() {
     const BaseFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
     const feeManager = BaseFeeManager.attach(deployedContracts["BaseCreditPoolFeeManager"]);
 
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "initialize", [
-        "BaseCreditPool",
-        hdt.address,
-        humaConfig.address,
-        feeManager.address,
-    ]);
+    // await sendTransaction("BaseCreditPoolConfig", poolConfig, "initialize", [
+    //     "BaseCreditPool",
+    //     hdt.address,
+    //     humaConfig.address,
+    //     feeManager.address,
+    // ]);
 
     const decimals = await hdt.decimals();
     const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("cap: " + cap);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolLiquidityCap", [cap]);
+    // await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolLiquidityCap", [cap]);
 
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPool", [
-        deployedContracts["BaseCreditPool"],
-    ]);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setEvaluationAgent", [
-        2,
-        ea_bcp.address,
-    ]);
+    // await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPool", [
+    //     deployedContracts["BaseCreditPool"],
+    // ]);
 
     await sendTransaction(
         "BaseCreditPoolConfig",
@@ -240,6 +236,12 @@ async function initBaseCreditPoolConfig() {
         "setEARewardsAndLiquidity",
         [1000, 100]
     );
+
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setEvaluationAgent", [
+        2,
+        ea_bcp.address,
+    ]);
+    
     const maxCL = BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("maxCL: " + maxCL);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setMaxCreditLine", [maxCL]);
@@ -249,11 +251,13 @@ async function initBaseCreditPoolConfig() {
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolToken", [
         deployedContracts["BaseCreditHDT"],
     ]);
-    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [1]);
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [0]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "addPoolOperator", [bcpOperator.address]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolOwnerTreasury", [bcpOwnerTreasury.address]);
 
+    await sendTransaction("BaseCreditPoolConfig", poolConfig, "setCreditApprovalExpiration", [5]);
+    
     await transferOwnershipToTL("BasePoolConfig", "BaseCreditPoolConfig", "BaseCreditPoolTimelock");
 
     await updateInitilizedContract("BaseCreditPoolConfig");

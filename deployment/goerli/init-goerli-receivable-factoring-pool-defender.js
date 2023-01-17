@@ -213,40 +213,43 @@ async function initPoolConfig() {
         deployedContracts["ReceivableFactoringPoolFeeManager"]
     );
 
-    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "initialize", [
-        "ReceivableFactoringPool",
-        hdt.address,
-        humaConfig.address,
-        feeManager.address,
-    ]);
+    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "initialize", [
+    //     "ReceivableFactoringPool",
+    //     hdt.address,
+    //     humaConfig.address,
+    //     feeManager.address,
+    // ]);
 
     const decimals = await hdt.decimals();
-    const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
-    console.log("cap: " + cap);
-    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolLiquidityCap", [
-        cap,
-    ]);
+    // const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
+    // console.log("cap: " + cap);
+    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolLiquidityCap", [
+    //     cap,
+    // ]);
 
-    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPool", [
-        deployedContracts["ReceivableFactoringPool"],
-    ]);
-    await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setEvaluationAgent", [
-        1,
-        ea.address,
-    ]);
+    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPool", [
+    //     deployedContracts["ReceivableFactoringPool"],
+    // ]);
 
-    await sendTransaction(
-        "ReceivableFactoringPoolConfig",
-        poolConfig,
-        "setPoolOwnerRewardsAndLiquidity",
-        [500, 200]
-    );
-    await sendTransaction(
-        "ReceivableFactoringPoolConfig",
-        poolConfig,
-        "setEARewardsAndLiquidity",
-        [1000, 100]
-    );
+
+    // await sendTransaction(
+    //     "ReceivableFactoringPoolConfig",
+    //     poolConfig,
+    //     "setPoolOwnerRewardsAndLiquidity",
+    //     [500, 200]
+    // );
+    // await sendTransaction(
+    //     "ReceivableFactoringPoolConfig",
+    //     poolConfig,
+    //     "setEARewardsAndLiquidity",
+    //     [1000, 100]
+    // );
+
+    // await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setEvaluationAgent", [
+    //     1,
+    //     ea.address,
+    // ]);
+
     const maxCL = BN.from(1_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("maxCL: " + maxCL);
     await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setMaxCreditLine", [
@@ -267,7 +270,7 @@ async function initPoolConfig() {
         "ReceivableFactoringPoolConfig",
         poolConfig,
         "setWithdrawalLockoutPeriod",
-        [90]
+        [15]
     );
     await sendTransaction(
         "ReceivableFactoringPoolConfig",
