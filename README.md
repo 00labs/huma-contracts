@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="https://huma.finance"><img src="https://user-images.githubusercontent.com/5999398/210867640-95c8944c-fcd0-4199-9f08-b0ae6eda70c0.jpg" alt="Huma Finance" width="500px"></a>
+</p>
+
 <h1 align="center">Welcome to Huma Finance EVM contracts</h1>
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-1.0.0-blue.svg?cacheSeconds=2592000" />
@@ -9,6 +13,9 @@
   </a>
   <a href="https://twitter.com/humafinance" target="_blank">
     <img alt="Twitter: humafinance" src="https://img.shields.io/twitter/follow/humafinance.svg?style=social" />
+  </a>
+  <a href="https://discord.gg/7e2fdMSCZr" target="_blank">
+    <img alt="Join Discord" src="https://badgen.net/badge/Join/HUMAnity/cyan?icon=discord" />
   </a>
 </p>
 
