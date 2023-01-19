@@ -1550,5 +1550,20 @@ describe("Base Credit Pool", function () {
                 "withdrawnAmountHigherThanBalance"
             );
         });
+
+        it("Should not withdraw zero pool owner fee", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwnerTreasury);
+            await expect(
+                poolConfigFromPoolOwner.withdrawPoolOwnerFee(0)
+            ).to.be.revertedWithCustomError(poolConfigContract, "zeroAmountProvided");
+        });
+
+        it("Should not withdraw zero ea fee", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(evaluationAgent);
+            await expect(poolConfigFromPoolOwner.withdrawEAFee(0)).to.be.revertedWithCustomError(
+                poolConfigContract,
+                "zeroAmountProvided"
+            );
+        });
     });
 });
