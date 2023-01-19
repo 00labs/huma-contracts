@@ -8,6 +8,8 @@ const {
     checkResult,
     checkArruedIncome,
     toToken,
+    evmSnapshot,
+    evmRevert,
 } = require("./BaseTest");
 
 let eaNFTContract;
@@ -30,6 +32,8 @@ let poolOwnerTreasury;
 
 let record;
 let recordStatic;
+
+let sId;
 
 describe("Base Fee Manager", function () {
     before(async function () {
@@ -78,6 +82,15 @@ describe("Base Fee Manager", function () {
     });
 
     describe("Admin functions", function () {
+        before(async function () {
+            sId = await evmSnapshot();
+        });
+
+        after(async function () {
+            if (sId) {
+                const res = await evmRevert(sId);
+            }
+        });
         describe("setFees()", function () {
             it("Should disallow non-owner to set the fees", async function () {
                 await expect(
@@ -139,29 +152,16 @@ describe("Base Fee Manager", function () {
 
     describe("getDueInfo(), IntOnly", async function () {
         before(async function () {
+            sId = await evmSnapshot();
+
             await feeManagerContract
                 .connect(poolOwner)
                 .setFees(toToken(10), 100, toToken(20), 500, 0);
-            [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
-                poolOwner,
-                proxyOwner,
-                evaluationAgent,
-                lender,
-                humaConfigContract,
-                feeManagerContract,
-                testTokenContract,
-                0,
-                eaNFTContract,
-                false,
-                poolOperator,
-                poolOwnerTreasury
-            );
 
             await poolContract.connect(borrower).requestCredit(toToken(400), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(400), 30, 12, 1217);
-            await testTokenContract.connect(lender).approve(poolContract.address, toToken(300));
             await poolContract.connect(borrower).drawdown(toToken(400));
 
             record = await poolContract.creditRecordMapping(borrower.address);
@@ -170,8 +170,12 @@ describe("Base Fee Manager", function () {
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
             checkResult(r, 0, 4001095, 4001095, toToken(400), 0);
+        });
 
-            await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
+        after(async function () {
+            if (sId) {
+                const res = await evmRevert(sId);
+            }
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
@@ -216,25 +220,11 @@ describe("Base Fee Manager", function () {
 
     describe("getDueInfo(), MinPrincipal", async function () {
         before(async function () {
-            [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
-                poolOwner,
-                proxyOwner,
-                evaluationAgent,
-                lender,
-                humaConfigContract,
-                feeManagerContract,
-                testTokenContract,
-                500,
-                eaNFTContract,
-                false,
-                poolOperator,
-                poolOwnerTreasury
-            );
+            sId = await evmSnapshot();
 
             await feeManagerContract
                 .connect(poolOwner)
                 .setFees(toToken(10), 100, toToken(20), 100, 0);
-            await poolConfigContract.connect(poolOwner).setAPR(1217);
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
 
             // Create a borrowing record
@@ -254,6 +244,13 @@ describe("Base Fee Manager", function () {
             // from the first statement does not appear when call getDueInfo().
             checkResult(r, 0, 40010958, 240010958, toToken(3800), 0);
         });
+
+        after(async function () {
+            if (sId) {
+                const res = await evmRevert(sId);
+            }
+        });
+
         describe("1st statement", async function () {
             describe("No late fee", async function () {
                 it("WithMinPrincipal", async function () {
@@ -298,20 +295,7 @@ describe("Base Fee Manager", function () {
 
     describe("getDueInfo() + membership fee, IntOnly", async function () {
         before(async function () {
-            [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
-                poolOwner,
-                proxyOwner,
-                evaluationAgent,
-                lender,
-                humaConfigContract,
-                feeManagerContract,
-                testTokenContract,
-                0,
-                eaNFTContract,
-                false,
-                poolOperator,
-                poolOwnerTreasury
-            );
+            sId = await evmSnapshot();
 
             await feeManagerContract
                 .connect(poolOwner)
@@ -320,7 +304,6 @@ describe("Base Fee Manager", function () {
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(400), 30, 12, 1217);
-            await testTokenContract.connect(lender).approve(poolContract.address, toToken(300));
             await poolContract.connect(borrower).drawdown(toToken(400));
 
             record = await poolContract.creditRecordMapping(borrower.address);
@@ -329,8 +312,12 @@ describe("Base Fee Manager", function () {
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
             checkResult(r, 0, 14001095, 14001095, toToken(400), 0);
+        });
 
-            await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(0);
+        after(async function () {
+            if (sId) {
+                const res = await evmRevert(sId);
+            }
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
@@ -375,25 +362,11 @@ describe("Base Fee Manager", function () {
 
     describe("getDueInfo() + membership fee, MinPrincipal", async function () {
         before(async function () {
-            [hdtContract, poolConfigContract, poolContract] = await deployAndSetupPool(
-                poolOwner,
-                proxyOwner,
-                evaluationAgent,
-                lender,
-                humaConfigContract,
-                feeManagerContract,
-                testTokenContract,
-                500,
-                eaNFTContract,
-                false,
-                poolOperator,
-                poolOwnerTreasury
-            );
+            sId = await evmSnapshot();
 
             await feeManagerContract
                 .connect(poolOwner)
                 .setFees(toToken(10), 100, toToken(20), 100, toToken(10));
-            await poolConfigContract.connect(poolOwner).setAPR(1217);
             await feeManagerContract.connect(poolOwner).setMinPrincipalRateInBps(500);
 
             // Create a borrowing record
@@ -412,6 +385,12 @@ describe("Base Fee Manager", function () {
             // Please note drawdown() has distributed the 40 income, thus, the 40 income
             // from the first statement does not appear when call getDueInfo().
             checkResult(r, 0, 50010958, 250010958, toToken(3800), 0);
+        });
+
+        after(async function () {
+            if (sId) {
+                const res = await evmRevert(sId);
+            }
         });
         describe("1st statement", async function () {
             describe("No late fee", async function () {
@@ -452,6 +431,44 @@ describe("Base Fee Manager", function () {
                     });
                 });
             });
+        });
+    });
+
+    describe("calcLateFee()", async function () {
+        before(async function () {
+            sId = await evmSnapshot();
+        });
+
+        after(async function () {
+            if (sId) {
+                const res = await evmRevert(sId);
+            }
+        });
+
+        it("do nothing", async function () {
+            const fees = await feeManagerContract.calcLateFee(0, 0, 0);
+            expect(fees).to.equal(0);
+        });
+
+        it("only flat late fee", async function () {
+            await feeManagerContract
+                .connect(poolOwner)
+                .setFees(toToken(10), 100, toToken(20), 0, 0);
+
+            await poolContract.connect(borrower).requestCredit(toToken(400), 30, 12);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(400), 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(toToken(400));
+
+            record = await poolContract.creditRecordMapping(borrower.address);
+            recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30 + 10]);
+            await ethers.provider.send("evm_mine", []);
+
+            let r = await feeManagerContract.getDueInfo(record, recordStatic);
+            checkResult(r, 1, 24041117, 24041117, 404001095, 24041117);
         });
     });
 });
