@@ -321,6 +321,12 @@ describe("Base Pool Config", function () {
                     .to.emit(poolConfigContract, "CreditApprovalExpirationChanged")
                     .withArgs(432000, poolOwner.address);
             });
+
+            it("Should not set pool to zero address", async function () {
+                await expect(
+                    poolConfigContract.connect(poolOwner).setPool(ethers.constants.AddressZero)
+                ).to.be.revertedWithCustomError(poolConfigContract, "zeroAddressProvided");
+            });
         });
 
         describe("Change Evaluation Agent", async function () {
@@ -392,6 +398,46 @@ describe("Base Pool Config", function () {
             });
 
             it("Should allow evaluation agent to be replaced when the old EA has rewards", async function () {
+                const eaNFTId = await poolConfigContract.evaluationAgentId();
+
+                // change to new EA
+                await testTokenContract.mint(evaluationAgent2.address, toToken(2_000_000));
+                await testTokenContract
+                    .connect(evaluationAgent2)
+                    .approve(poolContract.address, toToken(2_000_000));
+                await poolContract
+                    .connect(poolOperator)
+                    .addApprovedLender(evaluationAgent2.address);
+                await expect(
+                    poolContract.connect(evaluationAgent2).deposit(toToken(2_000_000))
+                ).to.emit(poolContract, "LiquidityDeposited");
+                await expect(
+                    poolConfigContract
+                        .connect(poolOwner)
+                        .setEvaluationAgent(newNFTTokenId, evaluationAgent2.address)
+                )
+                    .to.emit(poolConfigContract, "EvaluationAgentChanged")
+                    .withArgs(
+                        evaluationAgent.address,
+                        evaluationAgent2.address,
+                        newNFTTokenId,
+                        poolOwner.address
+                    );
+
+                // change back to old EA
+                await expect(
+                    poolConfigContract
+                        .connect(poolOwner)
+                        .setEvaluationAgent(eaNFTId, evaluationAgent.address)
+                )
+                    .to.emit(poolConfigContract, "EvaluationAgentChanged")
+                    .withArgs(
+                        evaluationAgent2.address,
+                        evaluationAgent.address,
+                        eaNFTId,
+                        poolOwner.address
+                    );
+
                 await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
                 console.log("done");
                 await poolContract
@@ -409,16 +455,6 @@ describe("Base Pool Config", function () {
                 expect(accruedIncome.poolOwnerIncome).to.equal(1050136986);
                 let oldBalance = await testTokenContract.balanceOf(evaluationAgent.address);
 
-                await testTokenContract.mint(evaluationAgent2.address, toToken(2_000_000));
-                await testTokenContract
-                    .connect(evaluationAgent2)
-                    .approve(poolContract.address, toToken(2_000_000));
-                await poolContract
-                    .connect(poolOperator)
-                    .addApprovedLender(evaluationAgent2.address);
-                await expect(
-                    poolContract.connect(evaluationAgent2).deposit(toToken(2_000_000))
-                ).to.emit(poolContract, "LiquidityDeposited");
                 await expect(
                     poolConfigContract
                         .connect(poolOwner)

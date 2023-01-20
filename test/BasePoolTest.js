@@ -212,6 +212,12 @@ describe("Base Pool - LP and Admin functions", function () {
     });
 
     describe("Deposit", function () {
+        it("Cannot makeInitialDeposit while account is not pool owner or EA", async function () {
+            await expect(
+                poolContract.connect(lender).makeInitialDeposit(toToken(1))
+            ).to.be.revertedWithCustomError(poolConfigContract, "notPoolOwnerTreasuryOrEA");
+        });
+
         it("Cannot deposit while protocol is paused", async function () {
             await humaConfigContract.connect(poolOwner).pause();
             await expect(

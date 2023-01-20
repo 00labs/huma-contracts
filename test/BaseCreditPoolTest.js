@@ -458,6 +458,36 @@ describe("Base Credit Pool", function () {
             await poolContract.connect(borrower).makePayment(borrower.address, toToken(1_000_000));
         });
 
+        it("Borrow full amount that has been approved without platform fees", async function () {
+            await feeManagerContract.connect(poolOwner).setFees(0, 0, 0, 0, 0);
+            let oldBalance = await testTokenContract.balanceOf(borrower.address);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+            expect(await poolContract.isApproved(borrower.address)).to.equal(true);
+
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+
+            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(
+                oldBalance.add(toToken(1_000_000))
+            );
+
+            let accruedIncome = await poolConfigContract.accruedIncome();
+            expect(accruedIncome.protocolIncome).to.equal(2000547945);
+            expect(accruedIncome.poolOwnerIncome).to.equal(500136986);
+            expect(accruedIncome.eaIncome).to.equal(1500410958);
+            expect(await poolContract.totalPoolValue()).to.equal(5006001643837);
+            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                4000000000000
+            );
+
+            await testTokenContract.mint(borrower.address, toToken(11000));
+            await testTokenContract
+                .connect(borrower)
+                .approve(poolContract.address, toToken(1_000_000));
+            await poolContract.connect(borrower).makePayment(borrower.address, toToken(1_000_000));
+        });
+
         it("Shall reject new approval after a drawdown has happened", async function () {
             await poolContract
                 .connect(eaServiceAccount)
@@ -1095,304 +1125,367 @@ describe("Base Credit Pool", function () {
     // Test scenario available at https://tinyurl.com/yc5fks9x
     describe("Default", function () {
         let dueDate, nextDate;
-        beforeEach(async function () {
-            await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
 
-            await poolContract
-                .connect(eaServiceAccount)
-                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
-            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
-            let blockBefore = await ethers.provider.getBlock();
-            dueDate = blockBefore.timestamp + 2592000;
+        describe("Common", function () {
+            beforeEach(async function () {
+                await poolConfigContract.connect(poolOwner).setAPR(1217);
+                await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
+
+                await poolContract
+                    .connect(eaServiceAccount)
+                    .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+                await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+                let blockBefore = await ethers.provider.getBlock();
+                dueDate = blockBefore.timestamp + 2592000;
+            });
+
+            it("Default flow", async function () {
+                await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+
+                // Period 1: Late for payment
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+
+                await poolContract.refreshAccount(borrower.address);
+                let creditInfo = await poolContract.creditRecordMapping(borrower.address);
+                await expect(
+                    poolContract.triggerDefault(borrower.address)
+                ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
+
+                expect(creditInfo.unbilledPrincipal).to.equal(1010002739726);
+                expect(creditInfo.feesAndInterestDue).to.equal(22202821925);
+                expect(creditInfo.totalDue).to.equal(22202821925);
+                expect(creditInfo.remainingPeriods).to.equal(10);
+                expect(creditInfo.missedPeriods).to.equal(1);
+                expect(await poolContract.totalPoolValue()).to.equal(5025923336993);
+
+                //Period 2: Two periods lates
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+
+                await poolContract.refreshAccount(borrower.address);
+                creditInfo = await poolContract.creditRecordMapping(borrower.address);
+                await expect(
+                    poolContract.triggerDefault(borrower.address)
+                ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
+
+                expect(creditInfo.unbilledPrincipal).to.equal(1032205561651);
+                expect(creditInfo.feesAndInterestDue).to.equal(22646939192);
+                expect(creditInfo.totalDue).to.equal(22646939192);
+                expect(creditInfo.remainingPeriods).to.equal(9);
+                expect(creditInfo.missedPeriods).to.equal(2);
+                expect(await poolContract.totalPoolValue()).to.equal(5039511500510);
+
+                // Period 3: 3 periods late. ready for default.
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+                expect(await poolContract.isLate(borrower.address)).to.equal(true);
+
+                // Intertionally bypass calling updateDueInfo(), and expects triggerDefault() to call it
+                // await poolContract.updateDueInfo(borrower.address);
+                // creditInfo = await poolContract.creditRecordMapping(borrower.address);
+
+                // Triggers default and makes sure the event is emitted
+                await expect(
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
+                )
+                    .to.emit(poolContract, "DefaultTriggered")
+                    .withArgs(borrower.address, 1054852500843, eaServiceAccount.address);
+
+                creditInfo = await poolContract.creditRecordMapping(borrower.address);
+                expect(creditInfo.unbilledPrincipal).to.equal(1054852500843);
+                expect(creditInfo.feesAndInterestDue).to.equal(23099940023);
+                expect(creditInfo.totalDue).to.equal(23099940023);
+                expect(creditInfo.remainingPeriods).to.equal(8);
+                expect(creditInfo.missedPeriods).to.equal(3);
+
+                // Checks pool value and all LP's withdrawable funds
+                expect(await hdtContract.totalSupply()).to.equal(toToken(5_000_000));
+                expect(await poolContract.totalPoolValue()).to.equal(3984658999667);
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                    796931799933
+                );
+                expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+                    1593863599866
+                );
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    1593863599866
+                );
+
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                    toToken(4_011_000)
+                );
+
+                accruedIncome = await poolConfigContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(13170500168);
+                expect(accruedIncome.poolOwnerIncome).to.equal(3292625041);
+                expect(accruedIncome.eaIncome).to.equal(9877875124);
+
+                // Should not call triggerDefault() again after an account is defaulted
+                await expect(
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
+                ).to.be.revertedWithCustomError(poolContract, "defaultHasAlreadyBeenTriggered");
+            });
+
+            it("Post-default payment", async function () {
+                await testTokenContract.connect(borrower).mint(borrower.address, toToken(200_000));
+                await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+
+                // Period 1: Late for payment, trigger default. The same setup as the "default flow" test.
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+                await poolContract.refreshAccount(borrower.address);
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+                await poolContract.refreshAccount(borrower.address);
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+
+                // Triggers default and makes sure the event is emitted
+                await expect(
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
+                )
+                    .to.emit(poolContract, "DefaultTriggered")
+                    .withArgs(borrower.address, 1054852500843, eaServiceAccount.address);
+
+                creditInfo = await poolContract.creditRecordMapping(borrower.address);
+                expect(creditInfo.unbilledPrincipal).to.equal(1054852500843);
+                expect(creditInfo.feesAndInterestDue).to.equal(23099940023);
+                expect(creditInfo.totalDue).to.equal(23099940023);
+                expect(creditInfo.remainingPeriods).to.equal(8);
+                expect(creditInfo.missedPeriods).to.equal(3);
+
+                // Checks pool value and all LP's withdrawable funds
+                expect(await hdtContract.totalSupply()).to.equal(toToken(5_000_000));
+                expect(await poolContract.totalPoolValue()).to.equal(3984658999667);
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                    796931799933
+                );
+                expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+                    1593863599866
+                );
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    1593863599866
+                );
+
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                    toToken(4_011_000)
+                );
+
+                accruedIncome = await poolConfigContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(13170500168);
+                expect(accruedIncome.poolOwnerIncome).to.equal(3292625041);
+                expect(accruedIncome.eaIncome).to.equal(9877875124);
+
+                // Stage 2: borrower pays back after default is triggered.
+                // the amount is unable to cover all the outstanding fees and principals.
+                // the fees will be charged first, then the principal. The account is in default
+                // state until everything is paid off.
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+
+                await testTokenContract
+                    .connect(borrower)
+                    .approve(poolContract.address, toToken(25_000));
+
+                nextDate = dueDate - 20 * 24 * 3600;
+                await setNextBlockTimestamp(nextDate);
+                await poolContract
+                    .connect(borrower)
+                    .makePayment(borrower.address, toToken(25_000));
+
+                record = await poolContract.creditRecordMapping(borrower.address);
+                recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+                checkRecord(
+                    record,
+                    recordStatic,
+                    toToken(1_000_000),
+                    1076514442977,
+                    dueDate,
+                    -9589279,
+                    0,
+                    0,
+                    0,
+                    7,
+                    1217,
+                    30,
+                    5,
+                    1029852500843
+                );
+                expect(await poolContract.totalPoolValue()).to.equal(4009658999667);
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                    801931799933
+                );
+                expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+                    1603863599866
+                );
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    1603863599866
+                );
+
+                // Checks all the accrued income of protocol, poolOwner, and EA.
+                accruedIncome = await poolConfigContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(13170500168);
+                expect(accruedIncome.poolOwnerIncome).to.equal(3292625041);
+                expect(accruedIncome.eaIncome).to.equal(9877875124);
+
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                    toToken(4_036_000)
+                );
+
+                // // Stage 3: pay enough to cover all principal losses
+                await testTokenContract
+                    .connect(borrower)
+                    .approve(poolContract.address, toToken(1_050_000));
+
+                nextDate = nextDate + 10 * 24 * 3600;
+                await setNextBlockTimestamp(nextDate);
+                await expect(
+                    poolContract
+                        .connect(borrower)
+                        .makePayment(borrower.address, toToken(1_050_000))
+                )
+                    .to.emit(poolContract, "PaymentMade")
+                    .withArgs(
+                        borrower.address,
+                        toToken(1_050_000),
+                        0,
+                        26514442977,
+                        borrower.address
+                    );
+
+                record = await poolContract.creditRecordMapping(borrower.address);
+                recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+                checkRecord(
+                    record,
+                    recordStatic,
+                    toToken(1_000_000),
+                    26514442977,
+                    dueDate,
+                    -3510548183,
+                    0,
+                    0,
+                    0,
+                    7,
+                    1217,
+                    30,
+                    5,
+                    0
+                );
+                expect(await poolContract.totalPoolValue()).to.equal(5051600000006);
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                    1010320000001
+                );
+                expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+                    2020640000002
+                );
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    2020640000002
+                );
+
+                accruedIncome = await poolConfigContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(17199999999);
+                expect(accruedIncome.poolOwnerIncome).to.equal(4299999998);
+                expect(accruedIncome.eaIncome).to.equal(12899999997);
+
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                    toToken(5_086_000)
+                );
+
+                // // Stage 4: pay off the remaining fees
+                await testTokenContract
+                    .connect(borrower)
+                    .approve(poolContract.address, toToken(27_000));
+
+                nextDate = nextDate + 1 * 24 * 3600;
+                await setNextBlockTimestamp(nextDate);
+                await expect(
+                    poolContract.connect(borrower).makePayment(borrower.address, toToken(27_000))
+                )
+                    .to.emit(poolContract, "PaymentMade")
+                    .withArgs(borrower.address, 22924329673, 0, 0, borrower.address);
+
+                record = await poolContract.creditRecordMapping(borrower.address);
+                recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
+                checkRecord(
+                    record,
+                    recordStatic,
+                    toToken(1_000_000),
+                    0,
+                    dueDate,
+                    0,
+                    0,
+                    0,
+                    0,
+                    7,
+                    1217,
+                    30,
+                    3,
+                    0
+                );
+                expect(await poolContract.totalPoolValue()).to.equal(5065354597811);
+                expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
+                    1013070919562
+                );
+                expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
+                    2026141839124
+                );
+                expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(
+                    2026141839124
+                );
+
+                accruedIncome = await poolConfigContract.accruedIncome();
+                expect(accruedIncome.protocolIncome).to.equal(21784865933);
+                expect(accruedIncome.poolOwnerIncome).to.equal(5446216481);
+                expect(accruedIncome.eaIncome).to.equal(16338649448);
+
+                expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
+                    5108924329673
+                );
+            });
         });
 
-        it("Default flow", async function () {
-            await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+        describe("Limit", function () {
+            it("Default to cause pool value zero", async function () {
+                await feeManagerContract.connect(poolOwner).setFees(0, 0, 0, 0, 0);
+                await poolConfigContract.connect(poolOwner).setAPR(1217);
+                await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
 
-            // Period 1: Late for payment
-            nextDate = dueDate + 1;
-            await mineNextBlockWithTimestamp(nextDate);
-            dueDate += 2592000;
+                await poolContract.connect(borrower).requestCredit(toToken(5_000_000), 30, 12);
+                await poolContract
+                    .connect(eaServiceAccount)
+                    .approveCredit(borrower.address, toToken(5_000_000), 30, 12, 1217);
+                await poolContract.connect(borrower).drawdown(toToken(5_000_000));
+                let blockBefore = await ethers.provider.getBlock();
+                dueDate = blockBefore.timestamp + 2592000;
 
-            await poolContract.refreshAccount(borrower.address);
-            let creditInfo = await poolContract.creditRecordMapping(borrower.address);
-            await expect(
-                poolContract.triggerDefault(borrower.address)
-            ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+                await poolContract.refreshAccount(borrower.address);
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
+                await poolContract.refreshAccount(borrower.address);
+                nextDate = dueDate + 1;
+                await mineNextBlockWithTimestamp(nextDate);
+                dueDate += 2592000;
 
-            expect(creditInfo.unbilledPrincipal).to.equal(1010002739726);
-            expect(creditInfo.feesAndInterestDue).to.equal(22202821925);
-            expect(creditInfo.totalDue).to.equal(22202821925);
-            expect(creditInfo.remainingPeriods).to.equal(10);
-            expect(creditInfo.missedPeriods).to.equal(1);
-            expect(await poolContract.totalPoolValue()).to.equal(5025923336993);
+                await expect(
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
+                )
+                    .to.emit(poolContract, "DefaultTriggered")
+                    .withArgs(borrower.address, 5151546922031, eaServiceAccount.address);
 
-            //Period 2: Two periods lates
-            nextDate = dueDate + 1;
-            await mineNextBlockWithTimestamp(nextDate);
-            dueDate += 2592000;
-
-            await poolContract.refreshAccount(borrower.address);
-            creditInfo = await poolContract.creditRecordMapping(borrower.address);
-            await expect(
-                poolContract.triggerDefault(borrower.address)
-            ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
-
-            expect(creditInfo.unbilledPrincipal).to.equal(1032205561651);
-            expect(creditInfo.feesAndInterestDue).to.equal(22646939192);
-            expect(creditInfo.totalDue).to.equal(22646939192);
-            expect(creditInfo.remainingPeriods).to.equal(9);
-            expect(creditInfo.missedPeriods).to.equal(2);
-            expect(await poolContract.totalPoolValue()).to.equal(5039511500510);
-
-            // Period 3: 3 periods late. ready for default.
-            nextDate = dueDate + 1;
-            await mineNextBlockWithTimestamp(nextDate);
-            dueDate += 2592000;
-            expect(await poolContract.isLate(borrower.address)).to.equal(true);
-
-            // Intertionally bypass calling updateDueInfo(), and expects triggerDefault() to call it
-            // await poolContract.updateDueInfo(borrower.address);
-            // creditInfo = await poolContract.creditRecordMapping(borrower.address);
-
-            // Triggers default and makes sure the event is emitted
-            await expect(poolContract.connect(eaServiceAccount).triggerDefault(borrower.address))
-                .to.emit(poolContract, "DefaultTriggered")
-                .withArgs(borrower.address, 1054852500843, eaServiceAccount.address);
-
-            creditInfo = await poolContract.creditRecordMapping(borrower.address);
-            expect(creditInfo.unbilledPrincipal).to.equal(1054852500843);
-            expect(creditInfo.feesAndInterestDue).to.equal(23099940023);
-            expect(creditInfo.totalDue).to.equal(23099940023);
-            expect(creditInfo.remainingPeriods).to.equal(8);
-            expect(creditInfo.missedPeriods).to.equal(3);
-
-            // Checks pool value and all LP's withdrawable funds
-            expect(await hdtContract.totalSupply()).to.equal(toToken(5_000_000));
-            expect(await poolContract.totalPoolValue()).to.equal(3984658999667);
-            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                796931799933
-            );
-            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-                1593863599866
-            );
-            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1593863599866);
-
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                toToken(4_011_000)
-            );
-
-            accruedIncome = await poolConfigContract.accruedIncome();
-            expect(accruedIncome.protocolIncome).to.equal(13170500168);
-            expect(accruedIncome.poolOwnerIncome).to.equal(3292625041);
-            expect(accruedIncome.eaIncome).to.equal(9877875124);
-
-            // Should not call triggerDefault() again after an account is defaulted
-            await expect(
-                poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
-            ).to.be.revertedWithCustomError(poolContract, "defaultHasAlreadyBeenTriggered");
-        });
-
-        it("Post-default payment", async function () {
-            await testTokenContract.connect(borrower).mint(borrower.address, toToken(200_000));
-            await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
-
-            // Period 1: Late for payment, trigger default. The same setup as the "default flow" test.
-            nextDate = dueDate + 1;
-            await mineNextBlockWithTimestamp(nextDate);
-            dueDate += 2592000;
-            await poolContract.refreshAccount(borrower.address);
-            nextDate = dueDate + 1;
-            await mineNextBlockWithTimestamp(nextDate);
-            dueDate += 2592000;
-            await poolContract.refreshAccount(borrower.address);
-            nextDate = dueDate + 1;
-            await mineNextBlockWithTimestamp(nextDate);
-            dueDate += 2592000;
-
-            // Triggers default and makes sure the event is emitted
-            await expect(poolContract.connect(eaServiceAccount).triggerDefault(borrower.address))
-                .to.emit(poolContract, "DefaultTriggered")
-                .withArgs(borrower.address, 1054852500843, eaServiceAccount.address);
-
-            creditInfo = await poolContract.creditRecordMapping(borrower.address);
-            expect(creditInfo.unbilledPrincipal).to.equal(1054852500843);
-            expect(creditInfo.feesAndInterestDue).to.equal(23099940023);
-            expect(creditInfo.totalDue).to.equal(23099940023);
-            expect(creditInfo.remainingPeriods).to.equal(8);
-            expect(creditInfo.missedPeriods).to.equal(3);
-
-            // Checks pool value and all LP's withdrawable funds
-            expect(await hdtContract.totalSupply()).to.equal(toToken(5_000_000));
-            expect(await poolContract.totalPoolValue()).to.equal(3984658999667);
-            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                796931799933
-            );
-            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-                1593863599866
-            );
-            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1593863599866);
-
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                toToken(4_011_000)
-            );
-
-            accruedIncome = await poolConfigContract.accruedIncome();
-            expect(accruedIncome.protocolIncome).to.equal(13170500168);
-            expect(accruedIncome.poolOwnerIncome).to.equal(3292625041);
-            expect(accruedIncome.eaIncome).to.equal(9877875124);
-
-            // Stage 2: borrower pays back after default is triggered.
-            // the amount is unable to cover all the outstanding fees and principals.
-            // the fees will be charged first, then the principal. The account is in default
-            // state until everything is paid off.
-            nextDate = dueDate + 1;
-            await mineNextBlockWithTimestamp(nextDate);
-            dueDate += 2592000;
-
-            await testTokenContract
-                .connect(borrower)
-                .approve(poolContract.address, toToken(25_000));
-
-            nextDate = dueDate - 20 * 24 * 3600;
-            await setNextBlockTimestamp(nextDate);
-            await poolContract.connect(borrower).makePayment(borrower.address, toToken(25_000));
-
-            record = await poolContract.creditRecordMapping(borrower.address);
-            recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(
-                record,
-                recordStatic,
-                toToken(1_000_000),
-                1076514442977,
-                dueDate,
-                -9589279,
-                0,
-                0,
-                0,
-                7,
-                1217,
-                30,
-                5,
-                1029852500843
-            );
-            expect(await poolContract.totalPoolValue()).to.equal(4009658999667);
-            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                801931799933
-            );
-            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-                1603863599866
-            );
-            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(1603863599866);
-
-            // Checks all the accrued income of protocol, poolOwner, and EA.
-            accruedIncome = await poolConfigContract.accruedIncome();
-            expect(accruedIncome.protocolIncome).to.equal(13170500168);
-            expect(accruedIncome.poolOwnerIncome).to.equal(3292625041);
-            expect(accruedIncome.eaIncome).to.equal(9877875124);
-
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                toToken(4_036_000)
-            );
-
-            // // Stage 3: pay enough to cover all principal losses
-            await testTokenContract
-                .connect(borrower)
-                .approve(poolContract.address, toToken(1_050_000));
-
-            nextDate = nextDate + 10 * 24 * 3600;
-            await setNextBlockTimestamp(nextDate);
-            await expect(
-                poolContract.connect(borrower).makePayment(borrower.address, toToken(1_050_000))
-            )
-                .to.emit(poolContract, "PaymentMade")
-                .withArgs(borrower.address, toToken(1_050_000), 0, 26514442977, borrower.address);
-
-            record = await poolContract.creditRecordMapping(borrower.address);
-            recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(
-                record,
-                recordStatic,
-                toToken(1_000_000),
-                26514442977,
-                dueDate,
-                -3510548183,
-                0,
-                0,
-                0,
-                7,
-                1217,
-                30,
-                5,
-                0
-            );
-            expect(await poolContract.totalPoolValue()).to.equal(5051600000006);
-            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                1010320000001
-            );
-            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-                2020640000002
-            );
-            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2020640000002);
-
-            accruedIncome = await poolConfigContract.accruedIncome();
-            expect(accruedIncome.protocolIncome).to.equal(17199999999);
-            expect(accruedIncome.poolOwnerIncome).to.equal(4299999998);
-            expect(accruedIncome.eaIncome).to.equal(12899999997);
-
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                toToken(5_086_000)
-            );
-
-            // // Stage 4: pay off the remaining fees
-            await testTokenContract
-                .connect(borrower)
-                .approve(poolContract.address, toToken(27_000));
-
-            nextDate = nextDate + 1 * 24 * 3600;
-            await setNextBlockTimestamp(nextDate);
-            await expect(
-                poolContract.connect(borrower).makePayment(borrower.address, toToken(27_000))
-            )
-                .to.emit(poolContract, "PaymentMade")
-                .withArgs(borrower.address, 22924329673, 0, 0, borrower.address);
-
-            record = await poolContract.creditRecordMapping(borrower.address);
-            recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(
-                record,
-                recordStatic,
-                toToken(1_000_000),
-                0,
-                dueDate,
-                0,
-                0,
-                0,
-                0,
-                7,
-                1217,
-                30,
-                3,
-                0
-            );
-            expect(await poolContract.totalPoolValue()).to.equal(5065354597811);
-            expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
-                1013070919562
-            );
-            expect(await hdtContract.withdrawableFundsOf(evaluationAgent.address)).to.equal(
-                2026141839124
-            );
-            expect(await hdtContract.withdrawableFundsOf(lender.address)).to.equal(2026141839124);
-
-            accruedIncome = await poolConfigContract.accruedIncome();
-            expect(accruedIncome.protocolIncome).to.equal(21784865933);
-            expect(accruedIncome.poolOwnerIncome).to.equal(5446216481);
-            expect(accruedIncome.eaIncome).to.equal(16338649448);
-
-            expect(await testTokenContract.balanceOf(poolContract.address)).to.equal(
-                5108924329673
-            );
+                expect(await poolContract.totalPoolValue()).to.equal(0);
+            });
         });
     });
 
@@ -1518,6 +1611,21 @@ describe("Base Credit Pool", function () {
             await expect(poolConfigFromEA.withdrawEAFee(1)).to.be.revertedWithCustomError(
                 poolConfigContract,
                 "withdrawnAmountHigherThanBalance"
+            );
+        });
+
+        it("Should not withdraw zero pool owner fee", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(poolOwnerTreasury);
+            await expect(
+                poolConfigFromPoolOwner.withdrawPoolOwnerFee(0)
+            ).to.be.revertedWithCustomError(poolConfigContract, "zeroAmountProvided");
+        });
+
+        it("Should not withdraw zero ea fee", async function () {
+            const poolConfigFromPoolOwner = await poolConfigContract.connect(evaluationAgent);
+            await expect(poolConfigFromPoolOwner.withdrawEAFee(0)).to.be.revertedWithCustomError(
+                poolConfigContract,
+                "zeroAmountProvided"
             );
         });
     });
