@@ -20,28 +20,28 @@
     </h1>
     <div class='clearfix'>
       <div class='fl pad1y space-right2'>
-        <span class="strong">85.71% </span>
+        <span class="strong">0% </span>
         <span class="quiet">Statements</span>
-        <span class='fraction'>6/7</span>
+        <span class='fraction'>0/7</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">100% </span>
+        <span class="strong">0% </span>
         <span class="quiet">Branches</span>
-        <span class='fraction'>2/2</span>
+        <span class='fraction'>0/2</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">85.71% </span>
+        <span class="strong">0% </span>
         <span class="quiet">Functions</span>
-        <span class='fraction'>6/7</span>
+        <span class='fraction'>0/7</span>
       </div>
       <div class='fl pad1y space-right2'>
-        <span class="strong">85.71% </span>
+        <span class="strong">0% </span>
         <span class="quiet">Lines</span>
-        <span class='fraction'>6/7</span>
+        <span class='fraction'>0/7</span>
       </div>
     </div>
   </div>
-  <div class='status-line high'></div>
+  <div class='status-line low'></div>
 <pre><table class="coverage">
 <tr><td class="line-count quiet">1
 2
@@ -86,11 +86,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">138×</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">416×</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -98,19 +94,23 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">21×</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3×</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">834×</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">//SPDX-License-Identifier: MIT
@@ -120,32 +120,32 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 &nbsp;
 contract TestToken is ERC20, IERC165 {
-    constructor() ERC20("TestToken", "USDC") {
-        _mint(msg.sender, 1000 * 10**decimals());
+<span class="fstat-no" title="function not covered" >    constructor() ERC20("TestToken", "USDC") {</span>
+<span class="cstat-no" title="statement not covered" >        _mint(msg.sender, 1000 * 10**decimals())</span>;
     }
 &nbsp;
-    function give1000To(address to) external {
-        _mint(to, 1000 * 10**decimals());
+<span class="fstat-no" title="function not covered" >    function give1000To(address to) external {</span>
+<span class="cstat-no" title="statement not covered" >        _mint(to, 1000 * 10**decimals())</span>;
     }
 &nbsp;
 <span class="fstat-no" title="function not covered" >    function give100000To(address to) external {</span>
 <span class="cstat-no" title="statement not covered" >        _mint(to, 100000 * 10**decimals())</span>;
     }
 &nbsp;
-    function mint(address to, uint256 amount) external {
-        _mint(to, amount);
+<span class="fstat-no" title="function not covered" >    function mint(address to, uint256 amount) external {</span>
+<span class="cstat-no" title="statement not covered" >        _mint(to, amount)</span>;
     }
 &nbsp;
-    function burn(address from, uint256 amount) external {
-        _burn(from, amount);
+<span class="fstat-no" title="function not covered" >    function burn(address from, uint256 amount) external {</span>
+<span class="cstat-no" title="statement not covered" >        _burn(from, amount)</span>;
     }
 &nbsp;
-    function decimals() public view virtual override returns (uint8) {
-        return 6;
+<span class="fstat-no" title="function not covered" >    function decimals() public view virtual override returns (uint8) {</span>
+<span class="cstat-no" title="statement not covered" >        return 6;</span>
     }
 &nbsp;
-    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-        return interfaceId == 0x36372b07 || interfaceId == 0x01ffc9a7;
+<span class="fstat-no" title="function not covered" >    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {</span>
+<span class="cstat-no" title="statement not covered" >        return interfaceId == 0x36372b07 || interfaceId == 0x01ffc9a7;</span>
     }
 }
 &nbsp;</pre></td></tr>
@@ -154,7 +154,7 @@ contract TestToken is ERC20, IERC165 {
 </div><!-- /wrapper -->
 <div class='footer quiet pad2 space-top1 center small'>
   Code coverage
-  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Dec 14 2022 17:00:31 GMT-0800 (Pacific Standard Time)
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Fri Jan 20 2023 13:36:59 GMT+0800 (中国标准时间)
 </div>
 </div>
 <script src="../../prettify.js"></script>
