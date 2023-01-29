@@ -5,17 +5,19 @@ const DEPLOYED_PATH = "./deployment/";
 const MAX_FEE_PER_GAS = 30_000_000_000;
 const MAX_PRIORITY_FEE_PER_GAS = 2_000_000_000;
 
-const getContractAddressFile = async function (fileType = "deployed") {
-    let network = (await hre.ethers.provider.getNetwork()).name;
-    // console.log('network : ', network)
-    network = network == "unknown" ? "localhost" : network;
+const getContractAddressFile = async function (fileType = "deployed", network) {
+    if (!network) {
+        network = (await hre.ethers.provider.getNetwork()).name;
+        // console.log('network : ', network)
+        network = network == "unknown" ? "localhost" : network;
+    }
     const contractAddressFile = `${DEPLOYED_PATH}${network}-${fileType}-contracts.json`;
-    // console.log('contractAddressFile: ', contractAddressFile)
+    // console.log("contractAddressFile: ", contractAddressFile);
     return contractAddressFile;
 };
 
-const readFileContent = async function (fileType = "deployed") {
-    const contractAddressFile = await getContractAddressFile(fileType);
+const readFileContent = async function (fileType = "deployed", network) {
+    const contractAddressFile = await getContractAddressFile(fileType, network);
     const data = fs.readFileSync(contractAddressFile, {flag: "a+"});
     const content = data.toString();
     if (content.length == 0) {
@@ -40,12 +42,12 @@ const getVerifiedContract = async function (contractName) {
     return await getContract("verified", contractName);
 };
 
-const getDeployedContracts = async function () {
-    return await getContracts("deployed");
+const getDeployedContracts = async function (network) {
+    return await getContracts("deployed", network);
 };
 
-async function getContracts(type) {
-    const content = await readFileContent(type);
+async function getContracts(type, network) {
+    const content = await readFileContent(type, network);
     const contracts = JSON.parse(content);
     return contracts;
 }
@@ -155,6 +157,16 @@ const toFixedDecimal = function (number, decimals) {
     return BN.from(number).mul(BN.from(10).pow(BN.from(decimals)));
 };
 
+const impersonate = async function (account) {
+    await hre.network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [account],
+    });
+    const amount = BN.from(10).mul(ethers.constants.WeiPerEther);
+    await network.provider.send("hardhat_setBalance", [account, amount.toHexString()]);
+    return await hre.ethers.provider.getSigner(account);
+};
+
 module.exports = {
     getInitilizedContract,
     updateInitilizedContract,
@@ -170,4 +182,5 @@ module.exports = {
     toFixedDecimal,
     getVerifiedContract,
     updateVerifiedContract,
+    impersonate,
 };
