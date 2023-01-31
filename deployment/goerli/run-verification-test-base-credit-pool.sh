@@ -20,7 +20,8 @@ done
 if ((i<30));
 then
     echo "hardhat node started successfully."
-    yarn hardhat run deployment/goerli/verification-test-goerli-base-credit-pool.js --network localhost
+    yarn hardhat run deployment/goerli/verification-test-base-credit-pool.js --network localhost
+    res=$?
 else
     echo "hardhat node failed to start."    
 fi
@@ -28,7 +29,13 @@ fi
 printf "\n"
 echo "close hardhat node..."
 kill $pid
-echo "delete temp file..."
-rm -rf hardhat_node.temp
-echo "All verficiation tests passed."
-printf "\n"
+
+if ((res==0));
+then
+    echo "delete temp file..."
+    rm -rf hardhat_node.temp
+    echo "All verficiation tests passed."
+    printf "\n"
+else
+    echo "Verification tests failed."   
+fi
