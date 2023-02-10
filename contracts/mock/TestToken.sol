@@ -1,11 +1,12 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
-contract TestToken is ERC20, IERC165 {
-    constructor() ERC20("TestToken", "USDC") {
+contract TestToken is ERC20Permit, IERC165 {
+    constructor() ERC20Permit("TestToken") ERC20("TestToken", "USDC") {
         _mint(msg.sender, 1000 * 10**decimals());
     }
 

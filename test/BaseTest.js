@@ -7,8 +7,8 @@ function toBN(number, decimals) {
     return BN.from(number).mul(BN.from(10).pow(BN.from(decimals)));
 }
 
-function toToken(number) {
-    return toBN(number, 6);
+function toToken(number, decimals = 6) {
+    return toBN(number, decimals);
 }
 
 async function deployContracts(
@@ -231,7 +231,7 @@ async function evmRevert(sId) {
 function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) {
     if (v1 != "SKIP") expect(rs.creditLimit).to.equal(v1);
     if (v2 != "SKIP") expect(r.unbilledPrincipal).to.equal(v2);
-    if (v3 != "SKIP") expect(r.dueDate).to.be.equal(v3);
+    if (v3 != "SKIP") expect(r.dueDate).to.equal(v3);
     if (v4 != "SKIP") expect(r.correction).to.equal(v4); //be.within(v4 - 1, v4 + 1);
     if (v5 != "SKIP") expect(r.totalDue).to.equal(v5);
     if (v6 != "SKIP") expect(r.feesAndInterestDue).to.equal(v6);
@@ -257,6 +257,34 @@ function checkArruedIncome(r, v1, v2, v3) {
     expect(r.poolOwnerIncome).to.equal(v3);
 }
 
+function checkResults(r, vs) {
+    expect(r.length).to.equal(vs.length);
+    for (let i = 0; i < r.length; i++) {
+        if (vs[i] != null) expect(r[i]).to.equal(vs[i]);
+    }
+}
+
+function printRecord(r, rs) {
+    if (r)
+        console.log(
+            `cr: [unbilledPrincipal: ${r.unbilledPrincipal}` +
+                `, dueDate: ${r.dueDate}` +
+                `, correction: ${r.correction}` +
+                `, totalDue: ${r.totalDue}` +
+                `, feesAndInterestDue: ${r.feesAndInterestDue}` +
+                `, missedPeriods: ${r.missedPeriods}` +
+                `, remainingPeriods: ${r.remainingPeriods}` +
+                `, state: ${r.state}]`
+        );
+    if (rs)
+        console.log(
+            `crs: [creditLimit: ${rs.creditLimit}` +
+                `, aprInBps: ${rs.aprInBps}` +
+                `, intervalInDays: ${rs.intervalInDays}` +
+                `, state: ${rs.state}]`
+        );
+}
+
 module.exports = {
     deployContracts,
     deployAndSetupPool,
@@ -270,4 +298,6 @@ module.exports = {
     mineNextBlockWithTimestamp,
     evmSnapshot,
     evmRevert,
+    checkResults,
+    printRecord,
 };

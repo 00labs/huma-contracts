@@ -7,8 +7,6 @@ import "./BasePool.sol";
 import "./BaseCreditPoolStorage.sol";
 import "./Errors.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @notice BaseCreditPool is the basic form of a complete pool in Huma Protocol.
  * All production pools are expected to be instances of BaseCreditPool or

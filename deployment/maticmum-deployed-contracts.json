@@ -1,0 +1,18 @@
+{
+  "HumaConfig": "0xc8eE3e49b060b118413F2493D30fB5666AeD8A2E",
+  "HumaConfigTimelock": "0x4d04FA40f2cb094439a78F0bEBa3763b82255b04",
+  "SuperfluidFactoringPoolTimelock": "0x562826a357377128cd2Ef4eCA367b68710EF8F45",
+  "SuperfluidFactoringPoolProxyAdminTimelock": "0x63B0Cd5aB037939269027B8687B6Ff2d3Cb67F10",
+  "SuperfluidFactoringPoolFeeManager": "0x69824d6d54ac67C6b18F509802b3B09bd46A3D71",
+  "SuperfluidPoolHDTImpl": "0xA168879fC4D4932f0EB0a5FeBeFc5Acc66FEe2AC",
+  "SuperfluidPoolHDT": "0xEf86bB7e7b059C78BC50679c5CA92A835a2f7CE1",
+  "SuperfluidFactoringPoolConfig": "0x2Cd56e0d786d87d1dA78c1eb2a1A0c86762685cC",
+  "SuperfluidFactoringPoolImpl": "0x48AC68d5F996eD3C6a6Bb916A121552dD01C87A1",
+  "SuperfluidFactoringPool": "0xC5BF9750A7BF93479990EF940d7e3984caa22558",
+  "SuperfluidProcessorImpl": "0xDaD5A07c3a5737A546b15aE72436d049da6702ff",
+  "SuperfluidProcessor": "0xA529F930273c58d557475c206cBE85903fDee65b",
+  "EANFT": "0xea477cD203d3F7c0b2F7B5E9B34c439c6057dfD7",
+  "SuperfluidTradableStream": "0x3ad49C053DCDF96788c0e40c1771d41422ddBb6A",
+  "Multisend": "0x174aBAE032174a4bfd3eE63Cb62626a6fcE457ed",
+  "MockSuperAppRegister": "0xdb4E4010810Da955E385E4b7682279237acF61Db"
+}
