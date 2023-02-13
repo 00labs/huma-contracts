@@ -7,11 +7,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ISuperfluid, ISuperToken, ISuperApp} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
 import {IConstantFlowAgreementV1} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
 import {CFAv1Library} from "@superfluid-finance/ethereum-contracts/contracts/apps/CFAv1Library.sol";
-import {IncDec} from "./IncDec.sol";
+import {CFALib} from "./CFALib.sol";
 import "../interfaces/IReceivableAsset.sol";
 import "hardhat/console.sol";
 
-struct NiflotMetadata {
+struct TradableStreamMetadata {
     uint256 duration;
     uint256 started;
     address origin;
@@ -20,29 +20,29 @@ struct NiflotMetadata {
     int96 flowrate;
 }
 
-// A Niflot's maximum duration is one month.
+// A TradableStream's maximum duration is one month.
 uint256 constant MAX_DURATION_SECONDS = 60 * 60 * 24 * 30;
 
-contract Niflot is ERC721, Ownable, IReceivableAsset {
+contract TradableStream is ERC721, Ownable, IReceivableAsset {
     using CFAv1Library for CFAv1Library.InitData;
-    using IncDec for CFAv1Library.InitData;
+    using CFALib for CFAv1Library.InitData;
     CFAv1Library.InitData public cfaV1;
 
-    /// @dev when a NIFLOT is transferred for the first time and engaged
-    event NiflotStarted(
-        // token id of the NIFLOT
+    /// @dev when a TradableStream is transferred for the first time and engaged
+    event TradableStreamStarted(
+        // token id of the TradableStream
         uint256 tokenId,
         // original sender of tokenized stream
         address indexed origin,
         // the original receiver of the tokenized stream
         address indexed receiver,
-        // the timestamp where the NIFLOT will become burnable
+        // the timestamp where the TradableStream will become burnable
         uint256 matureAt
     );
 
-    /// @dev when a NIFLOT is burned
-    event NiflotTerminated(
-        // token id of the NIFLOT
+    /// @dev when a TradableStream is burned
+    event TradableStreamTerminated(
+        // token id of the TradableStream
         uint256 tokenId,
         // original sender of tokenized stream
         address indexed origin,
@@ -50,11 +50,15 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
         address indexed receiver
     );
 
-    // /// @dev Super Token => acceptance for NIFLOT creation
-    // mapping(ISuperToken => bool) private _acceptedTokens;
+    event RefundExtraToken(
+        address receiver,
+        address owner,
+        uint256 refundAmount,
+        uint256 sendAmount
+    );
 
     /// @notice token ids => metadata
-    mapping(uint256 => NiflotMetadata) public niflots;
+    mapping(uint256 => TradableStreamMetadata) public metadatas;
 
     /// @notice origin => investor => total acquired flowrate
     mapping(address => mapping(address => int96)) private _investments;
@@ -81,50 +85,41 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
         _;
     }
 
-    // /// @dev set a Super Token to accepted or not
-    // /// @param token Super Token whose acceptance status is being changed
-    // /// @param accept New acceptance status
-    // function toggleAcceptToken(ISuperToken token, bool accept)
-    //     public
-    //     onlyOwner
-    // {
-    //     _acceptedTokens[token] = accept;
-    // }
-
-    /// @notice Burns a mature NIFLOT, restoring the original stream from origin to receiver
+    /// @notice Burns a mature TradableStream, restoring the original stream from origin to receiver
     /// @dev Anyone can call this method at any time
-    /// @dev  Will revert if niflot is not mature
+    /// @dev  Will revert if TradableStream is not mature
     /// @dev See `_beforeTokenTransfer` for the handover process.
-    /// @param tokenId The token ID of the NIFLOT that is being burned
-    function burn(uint256 tokenId) external override {
-        require(
-            niflots[tokenId].started == 0 || isMature(tokenId),
-            "cant burn a non mature niflot"
-        );
+    /// @param tokenId The token ID of the TradableStream that is being burned
+    function burn(uint256 tokenId) external override onlyOwner {
+        TradableStreamMetadata memory meta = metadatas[tokenId];
+        require(meta.started == 0 || isMature(tokenId), "cant burn a non mature TradableStream");
 
         _burn(tokenId);
 
-        emit NiflotTerminated(tokenId, niflots[tokenId].origin, niflots[tokenId].receiver);
-    }
+        // Refund the extra amount to receiver
 
-    /// @notice Lets an origin cancel a stream and burns associated NIFLOT
-    /// @notice Employer may circumvent by manually canceling stream on their end
-    /// @param tokenId The NIFLOT token ID pertaining to the stream that is being cancelled
-    function cancelByOrigin(uint256 tokenId) external exists(tokenId) {
-        NiflotMetadata memory meta = niflots[tokenId];
+        uint256 refundAmount = (block.timestamp - (meta.started + meta.duration)) *
+            uint256(uint96(meta.flowrate));
+        address owner = ownerOf(tokenId);
+        uint256 balance = meta.token.balanceOf(owner);
+        uint256 allownance = meta.token.allowance(owner, address(this));
+        uint256 sendAmount = balance < allownance ? balance : allownance;
+        sendAmount = sendAmount < refundAmount ? sendAmount : refundAmount;
 
-        require(msg.sender == meta.origin, "only origin can call this");
-        _burn(tokenId);
+        if (sendAmount > 0) {
+            meta.token.transferFrom(owner, meta.receiver, sendAmount);
+            emit RefundExtraToken(meta.receiver, owner, refundAmount, sendAmount);
+        }
 
-        emit NiflotTerminated(tokenId, niflots[tokenId].origin, niflots[tokenId].receiver);
+        emit TradableStreamTerminated(tokenId, meta.origin, meta.receiver);
     }
 
     // TODO: potentially add a dedicated flowrate so don't have to sell everything at once.
-    /// @notice Mint a NIFLOT against a stream you're receiving
-    /// @param token the currency this Niflot is based on
+    /// @notice Mint a TradableStream against a stream you're receiving
+    /// @param token the currency this TradableStream is based on
     /// @param origin the source that streams `token` to your account
     /// @param flowrate how much flowrate will be moved out
-    /// @param durationInSeconds how long this Niflot will run after it's been transferred for the first time
+    /// @param durationInSeconds how long this TradableStream will run after it's been transferred for the first time
     function mint(
         ISuperToken token,
         address origin,
@@ -133,7 +128,10 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
     ) external {
         // Accepted token toggle?
 
-        require(MAX_DURATION_SECONDS >= durationInSeconds, "niflot duration exceeds one month");
+        require(
+            MAX_DURATION_SECONDS >= durationInSeconds,
+            "TradableStream duration exceeds one month"
+        );
 
         // Get flow from origin to receiver
         (, int96 allFlowrate, , ) = cfaV1.cfa.getFlow(token, origin, msg.sender);
@@ -145,7 +143,7 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
 
         require(flowrate < availableFlowrate, "you don't have enough available flowrate");
 
-        niflots[nextId] = NiflotMetadata({
+        metadatas[nextId] = TradableStreamMetadata({
             origin: origin,
             receiver: msg.sender,
             flowrate: flowrate,
@@ -154,7 +152,7 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
             started: 0
         });
 
-        //will start streaming from niflot to msg.sender / receiver
+        //will start streaming from TradableStream to msg.sender / receiver
         _mint(msg.sender, nextId);
         nextId += 1;
     }
@@ -170,9 +168,9 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
             "New receiver cannot be a superApp"
         );
 
-        NiflotMetadata memory meta = niflots[tokenId];
+        TradableStreamMetadata memory meta = metadatas[tokenId];
 
-        require(newReceiver != meta.origin, "can't transfer a niflot to its origin");
+        require(newReceiver != meta.origin, "can't transfer a TradableStream to its origin");
 
         if (oldReceiver == address(0)) {
             //minted
@@ -180,7 +178,7 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
         } else if (newReceiver == address(0)) {
             //burnt
             _investments[meta.origin][oldReceiver] -= meta.flowrate;
-            delete niflots[tokenId];
+            delete metadatas[tokenId];
 
             //burnt
             cfaV1._decreaseFlowByOperator(
@@ -199,19 +197,14 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
             );
         } else {
             //transfer
-            if (meta.started == 0) {
-                niflots[tokenId].started = block.timestamp;
-                emit NiflotStarted(
-                    tokenId,
-                    meta.origin,
-                    meta.receiver,
-                    block.timestamp + meta.duration
-                );
-            } else {
-                if (isMature(tokenId)) {
-                    revert("this niflot is mature and can only be burnt");
-                }
-            }
+            require(meta.started == 0, "TradableStream can't be transferred multiple times");
+            metadatas[tokenId].started = block.timestamp;
+            emit TradableStreamStarted(
+                tokenId,
+                meta.origin,
+                meta.receiver,
+                block.timestamp + meta.duration
+            );
 
             _investments[meta.origin][oldReceiver] -= meta.flowrate;
             _investments[meta.origin][newReceiver] += meta.flowrate;
@@ -235,9 +228,9 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
     }
 
     function endsAt(uint256 tokenId) public view exists(tokenId) returns (uint256) {
-        if (niflots[tokenId].started == 0) return 0;
+        if (metadatas[tokenId].started == 0) return 0;
 
-        return niflots[tokenId].started + niflots[tokenId].duration;
+        return metadatas[tokenId].started + metadatas[tokenId].duration;
     }
 
     function isMature(uint256 tokenId) public view exists(tokenId) returns (bool) {
@@ -252,14 +245,14 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
         exists(tokenId)
         returns (ISuperToken token, uint256 value)
     {
-        NiflotMetadata memory meta = niflots[tokenId];
+        TradableStreamMetadata memory meta = metadatas[tokenId];
         assert(meta.flowrate > 0);
 
         token = meta.token;
         value = _remainingValue(meta, meta.flowrate);
     }
 
-    function _remainingValue(NiflotMetadata memory meta, int96 flowrate)
+    function _remainingValue(TradableStreamMetadata memory meta, int96 flowrate)
         internal
         view
         returns (uint256 value)
@@ -281,7 +274,7 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
         }
     }
 
-    function getNiflotData(uint256 tokenId)
+    function getTradableStreamData(uint256 tokenId)
         public
         view
         exists(tokenId)
@@ -295,7 +288,7 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
             int96 flowrate
         )
     {
-        NiflotMetadata memory meta = niflots[tokenId];
+        TradableStreamMetadata memory meta = metadatas[tokenId];
         return (
             meta.origin,
             meta.receiver,
@@ -307,65 +300,41 @@ contract Niflot is ERC721, Ownable, IReceivableAsset {
         );
     }
 
-    function payOwner(uint256 tokenId, uint256 amount) external override {}
+    function payOwner(uint256 tokenId, uint256 amount) external override onlyOwner {
+        require(isMature(tokenId), "this TradableStream is not mature");
+        TradableStreamMetadata memory meta = metadatas[tokenId];
+        assert(meta.flowrate > 0);
+        uint256 availableAmount = meta.duration * uint256(uint96(meta.flowrate));
+        if (amount > availableAmount) {
+            amount = availableAmount;
+        }
+        address owner = ownerOf(tokenId);
+
+        meta.token.transferFrom(owner, address(this), amount);
+        meta.token.downgradeTo(owner, amount);
+    }
 
     function getReceivableData(uint256 tokenId)
         external
         view
         override
         exists(tokenId)
-        returns (uint256 receivableParam, uint256 receivableAmount)
+        returns (
+            uint256 receivableParam,
+            uint256 receivableAmount,
+            address token
+        )
     {
-        NiflotMetadata memory meta = niflots[tokenId];
+        TradableStreamMetadata memory meta = metadatas[tokenId];
         address owner = ownerOf(tokenId);
         receivableParam = uint256(keccak256(abi.encodePacked(meta.token, meta.origin, owner)));
         (, int96 flowrate, , ) = cfaV1.cfa.getFlow(meta.token, meta.origin, owner);
-        if (flowrate > meta.flowrate) {
-            flowrate = meta.flowrate;
-        } else if (flowrate < 0) {
+        if (flowrate < 0) {
             flowrate = 0;
+        } else if (flowrate > meta.flowrate) {
+            flowrate = meta.flowrate;
         }
         receivableAmount = _remainingValue(meta, flowrate);
+        token = address(meta.token);
     }
-
-    // function metadata(uint256 tokenId)
-    //     public
-    //     view
-    //     exists(tokenId)
-    //     returns (
-    //         int96 nftFlowrate,
-    //         uint256 dueValue,
-    //         uint256 until
-    //     )
-    // {
-    //     (, nftFlowrate, , ) = cfaV1.cfa.getFlow(
-    //         _acceptedToken,
-    //         address(this),
-    //         ownerOf(tokenId)
-    //     );
-
-    //     uint256 secondsToGo = salaryPledges[tokenId].untilTs - block.timestamp;
-    //     dueValue = uint256(int256(nftFlowrate)) * secondsToGo;
-    //     until = salaryPledges[tokenId].untilTs;
-    // }
-
-    // function tokenURI(uint256 tokenId)
-    //     public
-    //     view
-    //     override
-    //     exists(tokenId)
-    //     returns (string memory)
-    // {
-    //     (int96 nftFlowrate, uint256 dueValue, uint256 until) = metadata(
-    //         tokenId
-    //     );
-    //     return
-    //         _sellaryRenderer.metadata(
-    //             tokenId,
-    //             _acceptedToken.symbol(),
-    //             nftFlowrate,
-    //             dueValue,
-    //             until
-    //         );
-    // }
 }

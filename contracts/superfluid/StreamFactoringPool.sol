@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "./StreamFactoringPoolStorage.sol";
 import "../BaseCreditPool.sol";
 import "../interfaces/IReceivableAsset.sol";
+import "./StreamFeeManager.sol";
 
 contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC721Receiver {
     using ERC165Checker for address;
@@ -90,9 +91,13 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
 
         _transferReceivableAsset(borrower, borrowAmount, receivableAsset, receivableTokenId);
 
+        StreamFeeManager(address(_feeManager)).setTempCreditRecordStatic(
+            _getCreditRecordStatic(borrower)
+        );
         _creditRecordStaticMapping[borrower].aprInBps = 0;
-
         uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
+        StreamFeeManager(address(_feeManager)).deleteTempCreditRecordStatic();
+
         emit DrawdownMadeWithReceivable(
             borrower,
             borrowAmount,
@@ -102,11 +107,10 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
         );
     }
 
-    function payoff(
-        address borrower,
-        address receivableAsset,
-        uint256 receivableTokenId
-    ) external virtual {
+    function payoff(address receivableAsset, uint256 receivableTokenId) external virtual {
+        address borrower = _receivableOwnershipMapping[
+            keccak256(abi.encode(receivableAsset, receivableTokenId))
+        ];
         require(isAbleToPayoff(borrower, receivableAsset, receivableTokenId), "Can't payoff");
 
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
@@ -133,7 +137,7 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
         address receivableAsset,
         uint256 receivableTokenId
     ) public view returns (bool) {
-        (, uint256 receivableAmount) = IReceivableAsset(receivableAsset).getReceivableData(
+        (, uint256 receivableAmount, ) = IReceivableAsset(receivableAsset).getReceivableData(
             receivableTokenId
         );
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
@@ -210,8 +214,9 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
 
         if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
 
-        (uint256 receivableParam, uint256 receivableAmount) = IReceivableAsset(receivableAsset)
-            .getReceivableData(receivableTokenId);
+        (uint256 receivableParam, uint256 receivableAmount, address token) = IReceivableAsset(
+            receivableAsset
+        ).getReceivableData(receivableTokenId);
 
         // For ERC721, receivableParam is the tokenId
         if (ri.receivableParam != receivableParam) revert Errors.receivableAssetParamMismatch();
@@ -225,5 +230,8 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
         ] = borrower;
 
         IERC721(receivableAsset).safeTransferFrom(borrower, address(this), receivableTokenId);
+        uint256 allowance = IERC20(token).allowance(address(this), receivableAsset) +
+            receivableAmount;
+        IERC20(token).approve(receivableAsset, allowance);
     }
 }

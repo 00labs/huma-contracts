@@ -7,7 +7,11 @@ interface IReceivableAsset is IERC721 {
     function getReceivableData(uint256 tokenId)
         external
         view
-        returns (uint256 receivableParam, uint256 value);
+        returns (
+            uint256 receivableParam,
+            uint256 receivableAmount,
+            address token
+        );
 
     function payOwner(uint256 tokenId, uint256 amount) external;
 
