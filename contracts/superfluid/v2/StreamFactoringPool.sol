@@ -5,11 +5,15 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import "./StreamFactoringPoolStorage.sol";
-import "../BaseCreditPool.sol";
-import "../interfaces/IReceivableAsset.sol";
-import "./StreamFeeManager.sol";
+import "../../BaseCreditPool.sol";
+import "./IReceivableAsset.sol";
+import "../StreamFeeManager.sol";
 
-contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC721Receiver {
+abstract contract StreamFactoringPoolV2 is
+    BaseCreditPool,
+    StreamFactoringPoolStorageV2,
+    IERC721Receiver
+{
     using ERC165Checker for address;
     using SafeERC20 for IERC20;
 
@@ -21,6 +25,34 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
         uint256 receivableTokenId
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
+
+    function getReceivableData(
+        address receivableAsset,
+        uint256 receivableTokenId,
+        uint256 interval
+    )
+        internal
+        view
+        virtual
+        returns (
+            uint256 receivableParam,
+            uint256 receivableAmount,
+            StreamInfo memory streamInfo
+        );
+
+    // function isReadyToPayoff(address receivableAsset, uint256 receivableTokenId)
+    //     internal
+    //     view
+    //     virtual
+    //     returns (bool isReady);
+
+    function payOwner(
+        address receivableAsset,
+        uint256 receivableTokenId,
+        StreamInfo memory sr
+    ) internal virtual;
+
+    function burn(address receivableAsset, uint256 receivableTokenId) internal virtual;
 
     function onERC721Received(
         address, /*operator*/
@@ -89,11 +121,20 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
-        _transferReceivableAsset(borrower, borrowAmount, receivableAsset, receivableTokenId);
+        BS.CreditRecordStatic memory crs = _getCreditRecordStatic(borrower);
 
-        StreamFeeManager(address(_feeManager)).setTempCreditRecordStatic(
-            _getCreditRecordStatic(borrower)
+        _transferReceivableAsset(
+            borrower,
+            borrowAmount,
+            crs.intervalInDays * SECONDS_IN_A_DAY,
+            receivableAsset,
+            receivableTokenId
         );
+
+        uint256 allowance = _underlyingToken.allowance(borrower, address(this));
+        require(allowance >= borrowAmount, "Allowance is not enough");
+
+        StreamFeeManager(address(_feeManager)).setTempCreditRecordStatic(crs);
         _creditRecordStaticMapping[borrower].aprInBps = 0;
         uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
         StreamFeeManager(address(_feeManager)).deleteTempCreditRecordStatic();
@@ -108,40 +149,42 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
     }
 
     function payoff(address receivableAsset, uint256 receivableTokenId) external virtual {
-        address borrower = _receivableOwnershipMapping[
+        StreamInfo memory sr = _streamInfoMapping[
             keccak256(abi.encode(receivableAsset, receivableTokenId))
         ];
-        require(isAbleToPayoff(borrower, receivableAsset, receivableTokenId), "Can't payoff");
+        require(sr.borrower != address(0), "Can't find borrower");
+        BS.CreditRecord memory cr = _getCreditRecord(sr.borrower);
 
-        BS.CreditRecord memory cr = _getCreditRecord(borrower);
+        require(block.timestamp > cr.dueDate, "Can't payoff early");
+
         uint256 beforeAmount = _underlyingToken.balanceOf(address(this));
-        IReceivableAsset(receivableAsset).payOwner(receivableTokenId, cr.unbilledPrincipal);
+        payOwner(receivableAsset, receivableTokenId, sr);
         uint256 amountReceived = _underlyingToken.balanceOf(address(this)) - beforeAmount;
 
+        if (amountReceived < cr.unbilledPrincipal) {
+            uint256 difference = cr.unbilledPrincipal - amountReceived;
+            uint256 allowance = _underlyingToken.allowance(sr.borrower, address(this));
+            if (allowance > difference) {
+                _underlyingToken.safeTransferFrom(sr.borrower, address(this), difference);
+                amountReceived = cr.unbilledPrincipal;
+            } else {
+                _underlyingToken.safeTransferFrom(sr.borrower, address(this), allowance);
+                amountReceived += allowance;
+            }
+        }
+
         (uint256 amountPaid, bool paidoff, ) = _makePayment(
-            borrower,
+            sr.borrower,
             amountReceived,
             BS.PaymentStatus.ReceivedAndVerified
         );
 
-        require(paidoff, "Received amount isn't enough to payoff");
+        // check paidoff?
 
-        IReceivableAsset(receivableAsset).burn(receivableTokenId);
+        burn(receivableAsset, receivableTokenId);
 
         if (amountReceived > amountPaid)
-            _disburseRemainingFunds(borrower, amountReceived - amountPaid);
-    }
-
-    function isAbleToPayoff(
-        address borrower,
-        address receivableAsset,
-        uint256 receivableTokenId
-    ) public view returns (bool) {
-        (, uint256 receivableAmount, ) = IReceivableAsset(receivableAsset).getReceivableData(
-            receivableTokenId
-        );
-        BS.CreditRecord memory cr = _getCreditRecord(borrower);
-        return receivableAmount >= cr.unbilledPrincipal;
+            _disburseRemainingFunds(sr.borrower, amountReceived - amountPaid);
     }
 
     /**
@@ -182,7 +225,7 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
         // If receivables are required, they need to be ERC721 or ERC20.
         if (
             receivableAsset != address(0) &&
-            !receivableAsset.supportsInterface(type(IReceivableAsset).interfaceId)
+            !receivableAsset.supportsInterface(type(IReceivableAssetV2).interfaceId)
         ) revert Errors.unsupportedReceivableAsset();
 
         BS.ReceivableInfo memory ri = BS.ReceivableInfo(
@@ -204,6 +247,7 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
     function _transferReceivableAsset(
         address borrower,
         uint256 borrowAmount,
+        uint256 interval,
         address receivableAsset,
         uint256 receivableTokenId
     ) internal virtual {
@@ -214,9 +258,11 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
 
         if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
 
-        (uint256 receivableParam, uint256 receivableAmount, address token) = IReceivableAsset(
-            receivableAsset
-        ).getReceivableData(receivableTokenId);
+        (
+            uint256 receivableParam,
+            uint256 receivableAmount,
+            StreamInfo memory streamInfo
+        ) = getReceivableData(receivableAsset, receivableTokenId, interval);
 
         // For ERC721, receivableParam is the tokenId
         if (ri.receivableParam != receivableParam) revert Errors.receivableAssetParamMismatch();
@@ -224,14 +270,9 @@ contract StreamFactoringPool is BaseCreditPool, StreamFactoringPoolStorage, IERC
         if (receivableAmount < borrowAmount) revert Errors.insufficientReceivableAmount();
 
         // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
-        // for lookup by off-chain payment processers
-        _receivableOwnershipMapping[
-            keccak256(abi.encode(receivableAsset, receivableTokenId))
-        ] = borrower;
+        streamInfo.borrower = borrower;
+        _streamInfoMapping[keccak256(abi.encode(receivableAsset, receivableTokenId))] = streamInfo;
 
         IERC721(receivableAsset).safeTransferFrom(borrower, address(this), receivableTokenId);
-        uint256 allowance = IERC20(token).allowance(address(this), receivableAsset) +
-            receivableAmount;
-        IERC20(token).approve(receivableAsset, allowance);
     }
 }

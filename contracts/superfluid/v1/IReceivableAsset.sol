@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-interface IReceivableAsset is IERC721 {
+interface IReceivableAssetV1 is IERC721 {
     function getReceivableData(uint256 tokenId)
         external
         view

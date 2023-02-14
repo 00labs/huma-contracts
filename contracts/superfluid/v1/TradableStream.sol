@@ -7,8 +7,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ISuperfluid, ISuperToken, ISuperApp} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
 import {IConstantFlowAgreementV1} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
 import {CFAv1Library} from "@superfluid-finance/ethereum-contracts/contracts/apps/CFAv1Library.sol";
-import {CFALib} from "./CFALib.sol";
-import "../interfaces/IReceivableAsset.sol";
+import {CFALib} from "../CFALib.sol";
+import "./IReceivableAsset.sol";
 import "hardhat/console.sol";
 
 struct TradableStreamMetadata {
@@ -23,7 +23,7 @@ struct TradableStreamMetadata {
 // A TradableStream's maximum duration is one month.
 uint256 constant MAX_DURATION_SECONDS = 60 * 60 * 24 * 30;
 
-contract TradableStream is ERC721, Ownable, IReceivableAsset {
+contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
     using CFAv1Library for CFAv1Library.InitData;
     using CFALib for CFAv1Library.InitData;
     CFAv1Library.InitData public cfaV1;
