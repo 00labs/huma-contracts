@@ -6,7 +6,7 @@ import {ISuperToken} from "@superfluid-finance/ethereum-contracts/contracts/inte
 import "./StreamFactoringPool.sol";
 import "./TradableStream.sol";
 
-contract SuperfluidFactoringPool is StreamFactoringPoolV2 {
+contract SuperfluidFactoringPool is StreamFactoringPool {
     function getReceivableData(
         address receivableAsset,
         uint256 receivableTokenId,
@@ -29,16 +29,35 @@ contract SuperfluidFactoringPool is StreamFactoringPoolV2 {
             ,
             ISuperToken token,
             int96 flowrate
-        ) = TradableStreamV2(receivableAsset).getTradableStreamData(receivableTokenId);
+        ) = TradableStream(receivableAsset).getTradableStreamData(receivableTokenId);
 
         require(started == 0, "This TradableStream is transferred");
         require(duration <= interval, "This TradableStream duration is too long");
 
         receivableParam = uint256(keccak256(abi.encodePacked(token, origin, receiver)));
-        (, receivableAmount) = TradableStreamV2(receivableAsset).remainingValue(receivableTokenId);
+        (, receivableAmount) = TradableStream(receivableAsset).remainingValue(receivableTokenId);
+        receivableAmount = convertAmount(
+            receivableAmount,
+            address(token),
+            address(_underlyingToken)
+        );
         streamInfo.lastStartTime = block.timestamp;
         streamInfo.endTime = block.timestamp + duration;
         streamInfo.flowrate = uint96(flowrate);
+    }
+
+    function convertAmount(
+        uint256 amountIn,
+        address tokenIn,
+        address tokenOut
+    ) internal view returns (uint256 amountOut) {
+        uint256 decimalsIn = IERC20Metadata(tokenIn).decimals();
+        uint256 decimalsOut = IERC20Metadata(tokenOut).decimals();
+        if (decimalsIn == decimalsOut) {
+            amountOut = amountIn;
+        } else {
+            amountOut = (amountIn * decimalsOut) / decimalsIn;
+        }
     }
 
     function payOwner(
@@ -46,7 +65,7 @@ contract SuperfluidFactoringPool is StreamFactoringPoolV2 {
         uint256 receivableTokenId,
         StreamInfo memory sr
     ) internal override {
-        (, , , , , ISuperToken token, ) = TradableStreamV2(receivableAsset).getTradableStreamData(
+        (, , , , , ISuperToken token, ) = TradableStream(receivableAsset).getTradableStreamData(
             receivableTokenId
         );
         uint256 amount = sr.receivedAmount;
@@ -66,7 +85,7 @@ contract SuperfluidFactoringPool is StreamFactoringPoolV2 {
             ,
             ISuperToken token,
             int96 flowrate
-        ) = TradableStreamV2(receivableAsset).getTradableStreamData(receivableTokenId);
+        ) = TradableStream(receivableAsset).getTradableStreamData(receivableTokenId);
 
         // Refund the extra amount to receiver
 
@@ -81,6 +100,6 @@ contract SuperfluidFactoringPool is StreamFactoringPoolV2 {
 
         // check isMature?
 
-        TradableStreamV2(receivableAsset).burn(receivableTokenId);
+        TradableStream(receivableAsset).burn(receivableTokenId);
     }
 }

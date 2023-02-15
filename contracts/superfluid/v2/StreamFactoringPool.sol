@@ -6,12 +6,11 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import "./StreamFactoringPoolStorage.sol";
 import "../../BaseCreditPool.sol";
-import "./IReceivableAsset.sol";
 import "../StreamFeeManager.sol";
 
-abstract contract StreamFactoringPoolV2 is
+abstract contract StreamFactoringPool is
     BaseCreditPool,
-    StreamFactoringPoolStorageV2,
+    StreamFactoringPoolStorage,
     IERC721Receiver
 {
     using ERC165Checker for address;
@@ -39,12 +38,6 @@ abstract contract StreamFactoringPoolV2 is
             uint256 receivableAmount,
             StreamInfo memory streamInfo
         );
-
-    // function isReadyToPayoff(address receivableAsset, uint256 receivableTokenId)
-    //     internal
-    //     view
-    //     virtual
-    //     returns (bool isReady);
 
     function payOwner(
         address receivableAsset,
@@ -225,7 +218,7 @@ abstract contract StreamFactoringPoolV2 is
         // If receivables are required, they need to be ERC721 or ERC20.
         if (
             receivableAsset != address(0) &&
-            !receivableAsset.supportsInterface(type(IReceivableAssetV2).interfaceId)
+            !receivableAsset.supportsInterface(type(IERC721).interfaceId)
         ) revert Errors.unsupportedReceivableAsset();
 
         BS.ReceivableInfo memory ri = BS.ReceivableInfo(

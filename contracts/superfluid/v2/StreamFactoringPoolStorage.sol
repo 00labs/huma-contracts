@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 import {BaseStructs as BS} from "../../libraries/BaseStructs.sol";
 
-contract StreamFactoringPoolStorageV2 {
+contract StreamFactoringPoolStorage {
     /// mapping from wallet address to the receivable supplied by this wallet
     mapping(address => BS.ReceivableInfo) internal _receivableInfoMapping;
 
