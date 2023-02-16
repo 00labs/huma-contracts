@@ -89,7 +89,9 @@ contract TradableStream is ERC721, Ownable {
     /// @dev  Will revert if TradableStream is not mature
     /// @dev See `_beforeTokenTransfer` for the handover process.
     /// @param tokenId The token ID of the TradableStream that is being burned
-    function burn(uint256 tokenId) external onlyOwner {
+    function burn(uint256 tokenId) external {
+        require(msg.sender == ownerOf(tokenId), "no permission to burn");
+
         TradableStreamMetadata memory meta = metadatas[tokenId];
         require(meta.started == 0 || isMature(tokenId), "cant burn a non mature TradableStream");
 

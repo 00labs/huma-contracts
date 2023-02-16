@@ -1,6 +1,3 @@
-require("dotenv").config();
-require("hardhat-contract-sizer");
-
 require("@nomicfoundation/hardhat-chai-matchers");
 require("@tenderly/hardhat-tenderly");
 
@@ -11,6 +8,7 @@ require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-prettier");
 require("solidity-coverage");
+require("hardhat-contract-sizer");
 
 require("hardhat-abi-exporter");
 require("dotenv").config();
@@ -338,7 +336,7 @@ module.exports = {
     solidity: {
         compilers: [
             {
-                version: "0.8.4",
+                version: "0.8.11",
                 settings: {
                     optimizer: {
                         enabled: true,

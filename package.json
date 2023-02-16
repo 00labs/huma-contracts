@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.5",
     "@nomiclabs/hardhat-ethers": "^2.1.1",
     "@nomiclabs/hardhat-etherscan": "^3.1.0",
@@ -38,6 +39,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-upgradeable": "^4.7.3",
+    "@superfluid-finance/ethereum-contracts": "^1.5.0",
     "dotenv": "^16.0.2",
     "hardhat": "^2.11.1"
   }
