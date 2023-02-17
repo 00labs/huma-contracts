@@ -9,6 +9,7 @@ contract Errors {
     error amountTooLow(); // 0x5b05bfbf
     error invalidBasisPointHigherThan10000(); // 0x07982d85
     error withdrawnAmountHigherThanBalance(); // 0x477c0ab2
+    error allowanceTooLow();
 
     // security
     error permissionDeniedNotAdmin(); // 0xf2c5b6a7

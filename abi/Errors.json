@@ -1,6 +1,11 @@
 [
   {
     "inputs": [],
+    "name": "allowanceTooLow",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "alreadyAPauser",
     "type": "error"
   },

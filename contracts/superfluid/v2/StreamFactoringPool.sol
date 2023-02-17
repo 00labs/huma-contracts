@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "./StreamFactoringPoolStorage.sol";
 import "../../BaseCreditPool.sol";
 import "../StreamFeeManager.sol";
+import "../../Errors.sol";
 
 abstract contract StreamFactoringPool is
     BaseCreditPool,
@@ -125,7 +126,7 @@ abstract contract StreamFactoringPool is
         );
 
         uint256 allowance = _underlyingToken.allowance(borrower, address(this));
-        require(allowance >= borrowAmount, "Allowance is not enough");
+        if (allowance < borrowAmount) revert Errors.allowanceTooLow();
 
         StreamFeeManager(address(_feeManager)).setTempCreditRecordStatic(crs);
         _creditRecordStaticMapping[borrower].aprInBps = 0;
@@ -176,8 +177,26 @@ abstract contract StreamFactoringPool is
 
         burn(receivableAsset, receivableTokenId);
 
+        delete _receivableInfoMapping[sr.borrower];
+
         if (amountReceived > amountPaid)
             _disburseRemainingFunds(sr.borrower, amountReceived - amountPaid);
+    }
+
+    function receivableInfoMapping(address account)
+        external
+        view
+        returns (BS.ReceivableInfo memory)
+    {
+        return _receivableInfoMapping[account];
+    }
+
+    function streamInfoMapping(address receivableAsset, uint256 receivableTokenId)
+        external
+        view
+        returns (StreamInfo memory)
+    {
+        return _streamInfoMapping[keccak256(abi.encode(receivableAsset, receivableTokenId))];
     }
 
     /**
