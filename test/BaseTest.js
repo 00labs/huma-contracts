@@ -7,8 +7,8 @@ function toBN(number, decimals) {
     return BN.from(number).mul(BN.from(10).pow(BN.from(decimals)));
 }
 
-function toToken(number) {
-    return toBN(number, 6);
+function toToken(number, decimals = 6) {
+    return toBN(number, decimals);
 }
 
 async function deployContracts(
@@ -257,6 +257,13 @@ function checkArruedIncome(r, v1, v2, v3) {
     expect(r.poolOwnerIncome).to.equal(v3);
 }
 
+function checkResults(r, vs) {
+    expect(r.length).to.equal(vs.length);
+    for (let i = 0; i < r.length; i++) {
+        expect(r[i]).to.equal(vs[i]);
+    }
+}
+
 module.exports = {
     deployContracts,
     deployAndSetupPool,
@@ -270,4 +277,5 @@ module.exports = {
     mineNextBlockWithTimestamp,
     evmSnapshot,
     evmRevert,
+    checkResults,
 };
