@@ -146,10 +146,10 @@ abstract contract StreamFactoringPool is
         StreamInfo memory sr = _streamInfoMapping[
             keccak256(abi.encode(receivableAsset, receivableTokenId))
         ];
-        require(sr.borrower != address(0), "Can't find borrower");
+        if (sr.borrower == address(0)) revert Errors.receivableAssetParamMismatch();
         BS.CreditRecord memory cr = _getCreditRecord(sr.borrower);
 
-        require(block.timestamp > cr.dueDate, "Can't payoff early");
+        if (block.timestamp < cr.dueDate) revert Errors.payoffTooSoon();
 
         uint256 beforeAmount = _underlyingToken.balanceOf(address(this));
         payOwner(receivableAsset, receivableTokenId, sr);
