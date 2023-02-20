@@ -516,13 +516,6 @@ describe("Superfluid Factoring", function () {
                 .drawdownWithReceivable(toUSDC(collateralAmount), nftContract.address, streamId);
         });
 
-        it.skip("test", async function () {
-            const bn1 = toDefaultToken(collateralAmount).div(BN.from(streamDuration));
-            console.log(`bn1: ${bn1}`);
-            console.log(`bn2: ${bn1.mul(BN.from(streamDuration))}`);
-            console.log(`bn2: ${bn1.add(BN.from(1)).mul(BN.from(streamDuration))}`);
-        });
-
         it("Should payoff", async function () {
             let cr = await poolContract.creditRecordMapping(borrower.address);
             const nts = cr.dueDate.toNumber() + 10000;
