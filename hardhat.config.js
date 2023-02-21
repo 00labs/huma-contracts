@@ -127,11 +127,6 @@ module.exports = {
     // Follow the directions, and uncomment the network you wish to deploy to.
 
     networks: {
-        hardhat: {
-            forking: {
-              url: goerliUrl,
-            }
-        },
         localhost: {
             url: "http://0.0.0.0:8545",
             /*
