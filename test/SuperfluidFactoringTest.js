@@ -279,6 +279,7 @@ async function deployAndSetupPool(
 
 describe("Superfluid Factoring", function () {
     before(async function () {
+        console.log(chainUrl)
         await network.provider.request({
             method: "hardhat_reset",
             params: [
