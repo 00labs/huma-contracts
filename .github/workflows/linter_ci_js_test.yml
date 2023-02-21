@@ -17,5 +17,6 @@ jobs:
       - name: Check coding styles
         run: yarn lint-solidity
       - name: run tests
-        env: GOERLI_URL: ${{ secrets.GOERLI_URL }}
+        env:
+          GOERLI_URL: ${{ secrets.GOERLI_URL }}
         run: yarn test
