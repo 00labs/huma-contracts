@@ -12,9 +12,23 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-      - name: Install dependencies
-        run: yarn install
+
+      - name: Set Node.js 16.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Run install
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install # will run `yarn install` command
+
       - name: Check coding styles
-        run: yarn lint-solidity
-      - name: run tests
-        run: yarn test
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: lint-solidity
+
+      - name: Test the contracts
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: test # will run `yarn test` command
