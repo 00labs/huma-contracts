@@ -9,7 +9,7 @@ contract Errors {
     error amountTooLow(); // 0x5b05bfbf
     error invalidBasisPointHigherThan10000(); // 0x07982d85
     error withdrawnAmountHigherThanBalance(); // 0x477c0ab2
-    error allowanceTooLow();
+    error allowanceTooLow(); // 0xcd8ef369
 
     // security
     error permissionDeniedNotAdmin(); // 0xf2c5b6a7
@@ -64,7 +64,7 @@ contract Errors {
     error creditLineNotInApprovedState(); // 0xfc91a989
     error paymentIdNotUnderReview(); // 0xd1696aaa
     error creditLineTooHigh(); // 0x552b8377
-    error creditLineOutstanding(); // 0x2901939a
+    error creditLineOutstanding(); // 0xc64e338c
 
     // pool operation
     error exceededPoolLiquidityCap(); // 0x5642ebd4
@@ -75,12 +75,12 @@ contract Errors {
     error borrowingAmountLessThanPlatformFees(); // 0x97fde118
     error withdrawTooSoon(); // 0x67982472
     error paymentAlreadyProcessed(); // 0xfd6754cf
-    error payoffTooSoon();
+    error payoffTooSoon(); // 0x1cbb3c48
 
     error defaultTriggeredTooEarly(); // 0x7872424e
     error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
 
     // superfluid tradable stream
-    error isTransferred();
-    error durationTooLong();
+    error isTransferred(); // 0x603159ab
+    error durationTooLong(); // 0xf1dd53a8
 }

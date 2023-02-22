@@ -57,5 +57,9 @@
   "notPoolOwnerTreasuryOrEA()": "0xc74cb44c",
   "paymentIdNotUnderReview()": "0xd1696aaa",
   "creditLineTooHigh()": "0x552b8377",
-  "creditLineOutstanding": "0x2901939a"
+  "creditLineOutstanding()": "0xc64e338c",
+  "allowanceTooLow()": "0xcd8ef369",
+  "payoffTooSoon()": "0x1cbb3c48",
+  "isTransferred()": "0x603159ab",
+  "durationTooLong()": "0xf1dd53a8"
 }
