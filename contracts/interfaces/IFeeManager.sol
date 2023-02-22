@@ -5,7 +5,7 @@ import "../libraries/BaseStructs.sol";
 
 interface IFeeManager {
     /**
-     * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
+     * @notice Computes the amount to be offseted due to in-cycle drawdown or principal payment
      * @dev Correction is used when there is change to the principal in the middle of the cycle
      * due to drawdown or principal payment. Since Huma computes the interest at the beginning
      * of each cycle, if there is a drawdown, the interest for this extra borrowing is not
