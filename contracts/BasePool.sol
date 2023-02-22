@@ -89,8 +89,8 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
     /**
      * @notice Withdraw capital from the pool in the unit of underlyingToken
-     * @dev Withdrawals are not allowed when 1) the pool withdraw is paused or
-     *      2) the LP has not reached lockout period since their last depsit
+     * @dev Withdrawals are not allowed when 1) the pool withdrawal is paused or
+     *      2) the LP has not reached lockout period since their last deposit
      *      3) the requested amount is higher than the LP's remaining principal
      * @dev the `amount` is total amount to withdraw, not the number of HDT shares,
      * which will be computed based on the current price per share
