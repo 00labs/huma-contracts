@@ -105,8 +105,8 @@ contract ReceivableFactoringPool is
         revert Errors.drawdownFunctionUsedInsteadofDrawdownWithReceivable();
     }
 
-    //      * @param receivableAsset the contract address of the receivable
-    //  * @param receivableParam is additional parameter of the receivable asset. For ERC721,
+    //  * @param receivableAsset the contract address of the receivable
+    //  * @param receivableParam is the additional parameter of the receivable asset. For ERC721,
     //  * it is tokenId; for ERC20, it is the quantity of the asset
 
     function drawdownWithReceivable(
@@ -223,7 +223,7 @@ contract ReceivableFactoringPool is
     /**
      * @notice disburse the remaining funds associated with the factoring to the borrower
      * @param receiver receiver of the funds, namely, the borrower
-     * @param amount the amount of the dispursement
+     * @param amount the amount of the disbursement
      */
     function _disburseRemainingFunds(address receiver, uint256 amount) internal {
         _underlyingToken.safeTransfer(receiver, amount);
@@ -319,7 +319,7 @@ contract ReceivableFactoringPool is
         if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
         if (receivableAsset.supportsInterface(type(IERC721).interfaceId)) {
             // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
-            // for lookup by off-chain payment processers
+            // for lookup by off-chain payment processors
             _receivableOwnershipMapping[
                 keccak256(abi.encode(receivableAsset, receivableParam))
             ] = borrower;
