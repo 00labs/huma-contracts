@@ -588,7 +588,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * manually verified after being flagged by the system.
      * @return amountPaid the actual amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
-     * @return paidoff a flag indciating whether the account has been paid off.
+     * @return paidoff a flag indicating whether the account has been paid off.
      * @return isReviewRequired a flag indicating whether this payment transaction has been
      * flagged for review.
      */
@@ -711,7 +711,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             if (cr.state == BS.CreditState.Defaulted) {
                 _recoverDefaultedAmount(borrower, amountToCollect);
             } else {
-                // Distribut or reverse income to consume outstanding correction.
+                // Distribute or reverse income to consume outstanding correction.
                 // Positive correction is generated because of a drawdown within this period.
                 // It is not booked or distributed yet, needs to be distributed.
                 // Negative correction is generated because of a payment including principal
@@ -795,7 +795,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      * @dev this is used in both makePayment() and drawdown() to bring the account current
      * @dev getDueInfo() gets the due information of the most current cycle. This function
      * updates the record in creditRecordMapping for `_borrower`
-     * @param borrower the address of the borrwoer
+     * @param borrower the address of the borrower
      * @param isFirstDrawdown whether this request is for the first drawdown of the credit line
      * @param distributeChargesForLastCycle whether to distribute income to different parties
      * (protocol, poolOwner, EA, and the pool). A `false` value is used in special cases
