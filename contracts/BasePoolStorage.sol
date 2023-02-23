@@ -12,7 +12,7 @@ contract BasePoolStorage {
     /// A multiplier over the credit limit, which is up to 80% of the invoice amount,
     /// that determines whether a payment amount should be flagged for review.
     /// It is possible for the actual invoice payment is higher than the invoice amount,
-    /// however, it is too high, the chance for a fraud is high and thus requires review.
+    /// however, if it is too high, the chance for fraud will be high and thus will require review.
     uint256 internal constant REVIEW_MULTIPLIER = 5;
 
     enum PoolStatus {

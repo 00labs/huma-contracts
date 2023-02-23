@@ -29,7 +29,7 @@ interface IPool {
     /// Returns the last time when the account has contributed to the pool as an LP
     function lastDepositTime(address account) external view returns (uint256);
 
-    /// Returns the pool config associated the pool
+    /// Returns the pool config associated with the pool
     function poolConfig() external view returns (address);
 
     /// Gets the total pool value right now

@@ -53,7 +53,7 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     }
 
     /**
-     * @notice Returns the toal value of the pool, in the units of underlyingToken
+     * @notice Returns the total value of the pool, in the units of underlyingToken
      */
     function totalAssets() public view returns (uint256) {
         return _pool.totalPoolValue();

@@ -79,22 +79,22 @@ contract BasePoolConfig is Ownable, Initializable {
     // The ERC20 token this pool manages
     IERC20 public underlyingToken;
 
-    // Evaluation Agents (EA) are the risk underwriting agents that associated with the pool.
+    // Evaluation Agents (EA) are the risk underwriting agents that are associated with the pool.
     address public evaluationAgent;
 
     uint256 public evaluationAgentId;
 
     PoolConfig internal _poolConfig;
 
-    AccruedIncome internal _accuredIncome;
+    AccruedIncome internal _accruedIncome;
 
-    AccruedWithdrawn internal _accuredWithdrawn;
+    AccruedWithdrawn internal _accruedWithdrawn;
 
     /// Pool operators can add or remove lenders.
     mapping(address => bool) private poolOperators;
 
     // Address for the account that handles the treasury functions for the pool owner:
-    // liquidity deposits, liquidity withdrawls, and reward withdrawals
+    // liquidity deposits, liquidity withdrawals, and reward withdrawals
     address public poolOwnerTreasury;
 
     event APRChanged(uint256 aprInBps, address by);
@@ -185,7 +185,7 @@ contract BasePoolConfig is Ownable, Initializable {
 
     /**
      * @notice Adds a pool operator, who can perform operational tasks for the pool, such as
-     * add or remove approved lenders, and disable the pool in eurgent situations. All signers
+     * add or remove approved lenders, and disable the pool in urgent situations. All signers
      * in the pool owner multisig are expected to be pool operators.
      * @param _operator Address to be added to the operator list
      * @dev If address(0) is provided, revert with "zeroAddressProvided()"
@@ -206,7 +206,7 @@ contract BasePoolConfig is Ownable, Initializable {
             revert Errors.notPool();
         }
 
-        AccruedIncome memory tempIncome = _accuredIncome;
+        AccruedIncome memory tempIncome = _accruedIncome;
 
         uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / HUNDRED_PERCENT_IN_BPS;
         tempIncome._protocolIncome += uint128(protocolFee);
@@ -221,7 +221,7 @@ contract BasePoolConfig is Ownable, Initializable {
             HUNDRED_PERCENT_IN_BPS;
         tempIncome._eaIncome += uint128(eaIncome);
 
-        _accuredIncome = tempIncome;
+        _accruedIncome = tempIncome;
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
 
@@ -233,7 +233,7 @@ contract BasePoolConfig is Ownable, Initializable {
             revert Errors.notPool();
         }
 
-        AccruedIncome memory tempIncome = _accuredIncome;
+        AccruedIncome memory tempIncome = _accruedIncome;
 
         uint256 protocolFee = (uint256(humaConfig.protocolFee()) * value) / HUNDRED_PERCENT_IN_BPS;
         tempIncome._protocolIncome -= uint128(protocolFee);
@@ -248,7 +248,7 @@ contract BasePoolConfig is Ownable, Initializable {
             HUNDRED_PERCENT_IN_BPS;
         tempIncome._eaIncome -= uint128(eaIncome);
 
-        _accuredIncome = tempIncome;
+        _accruedIncome = tempIncome;
 
         poolIncome = (valueForPool - ownerIncome - eaIncome);
 
@@ -307,8 +307,8 @@ contract BasePoolConfig is Ownable, Initializable {
         evaluationAgentId = eaId;
 
         if (oldEA != address(0)) {
-            uint256 rewardsToPayout = _accuredIncome._eaIncome -
-                _accuredWithdrawn._eaIncomeWithdrawn;
+            uint256 rewardsToPayout = _accruedIncome._eaIncome -
+                _accruedWithdrawn._eaIncomeWithdrawn;
             if (rewardsToPayout > 0) {
                 _withdrawEAFee(msg.sender, oldEA, rewardsToPayout);
             }
@@ -441,7 +441,7 @@ contract BasePoolConfig is Ownable, Initializable {
         // When it is triggered by pool owner, the fund still flows to the EA's account.
         onlyPoolOwnerOrEA(msg.sender);
         if (amount == 0) revert Errors.zeroAmountProvided();
-        if (amount + _accuredWithdrawn._eaIncomeWithdrawn > _accuredIncome._eaIncome)
+        if (amount + _accruedWithdrawn._eaIncomeWithdrawn > _accruedIncome._eaIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
         // Note: the transfer can only goes to evaluationAgent
         _withdrawEAFee(msg.sender, evaluationAgent, amount);
@@ -450,18 +450,18 @@ contract BasePoolConfig is Ownable, Initializable {
     function withdrawPoolOwnerFee(uint256 amount) external {
         onlyPoolOwnerTreasury(msg.sender);
         if (amount == 0) revert Errors.zeroAmountProvided();
-        if (amount + _accuredWithdrawn._poolOwnerIncomeWithdrawn > _accuredIncome._poolOwnerIncome)
+        if (amount + _accruedWithdrawn._poolOwnerIncomeWithdrawn > _accruedIncome._poolOwnerIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
-        _accuredWithdrawn._poolOwnerIncomeWithdrawn += uint128(amount);
+        _accruedWithdrawn._poolOwnerIncomeWithdrawn += uint128(amount);
         underlyingToken.safeTransferFrom(pool, msg.sender, amount);
         emit PoolRewardsWithdrawn(msg.sender, amount);
     }
 
     function withdrawProtocolFee(uint256 amount) external {
         if (msg.sender != humaConfig.owner()) revert Errors.notProtocolOwner();
-        if (amount + _accuredWithdrawn._protocolIncomeWithdrawn > _accuredIncome._protocolIncome)
+        if (amount + _accruedWithdrawn._protocolIncomeWithdrawn > _accruedIncome._protocolIncome)
             revert Errors.withdrawnAmountHigherThanBalance();
-        _accuredWithdrawn._protocolIncomeWithdrawn += uint128(amount);
+        _accruedWithdrawn._protocolIncomeWithdrawn += uint128(amount);
         address treasuryAddress = humaConfig.humaTreasury();
         // It is possible that Huma protocolTreasury is missed in the setup. If that happens,
         // the transaction is reverted. The protocol owner can still withdraw protocol fee
@@ -484,12 +484,12 @@ contract BasePoolConfig is Ownable, Initializable {
         )
     {
         return (
-            _accuredIncome._protocolIncome,
-            _accuredIncome._poolOwnerIncome,
-            _accuredIncome._eaIncome,
-            _accuredWithdrawn._protocolIncomeWithdrawn,
-            _accuredWithdrawn._poolOwnerIncomeWithdrawn,
-            _accuredWithdrawn._eaIncomeWithdrawn
+            _accruedIncome._protocolIncome,
+            _accruedIncome._poolOwnerIncome,
+            _accruedIncome._eaIncome,
+            _accruedWithdrawn._protocolIncomeWithdrawn,
+            _accruedWithdrawn._poolOwnerIncomeWithdrawn,
+            _accruedWithdrawn._eaIncomeWithdrawn
         );
     }
 
@@ -687,7 +687,7 @@ contract BasePoolConfig is Ownable, Initializable {
         address receiver,
         uint256 amount
     ) internal {
-        _accuredWithdrawn._eaIncomeWithdrawn += uint96(amount);
+        _accruedWithdrawn._eaIncomeWithdrawn += uint96(amount);
         underlyingToken.safeTransferFrom(pool, receiver, amount);
 
         emit EvaluationAgentRewardsWithdrawn(receiver, amount, caller);

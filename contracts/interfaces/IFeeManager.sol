@@ -5,7 +5,7 @@ import "../libraries/BaseStructs.sol";
 
 interface IFeeManager {
     /**
-     * @notice Computes the amuont to be offseted due to in-cycle drawdown or principal payment
+     * @notice Computes the amount to be offsetted due to in-cycle drawdown or principal payment
      * @dev Correction is used when there is change to the principal in the middle of the cycle
      * due to drawdown or principal payment. Since Huma computes the interest at the beginning
      * of each cycle, if there is a drawdown, the interest for this extra borrowing is not
@@ -50,7 +50,7 @@ interface IFeeManager {
      * @return periodsPassed the number of billing periods has passed since the last statement.
      * If it is within the same period, it will be 0.
      * @return feesAndInterestDue the sum of fees and interest due. If multiple cycles have passed,
-     * this amount is not necessarily the stotal fees and interest charged. It only returns the amount
+     * this amount is not necessarily the total fees and interest charged. It only returns the amount
      * that is due currently.
      * @return totalDue amount due in this period, it includes fees, interest, and min principal
      */

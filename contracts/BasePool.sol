@@ -90,7 +90,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
     /**
      * @notice Withdraw capital from the pool in the unit of underlyingToken
      * @dev Withdrawals are not allowed when 1) the pool withdraw is paused or
-     *      2) the LP has not reached lockout period since their last depsit
+     *      2) the LP has not reached lockout period since their last deposit
      *      3) the requested amount is higher than the LP's remaining principal
      * @dev the `amount` is total amount to withdraw, not the number of HDT shares,
      * which will be computed based on the current price per share
@@ -166,7 +166,7 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
      * @param value the amount of income to be reverted
      * @dev this is needed when the user pays off early. We collect and distribute interest
      * at the beginning of the pay period. When the user pays off early, the interest
-     * for the remainder of the period will be automatically subtraced from the payoff amount.
+     * for the remainder of the period will be automatically subtracted from the payoff amount.
      * The portion of the income will be reversed. We can also change the parameter of
      * distributeIncome to int256. Choose to use a separate function for better readability.
      */
