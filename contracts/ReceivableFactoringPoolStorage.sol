@@ -16,7 +16,7 @@ contract ReceivableFactoringPoolStorage {
     mapping(bytes32 => address) internal _receivableOwnershipMapping;
 
     /// list of outlier payments that require manual review before processing
-    mapping(bytes32 => BS.FlagedPaymentRecord) internal _paymentsToBeReviewed;
+    mapping(bytes32 => BS.FlaggedPaymentRecord) internal _paymentsToBeReviewed;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

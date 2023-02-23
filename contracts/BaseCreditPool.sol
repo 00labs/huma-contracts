@@ -808,7 +808,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     ) internal virtual returns (BS.CreditRecord memory cr) {
         cr = _getCreditRecord(borrower);
         if (isFirstDrawdown) cr.dueDate = 0;
-        bool alreadyLate = cr.totalDue > 0 ? true : false;
+        bool alreadyLate = cr.totalDue > 0;
 
         // Gets the up-to-date due information for the borrower. If the account has been
         // late or dormant for multiple cycles, getDueInfo() will bring it current and

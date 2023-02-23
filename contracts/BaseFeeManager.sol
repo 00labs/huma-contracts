@@ -189,7 +189,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
      * and only transfer an amount lower than the original payoff estimate.
      * @dev please note the first due date is set after the initial drawdown. All the future due
      * dates are computed by adding multiples of the payment interval to the first due date.
-     * @param _cr the credit record associated the account
+     * @param _cr the credit record associated with the account
      * @return periodsPassed the number of billing periods has passed since the last statement.
      * If it is within the same period, it will be 0.
      * @return feesAndInterestDue the sum of fees and interest due. If multiple cycles have passed,
@@ -235,12 +235,12 @@ contract BaseFeeManager is IFeeManager, Ownable {
         /**
          * Loops through the cycles as we would generate statements for each cycle.
          * The logic for each iteration is as follows:
-         * 1. Calcuate late fee if it is past due based on outstanding principal and due
+         * 1. Calculate late fee if it is past due based on outstanding principal and due
          * 2. Add membership fee
          * 3  Add outstanding due amount and corrections to the unbilled principal
          *    as the new base for principal
-         * 4. Calcuate interest for this new cycle using the new principal
-         * 5. Calculate the principal due, and minus it from the unbilled principal amount
+         * 4. Calculate interest for this new cycle using the new principal
+         * 5. Calculate the principal due, and subtract it from the unbilled principal amount
          */
         uint256 fees = 0;
         uint256 interest = 0;

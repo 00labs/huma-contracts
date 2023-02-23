@@ -40,7 +40,7 @@ library BaseStructs {
         uint256 receivableParam;
     }
 
-    struct FlagedPaymentRecord {
+    struct FlaggedPaymentRecord {
         address paymentReceiver;
         uint256 amount;
     }

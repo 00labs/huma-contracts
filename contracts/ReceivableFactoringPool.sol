@@ -176,7 +176,7 @@ contract ReceivableFactoringPool is
 
     function processPaymentAfterReview(bytes32 paymentIdHash, bool approved) external {
         _poolConfig.onlyPoolOwner(msg.sender);
-        BS.FlagedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
+        BS.FlaggedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
 
         if (fpr.paymentReceiver == address(0)) revert Errors.paymentIdNotUnderReview();
 
@@ -204,7 +204,7 @@ contract ReceivableFactoringPool is
     }
 
     function isPaymentUnderReview(bytes32 paymentIdHash) external view returns (bool) {
-        BS.FlagedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
+        BS.FlaggedPaymentRecord memory fpr = _paymentsToBeReviewed[paymentIdHash];
         return fpr.paymentReceiver != address(0);
     }
 
@@ -235,7 +235,7 @@ contract ReceivableFactoringPool is
         address borrower,
         uint256 amount
     ) internal {
-        _paymentsToBeReviewed[paymentIdHash] = BS.FlagedPaymentRecord(borrower, amount);
+        _paymentsToBeReviewed[paymentIdHash] = BS.FlaggedPaymentRecord(borrower, amount);
         emit PaymentFlaggedForReview(paymentIdHash, borrower, amount);
     }
 
