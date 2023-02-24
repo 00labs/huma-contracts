@@ -39,9 +39,7 @@ async function adjustFees() {
         deployedContracts["BaseCreditPoolConfig"]
     );
 
-    await poolConfig.setAPR(1000); // setting apr to be 10%
-    await poolConfig.setWithdrawalLockoutPeriod(0);
-    
+    await poolConfig.setAPR(1000); // setting apr to be 10%    
 }
 
 async function main() {
