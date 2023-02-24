@@ -56,7 +56,7 @@ async function deployContracts() {
     console.log("eaNFT initialized");
 
     console.log("feeManager initializing");
-    await feeManager.setFees(10_000_000, 0, 20_000_000, 0, 5_000_000);
+    await feeManager.setFees(0, 0, 0, 0, 0);
     await updateInitilizedContract("BaseCreditPoolFeeManager");
     console.log("feeManager initialized");
 
@@ -88,7 +88,7 @@ async function deployContracts() {
     const maxCL = BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)));
     console.log("maxCL: " + maxCL);
     await poolConfig.setMaxCreditLine(maxCL);
-    await poolConfig.setAPR(1000);
+    await poolConfig.setAPR(0);
     await poolConfig.setReceivableRequiredInBps(0);
     await poolConfig.setPoolPayPeriod(15);
     await poolConfig.setPoolToken(hdt.address);

@@ -19,8 +19,27 @@ async function adjustFees() {
         deployedContracts["BaseCreditPoolFeeManager"]
     );
 
-    await feeManager.setFees(20_000_000, 20_000_000, 
-        20_000_000, 20_000_000, 20_000_000);
+    await feeManager.setFees(
+        10_000_000,  // flat originatetion fee to be 10 usdc
+        0,  // proportional originatetion fee to be 0%
+        10_000_000,  // flat late fee to be 10 usdc
+        0,  // proportional late fee to be 0%
+        0   // membership fee to be 0 usdc/month
+        );
+
+    if (!deployedContracts["BaseCreditPoolConfig"]) {
+        throw new Error("BaseCreditPoolConfig not deployed yet!");
+    }
+
+    
+    const PoolConfig = await hre.ethers.getContractFactory(
+        "BasePoolConfig"
+    );
+    const poolConfig = FeeManager.attach(
+        deployedContracts["BaseCreditPoolConfig"]
+    );
+
+    await poolConfig.setAPR(1000); // setting apr to be 10%
     
 }
 
