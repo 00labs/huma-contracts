@@ -1,23 +1,43 @@
 const {BigNumber: BN} = require("ethers");
-const {deploy} = require("../utils.js");
+const {deploy, updateInitilizedContract} = require("../utils.js");
 
 async function deployContracts() {
-    const network = (await hre.ethers.provider.getNetwork()).name;
-    console.log("network : ", network);
-    const [deployer, treasury, eaService,
-    pdsService, ea] = await hre.ethers.getSigners();
+    // await hre.network.provider.send("hardhat_reset")
+    const [
+        deployer, 
+        treasury, 
+        eaService,
+        pdsService, 
+        ea, 
+        proxyOwner,
+        lender
+    ] = await hre.ethers.getSigners();
     
-    const usdc = await deploy("TestToken", "USDC");
+    console.log("ea address:", eaService.address);
+
+    const usdc = await deploy("TestToken", "USDC", [], deployer);
     const evaluationAgentNFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
-    
-    const humaConfig = await deploy("HumaConfig", "HumaConfig");
-    
-    const feeManager = await deploy("BaseFeeManager", "BaseCreditPoolFeeManager");
-    const hdt = await deploy("HDT", "BaseCreditHDT");
-    const poolConfig = await deploy("BasePoolConfig", "BaseCreditPoolConfig");
 
-    const pool = await deploy("BaseCreditPool", "BaseCreditPool");
+    const humaConfig = await deploy("HumaConfig", "HumaConfig", [], deployer);
+    
+    const feeManager = await deploy("BaseFeeManager", "BaseCreditPoolFeeManager", [], deployer);
+    const hdtImpl = await deploy("HDT", "BaseCreditHDTImpl", [], deployer);
+    const hdtProxy = await deploy("TransparentUpgradeableProxy", "BaseCreditHDT", [
+        hdtImpl.address,
+        proxyOwner.address,
+        [],
+    ], deployer);
+    const poolConfig = await deploy("BasePoolConfig", "BaseCreditPoolConfig", [], deployer);
 
+    const poolImpl = await deploy("BaseCreditPool", "BaseCreditPoolImpl", [], deployer);
+    const poolProxy = await deploy("TransparentUpgradeableProxy", "BaseCreditPool", [
+        poolImpl.address,
+        proxyOwner.address,
+        [],
+    ], deployer);
+    const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
+    pool = BaseCreditPool.attach(poolProxy.address);
+    
     console.log("humaConfig initializing");
     await humaConfig.setHumaTreasury(treasury.address);
     await humaConfig.setTreasuryFee(500);
@@ -26,18 +46,25 @@ async function deployContracts() {
     await humaConfig.setPDSServiceAccount(pdsService.address);
     await humaConfig.setProtocolDefaultGracePeriod(30 * 24 * 3600);
     await humaConfig.setLiquidityAsset(usdc.address, true);
+    await updateInitilizedContract("HumaConfig");
     console.log("humaConfig initialized");
     
     console.log("eaNFT initializing");
     await evaluationAgentNFT.connect(ea).mintNFT(ea.address);
+    await updateInitilizedContract("EANFT");
     console.log("eaNFT initialized");
 
     console.log("feeManager initializing");
     await feeManager.setFees(10_000_000, 0, 20_000_000, 0, 5_000_000);
+    await updateInitilizedContract("BaseCreditPoolFeeManager");
     console.log("feeManager initialized");
 
     console.log("HDT initializing");
+    const HDT = await hre.ethers.getContractFactory("HDT");
+    const hdt = HDT.attach(hdtProxy.address);
     await hdt.initialize("Credit HDT", "CHDT", usdc.address);
+    await hdt.setPool(pool.address);
+    await updateInitilizedContract("BaseCreditHDT");
     console.log("HDT initialized");
 
     console.log("Credit pool initializing");
@@ -68,26 +95,35 @@ async function deployContracts() {
     await poolConfig.setPoolDefaultGracePeriod(60);
     await poolConfig.setPoolOwnerTreasury(treasury.address);
     await poolConfig.setCreditApprovalExpiration(5);
+    await poolConfig.addPoolOperator(deployer.address);
 
     await pool.initialize(poolConfig.address);
+    await updateInitilizedContract("BaseCreditPoolConfig");
+    await updateInitilizedContract("BaseCreditPool");
     console.log("Credit pool initialized");
 
     console.log("Enabling pool");
     await pool.addApprovedLender(ea.address);
     await pool.addApprovedLender(treasury.address);
     
-
     const amountOwner = BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)));
     await usdc.mint(treasury.address, amountOwner);
-    await usdc.connect(treasury).approve(pool.address, amountOwner)
+    await usdc.connect(treasury).approve(pool.address, amountOwner);
     await pool.connect(treasury).makeInitialDeposit(amountOwner);
-
+    console.log("Enabling pool");
     const amountEA = BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)));
     await usdc.mint(ea.address, amountEA);
     await usdc.connect(ea).approve(pool.address, amountEA);
     await pool.connect(ea).makeInitialDeposit(amountEA);
     await pool.enablePool();
     console.log("Pool is enabled");
+
+    const amountLender = BN.from(500_000).mul(BN.from(10).pow(BN.from(decimals)));
+    await pool.addApprovedLender(lender.address);
+    await usdc.mint(lender.address, amountLender);
+    await usdc.connect(lender).approve(pool.address, amountLender);
+    await pool.connect(lender).deposit(amountLender);
+    lender
 
 }
 
