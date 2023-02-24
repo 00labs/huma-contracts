@@ -33,7 +33,8 @@
     "verify": "hardhat verify",
     "lint-solidity": "yarn solhint -f table 'contracts/**/*.sol'",
     "postinstall": "husky install",
-    "coverage": "hardhat coverage --network hardhat"
+    "coverage": "hardhat coverage --network hardhat",
+    "clear": "rm ./deployment/localhost-*"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",
