@@ -40,6 +40,7 @@ async function adjustFees() {
     );
 
     await poolConfig.setAPR(1000); // setting apr to be 10%
+    await poolConfig.setWithdrawalLockoutPeriod(0);
     
 }
 
