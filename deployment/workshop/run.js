@@ -35,7 +35,7 @@ async function adjustFees() {
     const PoolConfig = await hre.ethers.getContractFactory(
         "BasePoolConfig"
     );
-    const poolConfig = FeeManager.attach(
+    const poolConfig = PoolConfig.attach(
         deployedContracts["BaseCreditPoolConfig"]
     );
 
