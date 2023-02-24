@@ -10,7 +10,8 @@ async function deployContracts() {
         pdsService, 
         ea, 
         proxyOwner,
-        lender
+        lender,
+        borrower
     ] = await hre.ethers.getSigners();
     
     console.log("ea address:", eaService.address);
@@ -122,8 +123,7 @@ async function deployContracts() {
     await pool.addApprovedLender(lender.address);
     await usdc.mint(lender.address, amountLender);
     await usdc.connect(lender).approve(pool.address, amountLender);
-    await pool.connect(lender).deposit(amountLender);
-    lender
+    // await pool.connect(lender).deposit(amountLender);
 
 }
 
