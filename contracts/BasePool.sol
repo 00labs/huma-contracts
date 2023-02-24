@@ -108,12 +108,17 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
 
         _poolConfig.checkWithdrawLiquidityRequirement(msg.sender, withdrawableAmount - amount);
 
+        uint256 fees = getWithdrawFee(amount);
+
         uint256 shares = _poolToken.burnAmount(msg.sender, amount);
         _totalPoolValue -= amount;
-        _underlyingToken.safeTransfer(msg.sender, amount);
+        _underlyingToken.safeTransfer(msg.sender, amount - fees);
+        distributeIncome(fees);
 
         emit LiquidityWithdrawn(msg.sender, amount, shares);
     }
+
+    function getWithdrawFee(uint256 amount) internal virtual returns (uint256 fees) {}
 
     /**
      * @notice Withdraw all balance from the pool.
