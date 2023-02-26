@@ -28,13 +28,13 @@
     "chain": "hardhat node",
     "test": "hardhat test --network hardhat",
     "compile": "hardhat compile",
-    "deploy": "rm ./deployment/localhost-* && hardhat run deployment/workshop/deploy-base-credit-pool-with-init.js --network localhost",
+    "deploy": "rm -f ./deployment/localhost-* && hardhat run deployment/workshop/deploy-base-credit-pool-with-init.js --network localhost",
     "watch": "node scripts/watch.js",
     "verify": "hardhat verify",
     "lint-solidity": "yarn solhint -f table 'contracts/**/*.sol'",
     "postinstall": "husky install",
     "coverage": "hardhat coverage --network hardhat",
-    "clear": "rm ./deployment/localhost-*"
+    "clear": "rm -f ./deployment/localhost-*"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",
