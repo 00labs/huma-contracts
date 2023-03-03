@@ -3,12 +3,20 @@ const {deploy, updateInitilizedContract, getInitilizedContract} = require("../ut
 
 async function deployContracts() {
     // await hre.network.provider.send("hardhat_reset")
-    const [deployer, treasury, eaService, pdsService, ea, proxyOwner, lender, borrower] =
+    const [deployer, treasury, eaService, pdsService, ea, proxyOwner] =
         await hre.ethers.getSigners();
-    console.log("ea address:", eaService.address);
+    console.log(
+        "Remember to fund the following addresses with ETH. (Deployer needs the most, small amount is sufficient for the rest.)"
+    );
+    console.log("Deployer address: ", deployer.address);
+    console.log("Treasury address: ", treasury.address);
+    console.log("EaService address:", eaService.address);
+    console.log("EA address", ea.address);
 
-    const usdc = await deploy("TestToken", "USDC", [], deployer);
-    const evaluationAgentNFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
+    const usdc = await deploy("TestToken", "USDC", [], deployer, {gasLimit: 3_000_000});
+    const evaluationAgentNFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService, {
+        gasLimit: 2_000_000,
+    });
 
     const humaConfig = await deploy("HumaConfig", "HumaConfig", [], deployer);
 
@@ -145,10 +153,10 @@ async function deployContracts() {
         await pool.enablePool();
         console.log("Pool is enabled");
 
-        const amountLender = BN.from(500_000).mul(BN.from(10).pow(BN.from(decimals)));
-        await pool.addApprovedLender(lender.address);
-        await usdc.mint(lender.address, amountLender);
-        await usdc.connect(lender).approve(pool.address, amountLender);
+        // const amountLender = BN.from(500_000).mul(BN.from(10).pow(BN.from(decimals)));
+        // await pool.addApprovedLender(lender.address);
+        // await usdc.mint(lender.address, amountLender);
+        // await usdc.connect(lender).approve(pool.address, amountLender);
     }
     // await pool.connect(lender).deposit(amountLender);
 }

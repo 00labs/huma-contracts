@@ -163,21 +163,27 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [
-                deployer,
-                proxyOwner,
-                lender,
-                ea,
-                eaService,
-                pdsService,
-                treasury,
-                ea_bcp,
-                invoicePayer,
-                baseCreditPoolOperator,
-                receivableFactoringPoolOperator,
-                baseCreditPoolOwnerTreasury,
-                receivableFactoringPoolOwnerTreasury,
-            ],
+            // accounts: {
+            //     mnemonic: process.env.MNEMONIC,
+            //     path: "m/44'/60'/0'/0",
+            //     initialIndex: 0,
+            //     count: 20,
+            //     passphrase: "",
+            // },
+            // If you don't want to import all these private keys, just import your mnemonic phrase above
+            accounts: [deployer, treasury, eaService, pdsService, ea, proxyOwner, lender],
+        },
+        sepolia: {
+            url: process.env.SEPOLIA_URL,
+            // accounts: {
+            //     mnemonic: process.env.MNEMONIC,
+            //     path: "m/44'/60'/0'/0",
+            //     initialIndex: 0,
+            //     count: 20,
+            //     passphrase: "",
+            // },
+            // If you don't want to import all these private keys, just import your mnemonic phrase above
+            accounts: [deployer, treasury, eaService, pdsService, ea, proxyOwner, lender],
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",
