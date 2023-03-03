@@ -8,7 +8,7 @@ const {
 
 let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp;
 
-const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
+const HUMA_OWNER_ADRESS='';
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -36,9 +36,6 @@ async function initHumaConfig() {
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
 
-    const TimelockController = await hre.ethers.getContractFactory("TimelockController");
-    const humaConfigTL = TimelockController.attach(deployedContracts["HumaConfigTimelock"]);
-
     await sendTransaction("HumaConfig", humaConfig, "setProtocolDefaultGracePeriod", [
         30 * 24 * 3600,
     ]);
@@ -58,13 +55,6 @@ async function initHumaConfig() {
 
     // Set treasury for the protocol
     await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasury.address]);
-
-    await sendTransaction("HumaConfig", humaConfig, "transferOwnership", [humaConfigTL.address]);
-    const adminRole = await humaConfigTL.TIMELOCK_ADMIN_ROLE();
-    await sendTransaction("HumaConfigTimelock", humaConfigTL, "renounceRole", [
-        adminRole,
-        deployer.address,
-    ]);
 
     await updateInitilizedContract("HumaConfig");
 }
