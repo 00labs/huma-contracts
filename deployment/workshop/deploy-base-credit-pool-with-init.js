@@ -1,5 +1,5 @@
 const {BigNumber: BN} = require("ethers");
-const {deploy, updateInitilizedContract} = require("../utils.js");
+const {deploy, updateInitilizedContract, getInitilizedContract} = require("../utils.js");
 
 async function deployContracts() {
     // await hre.network.provider.send("hardhat_reset")
@@ -31,6 +31,8 @@ async function deployContracts() {
     );
     const BaseCreditPool = await ethers.getContractFactory("BaseCreditPool");
     pool = BaseCreditPool.attach(poolProxy.address);
+
+    const decimals = 6;
 
     console.log("humaConfig initializing");
     let initilized = await getInitilizedContract("HumaConfig");
@@ -70,11 +72,11 @@ async function deployContracts() {
 
     console.log("HDT initializing");
     initilized = await getInitilizedContract("BaseCreditHDT");
+    const HDT = await hre.ethers.getContractFactory("HDT");
+    const hdt = HDT.attach(hdtProxy.address);
     if (initilized) {
         console.log("HDT is already initialized!");
     } else {
-        const HDT = await hre.ethers.getContractFactory("HDT");
-        const hdt = HDT.attach(hdtProxy.address);
         await hdt.initialize("Credit HDT", "CHDT", usdc.address);
         await hdt.setPool(pool.address);
         await updateInitilizedContract("BaseCreditHDT");
@@ -92,7 +94,6 @@ async function deployContracts() {
             humaConfig.address,
             feeManager.address
         );
-        const decimals = 6;
         console.log("pause");
         const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
         console.log("cap: " + cap);
