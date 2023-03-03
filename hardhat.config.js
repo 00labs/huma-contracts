@@ -23,6 +23,10 @@ let goerliUrl = process.env["GOERLI_URL"];
 if (!goerliUrl) {
     goerliUrl = EMPTY_URL;
 }
+let sepoliaUrl = process.env["SEPOLIA_URL"];
+if (!sepoliaUrl) {
+    sepoliaUrl = EMPTY_URL;
+}
 let mumbaiUrl = process.env["MUMBAI_URL"];
 if (!mumbaiUrl) {
     mumbaiUrl = EMPTY_URL;
@@ -174,7 +178,7 @@ module.exports = {
             accounts: [deployer, treasury, eaService, pdsService, ea, proxyOwner, lender],
         },
         sepolia: {
-            url: process.env.SEPOLIA_URL,
+            url: sepoliaUrl,
             // accounts: {
             //     mnemonic: process.env.MNEMONIC,
             //     path: "m/44'/60'/0'/0",
