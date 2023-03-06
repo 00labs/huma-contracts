@@ -62,7 +62,7 @@ contract TradableStream is ERC721, Ownable {
     mapping(uint256 => TradableStreamMetadata) public metadatas;
 
     /// @notice origin => investor => total acquired flowrate
-    mapping(address => mapping(address => int96)) private _investments;
+    mapping(address => mapping(address => int96)) public _investments;
 
     /// @notice current token id
     uint256 public nextId;
@@ -74,11 +74,7 @@ contract TradableStream is ERC721, Ownable {
         );
     mapping(address => uint256) public nonces;
 
-    constructor(uint256 chainId, ISuperfluid host)
-        payable
-        Ownable()
-        ERC721("TradableStream", "TSTRM")
-    {
+    constructor(ISuperfluid host) payable Ownable() ERC721("TradableStream", "TSTRM") {
         IConstantFlowAgreementV1 cfa = IConstantFlowAgreementV1(
             address(
                 host.getAgreementClass(
@@ -96,7 +92,7 @@ contract TradableStream is ERC721, Ownable {
                 ),
                 keccak256(bytes("TradableStream")),
                 keccak256(bytes(version)),
-                chainId,
+                block.chainid,
                 address(this)
             )
         );

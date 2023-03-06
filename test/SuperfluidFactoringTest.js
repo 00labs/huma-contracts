@@ -13,6 +13,7 @@ const {
 require("dotenv").config();
 
 const GOERLI_CHAIN_ID = 5;
+const HARDHAT_CHAIN_ID = 31337;
 
 const POLYGON_USDC_MAP_SLOT = "0x0";
 const GOERLI_USDC_MAP_SLOT = "0x0";
@@ -318,7 +319,7 @@ describe("Superfluid Factoring", function () {
         await usdc.connect(payer).approve(usdcx.address, toUSDC(1_000_000));
 
         const nftContractFactory = await ethers.getContractFactory("TradableStream");
-        nftContract = await nftContractFactory.deploy(GOERLI_CHAIN_ID, sfHostAddress);
+        nftContract = await nftContractFactory.deploy(sfHostAddress);
         await nftContract.deployed();
     });
 
@@ -532,7 +533,7 @@ describe("Superfluid Factoring", function () {
                 {
                     name: "TradableStream",
                     version: nftVersion,
-                    chainId: GOERLI_CHAIN_ID,
+                    chainId: HARDHAT_CHAIN_ID,
                     verifyingContract: nftContract.address,
                 },
                 {
@@ -636,6 +637,220 @@ describe("Superfluid Factoring", function () {
                 streamDays,
                 3,
                 0
+            );
+        });
+    });
+
+    describe("multisend for drawdown", function () {
+        beforeEach(async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                ["approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"](
+                    borrower.address,
+                    toUSDC(streamAmount),
+                    streamDays,
+                    1,
+                    1217,
+                    nftContract.address,
+                    ethers.utils.solidityKeccak256(
+                        ["address", "address", "address"],
+                        [usdcx.address, payer.address, borrower.address]
+                    ),
+                    toUSDC(streamAmount)
+                );
+        });
+
+        it("Should multisend for drawdown", async function () {
+            const Multisend = await ethers.getContractFactory("Multisend");
+            const multisend = await Multisend.deploy();
+            await multisend.deployed();
+
+            const TestToken = await ethers.getContractFactory("TestToken");
+            const testToken = await TestToken.deploy();
+            await testToken.deployed();
+
+            let allowanceAmount = BN.from(10e10);
+            let nonce = await testToken.nonces(borrower.address);
+            let expiry = Math.ceil(Date.now() / 1000) + 300;
+            let signatureData = await borrower._signTypedData(
+                {
+                    name: "TestToken",
+                    version: "1",
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: testToken.address,
+                },
+                {
+                    Permit: [
+                        {name: "owner", type: "address"},
+                        {name: "spender", type: "address"},
+                        {name: "value", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "deadline", type: "uint256"},
+                    ],
+                },
+                {
+                    owner: borrower.address,
+                    spender: nftContract.address,
+                    value: allowanceAmount,
+                    nonce: nonce,
+                    deadline: expiry,
+                }
+            );
+            let signature = ethers.utils.splitSignature(signatureData);
+
+            let tos = [];
+            let datas = [];
+            tos.push(testToken.address);
+            datas.push(
+                testToken.interface.encodeFunctionData("permit", [
+                    borrower.address,
+                    nftContract.address,
+                    allowanceAmount,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ])
+            );
+
+            await usdc.connect(borrower).approve(poolContract.address, toUSDC(10_000));
+
+            const beforeAmount = await usdc.balanceOf(borrower.address);
+            const beforePoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
+            const beforeBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
+
+            const ts = Math.ceil(Date.now() / 1000) + 2;
+            await setNextBlockTimestamp(ts);
+
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            nonce = await nftContract.nonces(borrower.address);
+            expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            signature = ethers.utils.splitSignature(signatureData);
+
+            calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    poolContract.address,
+                    flowrate,
+                    streamDuration,
+                    nonce,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            tos.push(poolContract.address);
+            datas.push(
+                poolContract.interface.encodeFunctionData("drawdownWithAuthorization", [
+                    toUSDC(collateralAmount),
+                    nftContract.address,
+                    calldata,
+                ])
+            );
+
+            await multisend.multisend(tos, datas);
+
+            // await poolContract.drawdownWithAuthorization(
+            //     toUSDC(collateralAmount),
+            //     nftContract.address,
+            //     calldata
+            // );
+
+            const afterAmount = await usdc.balanceOf(borrower.address);
+            const afterPoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
+            const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
+
+            const interest = toUSDC(collateralAmount)
+                .mul(BN.from(streamDays * 1217))
+                .div(BN.from(365 * 10000));
+            const receivedAmount = afterAmount.sub(beforeAmount);
+
+            const streamId = 1;
+
+            expect(receivedAmount).to.equal(toUSDC(collateralAmount).sub(interest));
+            expect(await nftContract.ownerOf(streamId)).to.equal(poolContract.address);
+            expect(beforeBorrowerFlowrate.sub(afterBorrowerFlowrate)).to.equal(
+                afterPoolFlowrate.sub(beforePoolFlowrate)
+            );
+
+            let res = await nftContract.getTradableStreamData(streamId);
+            flowrate = res[6];
+            expect(afterPoolFlowrate.sub(beforePoolFlowrate)).to.equal(flowrate);
+
+            res = await poolContract.streamInfoMapping(nftContract.address, streamId);
+            const dueDate = ts + streamDuration;
+            checkResults(res, [borrower.address, ts, dueDate, flowrate, 0]);
+            const cr = await poolContract.creditRecordMapping(borrower.address);
+            const crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(
+                cr,
+                crs,
+                toUSDC(streamAmount),
+                0,
+                dueDate,
+                0,
+                toUSDC(collateralAmount),
+                0,
+                0,
+                0,
+                0,
+                streamDays,
+                3,
+                0
+            );
+
+            expect(await testToken.allowance(borrower.address, nftContract.address)).to.equal(
+                allowanceAmount
             );
         });
     });
