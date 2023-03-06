@@ -23,6 +23,8 @@ struct TradableStreamMetadata {
 uint256 constant MAX_DURATION_SECONDS = 60 * 60 * 24 * 30;
 
 contract TradableStream is ERC721, Ownable {
+    string public constant version = "1";
+
     using CFAv1Library for CFAv1Library.InitData;
     using CFALib for CFAv1Library.InitData;
     CFAv1Library.InitData public cfaV1;
@@ -65,7 +67,18 @@ contract TradableStream is ERC721, Ownable {
     /// @notice current token id
     uint256 public nextId;
 
-    constructor(ISuperfluid host) payable Ownable() ERC721("Niflot", "NIFLOT") {
+    bytes32 public immutable DOMAIN_SEPARATOR;
+    bytes32 public constant MINTTO_WITH_AUTHORIZATION_TYPEHASH =
+        keccak256(
+            "MintToWithAuthorization(address receiver,address token,address origin,address owner,int96 flowrate,uint256 durationInSeconds,uint256 nonce,uint256 expiry)"
+        );
+    mapping(address => uint256) public nonces;
+
+    constructor(uint256 chainId, ISuperfluid host)
+        payable
+        Ownable()
+        ERC721("TradableStream", "TSTRM")
+    {
         IConstantFlowAgreementV1 cfa = IConstantFlowAgreementV1(
             address(
                 host.getAgreementClass(
@@ -75,6 +88,18 @@ contract TradableStream is ERC721, Ownable {
         );
 
         cfaV1 = CFAv1Library.InitData(host, cfa);
+
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256(bytes("TradableStream")),
+                keccak256(bytes(version)),
+                chainId,
+                address(this)
+            )
+        );
     }
 
     /// @dev require that tokenId exists (minted and not burnt)
@@ -114,6 +139,22 @@ contract TradableStream is ERC721, Ownable {
     ) external {
         // Accepted token toggle?
 
+        _mintTo(msg.sender, token, origin, msg.sender, flowrate, durationInSeconds);
+    }
+
+    function _mintTo(
+        address receiver,
+        ISuperToken token,
+        address origin,
+        address owner,
+        int96 flowrate,
+        uint256 durationInSeconds
+    ) internal returns (uint256 tokenId) {
+        require(receiver != address(0), "Empty receiver");
+        require(address(token) != address(0), "Empty token");
+        require(origin != address(0), "Empty origin");
+        require(owner != address(0), "Empty owner");
+
         require(flowrate > 0, "Invalid flowrate");
 
         require(
@@ -122,18 +163,20 @@ contract TradableStream is ERC721, Ownable {
         );
 
         // Get flow from origin to receiver
-        (, int96 allFlowrate, , ) = cfaV1.cfa.getFlow(token, origin, msg.sender);
+        (, int96 allFlowrate, , ) = cfaV1.cfa.getFlow(token, origin, receiver);
 
         // Get investments
-        int96 alreadyInvested = _investments[origin][msg.sender];
+        int96 alreadyInvested = _investments[origin][receiver];
         require(allFlowrate > alreadyInvested, "you don't have any available flowrate");
         int96 availableFlowrate = allFlowrate - alreadyInvested;
 
         require(flowrate < availableFlowrate, "you don't have enough available flowrate");
 
-        metadatas[nextId] = TradableStreamMetadata({
+        tokenId = nextId;
+
+        metadatas[tokenId] = TradableStreamMetadata({
             origin: origin,
-            receiver: msg.sender,
+            receiver: receiver,
             flowrate: flowrate,
             token: token,
             duration: durationInSeconds,
@@ -141,8 +184,52 @@ contract TradableStream is ERC721, Ownable {
         });
 
         //will start streaming from TradableStream to msg.sender / receiver
-        _mint(msg.sender, nextId);
+        _mint(receiver, tokenId);
         nextId += 1;
+
+        if (owner != receiver) {
+            _transfer(receiver, owner, tokenId);
+        }
+    }
+
+    function mintToWithAuthorization(
+        address receiver,
+        address token,
+        address origin,
+        address owner,
+        int96 flowrate,
+        uint256 durationInSeconds,
+        uint256 nonce,
+        uint256 expiry,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256) {
+        require(expiry == 0 || block.timestamp <= expiry, "Authorization expired");
+        require(nonce == nonces[receiver]++, "Invalid nonce");
+
+        bytes32 data = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(
+                    abi.encode(
+                        MINTTO_WITH_AUTHORIZATION_TYPEHASH,
+                        receiver,
+                        token,
+                        origin,
+                        owner,
+                        flowrate,
+                        durationInSeconds,
+                        nonce,
+                        expiry
+                    )
+                )
+            )
+        );
+
+        require(receiver == ecrecover(data, v, r, s), "Invalid authorization");
+        return _mintTo(receiver, ISuperToken(token), origin, owner, flowrate, durationInSeconds);
     }
 
     function _beforeTokenTransfer(

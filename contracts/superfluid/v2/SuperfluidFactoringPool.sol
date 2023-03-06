@@ -31,7 +31,7 @@ contract SuperfluidFactoringPool is StreamFactoringPool {
             int96 flowrate
         ) = TradableStream(receivableAsset).getTradableStreamData(receivableTokenId);
 
-        if (started > 0) revert Errors.isTransferred();
+        // if (started > 0) revert Errors.isTransferred();
         if (duration > interval) revert Errors.durationTooLong();
 
         receivableParam = uint256(keccak256(abi.encodePacked(token, origin, receiver)));

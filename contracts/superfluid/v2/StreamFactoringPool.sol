@@ -9,6 +9,8 @@ import "../../BaseCreditPool.sol";
 import "../StreamFeeManager.sol";
 import "../../Errors.sol";
 
+import "hardhat/console.sol";
+
 abstract contract StreamFactoringPool is
     BaseCreditPool,
     StreamFactoringPoolStorage,
@@ -111,18 +113,28 @@ abstract contract StreamFactoringPool is
     ) external virtual {
         if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
 
-        address borrower = msg.sender;
+        _drawdown(msg.sender, borrowAmount, receivableAsset, receivableTokenId, false);
+    }
+
+    function _drawdown(
+        address borrower,
+        uint256 borrowAmount,
+        address receivableAsset,
+        uint256 receivableTokenId,
+        bool transferred
+    ) internal virtual {
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
         BS.CreditRecordStatic memory crs = _getCreditRecordStatic(borrower);
 
-        _transferReceivableAsset(
+        _handleReceivableAsset(
             borrower,
             borrowAmount,
             crs.intervalInDays * SECONDS_IN_A_DAY,
             receivableAsset,
-            receivableTokenId
+            receivableTokenId,
+            transferred
         );
 
         uint256 allowance = _underlyingToken.allowance(borrower, address(this));
@@ -140,6 +152,35 @@ abstract contract StreamFactoringPool is
             receivableAsset,
             receivableTokenId
         );
+    }
+
+    function drawdownWithAuthorization(
+        uint256 borrowAmount,
+        address receivableAsset,
+        bytes calldata data
+    ) external virtual {
+        if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
+
+        (bool success, bytes memory returndata) = receivableAsset.call(data);
+        if (!success) {
+            // Look for revert reason and bubble it up if present
+            if (returndata.length > 0) {
+                // The easiest way to bubble the revert reason is using memory via assembly
+                /// @solidity memory-safe-assembly
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert();
+            }
+        }
+
+        uint256 tokenId = abi.decode(returndata, (uint256));
+        console.log("data: ");
+        console.logBytes(data);
+        address borrower = abi.decode(data[4:36], (address));
+        _drawdown(borrower, borrowAmount, receivableAsset, tokenId, true);
     }
 
     function payoff(address receivableAsset, uint256 receivableTokenId) external virtual {
@@ -256,12 +297,13 @@ abstract contract StreamFactoringPool is
      * @param receivableAsset the contract address of the receivable asset.
      * @param receivableTokenId parameter of the receivable asset.
      */
-    function _transferReceivableAsset(
+    function _handleReceivableAsset(
         address borrower,
         uint256 borrowAmount,
         uint256 interval,
         address receivableAsset,
-        uint256 receivableTokenId
+        uint256 receivableTokenId,
+        bool transferred
     ) internal virtual {
         // Transfer receivable asset.
         BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
@@ -285,6 +327,8 @@ abstract contract StreamFactoringPool is
         streamInfo.borrower = borrower;
         _streamInfoMapping[keccak256(abi.encode(receivableAsset, receivableTokenId))] = streamInfo;
 
-        IERC721(receivableAsset).safeTransferFrom(borrower, address(this), receivableTokenId);
+        if (!transferred) {
+            IERC721(receivableAsset).safeTransferFrom(borrower, address(this), receivableTokenId);
+        }
     }
 }
