@@ -192,18 +192,16 @@ contract TradableStream is ERC721, Ownable {
         address receiver,
         address token,
         address origin,
-        address owner,
         int96 flowrate,
         uint256 durationInSeconds,
-        uint256 nonce,
         uint256 expiry,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) external returns (uint256) {
         require(expiry == 0 || block.timestamp <= expiry, "Authorization expired");
-        require(nonce == nonces[receiver]++, "Invalid nonce");
-        require(owner == msg.sender, "Invalid sender");
+
+        uint256 nonce = nonces[receiver]++;
 
         bytes32 data = keccak256(
             abi.encodePacked(
@@ -215,7 +213,7 @@ contract TradableStream is ERC721, Ownable {
                         receiver,
                         token,
                         origin,
-                        owner,
+                        msg.sender,
                         flowrate,
                         durationInSeconds,
                         nonce,
@@ -226,7 +224,8 @@ contract TradableStream is ERC721, Ownable {
         );
 
         require(receiver == ecrecover(data, v, r, s), "Invalid authorization");
-        return _mintTo(receiver, ISuperToken(token), origin, owner, flowrate, durationInSeconds);
+        return
+            _mintTo(receiver, ISuperToken(token), origin, msg.sender, flowrate, durationInSeconds);
     }
 
     function _beforeTokenTransfer(

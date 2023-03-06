@@ -114,39 +114,23 @@ contract SuperfluidFactoringPool is StreamFactoringPool {
             address receiver,
             address token,
             address origin,
-            address owner,
             int96 flowrate,
             uint256 durationInSeconds,
-            uint256 nonce,
             uint256 expiry,
             uint8 v,
             bytes32 r,
             bytes32 s
         ) = abi.decode(
                 data,
-                (
-                    address,
-                    address,
-                    address,
-                    address,
-                    int96,
-                    uint256,
-                    uint256,
-                    uint256,
-                    uint8,
-                    bytes32,
-                    bytes32
-                )
+                (address, address, address, int96, uint256, uint256, uint8, bytes32, bytes32)
             );
 
         tokenId = TradableStream(receivableAsset).mintToWithAuthorization(
             receiver,
             token,
             origin,
-            owner,
             flowrate,
             durationInSeconds,
-            nonce,
             expiry,
             v,
             r,

@@ -529,11 +529,6 @@
         "type": "address"
       },
       {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
         "internalType": "int96",
         "name": "flowrate",
         "type": "int96"
@@ -541,11 +536,6 @@
       {
         "internalType": "uint256",
         "name": "durationInSeconds",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "nonce",
         "type": "uint256"
       },
       {
