@@ -207,6 +207,7 @@ contract TradableStream is ERC721, Ownable {
     ) external returns (uint256) {
         require(expiry == 0 || block.timestamp <= expiry, "Authorization expired");
         require(nonce == nonces[receiver]++, "Invalid nonce");
+        require(owner == msg.sender, "Invalid sender");
 
         bytes32 data = keccak256(
             abi.encodePacked(

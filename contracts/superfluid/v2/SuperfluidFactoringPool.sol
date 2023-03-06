@@ -7,13 +7,14 @@ import "./StreamFactoringPool.sol";
 import "./TradableStream.sol";
 
 contract SuperfluidFactoringPool is StreamFactoringPool {
-    function getReceivableData(
+    function _getReceivableData(
         address receivableAsset,
         uint256 receivableTokenId,
         uint256 interval
     )
         internal
         view
+        virtual
         override
         returns (
             uint256 receivableParam,
@@ -60,11 +61,11 @@ contract SuperfluidFactoringPool is StreamFactoringPool {
         }
     }
 
-    function payOwner(
+    function _payOwner(
         address receivableAsset,
         uint256 receivableTokenId,
         StreamInfo memory sr
-    ) internal override {
+    ) internal virtual override {
         (, , , , , ISuperToken token, ) = TradableStream(receivableAsset).getTradableStreamData(
             receivableTokenId
         );
@@ -76,7 +77,7 @@ contract SuperfluidFactoringPool is StreamFactoringPool {
         token.downgrade(amount);
     }
 
-    function burn(address receivableAsset, uint256 receivableTokenId) internal override {
+    function _burn(address receivableAsset, uint256 receivableTokenId) internal virtual override {
         (
             ,
             address receiver,
@@ -101,5 +102,56 @@ contract SuperfluidFactoringPool is StreamFactoringPool {
         // check isMature?
 
         TradableStream(receivableAsset).burn(receivableTokenId);
+    }
+
+    function _mintNFT(address receivableAsset, bytes calldata data)
+        internal
+        virtual
+        override
+        returns (uint256 tokenId, address borrower)
+    {
+        (
+            address receiver,
+            address token,
+            address origin,
+            address owner,
+            int96 flowrate,
+            uint256 durationInSeconds,
+            uint256 nonce,
+            uint256 expiry,
+            uint8 v,
+            bytes32 r,
+            bytes32 s
+        ) = abi.decode(
+                data,
+                (
+                    address,
+                    address,
+                    address,
+                    address,
+                    int96,
+                    uint256,
+                    uint256,
+                    uint256,
+                    uint8,
+                    bytes32,
+                    bytes32
+                )
+            );
+
+        tokenId = TradableStream(receivableAsset).mintToWithAuthorization(
+            receiver,
+            token,
+            origin,
+            owner,
+            flowrate,
+            durationInSeconds,
+            nonce,
+            expiry,
+            v,
+            r,
+            s
+        );
+        borrower = receiver;
     }
 }

@@ -9,8 +9,6 @@ import "../../BaseCreditPool.sol";
 import "../StreamFeeManager.sol";
 import "../../Errors.sol";
 
-import "hardhat/console.sol";
-
 abstract contract StreamFactoringPool is
     BaseCreditPool,
     StreamFactoringPoolStorage,
@@ -28,7 +26,7 @@ abstract contract StreamFactoringPool is
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
 
-    function getReceivableData(
+    function _getReceivableData(
         address receivableAsset,
         uint256 receivableTokenId,
         uint256 interval
@@ -42,13 +40,18 @@ abstract contract StreamFactoringPool is
             StreamInfo memory streamInfo
         );
 
-    function payOwner(
+    function _payOwner(
         address receivableAsset,
         uint256 receivableTokenId,
         StreamInfo memory sr
     ) internal virtual;
 
-    function burn(address receivableAsset, uint256 receivableTokenId) internal virtual;
+    function _burn(address receivableAsset, uint256 receivableTokenId) internal virtual;
+
+    function _mintNFT(address receivableAsset, bytes calldata data)
+        internal
+        virtual
+        returns (uint256 tokenId, address borrower);
 
     function onERC721Received(
         address, /*operator*/
@@ -161,25 +164,22 @@ abstract contract StreamFactoringPool is
     ) external virtual {
         if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
 
-        (bool success, bytes memory returndata) = receivableAsset.call(data);
-        if (!success) {
-            // Look for revert reason and bubble it up if present
-            if (returndata.length > 0) {
-                // The easiest way to bubble the revert reason is using memory via assembly
-                /// @solidity memory-safe-assembly
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert();
-            }
-        }
+        // (bool success, bytes memory returndata) = receivableAsset.call(data);
+        // if (!success) {
+        //     // Look for revert reason and bubble it up if present
+        //     if (returndata.length > 0) {
+        //         // The easiest way to bubble the revert reason is using memory via assembly
+        //         /// @solidity memory-safe-assembly
+        //         assembly {
+        //             let returndata_size := mload(returndata)
+        //             revert(add(32, returndata), returndata_size)
+        //         }
+        //     } else {
+        //         revert();
+        //     }
+        // }
 
-        uint256 tokenId = abi.decode(returndata, (uint256));
-        console.log("data: ");
-        console.logBytes(data);
-        address borrower = abi.decode(data[4:36], (address));
+        (uint256 tokenId, address borrower) = _mintNFT(receivableAsset, data);
         _drawdown(borrower, borrowAmount, receivableAsset, tokenId, true);
     }
 
@@ -193,7 +193,7 @@ abstract contract StreamFactoringPool is
         if (block.timestamp < cr.dueDate) revert Errors.payoffTooSoon();
 
         uint256 beforeAmount = _underlyingToken.balanceOf(address(this));
-        payOwner(receivableAsset, receivableTokenId, sr);
+        _payOwner(receivableAsset, receivableTokenId, sr);
         uint256 amountReceived = _underlyingToken.balanceOf(address(this)) - beforeAmount;
 
         if (amountReceived < cr.unbilledPrincipal) {
@@ -216,7 +216,7 @@ abstract contract StreamFactoringPool is
 
         // check paidoff?
 
-        burn(receivableAsset, receivableTokenId);
+        _burn(receivableAsset, receivableTokenId);
 
         delete _receivableInfoMapping[sr.borrower];
 
@@ -316,7 +316,7 @@ abstract contract StreamFactoringPool is
             uint256 receivableParam,
             uint256 receivableAmount,
             StreamInfo memory streamInfo
-        ) = getReceivableData(receivableAsset, receivableTokenId, interval);
+        ) = _getReceivableData(receivableAsset, receivableTokenId, interval);
 
         // For ERC721, receivableParam is the tokenId
         if (ri.receivableParam != receivableParam) revert Errors.receivableAssetParamMismatch();

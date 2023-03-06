@@ -322,7 +322,7 @@ describe("Superfluid Factoring", function () {
         await nftContract.deployed();
     });
 
-    let streamAmount, streamDays, streamDuration, collateralAmount, streamId;
+    let streamAmount, streamDays, streamDuration, collateralAmount, streamId, nftVersion;
 
     async function prepare() {
         [humaConfigContract, eaNFTContract] = await deployContracts(
@@ -379,6 +379,8 @@ describe("Superfluid Factoring", function () {
         streamId = 0;
 
         await nftContract.connect(borrower).approve(poolContract.address, streamId);
+
+        nftVersion = await nftContract.version();
     }
 
     beforeEach(async function () {
@@ -510,23 +512,26 @@ describe("Superfluid Factoring", function () {
                 );
         });
 
-        it.only("Should drawdown with authorization", async function () {
+        it("Should drawdown with authorization", async function () {
             await usdc.connect(borrower).approve(poolContract.address, toUSDC(10_000));
+
+            const beforeAmount = await usdc.balanceOf(borrower.address);
+            const beforePoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
+            const beforeBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
+
+            const ts = Math.ceil(Date.now() / 1000) + 2;
+            await setNextBlockTimestamp(ts);
 
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-
-            let nonce = await nftContract.nonces(borrower.address);
-            console.log(`nonce: ${nonce}`);
-
-            const version = await nftContract.version();
+            const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
             const signatureData = await borrower._signTypedData(
                 {
                     name: "TradableStream",
-                    version: version,
+                    version: nftVersion,
                     chainId: GOERLI_CHAIN_ID,
                     verifyingContract: nftContract.address,
                 },
@@ -553,25 +558,36 @@ describe("Superfluid Factoring", function () {
                     expiry: expiry,
                 }
             );
-
-            console.log(`signatureData: ${signatureData}`);
-
             const signature = ethers.utils.splitSignature(signatureData);
-            console.log(`signature: ${JSON.stringify(signature)}`);
 
-            const calldata = nftContract.interface.encodeFunctionData("mintToWithAuthorization", [
-                borrower.address,
-                usdcx.address,
-                payer.address,
-                poolContract.address,
-                flowrate,
-                streamDuration,
-                nonce,
-                expiry,
-                signature.v,
-                signature.r,
-                signature.s,
-            ]);
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    poolContract.address,
+                    flowrate,
+                    streamDuration,
+                    nonce,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
 
             await poolContract.drawdownWithAuthorization(
                 toUSDC(collateralAmount),
@@ -579,19 +595,48 @@ describe("Superfluid Factoring", function () {
                 calldata
             );
 
-            // await nftContract.mintToWithAuthorization(
-            //     borrower.address,
-            //     usdcx.address,
-            //     payer.address,
-            //     poolContract.address,
-            //     flowrate,
-            //     streamDuration,
-            //     nonce,
-            //     expiry,
-            //     signature.v,
-            //     signature.r,
-            //     signature.s
-            // );
+            const afterAmount = await usdc.balanceOf(borrower.address);
+            const afterPoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
+            const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
+
+            const interest = toUSDC(collateralAmount)
+                .mul(BN.from(streamDays * 1217))
+                .div(BN.from(365 * 10000));
+            const receivedAmount = afterAmount.sub(beforeAmount);
+
+            const streamId = 1;
+
+            expect(receivedAmount).to.equal(toUSDC(collateralAmount).sub(interest));
+            expect(await nftContract.ownerOf(streamId)).to.equal(poolContract.address);
+            expect(beforeBorrowerFlowrate.sub(afterBorrowerFlowrate)).to.equal(
+                afterPoolFlowrate.sub(beforePoolFlowrate)
+            );
+
+            let res = await nftContract.getTradableStreamData(streamId);
+            flowrate = res[6];
+            expect(afterPoolFlowrate.sub(beforePoolFlowrate)).to.equal(flowrate);
+
+            res = await poolContract.streamInfoMapping(nftContract.address, streamId);
+            const dueDate = ts + streamDuration;
+            checkResults(res, [borrower.address, ts, dueDate, flowrate, 0]);
+            const cr = await poolContract.creditRecordMapping(borrower.address);
+            const crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(
+                cr,
+                crs,
+                toUSDC(streamAmount),
+                0,
+                dueDate,
+                0,
+                toUSDC(collateralAmount),
+                0,
+                0,
+                0,
+                0,
+                streamDays,
+                3,
+                0
+            );
         });
     });
 
