@@ -22,12 +22,12 @@ async function deployContracts() {
 
     // Deploying Superfluid factoring pool
 
-    // const humaConfig = await deploy("HumaConfig", "HumaConfig");
-    // const humaConfigTL = await deploy("TimelockController", "HumaConfigTimelock", [
-    //     0,
-    //     [deployer.address],
-    //     [deployer.address],
-    // ]);
+    const humaConfig = await deploy("HumaConfig", "HumaConfig");
+    const humaConfigTL = await deploy("TimelockController", "HumaConfigTimelock", [
+        0,
+        [deployer.address],
+        [deployer.address],
+    ]);
 
     const superfluidFactoringPoolTL = await deploy(
         "TimelockController",
@@ -63,6 +63,8 @@ async function deployContracts() {
     const tradableStream = await deploy("TradableStream", "SuperfluidTradableStream", [
         SF_HOST_ADDRESS,
     ]);
+
+    await deploy("Multisend", "Multisend");
 }
 
 deployContracts()

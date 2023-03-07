@@ -152,6 +152,9 @@ async function verifyContracts() {
         "[]",
     ]);
     console.log(`Verify SuperfluidFactoringPool result: ${verifyPool}`);
+
+    const verifyMultisend = await verifyContract("Multisend");
+    console.log(`Verify Multisend result: ${verifyMultisend}`);
 }
 
 verifyContracts()
