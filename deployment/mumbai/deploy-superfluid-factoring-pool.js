@@ -3,8 +3,8 @@ const {deploy} = require("../utils.js");
 const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
 const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
 
-const SF_USDC_ADDRESS = "0xc94dd466416A7dFE166aB2cF916D3875C049EBB7";
-const SF_HOST_ADDRESS = "0x22ff293e14F1EC3A09B137e9e06084AFd63adDF9";
+const SF_USDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
+const SF_HOST_ADDRESS = "0xEB796bdb90fFA0f28255275e16936D25d3418603";
 
 async function deployContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
@@ -58,7 +58,7 @@ async function deployContracts() {
         [],
     ]);
 
-    // const evaluationAgentNFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
+    const evaluationAgentNFT = await deploy("EvaluationAgentNFT", "EANFT", [], eaService);
 
     const tradableStream = await deploy("TradableStream", "SuperfluidTradableStream", [
         SF_HOST_ADDRESS,

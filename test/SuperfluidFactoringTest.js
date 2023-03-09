@@ -17,9 +17,11 @@ const HARDHAT_CHAIN_ID = 31337;
 
 const POLYGON_USDC_MAP_SLOT = "0x0";
 const GOERLI_USDC_MAP_SLOT = "0x0";
+const MUMBAI_USDC_MAP_SLOT = "0x0";
 
 let polygonUrl = process.env["POLYGON_URL"];
 let goerliUrl = process.env["GOERLI_URL"];
+let mumbaiUrl = process.env["MUMBAI_URL"];
 
 const POLYGON_USDC_ADDRESS = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 const POLYGON_SF_USDCX_ADDRESS = "0xCAa7349CEA390F89641fe306D93591f87595dc1F";
@@ -31,6 +33,11 @@ const GOERLI_SF_USDCX_ADDRESS = "0x8aE68021f6170E5a766bE613cEA0d75236ECCa9a";
 const GOERLI_SF_HOST_ADDRESS = "0x22ff293e14F1EC3A09B137e9e06084AFd63adDF9";
 const GOERLI_SF_CFA_ADDRESS = "0xEd6BcbF6907D4feEEe8a8875543249bEa9D308E8";
 
+const MUMBAI_USDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
+const MUMBAI_SF_USDCX_ADDRESS = "0x42bb40bF79730451B11f6De1CbA222F17b87Afd7";
+const MUMBAI_SF_HOST_ADDRESS = "0xEB796bdb90fFA0f28255275e16936D25d3418603";
+const MUMBAI_SF_CFA_ADDRESS = "0x49e565Ed1bdc17F3d220f72DF0857C26FA83F873";
+
 // let chainUrl = polygonUrl;
 // let usdcMapSlot = POLYGON_USDC_MAP_SLOT;
 // let usdcDecimals = 6;
@@ -40,14 +47,14 @@ const GOERLI_SF_CFA_ADDRESS = "0xEd6BcbF6907D4feEEe8a8875543249bEa9D308E8";
 // let sfHostAddress = POLYGON_SF_HOST_ADDRESS;
 // let sfCFAAddress = POLYGON_SF_CFA_ADDRESS;
 
-let chainUrl = goerliUrl;
-let usdcMapSlot = GOERLI_USDC_MAP_SLOT;
+let chainUrl = mumbaiUrl;
+let usdcMapSlot = MUMBAI_USDC_MAP_SLOT;
 let usdcDecimals = 18;
 
-let usdcAddress = GOERLI_USDC_ADDRESS;
-let sfUsdcxAddress = GOERLI_SF_USDCX_ADDRESS;
-let sfHostAddress = GOERLI_SF_HOST_ADDRESS;
-let sfCFAAddress = GOERLI_SF_CFA_ADDRESS;
+let usdcAddress = MUMBAI_USDC_ADDRESS;
+let sfUsdcxAddress = MUMBAI_SF_USDCX_ADDRESS;
+let sfHostAddress = MUMBAI_SF_HOST_ADDRESS;
+let sfCFAAddress = MUMBAI_SF_CFA_ADDRESS;
 
 let usdc, sf, usdcx, cfa;
 

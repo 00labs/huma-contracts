@@ -6,12 +6,20 @@ const {
     sendTransaction,
 } = require("../utils.js");
 
-let deployer, deployedContracts, lender, eaService, pdsService, treasury, payer;
-let ea_sfp, sfpOperator, sfpOwnerTreasury;
+let deployer,
+    deployedContracts,
+    lender,
+    ea_sfp,
+    eaService,
+    pdsService,
+    treasury,
+    sfpOperator,
+    sfpOwnerTreasury,
+    payer;
 
-const USDC_ADDRESS = "0xc94dd466416A7dFE166aB2cF916D3875C049EBB7";
+const USDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
 
-const HUMA_OWNER_ADRESS = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
+const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
 const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
 
 async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
@@ -59,10 +67,6 @@ async function initHumaConfig() {
         throw new Error("EANFT not deployed yet!");
     }
 
-    if (!deployedContracts["USDC"]) {
-        throw new Error("USDC not deployed yet!");
-    }
-
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
 
@@ -86,7 +90,8 @@ async function initHumaConfig() {
     // Set treasury for the protocol
     await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasury.address]);
 
-    await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock");
+    // Notice: Gnosis Safe doesn't support Mumbai now
+    // await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock");
 
     await updateInitilizedContract("HumaConfig");
 }
@@ -151,7 +156,8 @@ async function initHDT() {
         deployedContracts["SuperfluidFactoringPool"],
     ]);
 
-    await transferOwnershipToTL("HDT", "SuperfluidPoolHDT", "SuperfluidFactoringPoolTimelock");
+    // Notice: Gnosis Safe doesn't support Mumbai now
+    // await transferOwnershipToTL("HDT", "SuperfluidPoolHDT", "SuperfluidFactoringPoolTimelock");
 
     await updateInitilizedContract("SuperfluidPoolHDT");
 }
@@ -189,8 +195,8 @@ async function initPoolConfig() {
     const BasePoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
     const poolConfig = BasePoolConfig.attach(deployedContracts["SuperfluidFactoringPoolConfig"]);
 
-    if (!deployedContracts["ReceivableFactoringPool"]) {
-        throw new Error("ReceivableFactoringPool not deployed yet!");
+    if (!deployedContracts["SuperfluidFactoringPool"]) {
+        throw new Error("SuperfluidFactoringPool not deployed yet!");
     }
 
     if (!deployedContracts["SuperfluidPoolHDT"]) {
@@ -287,11 +293,12 @@ async function initPoolConfig() {
         sfpOwnerTreasury.address,
     ]);
 
-    await transferOwnershipToTL(
-        "BasePoolConfig",
-        "SuperfluidFactoringPoolConfig",
-        "SuperfluidFactoringPoolTimelock"
-    );
+    // Notice: Gnosis Safe doesn't support Mumbai now
+    // await transferOwnershipToTL(
+    //     "BasePoolConfig",
+    //     "SuperfluidFactoringPoolConfig",
+    //     "SuperfluidFactoringPoolTimelock"
+    // );
 
     await updateInitilizedContract("SuperfluidFactoringPoolConfig");
 }
@@ -371,7 +378,7 @@ async function prepare() {
     await sendTransaction("TestToken", usdcFromEA, "approve", [pool.address, amountEA]);
     await sendTransaction("SuperfluidFactoringPool", poolFromEA, "makeInitialDeposit", [amountEA]);
 
-    // await sendTransaction("SuperfluidFactoringPool", pool, "enablePool", []);
+    await sendTransaction("SuperfluidFactoringPool", pool, "enablePool", []);
 
     //payer
     const amountPayer = BN.from(100_000_000).mul(BN.from(10).pow(BN.from(decimals)));
@@ -386,23 +393,17 @@ async function initContracts() {
         deployer,
         proxyOwner,
         lender,
-        ,
+        ea_sfp,
         eaService,
         pdsService,
         treasury,
-        ,
         payer,
-        ,
-        ,
-        ,
-        ,
-        ea_sfp,
         sfpOperator,
         sfpOwnerTreasury,
     ] = await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);
-    console.log("ea_sfp address: " + ea_sfp.address);
+    console.log("ea address: " + ea_sfp.address);
 
     deployedContracts = await getDeployedContracts();
 
