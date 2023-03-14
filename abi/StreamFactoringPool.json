@@ -61,6 +61,11 @@
   },
   {
     "inputs": [],
+    "name": "durationTooLong",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "evaluationAgentServiceAccountRequired",
     "type": "error"
   },
@@ -961,29 +966,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "borrowAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "receivableAsset",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "receivableTokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "drawdownWithReceivable",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "enablePool",
     "outputs": [],
@@ -1443,9 +1425,9 @@
             "type": "uint256"
           },
           {
-            "internalType": "uint96",
+            "internalType": "uint256",
             "name": "flowrate",
-            "type": "uint96"
+            "type": "uint256"
           },
           {
             "internalType": "uint256",

@@ -10,7 +10,7 @@ contract StreamFactoringPoolStorage {
         address borrower;
         uint256 lastStartTime;
         uint256 endTime;
-        uint96 flowrate;
+        uint256 flowrate;
         uint256 receivedAmount;
     }
 

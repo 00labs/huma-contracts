@@ -427,7 +427,7 @@ describe("Superfluid Factoring", function () {
         });
     });
 
-    describe("drawdownWithReceivable", function () {
+    describe.skip("drawdownWithReceivable", function () {
         beforeEach(async function () {
             await poolContract
                 .connect(eaServiceAccount)
@@ -876,9 +876,74 @@ describe("Superfluid Factoring", function () {
 
             // const ts = Math.ceil(Date.now() / 1000) + 2;
             // await setNextBlockTimestamp(ts);
-            await poolContract
-                .connect(borrower)
-                .drawdownWithReceivable(toUSDC(collateralAmount), nftContract.address, streamId);
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    flowrate,
+                    streamDuration,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await poolContract.drawdownWithAuthorization(
+                toUSDC(collateralAmount),
+                nftContract.address,
+                calldata
+            );
         });
 
         it("Should payoff", async function () {
@@ -892,6 +957,8 @@ describe("Superfluid Factoring", function () {
                 .mul(beforeBorrowerFlowrate);
 
             await setNextBlockTimestamp(nts);
+
+            const streamId = 1;
 
             let res = await nftContract.getTradableStreamData(streamId);
             const flowrate = res[6];

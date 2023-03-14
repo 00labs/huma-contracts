@@ -26,18 +26,16 @@ abstract contract StreamFactoringPool is
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
 
-    function _getReceivableData(
-        address receivableAsset,
-        uint256 receivableTokenId,
-        uint256 interval
-    )
+    function _parseReceivableData(bytes memory data)
         internal
         view
         virtual
         returns (
-            uint256 receivableParam,
-            uint256 receivableAmount,
-            StreamInfo memory streamInfo
+            address receiver,
+            address token,
+            address origin,
+            uint256 flowrate,
+            uint256 durationInSeconds
         );
 
     function _payOwner(
@@ -51,7 +49,7 @@ abstract contract StreamFactoringPool is
     function _mintNFT(address receivableAsset, bytes calldata data)
         internal
         virtual
-        returns (uint256 tokenId, address borrower);
+        returns (uint256 tokenId);
 
     function onERC721Received(
         address, /*operator*/
@@ -109,36 +107,35 @@ abstract contract StreamFactoringPool is
         revert Errors.drawdownFunctionUsedInsteadofDrawdownWithReceivable();
     }
 
-    function drawdownWithReceivable(
+    function drawdownWithAuthorization(
         uint256 borrowAmount,
         address receivableAsset,
-        uint256 receivableTokenId
+        bytes calldata data
     ) external virtual {
         if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
 
-        _drawdown(msg.sender, borrowAmount, receivableAsset, receivableTokenId, false);
-    }
+        (address borrower, uint256 flowrate, uint256 duration) = _validateReceivableAsset(
+            borrowAmount,
+            receivableAsset,
+            data
+        );
 
-    function _drawdown(
-        address borrower,
-        uint256 borrowAmount,
-        address receivableAsset,
-        uint256 receivableTokenId,
-        bool transferred
-    ) internal virtual {
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
         BS.CreditRecordStatic memory crs = _getCreditRecordStatic(borrower);
+        if (duration > crs.intervalInDays * SECONDS_IN_A_DAY) revert Errors.durationTooLong();
 
-        _handleReceivableAsset(
-            borrower,
-            borrowAmount,
-            crs.intervalInDays * SECONDS_IN_A_DAY,
-            receivableAsset,
-            receivableTokenId,
-            transferred
-        );
+        uint256 receivableTokenId = _mintNFT(receivableAsset, data);
+
+        StreamInfo memory streamInfo;
+        streamInfo.lastStartTime = block.timestamp;
+        streamInfo.endTime = block.timestamp + duration;
+        streamInfo.flowrate = flowrate;
+        streamInfo.borrower = borrower;
+
+        // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
+        _streamInfoMapping[keccak256(abi.encode(receivableAsset, receivableTokenId))] = streamInfo;
 
         uint256 allowance = _underlyingToken.allowance(borrower, address(this));
         if (allowance < borrowAmount) revert Errors.allowanceTooLow();
@@ -155,32 +152,6 @@ abstract contract StreamFactoringPool is
             receivableAsset,
             receivableTokenId
         );
-    }
-
-    function drawdownWithAuthorization(
-        uint256 borrowAmount,
-        address receivableAsset,
-        bytes calldata data
-    ) external virtual {
-        if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
-
-        // (bool success, bytes memory returndata) = receivableAsset.call(data);
-        // if (!success) {
-        //     // Look for revert reason and bubble it up if present
-        //     if (returndata.length > 0) {
-        //         // The easiest way to bubble the revert reason is using memory via assembly
-        //         /// @solidity memory-safe-assembly
-        //         assembly {
-        //             let returndata_size := mload(returndata)
-        //             revert(add(32, returndata), returndata_size)
-        //         }
-        //     } else {
-        //         revert();
-        //     }
-        // }
-
-        (uint256 tokenId, address borrower) = _mintNFT(receivableAsset, data);
-        _drawdown(borrower, borrowAmount, receivableAsset, tokenId, true);
     }
 
     function payoff(address receivableAsset, uint256 receivableTokenId) external virtual {
@@ -289,46 +260,50 @@ abstract contract StreamFactoringPool is
         _receivableInfoMapping[borrower] = ri;
     }
 
-    /**
-     * @notice Transfers the backing asset for the credit line. The BaseCreditPool does not
-     * require backing asset, thus empty implementation. The extended contracts can
-     * support various backing assets, such as receivables, ERC721, and ERC20.
-     * @param borrower the borrower
-     * @param receivableAsset the contract address of the receivable asset.
-     * @param receivableTokenId parameter of the receivable asset.
-     */
-    function _handleReceivableAsset(
-        address borrower,
+    function _convertAmount(
+        uint256 amountIn,
+        address tokenIn,
+        address tokenOut
+    ) internal view returns (uint256 amountOut) {
+        uint256 decimalsIn = IERC20Metadata(tokenIn).decimals();
+        uint256 decimalsOut = IERC20Metadata(tokenOut).decimals();
+        if (decimalsIn == decimalsOut) {
+            amountOut = amountIn;
+        } else {
+            amountOut = (amountIn * decimalsOut) / decimalsIn;
+        }
+    }
+
+    function _validateReceivableAsset(
         uint256 borrowAmount,
-        uint256 interval,
         address receivableAsset,
-        uint256 receivableTokenId,
-        bool transferred
-    ) internal virtual {
-        // Transfer receivable asset.
+        bytes memory data
+    )
+        internal
+        virtual
+        returns (
+            address borrower,
+            uint256 flowrate,
+            uint256 duration
+        )
+    {
+        address token;
+        address origin;
+        (borrower, token, origin, flowrate, duration) = _parseReceivableData(data);
+
         BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
-
         assert(ri.receivableAsset != address(0));
-
         if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
 
-        (
-            uint256 receivableParam,
-            uint256 receivableAmount,
-            StreamInfo memory streamInfo
-        ) = _getReceivableData(receivableAsset, receivableTokenId, interval);
-
-        // For ERC721, receivableParam is the tokenId
+        uint256 receivableParam = uint256(keccak256(abi.encodePacked(token, origin, borrower)));
         if (ri.receivableParam != receivableParam) revert Errors.receivableAssetParamMismatch();
 
+        uint256 receivableAmount = flowrate * duration;
+        receivableAmount = _convertAmount(
+            receivableAmount,
+            address(token),
+            address(_underlyingToken)
+        );
         if (receivableAmount < borrowAmount) revert Errors.insufficientReceivableAmount();
-
-        // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
-        streamInfo.borrower = borrower;
-        _streamInfoMapping[keccak256(abi.encode(receivableAsset, receivableTokenId))] = streamInfo;
-
-        if (!transferred) {
-            IERC721(receivableAsset).safeTransferFrom(borrower, address(this), receivableTokenId);
-        }
     }
 }

@@ -141,7 +141,7 @@
   },
   {
     "inputs": [],
-    "name": "isTransferred",
+    "name": "invalidFlowrate",
     "type": "error"
   },
   {

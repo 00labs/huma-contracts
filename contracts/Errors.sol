@@ -81,6 +81,6 @@ contract Errors {
     error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
 
     // superfluid tradable stream
-    error isTransferred(); // 0x603159ab
     error durationTooLong(); // 0xf1dd53a8
+    error invalidFlowrate(); // 0xd06a9328
 }
