@@ -5,9 +5,9 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import "./StreamFactoringPoolStorage.sol";
-import "../../BaseCreditPool.sol";
-import "../StreamFeeManager.sol";
-import "../../Errors.sol";
+import "../BaseCreditPool.sol";
+import "./StreamFeeManager.sol";
+import "../Errors.sol";
 
 abstract contract StreamFactoringPool is
     BaseCreditPool,
