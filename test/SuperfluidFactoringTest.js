@@ -533,6 +533,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
+            let loanAmount = flowrate.mul(streamDuration);
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -594,7 +595,7 @@ describe("Superfluid Factoring", function () {
             );
 
             await poolContract.drawdownWithAuthorization(
-                toUSDC(collateralAmount),
+                loanAmount,
                 nftContract.address,
                 calldata
             );
@@ -603,14 +604,12 @@ describe("Superfluid Factoring", function () {
             const afterPoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
             const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
 
-            const interest = toUSDC(collateralAmount)
-                .mul(BN.from(streamDays * 1217))
-                .div(BN.from(365 * 10000));
+            const interest = loanAmount.mul(BN.from(streamDays * 1217)).div(BN.from(365 * 10000));
             const receivedAmount = afterAmount.sub(beforeAmount);
 
             const streamId = 1;
 
-            expect(receivedAmount).to.equal(toUSDC(collateralAmount).sub(interest));
+            expect(receivedAmount).to.equal(loanAmount.sub(interest));
             expect(await nftContract.ownerOf(streamId)).to.equal(poolContract.address);
             expect(beforeBorrowerFlowrate.sub(afterBorrowerFlowrate)).to.equal(
                 afterPoolFlowrate.sub(beforePoolFlowrate)
@@ -632,7 +631,7 @@ describe("Superfluid Factoring", function () {
                 0,
                 dueDate,
                 0,
-                toUSDC(collateralAmount),
+                loanAmount,
                 0,
                 0,
                 0,
@@ -728,6 +727,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
+            let loanAmount = flowrate.mul(BN.from(streamDuration));
             nonce = await nftContract.nonces(borrower.address);
             expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -791,7 +791,7 @@ describe("Superfluid Factoring", function () {
             tos.push(poolContract.address);
             datas.push(
                 poolContract.interface.encodeFunctionData("drawdownWithAuthorization", [
-                    toUSDC(collateralAmount),
+                    loanAmount,
                     nftContract.address,
                     calldata,
                 ])
@@ -809,14 +809,12 @@ describe("Superfluid Factoring", function () {
             const afterPoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
             const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
 
-            const interest = toUSDC(collateralAmount)
-                .mul(BN.from(streamDays * 1217))
-                .div(BN.from(365 * 10000));
+            const interest = loanAmount.mul(BN.from(streamDays * 1217)).div(BN.from(365 * 10000));
             const receivedAmount = afterAmount.sub(beforeAmount);
 
             const streamId = 1;
 
-            expect(receivedAmount).to.equal(toUSDC(collateralAmount).sub(interest));
+            expect(receivedAmount).to.equal(loanAmount.sub(interest));
             expect(await nftContract.ownerOf(streamId)).to.equal(poolContract.address);
             expect(beforeBorrowerFlowrate.sub(afterBorrowerFlowrate)).to.equal(
                 afterPoolFlowrate.sub(beforePoolFlowrate)
@@ -838,7 +836,7 @@ describe("Superfluid Factoring", function () {
                 0,
                 dueDate,
                 0,
-                toUSDC(collateralAmount),
+                loanAmount,
                 0,
                 0,
                 0,
@@ -855,6 +853,8 @@ describe("Superfluid Factoring", function () {
     });
 
     describe("payoff", function () {
+        let loanAmount;
+
         beforeEach(async function () {
             await poolContract
                 .connect(eaServiceAccount)
@@ -879,6 +879,10 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
+            loanAmount = flowrate.mul(BN.from(streamDuration));
+            console.log(
+                `collateralAmount: ${toDefaultToken(collateralAmount)}, loanAmount: ${loanAmount}`
+            );
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -940,7 +944,7 @@ describe("Superfluid Factoring", function () {
             );
 
             await poolContract.drawdownWithAuthorization(
-                toUSDC(collateralAmount),
+                loanAmount,
                 nftContract.address,
                 calldata
             );
@@ -974,12 +978,8 @@ describe("Superfluid Factoring", function () {
             const afterPoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
             const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
 
-            expect(afterBorrowAmount.sub(beforeBorrowAmount)).to.equal(
-                convertDefaultToUSDC(flowrate.mul(BN.from(streamDuration))).sub(
-                    toUSDC(collateralAmount)
-                )
-            );
-            expect(afterPoolAmount.sub(beforePoolAmount)).to.equal(toUSDC(collateralAmount));
+            expect(afterBorrowAmount.sub(beforeBorrowAmount)).to.equal(0);
+            expect(afterPoolAmount.sub(beforePoolAmount)).to.equal(loanAmount);
             expect(beforePoolFlowrate.sub(afterPoolFlowrate)).to.equal(
                 afterBorrowerFlowrate.sub(beforeBorrowerFlowrate)
             );
@@ -989,9 +989,9 @@ describe("Superfluid Factoring", function () {
                 "ERC721: invalid token ID"
             );
 
-            const sr = await poolContract.streamInfoMapping(nftContract.address, streamId);
+            const si = await poolContract.streamInfoMapping(nftContract.address, streamId);
             expect(afterBorrowXAmount.sub(beforeBorrowXAmount).sub(beforeReceivedAmount)).to.equal(
-                sr.flowrate.mul(BN.from(10000))
+                si.flowrate.mul(BN.from(10000))
             );
 
             cr = await poolContract.creditRecordMapping(borrower.address);
