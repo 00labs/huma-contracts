@@ -38,13 +38,19 @@ abstract contract StreamFactoringPool is
             uint256 durationInSeconds
         );
 
-    function _payOwner(
+    /**
+     * @notice Withdraw underlying token from receivable nft
+     * @param receivableAsset the address of receivable nft contract
+     * @param receivableTokenId the receivable nft id
+     * @param si the stored stream information of this receivable nft
+     */
+    function _withdrawFromNFT(
         address receivableAsset,
         uint256 receivableTokenId,
-        StreamInfo memory sr
+        StreamInfo memory si
     ) internal virtual;
 
-    function _burn(address receivableAsset, uint256 receivableTokenId) internal virtual;
+    function _burnNFT(address receivableAsset, uint256 receivableTokenId) internal virtual;
 
     function _mintNFT(address receivableAsset, bytes calldata data)
         internal
@@ -155,44 +161,44 @@ abstract contract StreamFactoringPool is
     }
 
     function payoff(address receivableAsset, uint256 receivableTokenId) external virtual {
-        StreamInfo memory sr = _streamInfoMapping[
+        StreamInfo memory si = _streamInfoMapping[
             keccak256(abi.encode(receivableAsset, receivableTokenId))
         ];
-        if (sr.borrower == address(0)) revert Errors.receivableAssetParamMismatch();
-        BS.CreditRecord memory cr = _getCreditRecord(sr.borrower);
+        if (si.borrower == address(0)) revert Errors.receivableAssetParamMismatch();
+        BS.CreditRecord memory cr = _getCreditRecord(si.borrower);
 
         if (block.timestamp < cr.dueDate) revert Errors.payoffTooSoon();
 
         uint256 beforeAmount = _underlyingToken.balanceOf(address(this));
-        _payOwner(receivableAsset, receivableTokenId, sr);
+        _withdrawFromNFT(receivableAsset, receivableTokenId, si);
         uint256 amountReceived = _underlyingToken.balanceOf(address(this)) - beforeAmount;
 
         if (amountReceived < cr.unbilledPrincipal) {
             uint256 difference = cr.unbilledPrincipal - amountReceived;
-            uint256 allowance = _underlyingToken.allowance(sr.borrower, address(this));
+            uint256 allowance = _underlyingToken.allowance(si.borrower, address(this));
             if (allowance > difference) {
-                _underlyingToken.safeTransferFrom(sr.borrower, address(this), difference);
+                _underlyingToken.safeTransferFrom(si.borrower, address(this), difference);
                 amountReceived = cr.unbilledPrincipal;
             } else {
-                _underlyingToken.safeTransferFrom(sr.borrower, address(this), allowance);
+                _underlyingToken.safeTransferFrom(si.borrower, address(this), allowance);
                 amountReceived += allowance;
             }
         }
 
         (uint256 amountPaid, bool paidoff, ) = _makePayment(
-            sr.borrower,
+            si.borrower,
             amountReceived,
             BS.PaymentStatus.ReceivedAndVerified
         );
 
-        // check paidoff?
+        // TODO If paidoff is false, need to transferFrom borrower's allowance or continue to lock NFT?
 
-        _burn(receivableAsset, receivableTokenId);
+        _burnNFT(receivableAsset, receivableTokenId);
 
-        delete _receivableInfoMapping[sr.borrower];
+        delete _receivableInfoMapping[si.borrower];
 
         if (amountReceived > amountPaid)
-            _disburseRemainingFunds(sr.borrower, amountReceived - amountPaid);
+            _disburseRemainingFunds(si.borrower, amountReceived - amountPaid);
     }
 
     function receivableInfoMapping(address account)
@@ -260,6 +266,13 @@ abstract contract StreamFactoringPool is
         _receivableInfoMapping[borrower] = ri;
     }
 
+    /**
+     * @notice Convert amount from tokenIn unit to tokenOut unit, e.g. from usdcx to usdc
+     * @param amountIn the amount value expressed in tokenIn unit
+     * @param tokenIn the address of tokenIn
+     * @param tokenOut the address of tokenOut
+     * @return amountOut the amount value expressed in tokenOut unit
+     */
     function _convertAmount(
         uint256 amountIn,
         address tokenIn,

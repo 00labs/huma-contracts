@@ -29,23 +29,27 @@ contract SuperfluidFactoringPool is StreamFactoringPool {
         flowrate = uint256(uint96(_flowrate));
     }
 
-    function _payOwner(
+    function _withdrawFromNFT(
         address receivableAsset,
         uint256 receivableTokenId,
-        StreamInfo memory sr
+        StreamInfo memory si
     ) internal virtual override {
         (, , , , , ISuperToken token, ) = TradableStream(receivableAsset).getTradableStreamData(
             receivableTokenId
         );
-        uint256 amount = sr.receivedAmount;
-        if (sr.endTime > sr.lastStartTime) {
-            amount += (sr.endTime - sr.lastStartTime) * sr.flowrate;
+        uint256 amount = si.receivedAmount;
+        if (si.endTime > si.lastStartTime) {
+            amount += (si.endTime - si.lastStartTime) * si.flowrate;
         }
 
         token.downgrade(amount);
     }
 
-    function _burn(address receivableAsset, uint256 receivableTokenId) internal virtual override {
+    function _burnNFT(address receivableAsset, uint256 receivableTokenId)
+        internal
+        virtual
+        override
+    {
         (
             ,
             address receiver,

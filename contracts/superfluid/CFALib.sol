@@ -34,15 +34,19 @@ library CFALib {
         int96 by
     ) internal {
         (, int96 curRate, , ) = _cfa.getFlow(token, address(this), to);
-        int96 newRate = curRate + by;
-        require(newRate >= 0, "overflow");
         if (curRate == 0) {
             cfaV1.createFlow(to, token, by);
         } else {
+            int96 newRate = curRate + by;
             cfaV1.updateFlow(to, token, newRate);
         }
     }
 
+    /**
+     * @notice Increase the rate of the specified flow by authorized operator,
+     * if this flow doesn't exist, create it,
+     * if this flow exists, update it.
+     */
     function _increaseFlowByOperator(
         CFAv1Library.InitData storage cfaV1,
         IConstantFlowAgreementV1 _cfa,
@@ -61,13 +65,12 @@ library CFALib {
         require(permissions == 7, "origin hasn't permitted Niflot as operator");
         (, int96 curRate, , ) = _cfa.getFlow(token, from, to);
 
-        int96 newRate = curRate + by;
-        require(newRate >= 0, "overflow");
-        require(newRate < allowance, "origin doesn't allow us to allocate that flowrate");
-
         if (curRate == 0) {
             cfaV1.createFlowByOperator(from, to, token, by);
         } else {
+            int96 newRate = curRate + by;
+            require(newRate < allowance, "origin doesn't allow us to allocate that flowrate");
+
             cfaV1.updateFlowByOperator(from, to, token, newRate);
         }
     }
