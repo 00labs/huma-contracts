@@ -8,8 +8,8 @@ const VERIFY_ARGS_PATH = "./deployment/goerli/verify_args/";
 const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
 const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
 
-const SF_USDC_ADDRESS = "0xc94dd466416A7dFE166aB2cF916D3875C049EBB7";
-const SF_HOST_ADDRESS = "0x22ff293e14F1EC3A09B137e9e06084AFd63adDF9";
+const SF_USDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
+const SF_HOST_ADDRESS = "0xEB796bdb90fFA0f28255275e16936D25d3418603";
 
 let deployedContracts, proxyOwner, network, deployer;
 
@@ -93,23 +93,23 @@ async function verifyContracts() {
     // const verifyUsdc = await verifyContract('USDC');
     // console.log(`Verify USDC result: ${verifyUsdc}`);
 
-    // const verifyEANFT = await verifyContract('EANFT');
-    // console.log(`Verify EANFT result: ${verifyEANFT}`);
+    const verifyEANFT = await verifyContract("EANFT");
+    console.log(`Verify EANFT result: ${verifyEANFT}`);
 
     const verifyTradableStream = await verifyContract("SuperfluidTradableStream", [
         `'${SF_HOST_ADDRESS}'`,
     ]);
     console.log(`Verify SuperfluidTradableStream result: ${verifyTradableStream}`);
 
-    // const verifyHumaConfig = await verifyContract("HumaConfig");
-    // console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
+    const verifyHumaConfig = await verifyContract("HumaConfig");
+    console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
 
-    // const verifyHumaConfigTL = await verifyContract("HumaConfigTimelock", [
-    //     0,
-    //     `['${HUMA_OWNER_MULTI_SIG}']`,
-    //     `['${deployer.address}']`,
-    // ]);
-    // console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+    const verifyHumaConfigTL = await verifyContract("HumaConfigTimelock", [
+        0,
+        `['${deployer.address}']`,
+        `['${deployer.address}']`,
+    ]);
+    console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
     const verifySuperfluidFactoringPoolTL = await verifyContract(
         "SuperfluidFactoringPoolTimelock",

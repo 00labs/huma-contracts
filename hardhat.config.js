@@ -65,14 +65,24 @@ let ea_bcp = process.env["EA_BASE_CREDIT"];
 if (!ea_bcp) {
     ea_bcp = EMPTY_PRIVATE_KEY;
 }
-let invoicePayer = process.env["INVOICE_PAYER"];
-if (!invoicePayer) {
-    invoicePayer = EMPTY_PRIVATE_KEY;
+let ea_sfp = process.env["EA_SUPERFLUID"];
+if (!ea_sfp) {
+    ea_sfp = EMPTY_PRIVATE_KEY;
 }
+let payer = process.env["PAYER"];
+if (!payer) {
+    payer = EMPTY_PRIVATE_KEY;
+}
+
 let baseCreditPoolOperator = process.env["BASE_CREDIT_POOL_OPERATOR"];
 if (!baseCreditPoolOperator) {
     baseCreditPoolOperator = EMPTY_PRIVATE_KEY;
 }
+let baseCreditPoolOwnerTreasury = process.env["BASE_CREDIT_POOL_OWNER_TREASURY"];
+if (!baseCreditPoolOwnerTreasury) {
+    baseCreditPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
+}
+
 let receivableFactoringPoolOperator = process.env["RECEIVABLE_FACTORING_POOL_OPERATOR"];
 if (!receivableFactoringPoolOperator) {
     receivableFactoringPoolOperator = EMPTY_PRIVATE_KEY;
@@ -81,9 +91,14 @@ let receivableFactoringPoolOwnerTreasury = process.env["RECEIVABLE_FACTORING_POO
 if (!receivableFactoringPoolOwnerTreasury) {
     receivableFactoringPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
 }
-let baseCreditPoolOwnerTreasury = process.env["BASE_CREDIT_POOL_OWNER_TREASURY"];
-if (!baseCreditPoolOwnerTreasury) {
-    baseCreditPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
+
+let sfpOperator = process.env["SUPERFLUID_POOL_OPERATOR"];
+if (!sfpOperator) {
+    sfpOperator = EMPTY_PRIVATE_KEY;
+}
+let sfpTreasury = process.env["SUPERFLUID_POOL_OWNER_TREASURY"];
+if (!sfpTreasury) {
+    sfpTreasury = EMPTY_PRIVATE_KEY;
 }
 
 //
@@ -170,11 +185,14 @@ module.exports = {
                 pdsService,
                 treasury,
                 ea_bcp,
-                invoicePayer,
+                payer,
                 baseCreditPoolOperator,
                 receivableFactoringPoolOperator,
                 baseCreditPoolOwnerTreasury,
                 receivableFactoringPoolOwnerTreasury,
+                ea_sfp,
+                sfpOperator,
+                sfpTreasury,
             ],
         },
         xdai: {
@@ -202,23 +220,39 @@ module.exports = {
             url: polygonUrl,
             accounts: [deployer, eaService],
         },
+        matic: {
+            url: polygonUrl,
+            accounts: [deployer, eaService, pdsService],
+        },
         mumbai: {
             url: mumbaiUrl,
             accounts: [
                 deployer,
                 proxyOwner,
                 lender,
-                ea,
+                ea_sfp,
                 eaService,
                 pdsService,
                 treasury,
-                ea_bcp,
-                invoicePayer,
+                payer,
+                sfpOperator,
+                sfpTreasury,
             ],
         },
-        matic: {
-            url: polygonUrl,
-            accounts: [deployer, eaService, pdsService],
+        maticmum: {
+            url: mumbaiUrl,
+            accounts: [
+                deployer,
+                proxyOwner,
+                lender,
+                ea_sfp,
+                eaService,
+                pdsService,
+                treasury,
+                payer,
+                sfpOperator,
+                sfpTreasury,
+            ],
         },
         optimism: {
             url: "https://mainnet.optimism.io",
@@ -358,8 +392,9 @@ module.exports = {
     etherscan: {
         apiKey: {
             goerli: process.env.ETHERSCAN_API_KEY || null,
-            polygon: process.env.POLYGONSCAN_API_KEY || null,
             mainnet: process.env.ETHERSCAN_API_KEY || null,
+            polygon: process.env.POLYGONSCAN_API_KEY || null,
+            polygonMumbai: process.env.POLYGONSCAN_API_KEY || null,
         },
     },
     contractSizer: {

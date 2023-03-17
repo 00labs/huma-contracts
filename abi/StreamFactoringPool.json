@@ -61,6 +61,11 @@
   },
   {
     "inputs": [],
+    "name": "durationTooLong",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "evaluationAgentServiceAccountRequired",
     "type": "error"
   },
@@ -950,12 +955,12 @@
         "type": "address"
       },
       {
-        "internalType": "uint256",
-        "name": "receivableTokenId",
-        "type": "uint256"
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
       }
     ],
-    "name": "drawdownWithReceivable",
+    "name": "drawdownWithAuthorization",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1420,9 +1425,9 @@
             "type": "uint256"
           },
           {
-            "internalType": "uint96",
+            "internalType": "uint256",
             "name": "flowrate",
-            "type": "uint96"
+            "type": "uint256"
           },
           {
             "internalType": "uint256",

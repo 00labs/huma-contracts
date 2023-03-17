@@ -60,6 +60,6 @@
   "creditLineOutstanding()": "0xc64e338c",
   "allowanceTooLow()": "0xcd8ef369",
   "payoffTooSoon()": "0x1cbb3c48",
-  "isTransferred()": "0x603159ab",
-  "durationTooLong()": "0xf1dd53a8"
+  "durationTooLong()": "0xf1dd53a8",
+  "invalidFlowrate()": "0xd06a9328"
 }

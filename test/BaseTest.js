@@ -231,7 +231,7 @@ async function evmRevert(sId) {
 function checkRecord(r, rs, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) {
     if (v1 != "SKIP") expect(rs.creditLimit).to.equal(v1);
     if (v2 != "SKIP") expect(r.unbilledPrincipal).to.equal(v2);
-    if (v3 != "SKIP") expect(r.dueDate).to.be.equal(v3);
+    if (v3 != "SKIP") expect(r.dueDate).to.equal(v3);
     if (v4 != "SKIP") expect(r.correction).to.equal(v4); //be.within(v4 - 1, v4 + 1);
     if (v5 != "SKIP") expect(r.totalDue).to.equal(v5);
     if (v6 != "SKIP") expect(r.feesAndInterestDue).to.equal(v6);

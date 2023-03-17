@@ -7,8 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ISuperfluid, ISuperToken, ISuperApp} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
 import {IConstantFlowAgreementV1} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
 import {CFAv1Library} from "@superfluid-finance/ethereum-contracts/contracts/apps/CFAv1Library.sol";
-import {CFALib} from "../CFALib.sol";
-import "./IReceivableAsset.sol";
+import {CFALib} from "./CFALib.sol";
 import "hardhat/console.sol";
 
 struct TradableStreamMetadata {
@@ -23,7 +22,9 @@ struct TradableStreamMetadata {
 // A TradableStream's maximum duration is one month.
 uint256 constant MAX_DURATION_SECONDS = 60 * 60 * 24 * 30;
 
-contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
+contract TradableStream is ERC721, Ownable {
+    string public constant version = "1";
+
     using CFAv1Library for CFAv1Library.InitData;
     using CFALib for CFAv1Library.InitData;
     CFAv1Library.InitData public cfaV1;
@@ -61,12 +62,19 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
     mapping(uint256 => TradableStreamMetadata) public metadatas;
 
     /// @notice origin => investor => total acquired flowrate
-    mapping(address => mapping(address => int96)) private _investments;
+    mapping(address => mapping(address => int96)) public _investments;
 
     /// @notice current token id
     uint256 public nextId;
 
-    constructor(ISuperfluid host) payable Ownable() ERC721("Niflot", "NIFLOT") {
+    bytes32 public immutable DOMAIN_SEPARATOR;
+    bytes32 public constant MINTTO_WITH_AUTHORIZATION_TYPEHASH =
+        keccak256(
+            "MintToWithAuthorization(address receiver,address token,address origin,address owner,int96 flowrate,uint256 durationInSeconds,uint256 nonce,uint256 expiry)"
+        );
+    mapping(address => uint256) public nonces;
+
+    constructor(ISuperfluid host) payable Ownable() ERC721("TradableStream", "TSTRM") {
         IConstantFlowAgreementV1 cfa = IConstantFlowAgreementV1(
             address(
                 host.getAgreementClass(
@@ -76,6 +84,18 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
         );
 
         cfaV1 = CFAv1Library.InitData(host, cfa);
+
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256(bytes("TradableStream")),
+                keccak256(bytes(version)),
+                block.chainid,
+                address(this)
+            )
+        );
     }
 
     /// @dev require that tokenId exists (minted and not burnt)
@@ -90,26 +110,13 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
     /// @dev  Will revert if TradableStream is not mature
     /// @dev See `_beforeTokenTransfer` for the handover process.
     /// @param tokenId The token ID of the TradableStream that is being burned
-    function burn(uint256 tokenId) external override onlyOwner {
+    function burn(uint256 tokenId) external {
+        require(msg.sender == ownerOf(tokenId), "no permission to burn");
+
         TradableStreamMetadata memory meta = metadatas[tokenId];
         require(meta.started == 0 || isMature(tokenId), "cant burn a non mature TradableStream");
 
         _burn(tokenId);
-
-        // Refund the extra amount to receiver
-
-        uint256 refundAmount = (block.timestamp - (meta.started + meta.duration)) *
-            uint256(uint96(meta.flowrate));
-        address owner = ownerOf(tokenId);
-        uint256 balance = meta.token.balanceOf(owner);
-        uint256 allownance = meta.token.allowance(owner, address(this));
-        uint256 sendAmount = balance < allownance ? balance : allownance;
-        sendAmount = sendAmount < refundAmount ? sendAmount : refundAmount;
-
-        if (sendAmount > 0) {
-            meta.token.transferFrom(owner, meta.receiver, sendAmount);
-            emit RefundExtraToken(meta.receiver, owner, refundAmount, sendAmount);
-        }
 
         emit TradableStreamTerminated(tokenId, meta.origin, meta.receiver);
     }
@@ -128,24 +135,44 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
     ) external {
         // Accepted token toggle?
 
+        _mintTo(msg.sender, token, origin, msg.sender, flowrate, durationInSeconds);
+    }
+
+    function _mintTo(
+        address receiver,
+        ISuperToken token,
+        address origin,
+        address owner,
+        int96 flowrate,
+        uint256 durationInSeconds
+    ) internal returns (uint256 tokenId) {
+        require(receiver != address(0), "Empty receiver");
+        require(address(token) != address(0), "Empty token");
+        require(origin != address(0), "Empty origin");
+        require(owner != address(0), "Empty owner");
+
+        require(flowrate > 0, "Invalid flowrate");
+
         require(
             MAX_DURATION_SECONDS >= durationInSeconds,
             "TradableStream duration exceeds one month"
         );
 
         // Get flow from origin to receiver
-        (, int96 allFlowrate, , ) = cfaV1.cfa.getFlow(token, origin, msg.sender);
+        (, int96 allFlowrate, , ) = cfaV1.cfa.getFlow(token, origin, receiver);
 
         // Get investments
-        int96 alreadyInvested = _investments[origin][msg.sender];
+        int96 alreadyInvested = _investments[origin][receiver];
         require(allFlowrate > alreadyInvested, "you don't have any available flowrate");
         int96 availableFlowrate = allFlowrate - alreadyInvested;
 
         require(flowrate < availableFlowrate, "you don't have enough available flowrate");
 
-        metadatas[nextId] = TradableStreamMetadata({
+        tokenId = nextId;
+
+        metadatas[tokenId] = TradableStreamMetadata({
             origin: origin,
-            receiver: msg.sender,
+            receiver: receiver,
             flowrate: flowrate,
             token: token,
             duration: durationInSeconds,
@@ -153,8 +180,52 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
         });
 
         //will start streaming from TradableStream to msg.sender / receiver
-        _mint(msg.sender, nextId);
+        _mint(receiver, tokenId);
         nextId += 1;
+
+        if (owner != receiver) {
+            _transfer(receiver, owner, tokenId);
+        }
+    }
+
+    function mintToWithAuthorization(
+        address receiver,
+        address token,
+        address origin,
+        int96 flowrate,
+        uint256 durationInSeconds,
+        uint256 expiry,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint256) {
+        require(expiry == 0 || block.timestamp <= expiry, "Authorization expired");
+
+        uint256 nonce = nonces[receiver]++;
+
+        bytes32 data = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(
+                    abi.encode(
+                        MINTTO_WITH_AUTHORIZATION_TYPEHASH,
+                        receiver,
+                        token,
+                        origin,
+                        msg.sender,
+                        flowrate,
+                        durationInSeconds,
+                        nonce,
+                        expiry
+                    )
+                )
+            )
+        );
+
+        require(receiver == ecrecover(data, v, r, s), "Invalid authorization");
+        return
+            _mintTo(receiver, ISuperToken(token), origin, msg.sender, flowrate, durationInSeconds);
     }
 
     function _beforeTokenTransfer(
@@ -197,14 +268,20 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
             );
         } else {
             //transfer
-            require(meta.started == 0, "TradableStream can't be transferred multiple times");
-            metadatas[tokenId].started = block.timestamp;
-            emit TradableStreamStarted(
-                tokenId,
-                meta.origin,
-                meta.receiver,
-                block.timestamp + meta.duration
-            );
+            //transfer
+            if (meta.started == 0) {
+                metadatas[tokenId].started = block.timestamp;
+                emit TradableStreamStarted(
+                    tokenId,
+                    meta.origin,
+                    meta.receiver,
+                    block.timestamp + meta.duration
+                );
+            } else {
+                if (isMature(tokenId)) {
+                    revert("this niflot is mature and can only be burnt");
+                }
+            }
 
             _investments[meta.origin][oldReceiver] -= meta.flowrate;
             _investments[meta.origin][newReceiver] += meta.flowrate;
@@ -249,14 +326,6 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
         assert(meta.flowrate > 0);
 
         token = meta.token;
-        value = _remainingValue(meta, meta.flowrate);
-    }
-
-    function _remainingValue(TradableStreamMetadata memory meta, int96 flowrate)
-        internal
-        view
-        returns (uint256 value)
-    {
         int256 remainingSeconds;
         if (meta.started == 0) {
             remainingSeconds = int256(meta.duration);
@@ -270,7 +339,7 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
         if (remainingSeconds <= 0) {
             value = 0;
         } else {
-            value = uint256(remainingSeconds) * uint256(uint96(flowrate));
+            value = uint256(remainingSeconds) * uint256(uint96(meta.flowrate));
         }
     }
 
@@ -298,43 +367,5 @@ contract TradableStreamV1 is ERC721, Ownable, IReceivableAssetV1 {
             meta.token,
             meta.flowrate
         );
-    }
-
-    function payOwner(uint256 tokenId, uint256 amount) external override onlyOwner {
-        require(isMature(tokenId), "this TradableStream is not mature");
-        TradableStreamMetadata memory meta = metadatas[tokenId];
-        assert(meta.flowrate > 0);
-        uint256 availableAmount = meta.duration * uint256(uint96(meta.flowrate));
-        if (amount > availableAmount) {
-            amount = availableAmount;
-        }
-        address owner = ownerOf(tokenId);
-
-        meta.token.transferFrom(owner, address(this), amount);
-        meta.token.downgradeTo(owner, amount);
-    }
-
-    function getReceivableData(uint256 tokenId)
-        external
-        view
-        override
-        exists(tokenId)
-        returns (
-            uint256 receivableParam,
-            uint256 receivableAmount,
-            address token
-        )
-    {
-        TradableStreamMetadata memory meta = metadatas[tokenId];
-        address owner = ownerOf(tokenId);
-        receivableParam = uint256(keccak256(abi.encodePacked(meta.token, meta.origin, owner)));
-        (, int96 flowrate, , ) = cfaV1.cfa.getFlow(meta.token, meta.origin, owner);
-        if (flowrate < 0) {
-            flowrate = 0;
-        } else if (flowrate > meta.flowrate) {
-            flowrate = meta.flowrate;
-        }
-        receivableAmount = _remainingValue(meta, flowrate);
-        token = address(meta.token);
     }
 }

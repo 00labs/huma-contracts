@@ -5,11 +5,15 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import "./StreamFactoringPoolStorage.sol";
-import "../../BaseCreditPool.sol";
-import "./IReceivableAsset.sol";
-import "../StreamFeeManager.sol";
+import "../BaseCreditPool.sol";
+import "./StreamFeeManager.sol";
+import "../Errors.sol";
 
-contract StreamFactoringPoolV1 is BaseCreditPool, StreamFactoringPoolStorageV1, IERC721Receiver {
+abstract contract StreamFactoringPool is
+    BaseCreditPool,
+    StreamFactoringPoolStorage,
+    IERC721Receiver
+{
     using ERC165Checker for address;
     using SafeERC20 for IERC20;
 
@@ -21,6 +25,37 @@ contract StreamFactoringPoolV1 is BaseCreditPool, StreamFactoringPoolStorageV1, 
         uint256 receivableTokenId
     );
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
+
+    function _parseReceivableData(bytes memory data)
+        internal
+        view
+        virtual
+        returns (
+            address receiver,
+            address token,
+            address origin,
+            uint256 flowrate,
+            uint256 durationInSeconds
+        );
+
+    /**
+     * @notice Withdraw underlying token from receivable nft
+     * @param receivableAsset the address of receivable nft contract
+     * @param receivableTokenId the receivable nft id
+     * @param si the stored stream information of this receivable nft
+     */
+    function _withdrawFromNFT(
+        address receivableAsset,
+        uint256 receivableTokenId,
+        StreamInfo memory si
+    ) internal virtual;
+
+    function _burnNFT(address receivableAsset, uint256 receivableTokenId) internal virtual;
+
+    function _mintNFT(address receivableAsset, bytes calldata data)
+        internal
+        virtual
+        returns (uint256 tokenId);
 
     function onERC721Received(
         address, /*operator*/
@@ -78,22 +113,40 @@ contract StreamFactoringPoolV1 is BaseCreditPool, StreamFactoringPoolStorageV1, 
         revert Errors.drawdownFunctionUsedInsteadofDrawdownWithReceivable();
     }
 
-    function drawdownWithReceivable(
+    function drawdownWithAuthorization(
         uint256 borrowAmount,
         address receivableAsset,
-        uint256 receivableTokenId
+        bytes calldata data
     ) external virtual {
         if (receivableAsset == address(0)) revert Errors.zeroAddressProvided();
 
-        address borrower = msg.sender;
+        (address borrower, uint256 flowrate, uint256 duration) = _validateReceivableAsset(
+            borrowAmount,
+            receivableAsset,
+            data
+        );
+
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
-        _transferReceivableAsset(borrower, borrowAmount, receivableAsset, receivableTokenId);
+        BS.CreditRecordStatic memory crs = _getCreditRecordStatic(borrower);
+        if (duration > crs.intervalInDays * SECONDS_IN_A_DAY) revert Errors.durationTooLong();
 
-        StreamFeeManager(address(_feeManager)).setTempCreditRecordStatic(
-            _getCreditRecordStatic(borrower)
-        );
+        uint256 receivableTokenId = _mintNFT(receivableAsset, data);
+
+        StreamInfo memory streamInfo;
+        streamInfo.lastStartTime = block.timestamp;
+        streamInfo.endTime = block.timestamp + duration;
+        streamInfo.flowrate = flowrate;
+        streamInfo.borrower = borrower;
+
+        // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
+        _streamInfoMapping[keccak256(abi.encode(receivableAsset, receivableTokenId))] = streamInfo;
+
+        uint256 allowance = _underlyingToken.allowance(borrower, address(this));
+        if (allowance < borrowAmount) revert Errors.allowanceTooLow();
+
+        StreamFeeManager(address(_feeManager)).setTempCreditRecordStatic(crs);
         _creditRecordStaticMapping[borrower].aprInBps = 0;
         uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
         StreamFeeManager(address(_feeManager)).deleteTempCreditRecordStatic();
@@ -108,40 +161,60 @@ contract StreamFactoringPoolV1 is BaseCreditPool, StreamFactoringPoolStorageV1, 
     }
 
     function payoff(address receivableAsset, uint256 receivableTokenId) external virtual {
-        address borrower = _receivableOwnershipMapping[
+        StreamInfo memory si = _streamInfoMapping[
             keccak256(abi.encode(receivableAsset, receivableTokenId))
         ];
-        require(isAbleToPayoff(borrower, receivableAsset, receivableTokenId), "Can't payoff");
+        if (si.borrower == address(0)) revert Errors.receivableAssetParamMismatch();
+        BS.CreditRecord memory cr = _getCreditRecord(si.borrower);
 
-        BS.CreditRecord memory cr = _getCreditRecord(borrower);
+        if (block.timestamp < cr.dueDate) revert Errors.payoffTooSoon();
+
         uint256 beforeAmount = _underlyingToken.balanceOf(address(this));
-        IReceivableAssetV1(receivableAsset).payOwner(receivableTokenId, cr.unbilledPrincipal);
+        _withdrawFromNFT(receivableAsset, receivableTokenId, si);
         uint256 amountReceived = _underlyingToken.balanceOf(address(this)) - beforeAmount;
 
+        if (amountReceived < cr.unbilledPrincipal) {
+            uint256 difference = cr.unbilledPrincipal - amountReceived;
+            uint256 allowance = _underlyingToken.allowance(si.borrower, address(this));
+            if (allowance > difference) {
+                _underlyingToken.safeTransferFrom(si.borrower, address(this), difference);
+                amountReceived = cr.unbilledPrincipal;
+            } else {
+                _underlyingToken.safeTransferFrom(si.borrower, address(this), allowance);
+                amountReceived += allowance;
+            }
+        }
+
         (uint256 amountPaid, bool paidoff, ) = _makePayment(
-            borrower,
+            si.borrower,
             amountReceived,
             BS.PaymentStatus.ReceivedAndVerified
         );
 
-        require(paidoff, "Received amount isn't enough to payoff");
+        // TODO If paidoff is false, need to transferFrom borrower's allowance or continue to lock NFT?
 
-        IReceivableAssetV1(receivableAsset).burn(receivableTokenId);
+        _burnNFT(receivableAsset, receivableTokenId);
+
+        delete _receivableInfoMapping[si.borrower];
 
         if (amountReceived > amountPaid)
-            _disburseRemainingFunds(borrower, amountReceived - amountPaid);
+            _disburseRemainingFunds(si.borrower, amountReceived - amountPaid);
     }
 
-    function isAbleToPayoff(
-        address borrower,
-        address receivableAsset,
-        uint256 receivableTokenId
-    ) public view returns (bool) {
-        (, uint256 receivableAmount, ) = IReceivableAssetV1(receivableAsset).getReceivableData(
-            receivableTokenId
-        );
-        BS.CreditRecord memory cr = _getCreditRecord(borrower);
-        return receivableAmount >= cr.unbilledPrincipal;
+    function receivableInfoMapping(address account)
+        external
+        view
+        returns (BS.ReceivableInfo memory)
+    {
+        return _receivableInfoMapping[account];
+    }
+
+    function streamInfoMapping(address receivableAsset, uint256 receivableTokenId)
+        external
+        view
+        returns (StreamInfo memory)
+    {
+        return _streamInfoMapping[keccak256(abi.encode(receivableAsset, receivableTokenId))];
     }
 
     /**
@@ -182,7 +255,7 @@ contract StreamFactoringPoolV1 is BaseCreditPool, StreamFactoringPoolStorageV1, 
         // If receivables are required, they need to be ERC721 or ERC20.
         if (
             receivableAsset != address(0) &&
-            !receivableAsset.supportsInterface(type(IReceivableAssetV1).interfaceId)
+            !receivableAsset.supportsInterface(type(IERC721).interfaceId)
         ) revert Errors.unsupportedReceivableAsset();
 
         BS.ReceivableInfo memory ri = BS.ReceivableInfo(
@@ -194,44 +267,56 @@ contract StreamFactoringPoolV1 is BaseCreditPool, StreamFactoringPoolStorageV1, 
     }
 
     /**
-     * @notice Transfers the backing asset for the credit line. The BaseCreditPool does not
-     * require backing asset, thus empty implementation. The extended contracts can
-     * support various backing assets, such as receivables, ERC721, and ERC20.
-     * @param borrower the borrower
-     * @param receivableAsset the contract address of the receivable asset.
-     * @param receivableTokenId parameter of the receivable asset.
+     * @notice Convert amount from tokenIn unit to tokenOut unit, e.g. from usdcx to usdc
+     * @param amountIn the amount value expressed in tokenIn unit
+     * @param tokenIn the address of tokenIn
+     * @param tokenOut the address of tokenOut
+     * @return amountOut the amount value expressed in tokenOut unit
      */
-    function _transferReceivableAsset(
-        address borrower,
+    function _convertAmount(
+        uint256 amountIn,
+        address tokenIn,
+        address tokenOut
+    ) internal view returns (uint256 amountOut) {
+        uint256 decimalsIn = IERC20Metadata(tokenIn).decimals();
+        uint256 decimalsOut = IERC20Metadata(tokenOut).decimals();
+        if (decimalsIn == decimalsOut) {
+            amountOut = amountIn;
+        } else {
+            amountOut = (amountIn * decimalsOut) / decimalsIn;
+        }
+    }
+
+    function _validateReceivableAsset(
         uint256 borrowAmount,
         address receivableAsset,
-        uint256 receivableTokenId
-    ) internal virtual {
-        // Transfer receivable asset.
+        bytes memory data
+    )
+        internal
+        virtual
+        returns (
+            address borrower,
+            uint256 flowrate,
+            uint256 duration
+        )
+    {
+        address token;
+        address origin;
+        (borrower, token, origin, flowrate, duration) = _parseReceivableData(data);
+
         BS.ReceivableInfo memory ri = _receivableInfoMapping[borrower];
-
         assert(ri.receivableAsset != address(0));
-
         if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
 
-        (uint256 receivableParam, uint256 receivableAmount, address token) = IReceivableAssetV1(
-            receivableAsset
-        ).getReceivableData(receivableTokenId);
-
-        // For ERC721, receivableParam is the tokenId
+        uint256 receivableParam = uint256(keccak256(abi.encodePacked(token, origin, borrower)));
         if (ri.receivableParam != receivableParam) revert Errors.receivableAssetParamMismatch();
 
+        uint256 receivableAmount = flowrate * duration;
+        receivableAmount = _convertAmount(
+            receivableAmount,
+            address(token),
+            address(_underlyingToken)
+        );
         if (receivableAmount < borrowAmount) revert Errors.insufficientReceivableAmount();
-
-        // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
-        // for lookup by off-chain payment processers
-        _receivableOwnershipMapping[
-            keccak256(abi.encode(receivableAsset, receivableTokenId))
-        ] = borrower;
-
-        IERC721(receivableAsset).safeTransferFrom(borrower, address(this), receivableTokenId);
-        uint256 allowance = IERC20(token).allowance(address(this), receivableAsset) +
-            receivableAmount;
-        IERC20(token).approve(receivableAsset, allowance);
     }
 }
