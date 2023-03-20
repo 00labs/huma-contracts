@@ -19,4 +19,5 @@ jobs:
       - name: run tests
         env:
           GOERLI_URL: ${{ secrets.GOERLI_URL }}
+          MUMBAI_URL: ${{ secrets.MUMBAI_URL }}
         run: yarn test
