@@ -264,6 +264,25 @@ function checkResults(r, vs) {
     }
 }
 
+function printRecord(r, rs) {
+    console.log(
+        `cr: [unbilledPrincipal: ${r.unbilledPrincipal}` +
+            `, dueDate: ${r.dueDate}` +
+            `, correction: ${r.correction}` +
+            `, totalDue: ${r.totalDue}` +
+            `, feesAndInterestDue: ${r.feesAndInterestDue}` +
+            `, missedPeriods: ${r.missedPeriods}` +
+            `, remainingPeriods: ${r.remainingPeriods}` +
+            `, state: ${r.state}]`
+    );
+    console.log(
+        `crs: [creditLimit: ${rs.creditLimit}` +
+            `, aprInBps: ${rs.aprInBps}` +
+            `, intervalInDays: ${rs.intervalInDays}` +
+            `, state: ${rs.state}]`
+    );
+}
+
 module.exports = {
     deployContracts,
     deployAndSetupPool,
@@ -278,4 +297,5 @@ module.exports = {
     evmSnapshot,
     evmRevert,
     checkResults,
+    printRecord,
 };
