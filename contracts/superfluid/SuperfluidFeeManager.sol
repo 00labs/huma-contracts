@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../BaseFeeManager.sol";
 
-contract StreamFeeManager is BaseFeeManager {
+contract SuperfluidFeeManager is BaseFeeManager {
     BS.CreditRecordStatic internal _tempCrStatic;
 
     function distBorrowingAmount(uint256 borrowAmount)

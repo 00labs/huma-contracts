@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
-import {BaseStructs as BS} from "../libraries/BaseStructs.sol";
 
-contract StreamFactoringPoolStorage {
-    /// mapping from wallet address to the receivable supplied by this wallet
-    mapping(address => BS.ReceivableInfo) internal _receivableInfoMapping;
-
+contract SuperfluidPoolProcessorStorage {
     struct StreamInfo {
         address borrower;
         uint256 lastStartTime;
@@ -18,6 +14,10 @@ contract StreamFactoringPoolStorage {
     /// the borrower address. This is needed for us to locate the borrower using
     /// the received receivable asset.
     mapping(bytes32 => StreamInfo) internal _streamInfoMapping;
+
+    /// mapping from the keccak256 hash of the Super token address and flowId to
+    /// the keccak256 hash of the receivableAddress and receivableParam(tokenId)
+    mapping(bytes32 => bytes32) internal _flowMapping;
 
     uint256[100] private __gap;
 }

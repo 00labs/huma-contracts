@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
 import "./StreamFactoringPoolStorage.sol";
 import "../BaseCreditPool.sol";
-import "./StreamFeeManager.sol";
+import "./SuperfluidFeeManager.sol";
 import "../Errors.sol";
 
 abstract contract StreamFactoringPool is
@@ -146,10 +146,10 @@ abstract contract StreamFactoringPool is
         uint256 allowance = _underlyingToken.allowance(borrower, address(this));
         if (allowance < borrowAmount) revert Errors.allowanceTooLow();
 
-        StreamFeeManager(address(_feeManager)).setTempCreditRecordStatic(crs);
-        _creditRecordStaticMapping[borrower].aprInBps = 0;
+        SuperfluidFeeManager(address(_feeManager)).setTempCreditRecordStatic(crs);
+        //_creditRecordStaticMapping[borrower].aprInBps = 0;
         uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
-        StreamFeeManager(address(_feeManager)).deleteTempCreditRecordStatic();
+        SuperfluidFeeManager(address(_feeManager)).deleteTempCreditRecordStatic();
 
         emit DrawdownMadeWithReceivable(
             borrower,
