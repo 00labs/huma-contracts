@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../ReceivableFactoringPoolProcessor.sol";
 import "./SuperfluidPoolProcessorStorage.sol";
@@ -13,6 +14,8 @@ contract SuperfluidPoolProcessor is
     ReceivableFactoringPoolProcessor,
     SuperfluidPoolProcessorStorage
 {
+    using SafeERC20 for IERC20;
+
     function mintAndDrawdown(
         address borrower,
         uint256 borrowAmount,
@@ -36,7 +39,7 @@ contract SuperfluidPoolProcessor is
 
         SuperfluidFeeManager(feeManager).setTempCreditRecordStatic(crs);
         // _creditRecordStaticMapping[borrower].aprInBps = 0;
-        uint256 netAmountToBorrower = pool.drawdown(borrower, borrowAmount);
+        uint256 netAmountToBorrower = pool.drawdown4Processor(borrower, borrowAmount);
         SuperfluidFeeManager(feeManager).deleteTempCreditRecordStatic();
 
         emit DrawdownMadeWithReceivable(
@@ -46,6 +49,87 @@ contract SuperfluidPoolProcessor is
             receivableAsset,
             receivableId
         );
+    }
+
+    function payoff(address receivableAsset, uint256 receivableTokenId) external virtual {
+        StreamInfo memory si = _streamInfoMapping[
+            keccak256(abi.encode(receivableAsset, receivableTokenId))
+        ];
+        if (si.borrower == address(0)) revert Errors.receivableAssetParamMismatch();
+        BS.CreditRecord memory cr = pool.creditRecordMapping(si.borrower);
+
+        if (block.timestamp < cr.dueDate) revert Errors.payoffTooSoon();
+
+        (address underlyingTokenAddr, , , ) = pool.getCoreData();
+        IERC20 underlyingToken = IERC20(underlyingTokenAddr);
+
+        uint256 beforeAmount = underlyingToken.balanceOf(address(this));
+        _withdrawFromNFT(receivableAsset, receivableTokenId, si);
+        uint256 amountReceived = underlyingToken.balanceOf(address(this)) - beforeAmount;
+
+        if (amountReceived < cr.unbilledPrincipal) {
+            uint256 difference = cr.unbilledPrincipal - amountReceived;
+            uint256 allowance = underlyingToken.allowance(si.borrower, address(this));
+            if (allowance > difference) {
+                underlyingToken.safeTransferFrom(si.borrower, address(this), difference);
+                amountReceived = cr.unbilledPrincipal;
+            } else {
+                underlyingToken.safeTransferFrom(si.borrower, address(this), allowance);
+                amountReceived += allowance;
+            }
+        }
+
+        (uint256 amountPaid, bool paidoff) = pool.makePayment4Processor(
+            si.borrower,
+            amountReceived
+        );
+
+        // TODO If paidoff is false, need to transferFrom borrower's allowance or continue to lock NFT?
+
+        _burnNFT(receivableAsset, receivableTokenId);
+    }
+
+    function _burnNFT(address receivableAsset, uint256 receivableTokenId) internal virtual {
+        (
+            ,
+            address receiver,
+            uint256 duration,
+            uint256 started,
+            ,
+            ISuperToken token,
+            int96 flowrate
+        ) = TradableStream(receivableAsset).getTradableStreamData(receivableTokenId);
+
+        // Refund the extra amount to receiver
+
+        uint256 refundAmount = (block.timestamp - (started + duration)) *
+            uint256(uint96(flowrate));
+        uint256 balance = token.balanceOf(address(this));
+        uint256 sendAmount = balance < refundAmount ? balance : refundAmount;
+
+        if (sendAmount > 0) {
+            token.transfer(receiver, sendAmount);
+        }
+
+        // check isMature?
+
+        TradableStream(receivableAsset).burn(receivableTokenId);
+    }
+
+    function _withdrawFromNFT(
+        address receivableAsset,
+        uint256 receivableTokenId,
+        StreamInfo memory si
+    ) internal virtual {
+        (, , , , , ISuperToken token, ) = TradableStream(receivableAsset).getTradableStreamData(
+            receivableTokenId
+        );
+        uint256 amount = si.receivedAmount;
+        if (si.endTime > si.lastStartTime) {
+            amount += (si.endTime - si.lastStartTime) * si.flowrate;
+        }
+
+        token.downgrade(amount);
     }
 
     /**

@@ -96,7 +96,7 @@ contract ReceivableFactoringPoolV2 is
         if (receivableParam != ri.receivableParam) revert Errors.receivableAssetParamMismatch();
     }
 
-    function drawdown(address borrower, uint256 borrowAmount)
+    function drawdown4Processor(address borrower, uint256 borrowAmount)
         external
         virtual
         returns (uint256 netAmountToBorrower)
@@ -104,6 +104,33 @@ contract ReceivableFactoringPoolV2 is
         _onlyProcessor();
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
         netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
+    }
+
+    function makePayment4Processor(address borrower, uint256 amount)
+        external
+        virtual
+        returns (uint256 amountPaid, bool paidoff)
+    {
+        _onlyProcessor();
+        (amountPaid, paidoff, ) = _makePayment(
+            borrower,
+            amount,
+            BS.PaymentStatus.ReceivedAndVerified
+        );
+
+        delete receivableInfoMapping[borrower];
+
+        if (amount > amountPaid) _disburseRemainingFunds(borrower, amount - amountPaid);
+    }
+
+    /**
+     * @notice disburse the remaining funds associated with the factoring to the borrower
+     * @param receiver receiver of the funds, namely, the borrower
+     * @param amount the amount of the dispursement
+     */
+    function _disburseRemainingFunds(address receiver, uint256 amount) internal {
+        _underlyingToken.safeTransfer(receiver, amount);
+        emit ExtraFundsDispersed(receiver, amount);
     }
 
     /**

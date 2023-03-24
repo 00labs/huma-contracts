@@ -22,6 +22,8 @@ interface IReceivablePool {
         view
         returns (BS.CreditRecordStatic memory);
 
+    function creditRecordMapping(address account) external view returns (BS.CreditRecord memory);
+
     function validateReceivableAsset(
         address borrower,
         uint256 borrowAmount,
@@ -29,7 +31,11 @@ interface IReceivablePool {
         uint256 receivableParam
     ) external;
 
-    function drawdown(address borrower, uint256 borrowAmount)
+    function drawdown4Processor(address borrower, uint256 borrowAmount)
         external
         returns (uint256 netAmountToBorrower);
+
+    function makePayment4Processor(address borrower, uint256 amount)
+        external
+        returns (uint256 amountPaid, bool paidoff);
 }

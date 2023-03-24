@@ -20,6 +20,16 @@
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "payoffTooSoon",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "receivableAssetParamMismatch",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -106,6 +116,24 @@
       }
     ],
     "name": "mintAndDrawdown",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "receivableAsset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "receivableTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "payoff",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
