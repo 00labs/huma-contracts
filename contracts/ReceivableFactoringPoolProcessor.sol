@@ -22,7 +22,7 @@ abstract contract ReceivableFactoringPoolProcessor is
         _disableInitializers();
     }
 
-    function initialize(address poolAddr) external initializer {
+    function initialize(address poolAddr) public initializer {
         pool = IReceivablePool(poolAddr);
     }
 

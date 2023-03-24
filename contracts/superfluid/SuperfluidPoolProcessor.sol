@@ -4,6 +4,10 @@ pragma solidity ^0.8.0;
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {ISuperToken} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
+import {IConstantFlowAgreementV1} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
+import {SuperAppBase} from "@superfluid-finance/ethereum-contracts/contracts/apps/SuperAppBase.sol";
+
 import "../ReceivableFactoringPoolProcessor.sol";
 import "./SuperfluidPoolProcessorStorage.sol";
 import "../Errors.sol";
@@ -12,9 +16,20 @@ import "./SuperfluidFeeManager.sol";
 
 contract SuperfluidPoolProcessor is
     ReceivableFactoringPoolProcessor,
-    SuperfluidPoolProcessorStorage
+    SuperfluidPoolProcessorStorage,
+    SuperAppBase
 {
     using SafeERC20 for IERC20;
+
+    function initialize(
+        address _pool,
+        address _host,
+        address _cfa
+    ) public initializer {
+        super.initialize(_pool);
+        host = _host;
+        cfa = _cfa;
+    }
 
     function mintAndDrawdown(
         address borrower,
@@ -58,7 +73,7 @@ contract SuperfluidPoolProcessor is
         if (si.borrower == address(0)) revert Errors.receivableAssetParamMismatch();
         BS.CreditRecord memory cr = pool.creditRecordMapping(si.borrower);
 
-        if (block.timestamp < cr.dueDate) revert Errors.payoffTooSoon();
+        if (block.timestamp <= cr.dueDate) revert Errors.payoffTooSoon();
 
         (address underlyingTokenAddr, , , ) = pool.getCoreData();
         IERC20 underlyingToken = IERC20(underlyingTokenAddr);
@@ -66,6 +81,7 @@ contract SuperfluidPoolProcessor is
         uint256 beforeAmount = underlyingToken.balanceOf(address(this));
         _withdrawFromNFT(receivableAsset, receivableTokenId, si);
         uint256 amountReceived = underlyingToken.balanceOf(address(this)) - beforeAmount;
+        amountReceived += si.receivedAllowanceAmount;
 
         if (amountReceived < cr.unbilledPrincipal) {
             uint256 difference = cr.unbilledPrincipal - amountReceived;
@@ -79,14 +95,46 @@ contract SuperfluidPoolProcessor is
             }
         }
 
+        // TODO If paidoff is false, need to transferFrom borrower's allowance
+
         (uint256 amountPaid, bool paidoff) = pool.makePayment4Processor(
             si.borrower,
             amountReceived
         );
 
-        // TODO If paidoff is false, need to transferFrom borrower's allowance or continue to lock NFT?
-
         _burnNFT(receivableAsset, receivableTokenId);
+    }
+
+    function afterAgreementUpdated(
+        ISuperToken _superToken,
+        address _agreementClass,
+        bytes32 _agreementId,
+        bytes calldata, // _agreementData,
+        bytes calldata, // _cbdata,
+        bytes calldata _ctx
+    ) external virtual override returns (bytes memory newCtx) {
+        _onlySuperfluid(msg.sender, _agreementClass);
+        (, int96 rate, , ) = IConstantFlowAgreementV1(_agreementClass).getFlowByID(
+            _superToken,
+            _agreementId
+        );
+        assert(rate > 0);
+        uint256 newFlowrate = uint256(uint96(rate));
+        _handleFlowChange(_superToken, _agreementId, newFlowrate);
+        newCtx = _ctx;
+    }
+
+    function afterAgreementTerminated(
+        ISuperToken _superToken,
+        address _agreementClass,
+        bytes32 _agreementId,
+        bytes calldata, // _agreementData,
+        bytes calldata, // _cbdata,
+        bytes calldata _ctx
+    ) external virtual override returns (bytes memory newCtx) {
+        _onlySuperfluid(msg.sender, _agreementClass);
+        _handleFlowChange(_superToken, _agreementId, 0);
+        newCtx = _ctx;
     }
 
     function _burnNFT(address receivableAsset, uint256 receivableTokenId) internal virtual {
@@ -124,12 +172,12 @@ contract SuperfluidPoolProcessor is
         (, , , , , ISuperToken token, ) = TradableStream(receivableAsset).getTradableStreamData(
             receivableTokenId
         );
-        uint256 amount = si.receivedAmount;
+        uint256 amount = si.receivedFlowAmount;
         if (si.endTime > si.lastStartTime) {
             amount += (si.endTime - si.lastStartTime) * si.flowrate;
         }
 
-        token.downgrade(amount);
+        token.downgradeTo(address(pool), amount);
     }
 
     /**
@@ -239,5 +287,43 @@ contract SuperfluidPoolProcessor is
         streamInfo.borrower = receiver;
         // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
         _streamInfoMapping[receivableHash] = streamInfo;
+    }
+
+    function _handleFlowChange(
+        ISuperToken superToken,
+        bytes32 flowId,
+        uint256 newFlowrate
+    ) internal {
+        bytes32 key = keccak256(abi.encode(superToken, flowId));
+        key = _flowMapping[key];
+        StreamInfo memory si = _streamInfoMapping[key];
+        uint256 flowrate = si.flowrate;
+        if (newFlowrate == flowrate) return;
+
+        si.receivedFlowAmount = (block.timestamp - si.lastStartTime) * flowrate;
+        si.lastStartTime = block.timestamp;
+        si.flowrate = newFlowrate;
+
+        if (newFlowrate < si.flowrate) {
+            (address underlyingTokenAddr, , , ) = pool.getCoreData();
+            IERC20 underlyingToken = IERC20(underlyingTokenAddr);
+            uint256 balance = underlyingToken.balanceOf(si.borrower);
+            uint256 allowanceAmount = (si.flowrate - newFlowrate) * (si.endTime - block.timestamp);
+            if (allowanceAmount > balance) {
+                allowanceAmount = balance;
+            }
+
+            address poolAddr = address(pool);
+            uint256 beforeAmount = underlyingToken.balanceOf(poolAddr);
+            underlyingToken.safeTransferFrom(si.borrower, poolAddr, allowanceAmount);
+            uint256 allowanceReceived = underlyingToken.balanceOf(poolAddr) - beforeAmount;
+
+            si.receivedAllowanceAmount = allowanceReceived;
+        }
+        _streamInfoMapping[key] = si;
+    }
+
+    function _onlySuperfluid(address hostValue, address cfaValue) internal view {
+        if (host != hostValue || cfa != cfaValue) revert();
     }
 }

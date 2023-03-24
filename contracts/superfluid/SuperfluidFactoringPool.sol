@@ -2,72 +2,11 @@
 pragma solidity ^0.8.0;
 
 import {ISuperToken} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
-import {IConstantFlowAgreementV1} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
-import {SuperAppBase} from "@superfluid-finance/ethereum-contracts/contracts/apps/SuperAppBase.sol";
 
 import "./StreamFactoringPool.sol";
 import "./TradableStream.sol";
-import "./SuperfluidPoolConfig.sol";
-import "./SuperfluidFactoringPoolStorage.sol";
 
-contract SuperfluidFactoringPool is
-    StreamFactoringPool,
-    SuperfluidFactoringPoolStorage,
-    SuperAppBase
-{
-    function afterAgreementUpdated(
-        ISuperToken _superToken,
-        address _agreementClass,
-        bytes32 _agreementId,
-        bytes calldata, // _agreementData,
-        bytes calldata, // _cbdata,
-        bytes calldata _ctx
-    ) external virtual override returns (bytes memory newCtx) {
-        _onlySuperfluid(msg.sender, _agreementClass);
-        (, int96 rate, , ) = IConstantFlowAgreementV1(_agreementClass).getFlowByID(
-            _superToken,
-            _agreementId
-        );
-        assert(rate > 0);
-        uint256 newFlowrate = uint256(uint96(rate));
-        _handleFlowChange(_superToken, _agreementId, newFlowrate);
-        newCtx = _ctx;
-    }
-
-    function afterAgreementTerminated(
-        ISuperToken _superToken,
-        address _agreementClass,
-        bytes32 _agreementId,
-        bytes calldata, // _agreementData,
-        bytes calldata, // _cbdata,
-        bytes calldata _ctx
-    ) external virtual override returns (bytes memory newCtx) {
-        _onlySuperfluid(msg.sender, _agreementClass);
-        _handleFlowChange(_superToken, _agreementId, 0);
-        newCtx = _ctx;
-    }
-
-    function _handleFlowChange(
-        ISuperToken superToken,
-        bytes32 flowId,
-        uint256 newFlowrate
-    ) internal {
-        bytes32 key = keccak256(abi.encode(superToken, flowId));
-        key = _flowMapping[key];
-        StreamInfo memory si = _streamInfoMapping[key];
-        uint256 flowrate = si.flowrate;
-        if (newFlowrate == flowrate) return;
-
-        si.receivedAmount = (block.timestamp - si.lastStartTime) * flowrate;
-        si.lastStartTime = block.timestamp;
-        si.flowrate = newFlowrate;
-        _streamInfoMapping[key] = si;
-
-        if (newFlowrate < si.flowrate) {
-            // TODO deduct some money from allowance
-        }
-    }
-
+contract SuperfluidFactoringPool is StreamFactoringPool {
     function _parseReceivableData(bytes memory data)
         internal
         view
@@ -169,17 +108,5 @@ contract SuperfluidFactoringPool is
             r,
             s
         );
-
-        bytes32 flowId = keccak256(abi.encode(origin, address(this)));
-        bytes32 key = keccak256(abi.encode(superToken, flowId));
-        _flowMapping[key] = keccak256(abi.encode(receivableAsset, tokenId));
-    }
-
-    function _onlySuperfluid(address host, address cfa) internal view {
-        (address hostValue, address cfaValue) = SuperfluidPoolConfig(address(_poolConfig))
-            .getSuperfluidConfig();
-        if (host != hostValue || cfa != cfaValue) {
-            revert();
-        }
     }
 }
