@@ -381,19 +381,6 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "poolAddr",
-        "type": "address"
-      }
-    ],
-    "name": "initialize",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
         "name": "borrower",
         "type": "address"
       },
@@ -444,6 +431,62 @@
         "internalType": "contract IReceivablePool",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "receivableAsset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "receivableId",
+        "type": "uint256"
+      }
+    ],
+    "name": "streamInfoMapping",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "borrower",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "lastStartTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "endTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "flowrate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "receivedFlowAmount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "receivedAllowanceAmount",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct SuperfluidPoolProcessorStorage.StreamInfo",
+        "name": "",
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",

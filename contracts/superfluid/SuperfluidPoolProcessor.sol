@@ -26,7 +26,7 @@ contract SuperfluidPoolProcessor is
         address _host,
         address _cfa
     ) public initializer {
-        super.initialize(_pool);
+        super._baseInitialize(_pool);
         host = _host;
         cfa = _cfa;
     }
@@ -52,10 +52,13 @@ contract SuperfluidPoolProcessor is
 
         uint256 receivableId = _mintNFT(receivableAsset, mintToData);
 
-        SuperfluidFeeManager(feeManager).setTempCreditRecordStatic(crs);
-        // _creditRecordStaticMapping[borrower].aprInBps = 0;
+        uint256 interest = (borrowAmount * crs.aprInBps * crs.intervalInDays * SECONDS_IN_A_DAY) /
+            SECONDS_IN_A_YEAR /
+            HUNDRED_PERCENT_IN_BPS;
+        SuperfluidFeeManager(feeManager).setTempInterest(interest);
         uint256 netAmountToBorrower = pool.drawdown4Processor(borrower, borrowAmount);
-        SuperfluidFeeManager(feeManager).deleteTempCreditRecordStatic();
+        SuperfluidFeeManager(feeManager).deleteTempInterest();
+        pool.makePayment4Processor(borrower, interest);
 
         emit DrawdownMadeWithReceivable(
             borrower,
@@ -78,24 +81,22 @@ contract SuperfluidPoolProcessor is
         (address underlyingTokenAddr, , , ) = pool.getCoreData();
         IERC20 underlyingToken = IERC20(underlyingTokenAddr);
 
-        uint256 beforeAmount = underlyingToken.balanceOf(address(this));
+        address poolAddr = address(pool);
+        uint256 beforeAmount = underlyingToken.balanceOf(poolAddr);
         _withdrawFromNFT(receivableAsset, receivableTokenId, si);
-        uint256 amountReceived = underlyingToken.balanceOf(address(this)) - beforeAmount;
+        uint256 amountReceived = underlyingToken.balanceOf(poolAddr) - beforeAmount;
         amountReceived += si.receivedAllowanceAmount;
 
         if (amountReceived < cr.unbilledPrincipal) {
             uint256 difference = cr.unbilledPrincipal - amountReceived;
             uint256 allowance = underlyingToken.allowance(si.borrower, address(this));
-            if (allowance > difference) {
-                underlyingToken.safeTransferFrom(si.borrower, address(this), difference);
-                amountReceived = cr.unbilledPrincipal;
-            } else {
-                underlyingToken.safeTransferFrom(si.borrower, address(this), allowance);
-                amountReceived += allowance;
-            }
-        }
+            uint256 balance = underlyingToken.balanceOf(si.borrower);
+            if (balance < allowance) allowance = balance;
+            if (allowance < difference) difference = allowance;
 
-        // TODO If paidoff is false, need to transferFrom borrower's allowance
+            underlyingToken.safeTransferFrom(si.borrower, poolAddr, difference);
+            amountReceived += difference;
+        }
 
         (uint256 amountPaid, bool paidoff) = pool.makePayment4Processor(
             si.borrower,
@@ -137,6 +138,14 @@ contract SuperfluidPoolProcessor is
         newCtx = _ctx;
     }
 
+    function streamInfoMapping(address receivableAsset, uint256 receivableId)
+        external
+        view
+        returns (StreamInfo memory)
+    {
+        return _streamInfoMapping[keccak256(abi.encode(receivableAsset, receivableId))];
+    }
+
     function _burnNFT(address receivableAsset, uint256 receivableTokenId) internal virtual {
         (
             ,
@@ -158,8 +167,6 @@ contract SuperfluidPoolProcessor is
         if (sendAmount > 0) {
             token.transfer(receiver, sendAmount);
         }
-
-        // check isMature?
 
         TradableStream(receivableAsset).burn(receivableTokenId);
     }

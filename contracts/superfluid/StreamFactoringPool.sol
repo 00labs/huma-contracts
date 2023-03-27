@@ -146,18 +146,22 @@ abstract contract StreamFactoringPool is
         uint256 allowance = _underlyingToken.allowance(borrower, address(this));
         if (allowance < borrowAmount) revert Errors.allowanceTooLow();
 
-        SuperfluidFeeManager(address(_feeManager)).setTempCreditRecordStatic(crs);
-        //_creditRecordStaticMapping[borrower].aprInBps = 0;
-        uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
-        SuperfluidFeeManager(address(_feeManager)).deleteTempCreditRecordStatic();
+        // uint256 borrowAmountTemp = borrowAmount;
+        // uint256 interest = (borrowAmountTemp * crs.aprInBps * crs.intervalInDays) /
+        //     365 /
+        //     HUNDRED_PERCENT_IN_BPS;
+        // SuperfluidFeeManager(address(_feeManager)).setTempInterest(interest);
+        // uint256 netAmountToBorrower = super._drawdown(borrower, cr, borrowAmountTemp);
+        // SuperfluidFeeManager(address(_feeManager)).deleteTempInterest();
+        // _makePayment(borrower, interest, BS.PaymentStatus.ReceivedAndVerified);
 
-        emit DrawdownMadeWithReceivable(
-            borrower,
-            borrowAmount,
-            netAmountToBorrower,
-            receivableAsset,
-            receivableTokenId
-        );
+        // emit DrawdownMadeWithReceivable(
+        //     borrower,
+        //     borrowAmountTemp,
+        //     netAmountToBorrower,
+        //     receivableAsset,
+        //     receivableTokenId
+        // );
     }
 
     function payoff(address receivableAsset, uint256 receivableTokenId) external virtual {

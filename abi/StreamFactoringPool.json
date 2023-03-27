@@ -11,22 +11,12 @@
   },
   {
     "inputs": [],
-    "name": "creditExpiredDueToMaturity",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "creditLineAlreadyExists",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "creditLineExceeded",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "creditLineNotInGoodStandingState",
     "type": "error"
   },
   {

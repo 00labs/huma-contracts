@@ -20,7 +20,7 @@ contract ReceivableFactoringPoolV2 is
     event ExtraFundsDispersed(address indexed receiver, uint256 amount);
 
     function initialize(address poolConfigAddr, address processorAddr) external initializer {
-        super.initialize(poolConfigAddr);
+        super._baseInitialize(poolConfigAddr);
         processor = processorAddr;
     }
 

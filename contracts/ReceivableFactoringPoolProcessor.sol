@@ -8,7 +8,9 @@ abstract contract ReceivableFactoringPoolProcessor is
     Initializable,
     ReceivableFactoringPoolProcessorStorage
 {
+    uint256 internal constant HUNDRED_PERCENT_IN_BPS = 10000;
     uint256 internal constant SECONDS_IN_A_DAY = 1 days;
+    uint256 internal constant SECONDS_IN_A_YEAR = 365 days;
 
     event DrawdownMadeWithReceivable(
         address indexed borrower,
@@ -22,11 +24,7 @@ abstract contract ReceivableFactoringPoolProcessor is
         _disableInitializers();
     }
 
-    function initialize(address poolAddr) public initializer {
+    function _baseInitialize(address poolAddr) internal onlyInitializing {
         pool = IReceivablePool(poolAddr);
     }
-
-    // function _onlyPool() internal view {
-    //     if (msg.sender != address(pool)) revert();
-    // }
 }
