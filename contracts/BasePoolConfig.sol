@@ -150,7 +150,7 @@ contract BasePoolConfig is Ownable, Initializable {
         address _poolToken,
         address _humaConfig,
         address _feeManager
-    ) external onlyOwner initializer {
+    ) public onlyOwner initializer {
         poolName = _poolName;
         if (_poolToken == address(0)) revert Errors.zeroAddressProvided();
         if (_humaConfig == address(0)) revert Errors.zeroAddressProvided();

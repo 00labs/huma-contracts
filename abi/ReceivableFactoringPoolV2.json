@@ -1,11 +1,6 @@
 [
   {
     "inputs": [],
-    "name": "allowanceTooLow",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "creditExpiredDueToFirstDrawdownTooLate",
     "type": "error"
   },
@@ -61,11 +56,6 @@
   },
   {
     "inputs": [],
-    "name": "durationTooLong",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "evaluationAgentServiceAccountRequired",
     "type": "error"
   },
@@ -86,22 +76,12 @@
   },
   {
     "inputs": [],
-    "name": "invalidFlowrate",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "onlyBorrowerOrEACanReduceCreditLine",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "paymentDetectionServiceAccountRequired",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "payoffTooSoon",
     "type": "error"
   },
   {
@@ -422,43 +402,6 @@
       }
     ],
     "name": "DrawdownMade",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "borrowAmount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "netAmountToBorrower",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "receivableAsset",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "receivableTokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "DrawdownMadeWithReceivable",
     "type": "event"
   },
   {
@@ -950,23 +893,24 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "borrowAmount",
-        "type": "uint256"
-      },
-      {
         "internalType": "address",
-        "name": "receivableAsset",
+        "name": "borrower",
         "type": "address"
       },
       {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
+        "internalType": "uint256",
+        "name": "borrowAmount",
+        "type": "uint256"
       }
     ],
-    "name": "drawdownWithAuthorization",
-    "outputs": [],
+    "name": "drawdown4Processor",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "netAmountToBorrower",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -1021,6 +965,24 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "poolConfigAddr",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "processorAddr",
+        "type": "address"
+      }
+    ],
+    "name": "initialize",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -1190,6 +1152,35 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "makePayment4Processor",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "amountPaid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "paidoff",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "",
         "type": "address"
       },
@@ -1221,26 +1212,21 @@
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "poolConfig",
+    "outputs": [
       {
         "internalType": "address",
-        "name": "receivableAsset",
+        "name": "",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "receivableTokenId",
-        "type": "uint256"
       }
     ],
-    "name": "payoff",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "poolConfig",
+    "name": "processor",
     "outputs": [
       {
         "internalType": "address",
@@ -1255,33 +1241,26 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "account",
+        "name": "",
         "type": "address"
       }
     ],
     "name": "receivableInfoMapping",
     "outputs": [
       {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "receivableAsset",
-            "type": "address"
-          },
-          {
-            "internalType": "uint96",
-            "name": "receivableAmount",
-            "type": "uint96"
-          },
-          {
-            "internalType": "uint256",
-            "name": "receivableParam",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct BaseStructs.ReceivableInfo",
-        "name": "",
-        "type": "tuple"
+        "internalType": "address",
+        "name": "receivableAsset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint96",
+        "name": "receivableAmount",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint256",
+        "name": "receivableParam",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -1398,57 +1377,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "receivableAsset",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "receivableTokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "streamInfoMapping",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "borrower",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lastStartTime",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "endTime",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "flowrate",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "receivedAmount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct StreamFactoringPoolStorage.StreamInfo",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "totalPoolValue",
     "outputs": [
@@ -1485,6 +1413,34 @@
     "name": "updateCoreData",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "borrowAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "receivableAsset",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "receivableParam",
+        "type": "uint256"
+      }
+    ],
+    "name": "validateReceivableAsset",
+    "outputs": [],
+    "stateMutability": "view",
     "type": "function"
   },
   {

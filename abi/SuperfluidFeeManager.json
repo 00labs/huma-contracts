@@ -157,7 +157,7 @@
   },
   {
     "inputs": [],
-    "name": "deleteTempCreditRecordStatic",
+    "name": "deleteTempInterest",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -474,36 +474,27 @@
   {
     "inputs": [
       {
-        "components": [
-          {
-            "internalType": "uint96",
-            "name": "creditLimit",
-            "type": "uint96"
-          },
-          {
-            "internalType": "uint16",
-            "name": "aprInBps",
-            "type": "uint16"
-          },
-          {
-            "internalType": "uint16",
-            "name": "intervalInDays",
-            "type": "uint16"
-          },
-          {
-            "internalType": "uint96",
-            "name": "defaultAmount",
-            "type": "uint96"
-          }
-        ],
-        "internalType": "struct BaseStructs.CreditRecordStatic",
-        "name": "_crStatic",
-        "type": "tuple"
+        "internalType": "uint256",
+        "name": "_tempInterest",
+        "type": "uint256"
       }
     ],
-    "name": "setTempCreditRecordStatic",
+    "name": "setTempInterest",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tempInterest",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
