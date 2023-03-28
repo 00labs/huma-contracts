@@ -9,6 +9,8 @@ import "./BaseCreditPool.sol";
 import "./Errors.sol";
 import "./interfaces/IReceivablePool.sol";
 
+import "hardhat/console.sol";
+
 contract ReceivableFactoringPoolV2 is
     BaseCreditPool,
     ReceivableFactoringPoolStorageV2,
@@ -172,7 +174,7 @@ contract ReceivableFactoringPoolV2 is
         receivableInfoMapping[borrower] = ri;
     }
 
-    function _onlyProcessor() internal {
+    function _onlyProcessor() internal view {
         if (msg.sender != processor) revert();
     }
 }

@@ -58,7 +58,6 @@ contract SuperfluidPoolProcessor is
         SuperfluidFeeManager(feeManager).setTempInterest(interest);
         uint256 netAmountToBorrower = pool.drawdown4Processor(borrower, borrowAmount);
         SuperfluidFeeManager(feeManager).deleteTempInterest();
-        pool.makePayment4Processor(borrower, interest);
 
         emit DrawdownMadeWithReceivable(
             borrower,
