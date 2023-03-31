@@ -53,14 +53,26 @@ contract SuperfluidFeeManager is BaseFeeManager {
             int96 totalCharges
         )
     {
-        if (_cr.state > BS.CreditState.Delayed) {
+        console.log(
+            "_cr.unbilledPrincipal: %s, _cr.dueDate: %s, _cr.totalDue: %s",
+            _cr.unbilledPrincipal,
+            _cr.dueDate,
+            _cr.totalDue
+        );
+        console.log(
+            "_cr.missedPeriods: %s, _cr.remainingPeriods: %s, _cr.state: %s",
+            _cr.missedPeriods,
+            _cr.remainingPeriods,
+            uint256(_cr.state)
+        );
+        if (_cr.state > BS.CreditState.GoodStanding) {
             (periodsPassed, feesAndInterestDue, totalDue, unbilledPrincipal, totalCharges) = super
                 .getDueInfo(_cr, _crStatic);
         } else if (_cr.state == BS.CreditState.Approved) {
             periodsPassed = 1;
             totalDue = _cr.unbilledPrincipal;
         } else if (_cr.state == BS.CreditState.GoodStanding) {
-            periodsPassed = 1;
+            periodsPassed = 0;
             totalDue = _cr.totalDue;
         }
     }
@@ -69,7 +81,9 @@ contract SuperfluidFeeManager is BaseFeeManager {
         uint256 dueDate,
         uint256 aprInBps,
         uint256 amount
-    ) external view virtual override returns (uint256 correction) {
-        // reuturn 0;
+    ) public view virtual override returns (uint256 correction) {
+        if (dueDate > block.timestamp) {
+            correction = super.calcCorrection(dueDate, aprInBps, amount);
+        }
     }
 }

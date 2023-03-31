@@ -35,7 +35,7 @@ contract SuperfluidPoolProcessor is
         address borrower,
         uint256 borrowAmount,
         address receivableAsset,
-        bytes calldata mintToData
+        bytes calldata dataForMintTo
     ) external virtual {
         // pool.validateReceivableAsset();
         (address underlyingToken, , , address feeManager) = pool.getCoreData();
@@ -43,14 +43,14 @@ contract SuperfluidPoolProcessor is
             borrower,
             borrowAmount,
             receivableAsset,
-            mintToData,
+            dataForMintTo,
             underlyingToken
         );
 
         uint256 allowance = IERC20(underlyingToken).allowance(borrower, address(this));
         if (allowance < borrowAmount) revert Errors.allowanceTooLow();
 
-        uint256 receivableId = _mintNFT(receivableAsset, mintToData);
+        uint256 receivableId = _mintNFT(receivableAsset, dataForMintTo);
 
         uint256 interest = (borrowAmount * crs.aprInBps * crs.intervalInDays * SECONDS_IN_A_DAY) /
             SECONDS_IN_A_YEAR /
@@ -86,23 +86,22 @@ contract SuperfluidPoolProcessor is
         uint256 amountReceived = underlyingToken.balanceOf(poolAddr) - beforeAmount;
         amountReceived += si.receivedAllowanceAmount;
 
-        if (amountReceived < cr.unbilledPrincipal) {
-            uint256 difference = cr.unbilledPrincipal - amountReceived;
-            uint256 allowance = underlyingToken.allowance(si.borrower, address(this));
-            uint256 balance = underlyingToken.balanceOf(si.borrower);
-            if (balance < allowance) allowance = balance;
-            if (allowance < difference) difference = allowance;
-
-            underlyingToken.safeTransferFrom(si.borrower, poolAddr, difference);
-            amountReceived += difference;
+        if (amountReceived < cr.totalDue) {
+            uint256 difference = cr.totalDue - amountReceived;
+            uint256 received = _transferFromAccount(
+                underlyingToken,
+                si.borrower,
+                poolAddr,
+                difference
+            );
+            amountReceived += received;
         }
 
-        (uint256 amountPaid, bool paidoff) = pool.makePayment4Processor(
-            si.borrower,
-            amountReceived
-        );
+        (, bool paidoff) = pool.payoff4Processor(si.borrower, amountReceived);
 
-        _burnNFT(receivableAsset, receivableTokenId);
+        if (paidoff) {
+            _burnNFT(receivableAsset, receivableTokenId);
+        }
     }
 
     function afterAgreementUpdated(
@@ -132,6 +131,7 @@ contract SuperfluidPoolProcessor is
         bytes calldata, // _cbdata,
         bytes calldata _ctx
     ) external virtual override returns (bytes memory newCtx) {
+        console.log("afterAgreementTerminated is called");
         _onlySuperfluid(msg.sender, _agreementClass);
         _handleFlowChange(_superToken, _agreementId, 0);
         newCtx = _ctx;
@@ -211,7 +211,7 @@ contract SuperfluidPoolProcessor is
         address borrower,
         uint256 borrowAmount,
         address receivableAsset,
-        bytes memory mintToData,
+        bytes memory dataForMintTo,
         address underlyingToken
     ) internal virtual returns (BS.CreditRecordStatic memory crs) {
         (
@@ -225,7 +225,7 @@ contract SuperfluidPoolProcessor is
             ,
 
         ) = abi.decode(
-                mintToData,
+                dataForMintTo,
                 (address, address, address, int96, uint256, uint256, uint8, bytes32, bytes32)
             );
 
@@ -295,6 +295,20 @@ contract SuperfluidPoolProcessor is
         _streamInfoMapping[receivableHash] = streamInfo;
     }
 
+    function _transferFromAccount(
+        IERC20 token,
+        address from,
+        address to,
+        uint256 amount
+    ) internal returns (uint256 transferredAmount) {
+        uint256 allowance = token.allowance(from, address(this));
+        uint256 balance = token.balanceOf(from);
+        transferredAmount = amount;
+        if (transferredAmount > allowance) transferredAmount = allowance;
+        if (transferredAmount > balance) transferredAmount = balance;
+        if (transferredAmount > 0) token.safeTransferFrom(from, to, transferredAmount);
+    }
+
     function _handleFlowChange(
         ISuperToken superToken,
         bytes32 flowId,
@@ -308,24 +322,40 @@ contract SuperfluidPoolProcessor is
 
         si.receivedFlowAmount = (block.timestamp - si.lastStartTime) * flowrate;
         si.lastStartTime = block.timestamp;
-        si.flowrate = newFlowrate;
 
         if (newFlowrate < si.flowrate) {
             (address underlyingTokenAddr, , , ) = pool.getCoreData();
             IERC20 underlyingToken = IERC20(underlyingTokenAddr);
-            uint256 balance = underlyingToken.balanceOf(si.borrower);
-            uint256 allowanceAmount = (si.flowrate - newFlowrate) * (si.endTime - block.timestamp);
-            if (allowanceAmount > balance) {
-                allowanceAmount = balance;
+            uint256 difference = (si.flowrate - newFlowrate) * (si.endTime - block.timestamp);
+            uint256 received = _transferFromAccount(
+                underlyingToken,
+                si.borrower,
+                address(pool),
+                difference
+            );
+
+            if (received > 0) {
+                pool.makePayment4Processor(si.borrower, received);
+
+                if (newFlowrate == 0) {
+                    // flow is terminated
+                    if (received < difference) {
+                        // didn't receive enough amount
+                        // TODO send a event to trigger tryTransferFromBorrower function periodically
+                    } else {
+                        // received enough amount from borrower's allowance
+                        // TODO call payoff
+                        // option1 update cr.dueDate to block.timestamp + 1, but it can't refund the interest of flowed amount
+                        // option2 send a event to notify payoff is ready to be called
+                        // option3 call payoff here, but it is heavy and there is a limit to burn NFT}
+                    }
+                } else {
+                    // flow is decreased
+                }
             }
-
-            address poolAddr = address(pool);
-            uint256 beforeAmount = underlyingToken.balanceOf(poolAddr);
-            underlyingToken.safeTransferFrom(si.borrower, poolAddr, allowanceAmount);
-            uint256 allowanceReceived = underlyingToken.balanceOf(poolAddr) - beforeAmount;
-
-            si.receivedAllowanceAmount = allowanceReceived;
         }
+
+        si.flowrate = newFlowrate;
         _streamInfoMapping[key] = si;
     }
 

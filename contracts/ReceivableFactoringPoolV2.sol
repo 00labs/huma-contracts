@@ -119,10 +119,28 @@ contract ReceivableFactoringPoolV2 is
             amount,
             BS.PaymentStatus.ReceivedAndVerified
         );
+    }
 
-        delete receivableInfoMapping[borrower];
+    function payoff4Processor(address borrower, uint256 amount)
+        external
+        virtual
+        returns (uint256 amountPaid, bool paidoff)
+    {
+        _onlyProcessor();
+        (amountPaid, paidoff, ) = _makePayment(
+            borrower,
+            amount,
+            BS.PaymentStatus.ReceivedAndVerified
+        );
 
-        if (amount > amountPaid) _disburseRemainingFunds(borrower, amount - amountPaid);
+        if (paidoff) {
+            delete receivableInfoMapping[borrower];
+            if (amount > amountPaid) _disburseRemainingFunds(borrower, amount - amountPaid);
+        } else {
+            BS.CreditRecord storage cr = _creditRecordMapping[borrower];
+            cr.state = BS.CreditState.Delayed;
+            _updateDueInfo(borrower, false, false);
+        }
     }
 
     /**

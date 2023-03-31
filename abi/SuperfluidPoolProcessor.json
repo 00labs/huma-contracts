@@ -396,7 +396,7 @@
       },
       {
         "internalType": "bytes",
-        "name": "mintToData",
+        "name": "dataForMintTo",
         "type": "bytes"
       }
     ],

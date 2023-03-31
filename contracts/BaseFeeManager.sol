@@ -110,7 +110,7 @@ contract BaseFeeManager is IFeeManager, Ownable {
         uint256 dueDate,
         uint256 aprInBps,
         uint256 amount
-    ) external view virtual override returns (uint256 correction) {
+    ) public view virtual override returns (uint256 correction) {
         // rounding to days
         uint256 remainingTime = dueDate - block.timestamp;
 
