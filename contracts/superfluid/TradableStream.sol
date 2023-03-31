@@ -58,6 +58,9 @@ contract TradableStream is ERC721, Ownable {
         uint256 sendAmount
     );
 
+    event IncreaseDuration(uint256 indexed tokenId, uint256 newDuration, uint256 oldDuration);
+    event DecreaseDuration(uint256 indexed tokenId, uint256 newDuration, uint256 oldDuration);
+
     /// @notice token ids => metadata
     mapping(uint256 => TradableStreamMetadata) public metadatas;
 
@@ -74,7 +77,13 @@ contract TradableStream is ERC721, Ownable {
         );
     mapping(address => uint256) public nonces;
 
-    constructor(ISuperfluid host) payable Ownable() ERC721("TradableStream", "TSTRM") {
+    address public immutable processor;
+
+    constructor(ISuperfluid host, address _processor)
+        payable
+        Ownable()
+        ERC721("TradableStream", "TSTRM")
+    {
         IConstantFlowAgreementV1 cfa = IConstantFlowAgreementV1(
             address(
                 host.getAgreementClass(
@@ -96,6 +105,8 @@ contract TradableStream is ERC721, Ownable {
                 address(this)
             )
         );
+
+        processor = _processor;
     }
 
     /// @dev require that tokenId exists (minted and not burnt)
@@ -226,6 +237,32 @@ contract TradableStream is ERC721, Ownable {
         require(receiver == ecrecover(data, v, r, s), "Invalid authorization");
         return
             _mintTo(receiver, ISuperToken(token), origin, msg.sender, flowrate, durationInSeconds);
+    }
+
+    function increaseDuration(uint256 tokenId, uint256 extended) external {
+        require(
+            msg.sender == ownerOf(tokenId) && msg.sender == processor,
+            "no permission to burn"
+        );
+
+        TradableStreamMetadata storage meta = metadatas[tokenId];
+        uint256 oldDuration = meta.duration;
+        uint256 newDuration = oldDuration + extended;
+        meta.duration = newDuration;
+
+        emit IncreaseDuration(tokenId, newDuration, oldDuration);
+    }
+
+    function decreaseDuration(uint256 tokenId, uint256 shortened) external {
+        require(msg.sender == ownerOf(tokenId), "no permission to burn");
+
+        TradableStreamMetadata storage meta = metadatas[tokenId];
+        uint256 oldDuration = meta.duration;
+        require(oldDuration > shortened, "invalid shortened value");
+        uint256 newDuration = oldDuration - shortened;
+        meta.duration = newDuration;
+
+        emit DecreaseDuration(tokenId, newDuration, oldDuration);
     }
 
     function _beforeTokenTransfer(

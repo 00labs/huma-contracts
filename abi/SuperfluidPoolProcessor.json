@@ -370,6 +370,11 @@
         "internalType": "address",
         "name": "_cfa",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_tradableStream",
+        "type": "address"
       }
     ],
     "name": "initialize",
@@ -439,11 +444,6 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "receivableAsset",
-        "type": "address"
-      },
-      {
         "internalType": "uint256",
         "name": "receivableId",
         "type": "uint256"
@@ -487,6 +487,19 @@
         "internalType": "struct SuperfluidPoolProcessorStorage.StreamInfo",
         "name": "",
         "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tradableStream",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",

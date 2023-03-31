@@ -255,10 +255,15 @@ async function deployAndSetupPool(
     await poolProcessorProxy.deployed();
     const poolProcessorContract = poolProcessorContractFactory.attach(poolProcessorProxy.address);
 
-    await poolProcessorContract["initialize(address,address,address)"](
+    const nftContractFactory = await ethers.getContractFactory("TradableStream");
+    nftContract = await nftContractFactory.deploy(sfHostAddress, poolProcessorContract.address);
+    await nftContract.deployed();
+
+    await poolProcessorContract["initialize(address,address,address,address)"](
         poolContract.address,
         sfHostAddress,
-        sfCFAAddress
+        sfCFAAddress,
+        nftContract.address
     );
     await poolContract["initialize(address,address)"](
         poolConfig.address,
@@ -366,10 +371,6 @@ describe("Superfluid Factoring", function () {
         await mint(payer.address, toUSDC(1_000_000));
         console.log(`payer ${payer.address} usdc balance: ${await usdc.balanceOf(payer.address)}`);
         await usdc.connect(payer).approve(usdcx.address, toUSDC(1_000_000));
-
-        const nftContractFactory = await ethers.getContractFactory("TradableStream");
-        nftContract = await nftContractFactory.deploy(sfHostAddress);
-        await nftContract.deployed();
 
         const sfRegisterContractFactory = await ethers.getContractFactory("MockSuperAppRegister");
         sfRegisterContract = await sfRegisterContractFactory.deploy(sfHostAddress);
@@ -481,80 +482,6 @@ describe("Superfluid Factoring", function () {
             ]);
             res = await poolContract.creditRecordStaticMapping(borrower.address);
             checkResults(res, [toUSDC(streamAmount), 1217, streamDays, 0]);
-        });
-    });
-
-    describe.skip("drawdownWithReceivable", function () {
-        beforeEach(async function () {
-            await poolContract
-                .connect(eaServiceAccount)
-                ["approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"](
-                    borrower.address,
-                    toUSDC(streamAmount),
-                    streamDays,
-                    1,
-                    1217,
-                    nftContract.address,
-                    ethers.utils.solidityKeccak256(
-                        ["address", "address", "address"],
-                        [usdcx.address, payer.address, borrower.address]
-                    ),
-                    toUSDC(streamAmount)
-                );
-        });
-
-        it("Should drawdown with receivable", async function () {
-            await usdc.connect(borrower).approve(poolContract.address, toUSDC(10_000));
-
-            const beforeAmount = await usdc.balanceOf(borrower.address);
-            const beforePoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
-            const beforeBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
-
-            const ts = Math.ceil(Date.now() / 1000) + 2;
-            await setNextBlockTimestamp(ts);
-            await poolContract
-                .connect(borrower)
-                .drawdownWithReceivable(toUSDC(collateralAmount), nftContract.address, streamId);
-            const afterAmount = await usdc.balanceOf(borrower.address);
-            const afterPoolFlowrate = await cfa.getNetFlow(usdcx.address, poolContract.address);
-            const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
-
-            const interest = toUSDC(collateralAmount)
-                .mul(BN.from(streamDays * 1217))
-                .div(BN.from(365 * 10000));
-            const receivedAmount = afterAmount.sub(beforeAmount);
-
-            expect(receivedAmount).to.equal(toUSDC(collateralAmount).sub(interest));
-            expect(await nftContract.ownerOf(streamId)).to.equal(poolContract.address);
-            expect(beforeBorrowerFlowrate.sub(afterBorrowerFlowrate)).to.equal(
-                afterPoolFlowrate.sub(beforePoolFlowrate)
-            );
-
-            let res = await nftContract.getTradableStreamData(streamId);
-            const flowrate = res[6];
-            expect(afterPoolFlowrate.sub(beforePoolFlowrate)).to.equal(flowrate);
-
-            res = await poolContract.streamInfoMapping(nftContract.address, streamId);
-            const dueDate = ts + streamDuration;
-            checkResults(res, [borrower.address, ts, dueDate, flowrate, 0]);
-            const cr = await poolContract.creditRecordMapping(borrower.address);
-            const crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            checkRecord(
-                cr,
-                crs,
-                toUSDC(streamAmount),
-                0,
-                dueDate,
-                0,
-                toUSDC(collateralAmount),
-                0,
-                0,
-                0,
-                0,
-                streamDays,
-                3,
-                0
-            );
         });
     });
 
@@ -683,7 +610,7 @@ describe("Superfluid Factoring", function () {
             flowrate = res[6];
             expect(afterProcessorFlowrate.sub(beforeProcessorFlowrate)).to.equal(flowrate);
 
-            res = await poolProcessorContract.streamInfoMapping(nftContract.address, streamId);
+            res = await poolProcessorContract.streamInfoMapping(streamId);
             const dueDate = ts + streamDuration;
             checkResults(res, [borrower.address, ts, dueDate, flowrate, 0, 0]);
             const cr = await poolContract.creditRecordMapping(borrower.address);
@@ -890,7 +817,7 @@ describe("Superfluid Factoring", function () {
             flowrate = res[6];
             expect(afterProcessorFlowrate.sub(beforeProcessorFlowrate)).to.equal(flowrate);
 
-            res = await poolProcessorContract.streamInfoMapping(nftContract.address, streamId);
+            res = await poolProcessorContract.streamInfoMapping(streamId);
             const dueDate = ts + streamDuration;
             checkResults(res, [borrower.address, ts, dueDate, flowrate, 0, 0]);
             const cr = await poolContract.creditRecordMapping(borrower.address);
@@ -1051,10 +978,7 @@ describe("Superfluid Factoring", function () {
             await expect(nftContract.ownerOf(streamId)).to.be.revertedWith(
                 "ERC721: invalid token ID"
             );
-            const si = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            const si = await poolProcessorContract.streamInfoMapping(streamId);
             expect(afterBorrowXAmount.sub(beforeBorrowXAmount).sub(beforeReceivedAmount)).to.equal(
                 si.flowrate.mul(BN.from(expiration))
             );
@@ -1166,10 +1090,7 @@ describe("Superfluid Factoring", function () {
                 "ERC721: invalid token ID"
             );
 
-            const si = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            const si = await poolProcessorContract.streamInfoMapping(streamId);
             expect(afterBorrowXAmount.sub(beforeBorrowXAmount).sub(beforeReceivedAmount)).to.equal(
                 si.flowrate.mul(BN.from(expiration))
             );
@@ -1281,10 +1202,7 @@ describe("Superfluid Factoring", function () {
                 "ERC721: invalid token ID"
             );
 
-            const si = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            const si = await poolProcessorContract.streamInfoMapping(streamId);
             expect(afterBorrowXAmount.sub(beforeBorrowXAmount).sub(beforeReceivedAmount)).to.equal(
                 si.flowrate.mul(BN.from(expiration))
             );
@@ -1425,19 +1343,13 @@ describe("Superfluid Factoring", function () {
             console.log(`nts: ${nts}`);
 
             const streamId = 1;
-            let beforeSI = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            let beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
             let beforeBorrowerBal = await usdc.balanceOf(borrower.address);
             let beforePoolBal = await usdc.balanceOf(poolContract.address);
             await deleteFlow(usdcx, payer, poolProcessorContract);
             let afterBorrowerBal = await usdc.balanceOf(borrower.address);
             let afterPoolBal = await usdc.balanceOf(poolContract.address);
-            let afterSI = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
             expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
             expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
@@ -1522,19 +1434,13 @@ describe("Superfluid Factoring", function () {
             await setNextBlockTimestamp(nts);
 
             const streamId = 1;
-            let beforeSI = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            let beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
             let beforeBorrowerBal = await usdc.balanceOf(borrower.address);
             let beforePoolBal = await usdc.balanceOf(poolContract.address);
             await deleteFlow(usdcx, payer, poolProcessorContract);
             let afterBorrowerBal = await usdc.balanceOf(borrower.address);
             let afterPoolBal = await usdc.balanceOf(poolContract.address);
-            let afterSI = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
             expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
             expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
@@ -1616,19 +1522,13 @@ describe("Superfluid Factoring", function () {
             await setNextBlockTimestamp(nts);
 
             const streamId = 1;
-            let beforeSI = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            let beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
             let beforeBorrowerBal = await usdc.balanceOf(borrower.address);
             let beforePoolBal = await usdc.balanceOf(poolContract.address);
             await deleteFlow(usdcx, payer, poolProcessorContract);
             let afterBorrowerBal = await usdc.balanceOf(borrower.address);
             let afterPoolBal = await usdc.balanceOf(poolContract.address);
-            let afterSI = await poolProcessorContract.streamInfoMapping(
-                nftContract.address,
-                streamId
-            );
+            let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
             let remainingBal = loanAmount.sub(afterSI.receivedFlowAmount);
             expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
