@@ -260,7 +260,7 @@ function checkArruedIncome(r, v1, v2, v3) {
 function checkResults(r, vs) {
     expect(r.length).to.equal(vs.length);
     for (let i = 0; i < r.length; i++) {
-        expect(r[i]).to.equal(vs[i]);
+        if (vs[i] != null) expect(r[i]).to.equal(vs[i]);
     }
 }
 

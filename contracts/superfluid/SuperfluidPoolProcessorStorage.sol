@@ -10,11 +10,10 @@ contract SuperfluidPoolProcessorStorage {
 
     struct StreamInfo {
         address borrower;
-        uint256 lastStartTime;
-        uint256 endTime;
-        uint256 flowrate;
+        uint96 flowrate;
+        uint64 lastStartTime;
+        uint64 endTime;
         uint256 receivedFlowAmount;
-        uint256 receivedAllowanceAmount;
     }
 
     /// mapping from the keccak256 hash of the receivableAddress and receivableId to

@@ -3,8 +3,6 @@ pragma solidity ^0.8.0;
 
 import "../BaseFeeManager.sol";
 
-import "hardhat/console.sol";
-
 contract SuperfluidFeeManager is BaseFeeManager {
     uint256 public tempInterest;
 
@@ -53,18 +51,6 @@ contract SuperfluidFeeManager is BaseFeeManager {
             int96 totalCharges
         )
     {
-        console.log(
-            "_cr.unbilledPrincipal: %s, _cr.dueDate: %s, _cr.totalDue: %s",
-            _cr.unbilledPrincipal,
-            _cr.dueDate,
-            _cr.totalDue
-        );
-        console.log(
-            "_cr.missedPeriods: %s, _cr.remainingPeriods: %s, _cr.state: %s",
-            _cr.missedPeriods,
-            _cr.remainingPeriods,
-            uint256(_cr.state)
-        );
         if (_cr.state > BS.CreditState.GoodStanding) {
             (periodsPassed, feesAndInterestDue, totalDue, unbilledPrincipal, totalCharges) = super
                 .getDueInfo(_cr, _crStatic);

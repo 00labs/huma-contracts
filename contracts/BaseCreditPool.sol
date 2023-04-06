@@ -823,6 +823,14 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             newCharges
         ) = _feeManager.getDueInfo(cr, _getCreditRecordStatic(borrower));
 
+        console.log(
+            "periodsPassed: %s, cr.totalDue: %s, cr.unbilledPrincipal: %s, newCharges: ",
+            periodsPassed,
+            cr.totalDue,
+            cr.unbilledPrincipal
+        );
+        console.logInt(newCharges);
+
         if (periodsPassed > 0) {
             cr.correction = 0;
             // Distribute income

@@ -39,7 +39,7 @@ interface IReceivablePool {
         external
         returns (uint256 amountPaid, bool paidoff);
 
-    function payoff4Processor(address borrower, uint256 amount)
+    function settlement4Processor(address borrower, uint256 amount)
         external
         virtual
         returns (uint256 amountPaid, bool paidoff);

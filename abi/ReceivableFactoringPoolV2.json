@@ -1212,35 +1212,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "payoff4Processor",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "amountPaid",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bool",
-        "name": "paidoff",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "poolConfig",
     "outputs": [
@@ -1402,6 +1373,35 @@
     ],
     "name": "setPoolConfig",
     "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "settlement4Processor",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "amountPaid",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "paidoff",
+        "type": "bool"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },

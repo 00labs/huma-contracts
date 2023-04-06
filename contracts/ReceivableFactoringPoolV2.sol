@@ -121,7 +121,7 @@ contract ReceivableFactoringPoolV2 is
         );
     }
 
-    function payoff4Processor(address borrower, uint256 amount)
+    function settlement4Processor(address borrower, uint256 amount)
         external
         virtual
         returns (uint256 amountPaid, bool paidoff)
@@ -138,8 +138,10 @@ contract ReceivableFactoringPoolV2 is
             if (amount > amountPaid) _disburseRemainingFunds(borrower, amount - amountPaid);
         } else {
             BS.CreditRecord storage cr = _creditRecordMapping[borrower];
-            cr.state = BS.CreditState.Delayed;
-            _updateDueInfo(borrower, false, false);
+            if (cr.state == BS.CreditState.GoodStanding) {
+                cr.state = BS.CreditState.Delayed;
+                _updateDueInfo(borrower, false, false);
+            }
         }
     }
 
