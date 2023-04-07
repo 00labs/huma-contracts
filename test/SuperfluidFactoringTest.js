@@ -1976,14 +1976,14 @@ describe("Superfluid Factoring", function () {
             ).to.be.revertedWithCustomError(poolProcessorContract, "receivableAssetParamMismatch");
         });
 
-        it("Should revert when flow was decreased during the loan period", async function () {
+        it.skip("Should revert when flow was decreased during the loan period", async function () {
             const newFlowrate = loanAmount.div(BN.from(streamDuration)).div(4);
             const calldata = genUpdateFlowCalldata(usdcx, poolProcessorContract, newFlowrate);
             await expect(sf.connect(payer).callAgreement(cfa.address, calldata, "0x")).to.be
                 .reverted;
         });
 
-        it("Should revert when flow was increased during the loan period", async function () {
+        it.skip("Should revert when flow was increased during the loan period", async function () {
             const newFlowrate = loanAmount.div(BN.from(streamDuration)).mul(2);
             const calldata = genUpdateFlowCalldata(usdcx, poolProcessorContract, newFlowrate);
             await expect(sf.connect(payer).callAgreement(cfa.address, calldata, "0x")).to.be

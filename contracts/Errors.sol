@@ -28,6 +28,7 @@ contract Errors {
     error notPool(); // 0x26d29bbf
     error drawdownFunctionUsedInsteadofDrawdownWithReceivable(); // 0x7e737537
     error notNFTOwner(); // 0x091a5762
+    error notProcessor();
 
     // system config
     error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
@@ -75,12 +76,14 @@ contract Errors {
     error borrowingAmountLessThanPlatformFees(); // 0x97fde118
     error withdrawTooSoon(); // 0x67982472
     error paymentAlreadyProcessed(); // 0xfd6754cf
-    error payoffTooSoon(); // 0x1cbb3c48
+    error settlementTooSoon(); // 0x0453e75e
 
     error defaultTriggeredTooEarly(); // 0x7872424e
     error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
 
-    // superfluid tradable stream
+    // superfluid
     error durationTooLong(); // 0xf1dd53a8
     error invalidFlowrate(); // 0xd06a9328
+    error onlySuperfluid(); // 0x3f9cd1c2
+    error borrowerMismatch(); // 0x27d3e640
 }

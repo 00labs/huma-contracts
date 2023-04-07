@@ -26,6 +26,11 @@
   },
   {
     "inputs": [],
+    "name": "borrowerMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "borrowingAmountLessThanPlatformFees",
     "type": "error"
   },
@@ -196,12 +201,22 @@
   },
   {
     "inputs": [],
+    "name": "notProcessor",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "notProtocolOwner",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "onlyBorrowerOrEACanReduceCreditLine",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "onlySuperfluid",
     "type": "error"
   },
   {
@@ -217,11 +232,6 @@
   {
     "inputs": [],
     "name": "paymentIdNotUnderReview",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "payoffTooSoon",
     "type": "error"
   },
   {
@@ -277,6 +287,11 @@
   {
     "inputs": [],
     "name": "sameValue",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "settlementTooSoon",
     "type": "error"
   },
   {

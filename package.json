@@ -34,7 +34,8 @@
     "verify": "hardhat verify",
     "lint-solidity": "yarn solhint -f table 'contracts/**/*.sol'",
     "postinstall": "husky install",
-    "coverage": "hardhat coverage --network hardhat"
+    "coverage": "hardhat coverage --network hardhat",
+    "gen-error-ids": "hardhat run scripts/gen-error-function-ids.js --network hardhat"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",

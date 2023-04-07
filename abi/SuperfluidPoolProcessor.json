@@ -6,6 +6,16 @@
   },
   {
     "inputs": [],
+    "name": "borrowerMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "creditLineNotInGoodStandingState",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "durationTooLong",
     "type": "error"
   },
@@ -21,12 +31,17 @@
   },
   {
     "inputs": [],
-    "name": "payoffTooSoon",
+    "name": "receivableAssetMismatch",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "receivableAssetParamMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "settlementTooSoon",
     "type": "error"
   },
   {

@@ -7,8 +7,6 @@ import "./BasePool.sol";
 import "./BaseCreditPoolStorage.sol";
 import "./Errors.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @notice BaseCreditPool is the basic form of a complete pool in Huma Protocol.
  * All production pools are expected to be instances of BaseCreditPool or
@@ -822,14 +820,6 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
             cr.unbilledPrincipal,
             newCharges
         ) = _feeManager.getDueInfo(cr, _getCreditRecordStatic(borrower));
-
-        console.log(
-            "periodsPassed: %s, cr.totalDue: %s, cr.unbilledPrincipal: %s, newCharges: ",
-            periodsPassed,
-            cr.totalDue,
-            cr.unbilledPrincipal
-        );
-        console.logInt(newCharges);
 
         if (periodsPassed > 0) {
             cr.correction = 0;

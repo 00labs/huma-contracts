@@ -59,7 +59,9 @@
   "creditLineTooHigh()": "0x552b8377",
   "creditLineOutstanding()": "0xc64e338c",
   "allowanceTooLow()": "0xcd8ef369",
-  "payoffTooSoon()": "0x1cbb3c48",
   "durationTooLong()": "0xf1dd53a8",
-  "invalidFlowrate()": "0xd06a9328"
+  "invalidFlowrate()": "0xd06a9328",
+  "settlementTooSoon()": "0x0453e75e",
+  "onlySuperfluid()": "0x3f9cd1c2",
+  "borrowerMismatch()": "0x27d3e640"
 }

@@ -46,7 +46,7 @@ contract SuperfluidPoolProcessor is
         address receivableAsset,
         bytes calldata dataForMintTo
     ) external virtual {
-        if (receivableAsset != tradableStream) revert(); //TODO revert error later
+        if (receivableAsset != tradableStream) revert Errors.receivableAssetMismatch();
         (address underlyingToken, , , address feeManager) = pool.getCoreData();
         BS.CreditRecordStatic memory crs = _validateReceivableAsset(
             borrower,
@@ -78,11 +78,11 @@ contract SuperfluidPoolProcessor is
     }
 
     function settlement(address receivableAsset, uint256 receivableId) external virtual {
-        if (receivableAsset != tradableStream) revert(); //TODO revert error later
+        if (receivableAsset != tradableStream) revert Errors.receivableAssetMismatch();
 
         StreamInfo memory si = _streamInfoMapping[receivableId];
         if (si.borrower == address(0)) revert Errors.receivableAssetParamMismatch();
-        if (block.timestamp <= si.endTime && si.flowrate > 0) revert Errors.payoffTooSoon();
+        if (block.timestamp <= si.endTime && si.flowrate > 0) revert Errors.settlementTooSoon();
         BS.CreditRecord memory cr = pool.creditRecordMapping(si.borrower);
 
         (address underlyingTokenAddr, , , ) = pool.getCoreData();
@@ -122,11 +122,12 @@ contract SuperfluidPoolProcessor is
     }
 
     function tryTransferAllowance(address receivableAsset, uint256 receivableId) external {
-        if (receivableAsset != tradableStream) revert(); //TODO revert error later
+        if (receivableAsset != tradableStream) revert Errors.receivableAssetMismatch();
         StreamInfo memory si = _streamInfoMapping[receivableId];
-        if (si.flowrate != 0) revert(); //TODO revert error later
+        if (si.flowrate != 0) revert Errors.invalidFlowrate();
         BS.CreditRecord memory cr = pool.creditRecordMapping(si.borrower);
-        if (cr.state > BS.CreditState.GoodStanding) revert(); //TODO
+        if (cr.state > BS.CreditState.GoodStanding)
+            revert Errors.creditLineNotInGoodStandingState();
 
         uint256 amount = si.receivedFlowAmount;
         (address underlyingTokenAddr, , , ) = pool.getCoreData();
@@ -276,7 +277,7 @@ contract SuperfluidPoolProcessor is
                 (address, address, address, int96, uint256, uint256, uint8, bytes32, bytes32)
             );
 
-        if (borrower != receiver) revert(); // TODO revert error later
+        if (borrower != receiver) revert Errors.borrowerMismatch();
 
         pool.validateReceivableAsset(
             receiver,
@@ -387,7 +388,7 @@ contract SuperfluidPoolProcessor is
                 // flow is terminated
                 if (received < difference) {
                     // didn't receive enough amount
-                    // TODO send a event to trigger tryTransferFromBorrower function periodically
+                    // send a event to trigger tryTransferFromBorrower function periodically
 
                     emit NotGettingEnoughAllowance(tradableStream, receivableId, si.borrower);
                 } else {
@@ -401,8 +402,7 @@ contract SuperfluidPoolProcessor is
                 }
             } else {
                 // flow is decreased
-                revert();
-
+                // revert();
                 // if (received < difference) {
                 //     // didin't receive enough amount
                 //     uint256 diff = difference - received;
@@ -420,8 +420,7 @@ contract SuperfluidPoolProcessor is
             }
         } else {
             // flow is increased
-            revert();
-
+            // revert();
             // TODO decrease duration
             // option1
             //   calculate shortened seconds, and do the opposited actions of above
@@ -457,6 +456,6 @@ contract SuperfluidPoolProcessor is
     // }
 
     function _onlySuperfluid(address hostValue, address cfaValue) internal view {
-        if (host != hostValue || cfa != cfaValue) revert(); //TODO revert error later
+        if (host != hostValue || cfa != cfaValue) revert Errors.invalidFlowrate();
     }
 }

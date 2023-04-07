@@ -2,14 +2,11 @@
 pragma solidity ^0.8.0;
 
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 
-import "./ReceivableFactoringPoolStorageV2.sol";
+import {ReceivableFactoringPoolStorageV2} from "./ReceivableFactoringPoolStorageV2.sol";
 import "./BaseCreditPool.sol";
-import "./Errors.sol";
-import "./interfaces/IReceivablePool.sol";
-
-import "hardhat/console.sol";
+import {Errors} from "./Errors.sol";
 
 contract ReceivableFactoringPoolV2 is
     BaseCreditPool,
@@ -195,6 +192,6 @@ contract ReceivableFactoringPoolV2 is
     }
 
     function _onlyProcessor() internal view {
-        if (msg.sender != processor) revert();
+        if (msg.sender != processor) revert Errors.notProcessor();
     }
 }

@@ -76,6 +76,11 @@
   },
   {
     "inputs": [],
+    "name": "notProcessor",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "onlyBorrowerOrEACanReduceCreditLine",
     "type": "error"
   },
