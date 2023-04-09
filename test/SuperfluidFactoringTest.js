@@ -531,6 +531,625 @@ describe("Superfluid Factoring", function () {
                 );
         });
 
+        it("Should revert when receivableAssets mismatched", async function () {
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    toUSDC(100),
+                    ethers.constants.AddressZero,
+                    "0x"
+                )
+            ).to.be.revertedWithCustomError(poolProcessorContract, "receivableAssetMismatch");
+        });
+
+        it("Should revert when borrower mismatched receiver", async function () {
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(streamDuration);
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    nftContract.address,
+                    usdcx.address,
+                    payer.address,
+                    flowrate,
+                    streamDuration,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    loanAmount,
+                    nftContract.address,
+                    calldata
+                )
+            ).to.be.revertedWithCustomError(poolProcessorContract, "borrowerMismatch");
+        });
+
+        it("Should revert when receivableParam mismatched", async function () {
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(streamDuration);
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    ethers.constants.AddressZero,
+                    flowrate,
+                    streamDuration,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    loanAmount,
+                    nftContract.address,
+                    calldata
+                )
+            ).to.be.revertedWithCustomError(poolProcessorContract, "receivableAssetParamMismatch");
+        });
+
+        it("Should revert when flowrate was invalid", async function () {
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(streamDuration);
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    0,
+                    streamDuration,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    loanAmount,
+                    nftContract.address,
+                    calldata
+                )
+            ).to.be.revertedWithCustomError(poolProcessorContract, "invalidFlowrate");
+        });
+
+        it("Should revert when duration was too long", async function () {
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(streamDuration);
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    flowrate,
+                    streamDuration + 1,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    loanAmount,
+                    nftContract.address,
+                    calldata
+                )
+            ).to.be.revertedWithCustomError(poolProcessorContract, "durationTooLong");
+        });
+
+        it("Should revert when there was no enough receivable amount", async function () {
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(streamDuration);
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    flowrate.div(2),
+                    streamDuration,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    loanAmount,
+                    nftContract.address,
+                    calldata
+                )
+            ).to.be.revertedWithCustomError(poolProcessorContract, "insufficientReceivableAmount");
+        });
+
+        it("Should revert when allowance was too low", async function () {
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(streamDuration);
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    flowrate,
+                    streamDuration,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    loanAmount,
+                    nftContract.address,
+                    calldata
+                )
+            ).to.be.revertedWithCustomError(poolProcessorContract, "allowanceTooLow");
+        });
+
+        it("Should revert when authorization expired", async function () {
+            await usdc.connect(borrower).approve(poolProcessorContract.address, toUSDC(10_000));
+
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(streamDuration);
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            let block = await ethers.provider.getBlock();
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    flowrate,
+                    streamDuration,
+                    block.timestamp,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    loanAmount,
+                    nftContract.address,
+                    calldata
+                )
+            ).to.be.revertedWith("Authorization expired");
+        });
+
+        it("Should revert when authorization was invalid", async function () {
+            await usdc.connect(borrower).approve(poolProcessorContract.address, toUSDC(10_000));
+
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(streamDuration);
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration + 1,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+
+            let block = await ethers.provider.getBlock();
+
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    flowrate,
+                    streamDuration,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+
+            await expect(
+                poolProcessorContract.mintAndDrawdown(
+                    borrower.address,
+                    loanAmount,
+                    nftContract.address,
+                    calldata
+                )
+            ).to.be.revertedWith("Invalid authorization");
+        });
+
         it("Should drawdown with authorization", async function () {
             await usdc.connect(borrower).approve(poolProcessorContract.address, toUSDC(10_000));
 
@@ -960,6 +1579,12 @@ describe("Superfluid Factoring", function () {
                 nftContract.address,
                 calldata
             );
+        });
+
+        it("Should revert when receivableAssets mismatched", async function () {
+            await expect(
+                poolProcessorContract.settlement(ethers.constants.AddressZero, streamId)
+            ).to.be.revertedWithCustomError(poolProcessorContract, "receivableAssetMismatch");
         });
 
         it("Should settlement", async function () {

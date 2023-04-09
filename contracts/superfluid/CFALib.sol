@@ -86,7 +86,6 @@ library CFALib {
         (, int96 curRate, , ) = _cfa.getFlow(token, from, to);
         // int96 newRate = curRate - by;
         // require(newRate >= 0, "new rate would be negative");
-        // TODO confirm this logic - flowrate changed during locked period
         if (curRate > 0) {
             if (curRate > by) {
                 cfaV1.updateFlowByOperator(from, to, token, curRate - by);
