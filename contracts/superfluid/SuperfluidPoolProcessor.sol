@@ -40,6 +40,14 @@ contract SuperfluidPoolProcessor is
         tradableStream = _tradableStream;
     }
 
+    /**
+     * @notice Mint a new NFT representing a receivable asset, and drawdown funds from the pool to the borrower's account
+     * @dev The `receivableAsset` must be the same as the `tradableStream` address stored in the contract
+     * @param borrower The address of the borrower who will receive the funds
+     * @param borrowAmount The amount of funds to be drawn down from the pool
+     * @param receivableAsset The address of the receivable asset used as collateral
+     * @param dataForMintTo Additional data to be passed to the `mintTo` function when minting the NFT
+     */
     function mintAndDrawdown(
         address borrower,
         uint256 borrowAmount,
@@ -77,6 +85,18 @@ contract SuperfluidPoolProcessor is
         );
     }
 
+    /**
+     * @notice Withdraws funds from the NFT and settles the receivable asset.
+     * @dev It can be called for the first time only when
+     *          a. Flow is terminated(flow rate is 0) and the credit line can be paid off
+     *          b. The first due date has expired.
+     *      It should pay off the credit line or change its state to delayed. It can be called repeatedly
+     *      in the latter case(delayed state).
+     *      It should be called to delete streamInfo and burn TradableStream NFT if the borrower paid off
+     *      a credit line manually by calling makePaymenet function.
+     * @param receivableAsset The address of the receivable asset used as collateral.
+     * @param receivableId The ID of the NFT representing the receivable asset.
+     */
     function settlement(address receivableAsset, uint256 receivableId) external virtual {
         if (receivableAsset != tradableStream) revert Errors.receivableAssetMismatch();
 
@@ -121,6 +141,14 @@ contract SuperfluidPoolProcessor is
         }
     }
 
+    /**
+     * @notice Try to transfer the borrower's allowance and make payment
+     * @dev It can be called only when
+     *          a. Flow is terminated(flow rate is 0)
+     *          b. The settlement function has not be called(credit line state is GoodStanding)
+     * @param receivableAsset The address of the receivable asset used as collateral.
+     * @param receivableId The ID of the NFT representing the receivable asset.
+     */
     function tryTransferAllowance(address receivableAsset, uint256 receivableId) external {
         if (receivableAsset != tradableStream) revert Errors.receivableAssetMismatch();
         StreamInfo memory si = _streamInfoMapping[receivableId];

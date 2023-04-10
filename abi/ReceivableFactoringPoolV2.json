@@ -131,6 +131,11 @@
   },
   {
     "inputs": [],
+    "name": "settlementTooSoon",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "unsupportedReceivableAsset",
     "type": "error"
   },

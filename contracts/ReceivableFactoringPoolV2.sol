@@ -8,6 +8,8 @@ import {ReceivableFactoringPoolStorageV2} from "./ReceivableFactoringPoolStorage
 import "./BaseCreditPool.sol";
 import {Errors} from "./Errors.sol";
 
+import "hardhat/console.sol";
+
 contract ReceivableFactoringPoolV2 is
     BaseCreditPool,
     ReceivableFactoringPoolStorageV2,
@@ -95,6 +97,12 @@ contract ReceivableFactoringPoolV2 is
         if (receivableParam != ri.receivableParam) revert Errors.receivableAssetParamMismatch();
     }
 
+    /**
+     * @notice Allows the processor to initiate a drawdown on behalf of a borrower.
+     * @param borrower The address of the borrower.
+     * @param borrowAmount The amount to be borrowed.
+     * @return netAmountToBorrower The net amount to be borrowed after deducting any fees.
+     */
     function drawdown4Processor(address borrower, uint256 borrowAmount)
         external
         virtual
@@ -105,6 +113,13 @@ contract ReceivableFactoringPoolV2 is
         netAmountToBorrower = super._drawdown(borrower, cr, borrowAmount);
     }
 
+    /**
+     * @notice Allows the processor to record a payment made by the borrower.
+     * @param borrower The address of the borrower.
+     * @param amount The amount of the payment.
+     * @return amountPaid The amount of the payment that was applied to the credit.
+     * @return paidoff A boolean indicating whether the credit has been fully paid off.
+     */
     function makePayment4Processor(address borrower, uint256 amount)
         external
         virtual
@@ -118,6 +133,18 @@ contract ReceivableFactoringPoolV2 is
         );
     }
 
+    /**
+     * @notice This function is used to settle the credit of a borrower and disburse any remaining funds to them.
+     * If the credit has been fully paid off, the `paidoff` variable will be set to true and the function can be
+     * called to settle the credit. However, if the credit is still active and the borrower tries to settle before
+     * the due date, the function will revert with the error message "settlement too soon".
+     * @param borrower The address of the borrower whose credit is being settled.
+     * @param amount The amount to be settled.
+     * @return amountPaid The amount that was actually paid.
+     * @return paidoff A boolean indicating whether the credit has been fully paid off.
+     *
+     * @dev This function can only be called by the processor address set during contract initialization.
+     */
     function settlement4Processor(address borrower, uint256 amount)
         external
         virtual
@@ -135,6 +162,7 @@ contract ReceivableFactoringPoolV2 is
             if (amount > amountPaid) _disburseRemainingFunds(borrower, amount - amountPaid);
         } else {
             BS.CreditRecord storage cr = _creditRecordMapping[borrower];
+            if (block.timestamp <= cr.dueDate) revert Errors.settlementTooSoon();
             if (cr.state == BS.CreditState.GoodStanding) {
                 cr.state = BS.CreditState.Delayed;
                 _updateDueInfo(borrower, false, false);
