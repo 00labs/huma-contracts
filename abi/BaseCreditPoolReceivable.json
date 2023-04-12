@@ -329,11 +329,6 @@
         "type": "uint256"
       },
       {
-        "internalType": "address",
-        "name": "receivableAsset",
-        "type": "address"
-      },
-      {
         "internalType": "uint96",
         "name": "receivableAmount",
         "type": "uint96"
@@ -393,7 +388,7 @@
       },
       {
         "internalType": "address",
-        "name": "receivableAsset",
+        "name": "paymentToken",
         "type": "address"
       },
       {
@@ -465,7 +460,7 @@
       },
       {
         "internalType": "address",
-        "name": "receivableAsset",
+        "name": "paymentToken",
         "type": "address"
       },
       {

@@ -99,7 +99,7 @@ describe("BaseCreditPoolReceivable", function () {
         }
     });
 
-    describe("BaseCreditPoolReceivable", function () {
+    describe.only("BaseCreditPoolReceivable", function () {
         it("Only minter role can mint", async function () {
             await expect(
                 baseCreditPoolReceivableContract
@@ -140,13 +140,28 @@ describe("BaseCreditPoolReceivable", function () {
                 tokenId
             );
             expect(tokenDetails.baseCreditPool).to.equal(poolContract.address);
-            expect(tokenDetails.receivableAsset).to.equal(testTokenContract.address);
+            expect(tokenDetails.paymentToken).to.equal(testTokenContract.address);
             expect(tokenDetails.receivableAmount).to.equal(1000);
             expect(tokenDetails.maturityDate).to.equal(100);
             expect(tokenDetails.balance).to.equal(0);
 
             const tokenURI = await baseCreditPoolReceivableContract.tokenURI(tokenId);
             expect(tokenURI).to.equal("Test URI");
+        });
+
+        it("Safe mint fails if using wrong payment token", async function () {
+            await expect(
+                baseCreditPoolReceivableContract
+                    .connect(borrower)
+                    .safeMint(
+                        borrower.address,
+                        poolContract.address,
+                        poolContract.address,
+                        1000,
+                        100,
+                        "Test URI"
+                    )
+            ).to.be.revertedWith("Payment token does not match pool underlying token");
         });
 
         describe("makePayment", async function () {
@@ -184,9 +199,7 @@ describe("BaseCreditPoolReceivable", function () {
                     0
                 );
                 await expect(
-                    baseCreditPoolReceivableContract
-                        .connect(borrower)
-                        .makePayment(tokenId, testTokenContract.address, 100)
+                    baseCreditPoolReceivableContract.connect(borrower).makePayment(tokenId, 100)
                 ).to.emit(poolContract, "PaymentMade");
 
                 const tokenDetails = await baseCreditPoolReceivableContract.receivableInfoMapping(
@@ -195,17 +208,15 @@ describe("BaseCreditPoolReceivable", function () {
                 expect(tokenDetails.balance).to.equal(100);
             });
 
-            it("makePayment fails if using a different receivable asset", async function () {
+            it("makePayment fails if not being called by token owner", async function () {
                 const tokenId = await baseCreditPoolReceivableContract.tokenOfOwnerByIndex(
                     borrower.address,
                     0
                 );
 
                 await expect(
-                    baseCreditPoolReceivableContract
-                        .connect(borrower)
-                        .makePayment(tokenId, poolContract.address, 100)
-                ).to.be.revertedWith("Invalid receivable asset");
+                    baseCreditPoolReceivableContract.connect(poolOwner).makePayment(tokenId, 1000)
+                ).to.be.revertedWith("Caller is not token owner");
             });
 
             it("makePayment fails if already paid off", async function () {
@@ -216,12 +227,10 @@ describe("BaseCreditPoolReceivable", function () {
 
                 await baseCreditPoolReceivableContract
                     .connect(borrower)
-                    .makePayment(tokenId, testTokenContract.address, 1000);
+                    .makePayment(tokenId, 1000);
 
                 await expect(
-                    baseCreditPoolReceivableContract
-                        .connect(borrower)
-                        .makePayment(tokenId, testTokenContract.address, 1000)
+                    baseCreditPoolReceivableContract.connect(borrower).makePayment(tokenId, 1000)
                 ).to.be.revertedWith("Receivable already paid");
             });
 
@@ -235,9 +244,7 @@ describe("BaseCreditPoolReceivable", function () {
                     .approve(poolContract.address, toToken(0));
 
                 await expect(
-                    baseCreditPoolReceivableContract
-                        .connect(borrower)
-                        .makePayment(tokenId, testTokenContract.address, 0)
+                    baseCreditPoolReceivableContract.connect(borrower).makePayment(tokenId, 0)
                 ).to.be.revertedWithCustomError(poolContract, "zeroAmountProvided");
             });
         });

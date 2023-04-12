@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import {BaseStructs as BS} from "../libraries/BaseStructs.sol";
 import "../BaseCreditPool.sol";
 
-contract BaseCreditPoolReceivable is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl {
+contract BaseCreditPoolReceivable is ERC721Enumerable, ERC721URIStorage, AccessControl {
     using Counters for Counters.Counter;
+    using BS for BS.CreditRecord;
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     Counters.Counter private _tokenIdCounter;
@@ -19,7 +20,7 @@ contract BaseCreditPoolReceivable is ERC721, ERC721Enumerable, ERC721URIStorage,
 
     struct ReceivableInfo {
         BaseCreditPool baseCreditPool;
-        address receivableAsset;
+        address paymentToken;
         uint96 receivableAmount;
         uint96 balance;
         uint64 maturityDate;
@@ -33,18 +34,24 @@ contract BaseCreditPoolReceivable is ERC721, ERC721Enumerable, ERC721URIStorage,
     function safeMint(
         address recipient,
         address baseCreditPool,
-        address receivableAsset,
+        address paymentToken,
         uint96 receivableAmount,
         uint64 maturityDate,
         string memory uri
     ) public onlyRole(MINTER_ROLE) {
+        (address underlyingToken, , , ) = BaseCreditPool(baseCreditPool).getCoreData();
+        require(
+            underlyingToken == paymentToken,
+            "Payment token does not match pool underlying token"
+        );
+
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(recipient, tokenId);
 
         ReceivableInfo memory receivableInfo = ReceivableInfo(
             BaseCreditPool(baseCreditPool),
-            receivableAsset,
+            paymentToken,
             receivableAmount,
             0, // Balance
             maturityDate
@@ -54,19 +61,13 @@ contract BaseCreditPoolReceivable is ERC721, ERC721Enumerable, ERC721URIStorage,
         _setTokenURI(tokenId, uri);
     }
 
-    function makePayment(
-        uint256 tokenId,
-        address receivableAsset,
-        uint96 receivableAmount
-    ) public {
+    function makePayment(uint256 tokenId, uint96 receivableAmount) public {
         ReceivableInfo storage receivableInfo = receivableInfoMapping[tokenId];
-        require(receivableInfo.receivableAsset == receivableAsset, "Invalid receivable asset");
+        require(msg.sender == ownerOf(tokenId), "Caller is not token owner");
         require(
             receivableInfo.balance < receivableInfo.receivableAmount,
             "Receivable already paid"
         );
-
-        receivableInfo.balance += receivableAmount;
 
         (uint256 amountPaid, ) = receivableInfo.baseCreditPool.makePayment(
             ownerOf(tokenId),
@@ -74,6 +75,8 @@ contract BaseCreditPoolReceivable is ERC721, ERC721Enumerable, ERC721URIStorage,
         );
 
         require(amountPaid > 0, "makePayment failed");
+
+        receivableInfo.balance += uint96(amountPaid);
     }
 
     // The following functions are overrides required by Solidity.
