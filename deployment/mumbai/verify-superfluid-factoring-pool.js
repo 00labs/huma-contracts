@@ -153,6 +153,9 @@ async function verifyContracts() {
     ]);
     console.log(`Verify SuperfluidFactoringPool result: ${verifyPool}`);
 
+    const verifyProcessorImpl = await verifyContract("SuperfluidProcessorImpl");
+    console.log(`Verify SuperfluidProcessorImpl result: ${verifyProcessorImpl}`);
+
     const verifyMultisend = await verifyContract("Multisend");
     console.log(`Verify Multisend result: ${verifyMultisend}`);
 }

@@ -86,8 +86,13 @@ async function verifySuperfluidFactoringPool() {
     const BasePoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
     const poolConfig = BasePoolConfig.attach(deployedContracts["SuperfluidFactoringPoolConfig"]);
 
-    const SuperfluidFactoringPool = await hre.ethers.getContractFactory("SuperfluidFactoringPool");
-    const pool = SuperfluidFactoringPool.attach(deployedContracts["SuperfluidFactoringPool"]);
+    const ReceivableFactoringPoolV2 = await hre.ethers.getContractFactory(
+        "ReceivableFactoringPoolV2"
+    );
+    const pool = ReceivableFactoringPoolV2.attach(deployedContracts["SuperfluidFactoringPool"]);
+
+    const SuperfluidPoolProcessor = await hre.ethers.getContractFactory("SuperfluidPoolProcessor");
+    const processor = SuperfluidPoolProcessor.attach(deployedContracts["SuperfluidProcessor"]);
 
     const HDT = await hre.ethers.getContractFactory("HDT");
     const hdt = HDT.attach(deployedContracts["SuperfluidPoolHDT"]);
@@ -180,10 +185,11 @@ async function verifySuperfluidFactoringPool() {
             ),
             streamAmount
         );
-    await usdc.connect(borrower).approve(pool.address, streamAmount.mul(BN.from(2)));
 
-    const collateralAmount = BN.from(500).mul(BN.from(10).pow(BN.from(decimals)));
+    await usdc.connect(borrower).approve(processor.address, streamAmount.mul(BN.from(2)));
+    let collateralAmount = BN.from(500).mul(BN.from(10).pow(BN.from(decimals)));
     flowrate = collateralAmount.div(BN.from(streamDuration)).add(BN.from(1));
+    collateralAmount = flowrate.mul(BN.from(streamDuration));
     let nonce = await nft.nonces(borrower.address);
     let expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -210,7 +216,7 @@ async function verifySuperfluidFactoringPool() {
             receiver: borrower.address,
             token: usdcx.address,
             origin: payer.address,
-            owner: pool.address,
+            owner: processor.address,
             flowrate: flowrate,
             durationInSeconds: streamDuration,
             nonce: nonce,
@@ -245,22 +251,21 @@ async function verifySuperfluidFactoringPool() {
     );
 
     let beforeAmount = await usdc.balanceOf(borrower.address);
-
     await multisend.multisend(
-        [pool.address],
+        [processor.address],
         [
-            pool.interface.encodeFunctionData("drawdownWithAuthorization", [
+            processor.interface.encodeFunctionData("mintAndDrawdown", [
+                borrower.address,
                 collateralAmount,
                 nft.address,
                 calldata,
             ]),
         ]
     );
-
     let afterAmount = await usdc.balanceOf(borrower.address);
     console.log(`${borrower.address} borrowed amount: ${afterAmount.sub(beforeAmount)}`);
     cr = await displayCreditRecord(pool, borrower);
-    const streamId = (await nft.balanceOf(pool.address)).sub(BN.from(1));
+    const streamId = (await nft.balanceOf(processor.address)).sub(BN.from(1));
     console.log(`streamId: ${streamId}`);
 
     // makePayment by borrower
@@ -271,6 +276,7 @@ async function verifySuperfluidFactoringPool() {
     console.log("*******************************************************************");
     console.log(`\n`);
 
+    await usdc.connect(borrower).approve(pool.address, streamAmount.mul(BN.from(2)));
     beforeAmount = cr.totalDue;
     let paymentAmount = BN.from(10).mul(BN.from(10).pow(BN.from(decimals)));
     await pool.connect(borrower).makePayment(borrower.address, paymentAmount);
@@ -299,19 +305,19 @@ async function verifySuperfluidFactoringPool() {
 
     console.log(`\n`);
     console.log("*******************************************************************");
-    console.log("*            Checking SuperfluidFactoringPool payoff              *");
+    console.log("*          Checking SuperfluidFactoringPool settlement            *");
     console.log("*******************************************************************");
     console.log(`\n`);
 
     await advanceClock(streamDays);
 
-    await pool.payoff(nft.address, streamId);
+    await processor.settlement(nft.address, streamId);
     cr = await displayCreditRecord(pool, borrower);
     if (cr.totalDue > 0 || cr.unbilledPrincipal > 0 || cr.state > 3) {
         throw new Error("Data is wrong after payoff!");
     }
 
-    // TODO onReceivedPayment with review
+    // TODO terminate flow
 
     // withdraw by lender
 

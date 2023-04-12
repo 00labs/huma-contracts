@@ -17,7 +17,11 @@ let deployer,
     sfpOwnerTreasury,
     payer;
 
-const USDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
+const SF_FUSDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
+const SF_HOST_ADDRESS = "0xEB796bdb90fFA0f28255275e16936D25d3418603";
+const SF_CFA_ADDRESS = "0x49e565Ed1bdc17F3d220f72DF0857C26FA83F873";
+
+const USDC_ADDRESS = SF_FUSDC_ADDRESS;
 
 const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
 const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
@@ -107,8 +111,8 @@ async function initFeeManager() {
         throw new Error("SuperfluidFactoringPoolFeeManager not deployed yet!");
     }
 
-    const StreamFeeManager = await hre.ethers.getContractFactory("StreamFeeManager");
-    const feeManager = StreamFeeManager.attach(
+    const SuperfluidFeeManager = await hre.ethers.getContractFactory("SuperfluidFeeManager");
+    const feeManager = SuperfluidFeeManager.attach(
         deployedContracts["SuperfluidFactoringPoolFeeManager"]
     );
 
@@ -217,8 +221,8 @@ async function initPoolConfig() {
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
 
-    const StreamFeeManager = await hre.ethers.getContractFactory("StreamFeeManager");
-    const feeManager = StreamFeeManager.attach(
+    const SuperfluidFeeManager = await hre.ethers.getContractFactory("SuperfluidFeeManager");
+    const feeManager = SuperfluidFeeManager.attach(
         deployedContracts["SuperfluidFactoringPoolFeeManager"]
     );
 
@@ -318,12 +322,38 @@ async function initPool() {
         throw new Error("SuperfluidFactoringPoolConfig not deployed yet!");
     }
 
-    const SuperfluidFactoringPool = await hre.ethers.getContractFactory("SuperfluidFactoringPool");
-    const pool = SuperfluidFactoringPool.attach(deployedContracts["SuperfluidFactoringPool"]);
+    if (!deployedContracts["SuperfluidProcessor"]) {
+        throw new Error("SuperfluidProcessor not deployed yet!");
+    }
 
-    await sendTransaction("SuperfluidFactoringPool", pool, "initialize", [
+    if (!deployedContracts["SuperfluidTradableStream"]) {
+        throw new Error("SuperfluidTradableStream not deployed yet!");
+    }
+
+    const ReceivableFactoringPoolV2 = await hre.ethers.getContractFactory(
+        "ReceivableFactoringPoolV2"
+    );
+    const pool = ReceivableFactoringPoolV2.attach(deployedContracts["SuperfluidFactoringPool"]);
+
+    await sendTransaction("SuperfluidFactoringPool", pool, "initialize(address,address)", [
         deployedContracts["SuperfluidFactoringPoolConfig"],
+        deployedContracts["SuperfluidProcessor"],
     ]);
+
+    const SuperfluidPoolProcessor = await hre.ethers.getContractFactory("SuperfluidPoolProcessor");
+    const processor = SuperfluidPoolProcessor.attach(deployedContracts["SuperfluidProcessor"]);
+
+    await sendTransaction(
+        "SuperfluidProcessor",
+        processor,
+        "initialize(address,address,address,address)",
+        [
+            deployedContracts["SuperfluidFactoringPool"],
+            SF_HOST_ADDRESS,
+            SF_CFA_ADDRESS,
+            deployedContracts["SuperfluidTradableStream"],
+        ]
+    );
 
     await updateInitilizedContract("SuperfluidFactoringPool");
 }
@@ -333,8 +363,10 @@ async function prepare() {
         throw new Error("SuperfluidFactoringPool not deployed yet!");
     }
 
-    const SuperfluidFactoringPool = await hre.ethers.getContractFactory("SuperfluidFactoringPool");
-    const pool = SuperfluidFactoringPool.attach(deployedContracts["SuperfluidFactoringPool"]);
+    const ReceivableFactoringPoolV2 = await hre.ethers.getContractFactory(
+        "ReceivableFactoringPoolV2"
+    );
+    const pool = ReceivableFactoringPoolV2.attach(deployedContracts["SuperfluidFactoringPool"]);
     const poolFromOperator = pool.connect(sfpOperator);
 
     await sendTransaction("SuperfluidFactoringPool", poolFromOperator, "addApprovedLender", [

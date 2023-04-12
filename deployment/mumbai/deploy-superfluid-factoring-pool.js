@@ -41,7 +41,7 @@ async function deployContracts() {
         [0, [POOL_OWNER_MULTI_SIG], [deployer.address]]
     );
 
-    const feeManager = await deploy("StreamFeeManager", "SuperfluidFactoringPoolFeeManager");
+    const feeManager = await deploy("SuperfluidFeeManager", "SuperfluidFactoringPoolFeeManager");
     const hdtImpl = await deploy("HDT", "SuperfluidPoolHDTImpl");
     const hdt = await deploy("TransparentUpgradeableProxy", "SuperfluidPoolHDT", [
         hdtImpl.address,
@@ -51,9 +51,16 @@ async function deployContracts() {
 
     const poolConfig = await deploy("BasePoolConfig", "SuperfluidFactoringPoolConfig");
 
-    const poolImpl = await deploy("SuperfluidFactoringPool", "SuperfluidFactoringPoolImpl");
+    const poolImpl = await deploy("ReceivableFactoringPoolV2", "SuperfluidFactoringPoolImpl");
     const pool = await deploy("TransparentUpgradeableProxy", "SuperfluidFactoringPool", [
         poolImpl.address,
+        superfluidFactoringPoolProxyAdminTL.address,
+        [],
+    ]);
+
+    const processorImpl = await deploy("SuperfluidPoolProcessor", "SuperfluidProcessorImpl");
+    const processor = await deploy("TransparentUpgradeableProxy", "SuperfluidProcessor", [
+        processorImpl.address,
         superfluidFactoringPoolProxyAdminTL.address,
         [],
     ]);
