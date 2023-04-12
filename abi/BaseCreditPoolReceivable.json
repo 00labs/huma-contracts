@@ -59,6 +59,37 @@
     "inputs": [
       {
         "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "PaymentDeclared",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
         "internalType": "bytes32",
         "name": "role",
         "type": "bytes32"
@@ -223,6 +254,24 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint96",
+        "name": "paymentAmount",
+        "type": "uint96"
+      }
+    ],
+    "name": "declarePayment",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
       }
     ],
     "name": "getApproved",
@@ -231,6 +280,25 @@
         "internalType": "address",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPaymentStatus",
+    "outputs": [
+      {
+        "internalType": "enum BaseCreditPoolReceivable.Status",
+        "name": "",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -330,7 +398,7 @@
       },
       {
         "internalType": "uint96",
-        "name": "receivableAmount",
+        "name": "paymentAmount",
         "type": "uint96"
       }
     ],
@@ -385,6 +453,11 @@
         "internalType": "contract BaseCreditPool",
         "name": "baseCreditPool",
         "type": "address"
+      },
+      {
+        "internalType": "enum BaseCreditPoolReceivable.PaymentMethod",
+        "name": "paymentMethod",
+        "type": "uint8"
       },
       {
         "internalType": "address",
@@ -472,6 +545,11 @@
         "internalType": "uint64",
         "name": "maturityDate",
         "type": "uint64"
+      },
+      {
+        "internalType": "enum BaseCreditPoolReceivable.PaymentMethod",
+        "name": "paymentMethod",
+        "type": "uint8"
       },
       {
         "internalType": "string",

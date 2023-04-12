@@ -99,35 +99,33 @@ describe("BaseCreditPoolReceivable", function () {
         }
     });
 
-    describe.only("BaseCreditPoolReceivable", function () {
+    describe("BaseCreditPoolReceivable", function () {
         it("Only minter role can mint", async function () {
             await expect(
-                baseCreditPoolReceivableContract
-                    .connect(eaServiceAccount)
-                    .safeMint(
-                        eaServiceAccount.address,
-                        poolContract.address,
-                        testTokenContract.address,
-                        100,
-                        100,
-                        "Test URI"
-                    )
+                baseCreditPoolReceivableContract.connect(eaServiceAccount).safeMint(
+                    eaServiceAccount.address,
+                    poolContract.address,
+                    testTokenContract.address,
+                    100,
+                    100,
+                    1, // baseCreditPoolReceivableContract.PaymentMethod.Payable
+                    "Test URI"
+                )
             ).to.be.revertedWith(
                 `AccessControl: account ${eaServiceAccount.address.toLowerCase()} is missing role ${minterRole}`
             );
         });
 
         it("Safe mint stores correct details on chain", async function () {
-            await baseCreditPoolReceivableContract
-                .connect(borrower)
-                .safeMint(
-                    borrower.address,
-                    poolContract.address,
-                    testTokenContract.address,
-                    1000,
-                    100,
-                    "Test URI"
-                );
+            await baseCreditPoolReceivableContract.connect(borrower).safeMint(
+                borrower.address,
+                poolContract.address,
+                testTokenContract.address,
+                1000,
+                100,
+                1, // baseCreditPoolReceivableContract.PaymentMethod.Payable
+                "Test URI"
+            );
 
             expect(await baseCreditPoolReceivableContract.balanceOf(borrower.address)).to.equal(1);
 
@@ -140,6 +138,7 @@ describe("BaseCreditPoolReceivable", function () {
                 tokenId
             );
             expect(tokenDetails.baseCreditPool).to.equal(poolContract.address);
+            expect(tokenDetails.paymentMethod).to.equal(1);
             expect(tokenDetails.paymentToken).to.equal(testTokenContract.address);
             expect(tokenDetails.receivableAmount).to.equal(1000);
             expect(tokenDetails.maturityDate).to.equal(100);
@@ -151,17 +150,117 @@ describe("BaseCreditPoolReceivable", function () {
 
         it("Safe mint fails if using wrong payment token", async function () {
             await expect(
-                baseCreditPoolReceivableContract
-                    .connect(borrower)
-                    .safeMint(
-                        borrower.address,
-                        poolContract.address,
-                        poolContract.address,
-                        1000,
-                        100,
-                        "Test URI"
-                    )
+                baseCreditPoolReceivableContract.connect(borrower).safeMint(
+                    borrower.address,
+                    poolContract.address,
+                    poolContract.address,
+                    1000,
+                    100,
+                    1, // baseCreditPoolReceivableContract.PaymentMethod.Payable
+                    "Test URI"
+                )
             ).to.be.revertedWith("Payment token does not match pool underlying token");
+        });
+
+        describe("declarePayment", async function () {
+            beforeEach(async function () {
+                await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
+                await poolContract
+                    .connect(eaServiceAccount)
+                    .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+                await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+
+                await baseCreditPoolReceivableContract.connect(borrower).safeMint(
+                    borrower.address,
+                    poolContract.address,
+                    testTokenContract.address,
+                    1000,
+                    100,
+                    0, // baseCreditPoolReceivableContract.PaymentMethod.Declarative
+                    "Test URI"
+                );
+
+                expect(
+                    await baseCreditPoolReceivableContract.balanceOf(borrower.address)
+                ).to.equal(1);
+
+                await testTokenContract.connect(borrower).mint(borrower.address, toToken(2_000));
+                await testTokenContract
+                    .connect(borrower)
+                    .approve(poolContract.address, toToken(2000));
+            });
+
+            it("declarePayment emits event and sends funds", async function () {
+                const tokenId = await baseCreditPoolReceivableContract.tokenOfOwnerByIndex(
+                    borrower.address,
+                    0
+                );
+                await expect(
+                    baseCreditPoolReceivableContract.connect(borrower).declarePayment(tokenId, 100)
+                ).to.emit(baseCreditPoolReceivableContract, "PaymentDeclared");
+
+                const tokenDetails = await baseCreditPoolReceivableContract.receivableInfoMapping(
+                    tokenId
+                );
+                expect(tokenDetails.balance).to.equal(100);
+            });
+
+            it("declarePayment fails if not being called by token owner", async function () {
+                const tokenId = await baseCreditPoolReceivableContract.tokenOfOwnerByIndex(
+                    borrower.address,
+                    0
+                );
+
+                await expect(
+                    baseCreditPoolReceivableContract
+                        .connect(poolOwner)
+                        .declarePayment(tokenId, 1000)
+                ).to.be.revertedWith("Caller is not token owner");
+            });
+
+            it("declarePayment fails if the receivable is payable", async function () {
+                await baseCreditPoolReceivableContract.connect(borrower).safeMint(
+                    borrower.address,
+                    poolContract.address,
+                    testTokenContract.address,
+                    1000,
+                    100,
+                    1, // baseCreditPoolReceivableContract.PaymentMethod.Payable
+                    "Test URI"
+                );
+
+                expect(
+                    await baseCreditPoolReceivableContract.balanceOf(borrower.address)
+                ).to.equal(2);
+
+                const tokenId = await baseCreditPoolReceivableContract.tokenOfOwnerByIndex(
+                    borrower.address,
+                    1
+                );
+
+                await expect(
+                    baseCreditPoolReceivableContract
+                        .connect(borrower)
+                        .declarePayment(tokenId, 1000)
+                ).to.be.revertedWith("Unsupported payment method for receivable");
+            });
+
+            it("declarePayment fails if already paid off", async function () {
+                const tokenId = await baseCreditPoolReceivableContract.tokenOfOwnerByIndex(
+                    borrower.address,
+                    0
+                );
+
+                await baseCreditPoolReceivableContract
+                    .connect(borrower)
+                    .declarePayment(tokenId, 1000);
+
+                await expect(
+                    baseCreditPoolReceivableContract
+                        .connect(borrower)
+                        .declarePayment(tokenId, 1000)
+                ).to.be.revertedWith("Receivable already paid");
+            });
         });
 
         describe("makePayment", async function () {
@@ -172,16 +271,15 @@ describe("BaseCreditPoolReceivable", function () {
                     .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
                 await poolContract.connect(borrower).drawdown(toToken(1_000_000));
 
-                await baseCreditPoolReceivableContract
-                    .connect(borrower)
-                    .safeMint(
-                        borrower.address,
-                        poolContract.address,
-                        testTokenContract.address,
-                        1000,
-                        100,
-                        "Test URI"
-                    );
+                await baseCreditPoolReceivableContract.connect(borrower).safeMint(
+                    borrower.address,
+                    poolContract.address,
+                    testTokenContract.address,
+                    1000,
+                    100,
+                    1, // baseCreditPoolReceivableContract.PaymentMethod.Payable
+                    "Test URI"
+                );
 
                 expect(
                     await baseCreditPoolReceivableContract.balanceOf(borrower.address)
@@ -217,6 +315,31 @@ describe("BaseCreditPoolReceivable", function () {
                 await expect(
                     baseCreditPoolReceivableContract.connect(poolOwner).makePayment(tokenId, 1000)
                 ).to.be.revertedWith("Caller is not token owner");
+            });
+
+            it("makePayment fails if the receivable is declarative", async function () {
+                await baseCreditPoolReceivableContract.connect(borrower).safeMint(
+                    borrower.address,
+                    poolContract.address,
+                    testTokenContract.address,
+                    1000,
+                    100,
+                    0, // baseCreditPoolReceivableContract.PaymentMethod.Declarative
+                    "Test URI"
+                );
+
+                expect(
+                    await baseCreditPoolReceivableContract.balanceOf(borrower.address)
+                ).to.equal(2);
+
+                const tokenId = await baseCreditPoolReceivableContract.tokenOfOwnerByIndex(
+                    borrower.address,
+                    1
+                );
+
+                await expect(
+                    baseCreditPoolReceivableContract.connect(borrower).makePayment(tokenId, 1000)
+                ).to.be.revertedWith("Unsupported payment method for receivable");
             });
 
             it("makePayment fails if already paid off", async function () {

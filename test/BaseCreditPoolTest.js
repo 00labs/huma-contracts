@@ -782,16 +782,15 @@ describe("Base Credit Pool", function () {
                 .approveCredit(borrower2.address, toToken(1_000_000), 30, 12, 1217);
             await poolContract.connect(borrower2).drawdown(toToken(1_000_000));
 
-            await baseCreditPoolReceivableContract
-                .connect(borrower2)
-                .safeMint(
-                    borrower2.address,
-                    poolContract.address,
-                    testTokenContract.address,
-                    1000,
-                    100,
-                    "Test URI"
-                );
+            await baseCreditPoolReceivableContract.connect(borrower2).safeMint(
+                borrower2.address,
+                poolContract.address,
+                testTokenContract.address,
+                1000,
+                100,
+                1, // baseCreditPoolReceivableContract.PaymentMethod.Payable
+                "Test URI"
+            );
 
             expect(await baseCreditPoolReceivableContract.balanceOf(borrower2.address)).to.equal(
                 1
@@ -808,9 +807,7 @@ describe("Base Credit Pool", function () {
             );
 
             await expect(
-                baseCreditPoolReceivableContract
-                    .connect(borrower2)
-                    .makePayment(tokenId, testTokenContract.address, 1000)
+                baseCreditPoolReceivableContract.connect(borrower2).makePayment(tokenId, 1000)
             ).to.be.revertedWithCustomError(
                 poolContract,
                 "paymentDetectionServiceAccountRequired"
@@ -820,9 +817,7 @@ describe("Base Credit Pool", function () {
                 .connect(poolOwner)
                 .setWhitelistedPaymentContract(baseCreditPoolReceivableContract.address, true);
 
-            await baseCreditPoolReceivableContract
-                .connect(borrower2)
-                .makePayment(tokenId, testTokenContract.address, 1000);
+            await baseCreditPoolReceivableContract.connect(borrower2).makePayment(tokenId, 1000);
 
             let creditInfo = await poolContract.creditRecordMapping(borrower2.address);
 
