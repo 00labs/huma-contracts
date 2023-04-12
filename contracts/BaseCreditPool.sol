@@ -233,8 +233,9 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
     }
 
     /**
-     * @notice Makes one payment for the borrower. This can be initiated by the borrower
-     * or by PDSServiceAccount with the allowance approval from the borrower.
+     * @notice Makes one payment for the borrower. This can be initiated by the borrower,
+     * a whitelisted payment contract, or by PDSServiceAccount with the allowance
+     * approval from the borrower.
      * If this is the final payment, it automatically triggers the payoff process.
      * @return amountPaid the actual amount paid to the contract. When the tendered
      * amount is larger than the payoff amount, the contract only accepts the payoff amount.
@@ -248,7 +249,8 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         override
         returns (uint256 amountPaid, bool paidoff)
     {
-        if (msg.sender != borrower) onlyPDSServiceAccount();
+        if (msg.sender != borrower && !_poolConfig.whitelistedPaymentContracts(msg.sender))
+            onlyPDSServiceAccount();
 
         (amountPaid, paidoff, ) = _makePayment(borrower, amount, BS.PaymentStatus.NotReceived);
     }
@@ -641,6 +643,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
         // If the reported received payment amount is far higher than the invoice amount,
         // flags the transaction for review.
+
         if (paymentStatus == BS.PaymentStatus.ReceivedNotVerified) {
             // Check against in-memory payoff amount first is purely for gas consideration.
             // We expect near 100% of the payments to fail in the first check

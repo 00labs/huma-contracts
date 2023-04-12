@@ -93,6 +93,9 @@ contract BasePoolConfig is Ownable, Initializable {
     /// Pool operators can add or remove lenders.
     mapping(address => bool) private poolOperators;
 
+    // Whitelisted payment contracts are allowed to call makePayment on behalf of a user
+    mapping(address => bool) public whitelistedPaymentContracts;
+
     // Address for the account that handles the treasury functions for the pool owner:
     // liquidity deposits, liquidity withdrawls, and reward withdrawals
     address public poolOwnerTreasury;
@@ -144,6 +147,12 @@ contract BasePoolConfig is Ownable, Initializable {
 
     /// A operator has been removed
     event PoolOperatorRemoved(address indexed operator, address by);
+
+    event WhitelistedPaymentContractsChanged(
+        address paymentContract,
+        address by,
+        bool whitelisted
+    );
 
     function initialize(
         string memory _poolName,
@@ -434,6 +443,17 @@ contract BasePoolConfig is Ownable, Initializable {
         _onlyOwnerOrHumaMasterAdmin();
         _poolConfig._withdrawalLockoutPeriodInSeconds = lockoutPeriodInDays * SECONDS_IN_A_DAY;
         emit WithdrawalLockoutPeriodChanged(lockoutPeriodInDays, msg.sender);
+    }
+
+    /**
+     * Updates the whitelisted setting of a payment contract. These contracts
+     * are allowed to call makePayment on behalf of a user.
+     * @param whitelisted whether the contract is allowed to call makePayment
+     */
+    function setWhitelistedPaymentContract(address paymentContract, bool whitelisted) external {
+        _onlyOwnerOrHumaMasterAdmin();
+        whitelistedPaymentContracts[paymentContract] = whitelisted;
+        emit WhitelistedPaymentContractsChanged(paymentContract, msg.sender, whitelisted);
     }
 
     function withdrawEAFee(uint256 amount) external {
