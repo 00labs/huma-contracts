@@ -42,7 +42,7 @@ contract SuperfluidPoolProcessor is
 
     /**
      * @notice Mint a new NFT representing a receivable asset, and drawdown funds from the pool to the borrower's account
-     * @dev The `receivableAsset` must be the same as the `tradableStream` address stored in the contract
+     * @dev The `receivableAsset` must be the same as the `tradableStream` address stored in the contract.
      * @param borrower The address of the borrower who will receive the funds
      * @param borrowAmount The amount of funds to be drawn down from the pool
      * @param receivableAsset The address of the receivable asset used as collateral

@@ -8,8 +8,6 @@ import {ReceivableFactoringPoolStorageV2} from "./ReceivableFactoringPoolStorage
 import "./BaseCreditPool.sol";
 import {Errors} from "./Errors.sol";
 
-import "hardhat/console.sol";
-
 contract ReceivableFactoringPoolV2 is
     BaseCreditPool,
     ReceivableFactoringPoolStorageV2,

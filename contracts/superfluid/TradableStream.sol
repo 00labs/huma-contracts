@@ -8,7 +8,6 @@ import {ISuperfluid, ISuperToken, ISuperApp} from "@superfluid-finance/ethereum-
 import {IConstantFlowAgreementV1} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
 import {CFAv1Library} from "@superfluid-finance/ethereum-contracts/contracts/apps/CFAv1Library.sol";
 import {CFALib} from "./CFALib.sol";
-import "hardhat/console.sol";
 
 struct TradableStreamMetadata {
     uint256 duration;
@@ -116,6 +115,8 @@ contract TradableStream is ERC721, Ownable {
         require(msg.sender == ownerOf(tokenId), "no permission to burn");
 
         TradableStreamMetadata memory meta = metadatas[tokenId];
+        // The owner can burn the StreamTradable at any time. One case is that the owner may burn it before the duration
+        // if the flow was terminated.
         // require(meta.started == 0 || isMature(tokenId), "cant burn a non mature TradableStream");
 
         _burn(tokenId);
@@ -190,6 +191,20 @@ contract TradableStream is ERC721, Ownable {
         }
     }
 
+    /// @notice Mint a TradableStream to msg.sender based on receiver's authorization
+    /// @dev This function is to combine mint, approve and transfer in one function.
+    ///      The receiver generates authorization proof(
+    ///      the format is 'MintToWithAuthorization(address receiver,address token,address origin,address owner,int96 flowrate,uint256 durationInSeconds,uint256 nonce,uint256 expiry)'
+    ///      ). The owner(who will receive this TradableStream) can call this function with the signature(v, r, s).
+    /// @param receiver the flow's receiver who creates the proof
+    /// @param token the currency this TradableStream is based on
+    /// @param origin the source that streams `token` to the receiver account
+    /// @param flowrate how much flowrate will be moved out
+    /// @param durationInSeconds how long this TradableStream will run after it's been transferred for the first time
+    /// @param expiry the expiration timestamp(second) of the proof
+    /// @param v v of the signature
+    /// @param r r of the signature
+    /// @param s s of the signature
     function mintToWithAuthorization(
         address receiver,
         address token,
@@ -254,20 +269,30 @@ contract TradableStream is ERC721, Ownable {
             delete metadatas[tokenId];
 
             //burnt
-            cfaV1._decreaseFlowByOperator(
-                cfaV1.cfa,
-                meta.token,
-                meta.origin,
-                oldReceiver,
-                meta.flowrate
-            );
-            cfaV1._increaseFlowByOperator(
-                cfaV1.cfa,
-                meta.token,
-                meta.origin,
-                meta.receiver,
-                meta.flowrate
-            );
+            (, int96 flowrate, , ) = cfaV1.cfa.getFlow(meta.token, meta.origin, oldReceiver);
+            if (flowrate > 0) {
+                // If the origin increased or decreased the flowrate after the TradableStream was transferred,
+                // current flowrate will be different from the initial flowrate.
+
+                // decrease current flowrate from the TradableStream's owner
+                cfaV1._decreaseFlowByOperator(
+                    cfaV1.cfa,
+                    meta.token,
+                    meta.origin,
+                    oldReceiver,
+                    flowrate
+                );
+
+                // increase current flowrate to the initial receiver
+                cfaV1._increaseFlowByOperator(
+                    cfaV1.cfa,
+                    meta.token,
+                    meta.origin,
+                    meta.receiver,
+                    flowrate
+                );
+            }
+            // If the origin teminated this flow, does nothing.
         } else {
             //transfer
             //transfer
