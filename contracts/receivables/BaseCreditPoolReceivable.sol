@@ -208,11 +208,11 @@ contract BaseCreditPoolReceivable is ERC721Enumerable, ERC721URIStorage, AccessC
         address to,
         uint256 tokenId
     ) internal override(ERC721, ERC721Enumerable) {
-        super._beforeTokenTransfer(from, to, tokenId);
+        ERC721Enumerable._beforeTokenTransfer(from, to, tokenId);
     }
 
     function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
+        ERC721URIStorage._burn(tokenId);
     }
 
     function tokenURI(uint256 tokenId)
@@ -221,7 +221,7 @@ contract BaseCreditPoolReceivable is ERC721Enumerable, ERC721URIStorage, AccessC
         override(ERC721, ERC721URIStorage)
         returns (string memory)
     {
-        return super.tokenURI(tokenId);
+        return ERC721URIStorage.tokenURI(tokenId);
     }
 
     function supportsInterface(bytes4 interfaceId)
@@ -230,6 +230,8 @@ contract BaseCreditPoolReceivable is ERC721Enumerable, ERC721URIStorage, AccessC
         override(ERC721, ERC721Enumerable, AccessControl)
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return
+            ERC721Enumerable.supportsInterface(interfaceId) ||
+            AccessControl.supportsInterface(interfaceId);
     }
 }
