@@ -299,11 +299,14 @@ describe("BaseCreditPoolReceivable", function () {
                 await expect(
                     baseCreditPoolReceivableContract.connect(borrower).makePayment(tokenId, 100)
                 ).to.emit(poolContract, "PaymentMade");
+                await expect(
+                    baseCreditPoolReceivableContract.connect(borrower).makePayment(tokenId, 100)
+                ).to.emit(baseCreditPoolReceivableContract, "PaymentMade");
 
                 const tokenDetails = await baseCreditPoolReceivableContract.receivableInfoMapping(
                     tokenId
                 );
-                expect(tokenDetails.balance).to.equal(100);
+                expect(tokenDetails.balance).to.equal(200);
             });
 
             it("makePayment fails if not being called by token owner", async function () {
