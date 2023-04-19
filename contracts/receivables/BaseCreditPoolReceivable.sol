@@ -71,6 +71,20 @@ contract BaseCreditPoolReceivable is ERC721Enumerable, ERC721URIStorage, AccessC
     );
 
     /**
+     * @dev Emitted when the owner of a receivable calls the makePayment function
+     * @param from The address of the owner of the receivable
+     * @param to The address of the BaseCreditPool that's paid by the receivable
+     * @param tokenId The ID of the receivable token
+     * @param amount The amount that was declared paid
+     */
+    event PaymentMade(
+        address indexed from,
+        address indexed to,
+        uint256 indexed tokenId,
+        uint256 amount
+    );
+
+    /**
      * @dev Constructor that sets the default admin and minter roles
      */
     constructor() ERC721("BaseCreditPoolReceivable", "pREC") {
@@ -181,6 +195,13 @@ contract BaseCreditPoolReceivable is ERC721Enumerable, ERC721URIStorage, AccessC
         require(amountPaid > 0, "makePayment failed");
 
         receivableInfo.balance += uint96(amountPaid);
+
+        emit PaymentMade(
+            msg.sender,
+            address(receivableInfo.baseCreditPool),
+            tokenId,
+            uint256(amountPaid)
+        );
     }
 
     /**
