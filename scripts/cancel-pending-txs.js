@@ -2,7 +2,7 @@ const {Wallet, utils} = require("ethers");
 
 const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const ACCOUNT_PRIVATE_KEY = "";
-const TO_ADDRESS = "0x60891b087E81Ee2a61B7606f68019ec112c539B9";
+const TO_ADDRESS = "0x07250B0373Aa6a3de47A44e3Cf720A6376296dD5";
 
 async function main() {
     const network = (await hre.ethers.provider.getNetwork()).name;
@@ -16,10 +16,10 @@ async function main() {
 
     const data = {
         to: TO_ADDRESS,
-        // value: utils.parseUnits("10", "gwei"),
-        maxFeePerGas: utils.parseUnits("100", "gwei"),
-        maxPriorityFeePerGas: utils.parseUnits("40", "gwei"),
-        nonce: null,
+        value: utils.parseUnits("10", "gwei"),
+        maxFeePerGas: utils.parseUnits("280", "gwei"),
+        maxPriorityFeePerGas: utils.parseUnits("200", "gwei"),
+        nonce: 92173,
     };
 
     const tx = await account.sendTransaction(data);
