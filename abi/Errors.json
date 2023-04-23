@@ -131,6 +131,16 @@
   },
   {
     "inputs": [],
+    "name": "flowIsNotTerminated",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "flowKeyMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "greaterThanMaxCreditLine",
     "type": "error"
   },
@@ -147,6 +157,16 @@
   {
     "inputs": [],
     "name": "invalidFlowrate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "invalidSuperfluidAction",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "invalidSuperfluidCallback",
     "type": "error"
   },
   {
@@ -277,6 +297,11 @@
   {
     "inputs": [],
     "name": "receivableAssetParamMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "receivableIdMismatch",
     "type": "error"
   },
   {

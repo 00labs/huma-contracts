@@ -14,6 +14,8 @@ contract SuperfluidPoolProcessorStorage {
         uint64 lastStartTime;
         uint64 endTime;
         uint256 receivedFlowAmount;
+        /// The mapping from the keccak256 hash of the Super token address and flowId
+        bytes32 flowKey;
     }
 
     /// The mapping from the keccak256 hash of the receivableAddress and receivableId to
@@ -22,14 +24,10 @@ contract SuperfluidPoolProcessorStorage {
     mapping(uint256 => StreamInfo) internal _streamInfoMapping;
 
     /// The mapping from the keccak256 hash of the Super token address and flowId to
-    /// the keccak256 hash of the receivableAddress and receivableId.
-    /// It is used to find StreamInfo when flow is updated. But there is a limitation,
-    /// it only can support one StreamInfo now. For example, there are 2 TradableStream,
-    /// payer -> payee1, payer -> payee2, both payee1 and payee2 called mintAndDrawdown,
-    /// the above 2 flows combined one new flow payer -> processor. If the payer -> processor flow
-    /// was updated, current solution can't recognzie the impact for each credit. It needs more consideration
-    /// of product and code work to solve this kind of problems.
-    mapping(bytes32 => uint256) internal _flowMapping;
+    /// the flow end time
+    mapping(bytes32 => uint256) internal _flowEndMapping;
+
+    bool internal _internalCall;
 
     uint256[100] private __gap;
 }

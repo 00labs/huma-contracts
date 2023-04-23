@@ -16,8 +16,7 @@ contract MockSuperAppRegister {
             SuperAppDefinitions.APP_LEVEL_FINAL |
                 SuperAppDefinitions.BEFORE_AGREEMENT_CREATED_NOOP |
                 SuperAppDefinitions.BEFORE_AGREEMENT_UPDATED_NOOP |
-                SuperAppDefinitions.BEFORE_AGREEMENT_TERMINATED_NOOP |
-                SuperAppDefinitions.AFTER_AGREEMENT_CREATED_NOOP
+                SuperAppDefinitions.BEFORE_AGREEMENT_TERMINATED_NOOP
         );
     }
 }

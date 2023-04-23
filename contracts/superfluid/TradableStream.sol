@@ -251,10 +251,10 @@ contract TradableStream is ERC721, Ownable {
         uint256 tokenId
     ) internal override {
         //blocks transfers to superApps - done for simplicity, but you could support super apps in a new version!
-        require(
-            !cfaV1.host.isApp(ISuperApp(newReceiver)) || newReceiver == address(this),
-            "New receiver cannot be a superApp"
-        );
+        // require(
+        //     !cfaV1.host.isApp(ISuperApp(newReceiver)) || newReceiver == address(this),
+        //     "New receiver cannot be a superApp"
+        // );
 
         TradableStreamMetadata memory meta = metadatas[tokenId];
 

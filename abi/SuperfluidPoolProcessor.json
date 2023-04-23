@@ -21,6 +21,16 @@
   },
   {
     "inputs": [],
+    "name": "flowIsNotTerminated",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "flowKeyMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "insufficientReceivableAmount",
     "type": "error"
   },
@@ -31,12 +41,22 @@
   },
   {
     "inputs": [],
+    "name": "invalidSuperfluidAction",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "invalidSuperfluidCallback",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "receivableAssetMismatch",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "receivableAssetParamMismatch",
+    "name": "receivableIdMismatch",
     "type": "error"
   },
   {
@@ -79,6 +99,25 @@
       }
     ],
     "name": "DrawdownMadeWithReceivable",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "flowKey",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "endTime",
+        "type": "uint256"
+      }
+    ],
+    "name": "FlowIsTerminated",
     "type": "event"
   },
   {
@@ -145,6 +184,31 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "receivableId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "flowKey",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ReceivableFlowKey",
+    "type": "event"
+  },
+  {
     "inputs": [
       {
         "internalType": "contract ISuperToken",
@@ -153,7 +217,7 @@
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "_agreementClass",
         "type": "address"
       },
       {
@@ -173,7 +237,7 @@
       },
       {
         "internalType": "bytes",
-        "name": "",
+        "name": "_ctx",
         "type": "bytes"
       }
     ],
@@ -181,7 +245,7 @@
     "outputs": [
       {
         "internalType": "bytes",
-        "name": "",
+        "name": "newCtx",
         "type": "bytes"
       }
     ],
@@ -407,6 +471,25 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "flowKey",
+        "type": "bytes32"
+      }
+    ],
+    "name": "flowEndMapping",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "endTime",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "host",
     "outputs": [
@@ -471,6 +554,24 @@
       }
     ],
     "name": "mintAndDrawdown",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "flowKey",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "receivableId",
+        "type": "uint256"
+      }
+    ],
+    "name": "onTerminatedFlow",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -542,6 +643,11 @@
             "internalType": "uint256",
             "name": "receivedFlowAmount",
             "type": "uint256"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "flowKey",
+            "type": "bytes32"
           }
         ],
         "internalType": "struct SuperfluidPoolProcessorStorage.StreamInfo",

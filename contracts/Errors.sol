@@ -28,7 +28,7 @@ contract Errors {
     error notPool(); // 0x26d29bbf
     error drawdownFunctionUsedInsteadofDrawdownWithReceivable(); // 0x7e737537
     error notNFTOwner(); // 0x091a5762
-    error notProcessor();
+    error notProcessor(); // 0x90409ca1
 
     // system config
     error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
@@ -77,6 +77,7 @@ contract Errors {
     error withdrawTooSoon(); // 0x67982472
     error paymentAlreadyProcessed(); // 0xfd6754cf
     error settlementTooSoon(); // 0x0453e75e
+    error receivableIdMismatch(); // 0x97be2b67
 
     error defaultTriggeredTooEarly(); // 0x7872424e
     error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
@@ -86,4 +87,8 @@ contract Errors {
     error invalidFlowrate(); // 0xd06a9328
     error onlySuperfluid(); // 0x3f9cd1c2
     error borrowerMismatch(); // 0x27d3e640
+    error flowKeyMismatch(); // 0x29d5a5f3
+    error flowIsNotTerminated(); // 0xe9c5922f
+    error invalidSuperfluidCallback(); // 0xd2747f83
+    error invalidSuperfluidAction(); // 0x2f2cd9e9
 }

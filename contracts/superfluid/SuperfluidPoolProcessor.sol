@@ -14,6 +14,8 @@ import "../Errors.sol";
 import "./TradableStream.sol";
 import "./SuperfluidFeeManager.sol";
 
+import "hardhat/console.sol";
+
 contract SuperfluidPoolProcessor is
     ReceivableFactoringPoolProcessor,
     SuperfluidPoolProcessorStorage,
@@ -27,6 +29,9 @@ contract SuperfluidPoolProcessor is
         uint256 receivableId,
         address borrower
     );
+
+    event FlowIsTerminated(bytes32 flowKey, uint256 endTime);
+    event ReceivableFlowKey(address borrower, uint256 receivableId, bytes32 flowKey);
 
     function initialize(
         address _pool,
@@ -67,6 +72,8 @@ contract SuperfluidPoolProcessor is
         uint256 allowance = IERC20(underlyingToken).allowance(borrower, address(this));
         if (allowance < borrowAmount) revert Errors.allowanceTooLow();
 
+        _internalCall = true;
+
         uint256 receivableId = _mintNFT(receivableAsset, dataForMintTo);
 
         uint256 interest = (borrowAmount * crs.aprInBps * crs.intervalInDays * SECONDS_IN_A_DAY) /
@@ -83,6 +90,8 @@ contract SuperfluidPoolProcessor is
             receivableAsset,
             receivableId
         );
+
+        _internalCall = false;
     }
 
     /**
@@ -101,9 +110,10 @@ contract SuperfluidPoolProcessor is
         if (receivableAsset != tradableStream) revert Errors.receivableAssetMismatch();
 
         StreamInfo memory si = _streamInfoMapping[receivableId];
-        if (si.borrower == address(0)) revert Errors.receivableAssetParamMismatch();
+        if (si.borrower == address(0)) revert Errors.receivableIdMismatch();
         if (block.timestamp <= si.endTime && si.flowrate > 0) revert Errors.settlementTooSoon();
-        BS.CreditRecord memory cr = pool.creditRecordMapping(si.borrower);
+
+        _internalCall = true;
 
         (address underlyingTokenAddr, , , ) = pool.getCoreData();
         IERC20 underlyingToken = IERC20(underlyingTokenAddr);
@@ -113,6 +123,7 @@ contract SuperfluidPoolProcessor is
         _withdrawFromNFT(receivableAsset, receivableId, si);
         uint256 amountReceived = underlyingToken.balanceOf(poolAddr) - beforeAmount;
 
+        BS.CreditRecord memory cr = pool.creditRecordMapping(si.borrower);
         if (amountReceived < cr.totalDue) {
             uint256 difference = cr.totalDue - amountReceived;
             uint256 received = _transferFromAccount(
@@ -139,6 +150,50 @@ contract SuperfluidPoolProcessor is
             delete _streamInfoMapping[receivableId];
             _burnNFT(receivableAsset, receivableId);
         }
+
+        _internalCall = false;
+    }
+
+    function onTerminatedFlow(bytes32 flowKey, uint256 receivableId) external {
+        StreamInfo memory si = _streamInfoMapping[receivableId];
+        address borrower = si.borrower;
+        if (borrower == address(0)) revert Errors.receivableIdMismatch();
+        if (si.flowKey != flowKey) revert Errors.flowKeyMismatch();
+        uint256 endTime = _flowEndMapping[si.flowKey];
+        if (endTime == 0 || endTime <= si.lastStartTime) revert Errors.flowIsNotTerminated();
+
+        uint256 flowrate = si.flowrate;
+        si.receivedFlowAmount = (endTime - si.lastStartTime) * flowrate;
+        si.lastStartTime = uint64(endTime);
+        si.flowrate = 0;
+
+        (address underlyingTokenAddr, , , ) = pool.getCoreData();
+        IERC20 underlyingToken = IERC20(underlyingTokenAddr);
+        uint256 difference = flowrate * (si.endTime - endTime);
+        uint256 received = _transferFromAccount(
+            underlyingToken,
+            borrower,
+            address(pool),
+            difference
+        );
+
+        if (received > 0) {
+            pool.makePayment4Processor(borrower, received);
+        }
+
+        if (received < difference) {
+            // didn't receive enough amount
+            // send an event to trigger tryTransferFromBorrower function periodically
+
+            emit NotGettingEnoughAllowance(tradableStream, receivableId, borrower);
+        } else {
+            // received enough amount from borrower's allowance
+            // send an event to notify settlement is ready to be called
+
+            emit ReadyToSettlement(tradableStream, receivableId, block.timestamp);
+        }
+
+        _streamInfoMapping[receivableId] = si;
     }
 
     /**
@@ -209,8 +264,28 @@ contract SuperfluidPoolProcessor is
         newCtx = _ctx;
     }
 
+    function afterAgreementCreated(
+        ISuperToken, /*superToken*/
+        address _agreementClass,
+        bytes32, /*agreementId*/
+        bytes calldata, /*agreementData*/
+        bytes calldata, /*cbdata*/
+        bytes calldata _ctx
+    ) external virtual override returns (bytes memory newCtx) {
+        _onlySuperfluid(msg.sender, _agreementClass);
+        if (_internalCall) {
+            newCtx = _ctx;
+        } else {
+            revert Errors.invalidSuperfluidAction();
+        }
+    }
+
     function streamInfoMapping(uint256 receivableId) external view returns (StreamInfo memory) {
         return _streamInfoMapping[receivableId];
+    }
+
+    function flowEndMapping(bytes32 flowKey) external view returns (uint256 endTime) {
+        endTime = _flowEndMapping[flowKey];
     }
 
     function _burnNFT(address receivableAsset, uint256 receivableId) internal virtual {
@@ -357,16 +432,18 @@ contract SuperfluidPoolProcessor is
         );
 
         bytes32 flowId = keccak256(abi.encode(origin, address(this)));
-        bytes32 key = keccak256(abi.encode(superToken, flowId));
-        _flowMapping[key] = receivableId;
+        bytes32 key = keccak256(abi.encodePacked(superToken, flowId));
 
         StreamInfo memory streamInfo;
         streamInfo.lastStartTime = uint64(block.timestamp);
         streamInfo.endTime = uint64(block.timestamp + duration);
         streamInfo.flowrate = uint96(flowrate);
         streamInfo.borrower = receiver;
+        streamInfo.flowKey = key;
         // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
         _streamInfoMapping[receivableId] = streamInfo;
+
+        emit ReceivableFlowKey(receiver, receivableId, key);
     }
 
     function _transferFromAccount(
@@ -388,102 +465,22 @@ contract SuperfluidPoolProcessor is
         bytes32 flowId,
         uint96 newFlowrate
     ) internal {
-        bytes32 key = keccak256(abi.encode(superToken, flowId));
-        uint256 receivableId = _flowMapping[key];
-        StreamInfo memory si = _streamInfoMapping[receivableId];
-        uint96 flowrate = si.flowrate;
-        if (newFlowrate == flowrate) return;
-
-        si.receivedFlowAmount = (block.timestamp - si.lastStartTime) * flowrate;
-        si.lastStartTime = uint64(block.timestamp);
-
-        if (newFlowrate < flowrate) {
-            (address underlyingTokenAddr, , , ) = pool.getCoreData();
-            IERC20 underlyingToken = IERC20(underlyingTokenAddr);
-            uint256 difference = (flowrate - newFlowrate) * (si.endTime - block.timestamp);
-            uint256 received = _transferFromAccount(
-                underlyingToken,
-                si.borrower,
-                address(pool),
-                difference
-            );
-
-            if (received > 0) {
-                pool.makePayment4Processor(si.borrower, received);
-            }
-
+        if (!_internalCall) {
+            bytes32 key = keccak256(abi.encodePacked(superToken, flowId));
             if (newFlowrate == 0) {
                 // flow is terminated
-                if (received < difference) {
-                    // didn't receive enough amount
-                    // send a event to trigger tryTransferFromBorrower function periodically
-
-                    emit NotGettingEnoughAllowance(tradableStream, receivableId, si.borrower);
-                } else {
-                    // received enough amount from borrower's allowance
-                    // TODO call settlement
-                    // option1 update cr.dueDate to block.timestamp + 1, but it can't refund the interest of flowed amount
-                    // option2 send a event to notify payoff is ready to be called
-                    // option3 call payoff here, but it is heavy and there is a limit to burn NFT}
-
-                    emit ReadyToSettlement(tradableStream, receivableId, block.timestamp);
-                }
+                _flowEndMapping[key] = block.timestamp;
+                emit FlowIsTerminated(key, block.timestamp);
             } else {
-                // flow is decreased
-                // revert();
-                // if (received < difference) {
-                //     // didin't receive enough amount
-                //     uint256 diff = difference - received;
-                //     // TODO increase duration
-                //     // option1
-                //     //   a. calculate new extended seconds(Xd), Xd * flowrate = Xd * interest_rate + diff
-                //     //      interest_rate = loan amount * apr / SECONDS_IN_A_YEAR / HUNDRED_PERCENT_IN_BPS
-                //     //      Xd = diff / (flowrate - interest_rate)
-                //     //   b. TradableStream(tradableStream).increaseDuration(Xd)
-                //     //   c. update cr.dueDate and si.endTime
-                //     // option2
-                //     //   extend duration in payoff function, treat it as a kind of delay and charge interest
-                //     //   this way will only extend duration of TradableStream, and keep a fixed interval of loan
-                // }
+                // flow is decreased or increased
+                revert Errors.invalidSuperfluidAction();
             }
         } else {
-            // flow is increased
-            // revert();
-            // TODO decrease duration
-            // option1
-            //   calculate shortened seconds, and do the opposited actions of above
-            // option2
-            //   send a event and notify the new trigger time of payoff, payoff function handles correction and burn
-            //   this way doesn't need to call TradableStream.decreaseDuration and update cr.dueDate
+            // ignore internal call
         }
-
-        si.flowrate = newFlowrate;
-        _streamInfoMapping[receivableId] = si;
     }
 
-    // function _extendTradableStreamDuration(StreamInfo memory si, uint256 receivableId) internal {
-    //     BS.CreditRecord memory cr = pool.creditRecordMapping(si.borrower);
-    //     uint256 dueDate = cr.dueDate;
-    //     uint256 endTime = si.endTime;
-    //     uint256 flowrate = si.flowrate;
-    //     uint256 totalDue = cr.totalDue;
-    //     if (dueDate > endTime) {
-    //         uint256 newEndTime = dueDate;
-    //         if ((dueDate - endTime) * flowrate <= totalDue) {
-    //             newEndTime = dueDate;
-    //         } else {
-    //             newEndTime = endTime + totalDue / flowrate + 1;
-    //             emit ReadyToSettlement(tradableStream, receivableId, newEndTime);
-    //         }
-    //         TradableStream(tradableStream).increaseDuration(receivableId, newEndTime - endTime);
-    //         si.lastStartTime = endTime;
-    //         si.endTime = newEndTime;
-    //         si.receivedFlowAmount = 0;
-    //         _streamInfoMapping[receivableId] = si;
-    //     }
-    // }
-
     function _onlySuperfluid(address hostValue, address cfaValue) internal view {
-        if (host != hostValue || cfa != cfaValue) revert Errors.invalidFlowrate();
+        if (host != hostValue || cfa != cfaValue) revert Errors.invalidSuperfluidCallback();
     }
 }
