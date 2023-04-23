@@ -14,8 +14,6 @@ import "../Errors.sol";
 import "./TradableStream.sol";
 import "./SuperfluidFeeManager.sol";
 
-import "hardhat/console.sol";
-
 contract SuperfluidPoolProcessor is
     ReceivableFactoringPoolProcessor,
     SuperfluidPoolProcessorStorage,
@@ -154,6 +152,15 @@ contract SuperfluidPoolProcessor is
         _internalCall = false;
     }
 
+    /**
+     * @notice Transfer the borrower's allowance and make payment
+     * @dev This function is called by bots if the flow associated with a receivable is closed.
+     *      It can be called only when the flow is terminated, and it can be called only once.
+     *      NotGettingEnoughAllowance will be sent if not getting enough balance from borrowers,
+     *      ReadyToSettlement will be sent if getting enough balance.
+     * @param flowKey The flow key generated based on ISuperToken, origin and receiver.
+     * @param receivableId The ID of the NFT representing the receivable asset.
+     */
     function onTerminatedFlow(bytes32 flowKey, uint256 receivableId) external {
         StreamInfo memory si = _streamInfoMapping[receivableId];
         address borrower = si.borrower;
