@@ -16,7 +16,7 @@
   "notPool()": "0x26d29bbf",
   "defaultGracePeriodLessThanMinAllowed()": "0xa733ff9c",
   "treasuryFeeHighThanUpperLimit()": "0x39cda0d1",
-  "alreayAPauser()": "0xfbca9e38",
+  "alreadyAPauser()": "0x9f694c22",
   "alreadyPoolAdmin()": "0x7bb356e2",
   "minPrincipalPaymentRateSettingTooHigh()": "0xc11fc042",
   "proposedEADoesNotOwnProvidedEANFT()": "0x75b0da3b",

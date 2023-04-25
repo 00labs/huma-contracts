@@ -90,9 +90,10 @@ contract ReceivableFactoringPoolV2 is
         super._checkDrawdownEligibility(borrower, cr, borrowAmount);
 
         BS.ReceivableInfo memory ri = receivableInfoMapping[borrower];
-        assert(ri.receivableAsset != address(0));
-        if (receivableAsset != ri.receivableAsset) revert Errors.receivableAssetMismatch();
-        if (receivableParam != ri.receivableParam) revert Errors.receivableAssetParamMismatch();
+        if (receivableAsset == address(0) || receivableAsset != ri.receivableAsset)
+            revert Errors.receivableAssetMismatch();
+        if (receivableParam == 0 || receivableParam != ri.receivableParam)
+            revert Errors.receivableAssetParamMismatch();
     }
 
     /**

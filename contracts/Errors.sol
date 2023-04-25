@@ -34,7 +34,7 @@ contract Errors {
     error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
     error treasuryFeeHighThanUpperLimit(); // 0x39cda0d1
     error alreadyAnOperator(); // 0x75cea0fc
-    error alreadyAPauser(); // 0xfbca9e38
+    error alreadyAPauser(); // 0x9f694c22
     error alreadyPoolAdmin(); // 0x7bb356e2
 
     // fee config
