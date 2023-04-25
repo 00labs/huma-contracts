@@ -3,7 +3,7 @@ const {getDeployedContracts, getVerifiedContract, updateVerifiedContract} = requ
 
 const fs = require("fs");
 
-const VERIFY_ARGS_PATH = "./deployment/goerli/verify_args/";
+const VERIFY_ARGS_PATH = "./deployment/mumbai/verify_args/";
 
 const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
 const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
