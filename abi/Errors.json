@@ -241,6 +241,11 @@
   },
   {
     "inputs": [],
+    "name": "receivableAlreadyPaid",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "receivableAssetMismatch",
     "type": "error"
   },

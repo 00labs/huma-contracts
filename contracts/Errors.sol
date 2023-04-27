@@ -77,4 +77,7 @@ contract Errors {
 
     error defaultTriggeredTooEarly(); // 0x7872424e
     error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
+
+    // receivables
+    error receivableAlreadyPaid(); // 0x8b5b0b8a
 }
