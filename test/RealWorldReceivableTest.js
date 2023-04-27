@@ -9,7 +9,7 @@ const {
     toToken,
 } = require("./BaseTest");
 
-describe.only("RealWorldReceivable Contract", function () {
+describe("RealWorldReceivable Contract", function () {
     let poolContract;
     let poolConfigContract;
     let humaConfigContract;
