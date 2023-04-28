@@ -9,12 +9,14 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "../Errors.sol";
+import "./RealWorldReceivableStorage.sol";
 
 /**
  * @title RealWorldReceivable
  * @dev ERC721 tokens that represent off-chain payable receivables
  */
 contract RealWorldReceivable is
+    RealWorldReceivableStorage,
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
@@ -23,25 +25,6 @@ contract RealWorldReceivable is
     AccessControlUpgradeable
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
-
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    CountersUpgradeable.Counter private _tokenIdCounter;
-
-    struct ReceivableInfo {
-        // The address of the pool that's expected to be paid out for this receivable
-        address poolAddress;
-        // The ERC20 token used to settle the receivable
-        address paymentToken;
-        // The total expected payment amount of the receivable
-        uint96 receivableAmount;
-        // The amount of the receivable that has been paid so far
-        uint96 paidAmount;
-        // The date at which the receivable is expected to be fully paid
-        uint64 maturityDate;
-    }
-
-    // Map tokenId to receivable information
-    mapping(uint256 => ReceivableInfo) public receivableInfoMapping;
 
     // The status of the receivable.
     enum Status {
