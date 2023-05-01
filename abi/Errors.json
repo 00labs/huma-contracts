@@ -136,6 +136,16 @@
   },
   {
     "inputs": [],
+    "name": "multipleCurrenciesGiven",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "noReceivableCurrency",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "notEvaluationAgent",
     "type": "error"
   },
@@ -237,11 +247,6 @@
   {
     "inputs": [],
     "name": "protocolIsPaused",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "receivableAlreadyPaid",
     "type": "error"
   },
   {

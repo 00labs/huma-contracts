@@ -38,12 +38,16 @@ contract RealWorldReceivable is
      * @param from The address of the owner of the receivable
      * @param to The address of the Pool that's paid by the receivable
      * @param tokenId The ID of the receivable token
+     * @param paymentToken The ERC20 token used to settle the receivable
+     * @param currencyCode The ISO 4217 currency code of the receivable, if paid in fiat
      * @param amount The amount that was declared paid
      */
     event PaymentDeclared(
         address indexed from,
         address indexed to,
         uint256 indexed tokenId,
+        address paymentToken,
+        uint16 currencyCode,
         uint256 amount
     );
 
@@ -68,31 +72,37 @@ contract RealWorldReceivable is
 
     /**
      * @dev Creates a new receivable token and assigns it to the recipient address
-     * @param recipient The address that will receive the new token
-     * @param paymentAddress The address that's expected to be paid for this receivable
+     * @param poolAddress The address that's expected to be paid for this receivable
      * @param paymentToken The ERC20 token used to pay the receivable
+     * @param currencyCode The ISO 4217 currency code of the receivable, if paid in fiat
      * @param receivableAmount The total amount of the receivable
      * @param maturityDate The date at which the receivable becomes due
      * @param uri The URI of the metadata associated with the receivable
      */
-    function safeMint(
-        address recipient,
-        address paymentAddress,
+    function createRealWorldReceivable(
+        address poolAddress,
         address paymentToken,
+        uint16 currencyCode,
         uint96 receivableAmount,
         uint64 maturityDate,
         string memory uri
     ) public onlyRole(MINTER_ROLE) {
+        if (paymentToken == address(0) && currencyCode == 0) revert Errors.noReceivableCurrency();
+        if (paymentToken != address(0) && currencyCode != 0)
+            revert Errors.multipleCurrenciesGiven();
+
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
-        _safeMint(recipient, tokenId);
+        _safeMint(msg.sender, tokenId);
 
-        ReceivableInfo memory receivableInfo = ReceivableInfo(
-            paymentAddress,
+        RealWorldReceivableInfo memory receivableInfo = RealWorldReceivableInfo(
+            poolAddress,
             paymentToken,
             receivableAmount,
             0, // paidAmount
-            maturityDate
+            maturityDate,
+            uint64(block.timestamp),
+            currencyCode
         );
         receivableInfoMapping[tokenId] = receivableInfo;
 
@@ -110,17 +120,15 @@ contract RealWorldReceivable is
      */
     function declarePayment(uint256 tokenId, uint96 paymentAmount) public {
         if (msg.sender != ownerOf(tokenId)) revert Errors.notNFTOwner();
-        ReceivableInfo storage receivableInfo = receivableInfoMapping[tokenId];
-
-        if (receivableInfo.paidAmount >= receivableInfo.receivableAmount)
-            revert Errors.receivableAlreadyPaid();
-
-        receivableInfo.paidAmount += uint96(paymentAmount);
+        RealWorldReceivableInfo storage receivableInfo = receivableInfoMapping[tokenId];
+        receivableInfo.paidAmount += paymentAmount;
 
         emit PaymentDeclared(
             msg.sender,
             receivableInfo.poolAddress,
             tokenId,
+            receivableInfo.paymentToken,
+            receivableInfo.currencyCode,
             uint256(paymentAmount)
         );
     }
@@ -133,9 +141,9 @@ contract RealWorldReceivable is
      * @param tokenId The ID of the receivable token.
      * @return The payment status of the receivable.
      */
-    function getPaymentStatus(uint256 tokenId) public view returns (Status) {
-        ReceivableInfo storage receivableInfo = receivableInfoMapping[tokenId];
-        if (receivableInfo.paidAmount == receivableInfo.receivableAmount) {
+    function getStatus(uint256 tokenId) public view returns (Status) {
+        RealWorldReceivableInfo memory receivableInfo = receivableInfoMapping[tokenId];
+        if (receivableInfo.paidAmount >= receivableInfo.receivableAmount) {
             return Status.Paid;
         } else if (receivableInfo.paidAmount > 0) {
             return Status.PartiallyPaid;

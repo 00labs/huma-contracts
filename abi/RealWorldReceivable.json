@@ -6,12 +6,17 @@
   },
   {
     "inputs": [],
-    "name": "notNFTOwner",
+    "name": "multipleCurrenciesGiven",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "receivableAlreadyPaid",
+    "name": "noReceivableCurrency",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notNFTOwner",
     "type": "error"
   },
   {
@@ -97,6 +102,18 @@
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "currencyCode",
+        "type": "uint16"
       },
       {
         "indexed": false,
@@ -287,6 +304,44 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "poolAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "paymentToken",
+        "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "currencyCode",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint96",
+        "name": "receivableAmount",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint64",
+        "name": "maturityDate",
+        "type": "uint64"
+      },
+      {
+        "internalType": "string",
+        "name": "uri",
+        "type": "string"
+      }
+    ],
+    "name": "createRealWorldReceivable",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "tokenId",
         "type": "uint256"
@@ -324,25 +379,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getPaymentStatus",
-    "outputs": [
-      {
-        "internalType": "enum RealWorldReceivable.Status",
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "bytes32",
         "name": "role",
         "type": "bytes32"
@@ -354,6 +390,25 @@
         "internalType": "bytes32",
         "name": "",
         "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getStatus",
+    "outputs": [
+      {
+        "internalType": "enum RealWorldReceivable.Status",
+        "name": "",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -498,6 +553,16 @@
         "internalType": "uint64",
         "name": "maturityDate",
         "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "creationDate",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint16",
+        "name": "currencyCode",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -535,44 +600,6 @@
       }
     ],
     "name": "revokeRole",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "paymentAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "paymentToken",
-        "type": "address"
-      },
-      {
-        "internalType": "uint96",
-        "name": "receivableAmount",
-        "type": "uint96"
-      },
-      {
-        "internalType": "uint64",
-        "name": "maturityDate",
-        "type": "uint64"
-      },
-      {
-        "internalType": "string",
-        "name": "uri",
-        "type": "string"
-      }
-    ],
-    "name": "safeMint",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

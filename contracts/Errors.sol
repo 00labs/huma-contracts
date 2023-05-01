@@ -79,5 +79,6 @@ contract Errors {
     error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
 
     // receivables
-    error receivableAlreadyPaid(); // 0x8b5b0b8a
+    error noReceivableCurrency(); // 0x10ded7f7
+    error multipleCurrenciesGiven(); // 0x9e47e954
 }

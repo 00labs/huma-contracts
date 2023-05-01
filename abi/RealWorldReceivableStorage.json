@@ -46,6 +46,16 @@
         "internalType": "uint64",
         "name": "maturityDate",
         "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "creationDate",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint16",
+        "name": "currencyCode",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",

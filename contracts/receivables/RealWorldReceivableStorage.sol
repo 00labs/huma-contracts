@@ -9,7 +9,7 @@ contract RealWorldReceivableStorage {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     CountersUpgradeable.Counter internal _tokenIdCounter;
 
-    struct ReceivableInfo {
+    struct RealWorldReceivableInfo {
         // The address of the pool that's expected to be paid out for this receivable
         address poolAddress;
         // The ERC20 token used to settle the receivable
@@ -20,10 +20,14 @@ contract RealWorldReceivableStorage {
         uint96 paidAmount;
         // The date at which the receivable is expected to be fully paid
         uint64 maturityDate;
+        // The date at which the receivable is created
+        uint64 creationDate;
+        // The ISO 4217 currency code of the receivable, if paid in fiat
+        uint16 currencyCode;
     }
 
     // Map tokenId to receivable information
-    mapping(uint256 => ReceivableInfo) public receivableInfoMapping;
+    mapping(uint256 => RealWorldReceivableInfo) public receivableInfoMapping;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

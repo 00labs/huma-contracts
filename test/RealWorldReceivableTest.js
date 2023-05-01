@@ -106,36 +106,73 @@ describe("RealWorldReceivable Contract", function () {
     });
 
     describe("RealWorldReceivable", function () {
-        it("Only minter role can mint", async function () {
+        it("Only minter role can call createRealWorldReceivable", async function () {
             await expect(
-                realWorldReceivableContract
-                    .connect(eaServiceAccount)
-                    .safeMint(
-                        eaServiceAccount.address,
-                        poolContract.address,
-                        testTokenContract.address,
-                        100,
-                        100,
-                        "Test URI"
-                    )
+                realWorldReceivableContract.connect(eaServiceAccount).createRealWorldReceivable(
+                    poolContract.address,
+                    testTokenContract.address,
+                    0, // currencyCode
+                    100,
+                    100,
+                    "Test URI"
+                )
             ).to.be.revertedWith(
                 `AccessControl: account ${eaServiceAccount.address.toLowerCase()} is missing role ${minterRole}`
             );
         });
 
-        it("Safe mint stores correct details on chain", async function () {
-            await realWorldReceivableContract
-                .connect(borrower)
-                .safeMint(
-                    borrower.address,
-                    poolContract.address,
-                    testTokenContract.address,
-                    1000,
-                    100,
-                    "Test URI"
-                );
+        it("createRealWorldReceivable needs one currency", async function () {
+            await expect(
+                realWorldReceivableContract
+                    .connect(borrower)
+                    .createRealWorldReceivable(
+                        poolContract.address,
+                        ethers.constants.AddressZero,
+                        0,
+                        1000,
+                        100,
+                        "Test URI"
+                    )
+            ).to.be.revertedWithCustomError(realWorldReceivableContract, "noReceivableCurrency");
+        });
 
-            expect(await realWorldReceivableContract.balanceOf(borrower.address)).to.equal(1);
+        it("createRealWorldReceivable cannot have two currencies", async function () {
+            await expect(
+                realWorldReceivableContract
+                    .connect(borrower)
+                    .createRealWorldReceivable(
+                        poolContract.address,
+                        testTokenContract.address,
+                        840,
+                        1000,
+                        100,
+                        "Test URI"
+                    )
+            ).to.be.revertedWithCustomError(
+                realWorldReceivableContract,
+                "multipleCurrenciesGiven"
+            );
+        });
+
+        it("createRealWorldReceivable stores correct details on chain", async function () {
+            await realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
+                poolContract.address,
+                testTokenContract.address,
+                0, // currencyCode
+                1000,
+                100,
+                "Test URI"
+            );
+            await realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
+                poolContract.address,
+                ethers.constants.AddressZero,
+                5, // currencyCode
+                1000,
+                100,
+                "Test URI"
+            );
+
+            expect(await realWorldReceivableContract.balanceOf(borrower.address)).to.equal(2);
 
             const tokenId = await realWorldReceivableContract.tokenOfOwnerByIndex(
                 borrower.address,
@@ -145,11 +182,30 @@ describe("RealWorldReceivable Contract", function () {
             const tokenDetails = await realWorldReceivableContract.receivableInfoMapping(tokenId);
             expect(tokenDetails.poolAddress).to.equal(poolContract.address);
             expect(tokenDetails.paymentToken).to.equal(testTokenContract.address);
+            expect(tokenDetails.currencyCode).to.equal(0);
             expect(tokenDetails.receivableAmount).to.equal(1000);
             expect(tokenDetails.maturityDate).to.equal(100);
             expect(tokenDetails.paidAmount).to.equal(0);
 
             const tokenURI = await realWorldReceivableContract.tokenURI(tokenId);
+            expect(tokenURI).to.equal("Test URI");
+
+            const tokenId2 = await realWorldReceivableContract.tokenOfOwnerByIndex(
+                borrower.address,
+                1
+            );
+
+            const tokenDetails2 = await realWorldReceivableContract.receivableInfoMapping(
+                tokenId2
+            );
+            expect(tokenDetails2.poolAddress).to.equal(poolContract.address);
+            expect(tokenDetails2.paymentToken).to.equal(ethers.constants.AddressZero);
+            expect(tokenDetails2.currencyCode).to.equal(5);
+            expect(tokenDetails2.receivableAmount).to.equal(1000);
+            expect(tokenDetails2.maturityDate).to.equal(100);
+            expect(tokenDetails2.paidAmount).to.equal(0);
+
+            const tokenURI2 = await realWorldReceivableContract.tokenURI(tokenId2);
             expect(tokenURI).to.equal("Test URI");
         });
 
@@ -161,16 +217,14 @@ describe("RealWorldReceivable Contract", function () {
                     .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
                 await poolContract.connect(borrower).drawdown(toToken(1_000_000));
 
-                await realWorldReceivableContract
-                    .connect(borrower)
-                    .safeMint(
-                        borrower.address,
-                        poolContract.address,
-                        testTokenContract.address,
-                        1000,
-                        100,
-                        "Test URI"
-                    );
+                await realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
+                    poolContract.address,
+                    testTokenContract.address,
+                    0, // currencyCode
+                    1000,
+                    100,
+                    "Test URI"
+                );
 
                 expect(await realWorldReceivableContract.balanceOf(borrower.address)).to.equal(1);
 
@@ -205,22 +259,58 @@ describe("RealWorldReceivable Contract", function () {
                     realWorldReceivableContract.connect(poolOwner).declarePayment(tokenId, 1000)
                 ).to.be.revertedWithCustomError(realWorldReceivableContract, "notNFTOwner");
             });
+        });
+    });
 
-            it("declarePayment fails if already paid off", async function () {
-                const tokenId = await realWorldReceivableContract.tokenOfOwnerByIndex(
-                    borrower.address,
-                    0
-                );
+    describe("getStatus", async function () {
+        beforeEach(async function () {
+            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
 
-                await realWorldReceivableContract.connect(borrower).declarePayment(tokenId, 1000);
+            await realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
+                poolContract.address,
+                testTokenContract.address,
+                0, // currencyCode
+                1000,
+                100,
+                "Test URI"
+            );
 
-                await expect(
-                    realWorldReceivableContract.connect(borrower).declarePayment(tokenId, 1000)
-                ).to.be.revertedWithCustomError(
-                    realWorldReceivableContract,
-                    "receivableAlreadyPaid"
-                );
-            });
+            expect(await realWorldReceivableContract.balanceOf(borrower.address)).to.equal(1);
+        });
+
+        it("Unpaid", async function () {
+            const tokenId = await realWorldReceivableContract.tokenOfOwnerByIndex(
+                borrower.address,
+                0
+            );
+            const status = await realWorldReceivableContract.getStatus(tokenId);
+            expect(status).to.equal(0);
+        });
+
+        it("Partially Paid", async function () {
+            const tokenId = await realWorldReceivableContract.tokenOfOwnerByIndex(
+                borrower.address,
+                0
+            );
+            await realWorldReceivableContract.connect(borrower).declarePayment(tokenId, 100);
+
+            const status = await realWorldReceivableContract.getStatus(tokenId);
+            expect(status).to.equal(2);
+        });
+
+        it("Paid", async function () {
+            const tokenId = await realWorldReceivableContract.tokenOfOwnerByIndex(
+                borrower.address,
+                0
+            );
+            await realWorldReceivableContract.connect(borrower).declarePayment(tokenId, 1000);
+
+            const status = await realWorldReceivableContract.getStatus(tokenId);
+            expect(status).to.equal(1);
         });
     });
 });
