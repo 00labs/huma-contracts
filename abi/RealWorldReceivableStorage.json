@@ -20,16 +20,11 @@
         "type": "uint256"
       }
     ],
-    "name": "receivableInfoMapping",
+    "name": "rwrInfoMapping",
     "outputs": [
       {
         "internalType": "address",
         "name": "poolAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "paymentToken",
         "type": "address"
       },
       {
@@ -44,12 +39,12 @@
       },
       {
         "internalType": "uint64",
-        "name": "maturityDate",
+        "name": "creationDate",
         "type": "uint64"
       },
       {
         "internalType": "uint64",
-        "name": "creationDate",
+        "name": "maturityDate",
         "type": "uint64"
       },
       {

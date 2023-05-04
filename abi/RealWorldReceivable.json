@@ -6,16 +6,6 @@
   },
   {
     "inputs": [],
-    "name": "multipleCurrenciesGiven",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "noReceivableCurrency",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "notNFTOwner",
     "type": "error"
   },
@@ -105,12 +95,6 @@
       },
       {
         "indexed": false,
-        "internalType": "address",
-        "name": "paymentToken",
-        "type": "address"
-      },
-      {
-        "indexed": false,
         "internalType": "uint16",
         "name": "currencyCode",
         "type": "uint16"
@@ -123,6 +107,49 @@
       }
     ],
     "name": "PaymentDeclared",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "poolAddress",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "receivableAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "maturityDate",
+        "type": "uint64"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "currencyCode",
+        "type": "uint16"
+      }
+    ],
+    "name": "ReceivableCreated",
     "type": "event"
   },
   {
@@ -306,11 +333,6 @@
       {
         "internalType": "address",
         "name": "poolAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "paymentToken",
         "type": "address"
       },
       {
@@ -522,55 +544,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "receivableInfoMapping",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "poolAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "paymentToken",
-        "type": "address"
-      },
-      {
-        "internalType": "uint96",
-        "name": "receivableAmount",
-        "type": "uint96"
-      },
-      {
-        "internalType": "uint96",
-        "name": "paidAmount",
-        "type": "uint96"
-      },
-      {
-        "internalType": "uint64",
-        "name": "maturityDate",
-        "type": "uint64"
-      },
-      {
-        "internalType": "uint64",
-        "name": "creationDate",
-        "type": "uint64"
-      },
-      {
-        "internalType": "uint16",
-        "name": "currencyCode",
-        "type": "uint16"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "bytes32",
         "name": "role",
         "type": "bytes32"
@@ -602,6 +575,50 @@
     "name": "revokeRole",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "rwrInfoMapping",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "poolAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint96",
+        "name": "receivableAmount",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint96",
+        "name": "paidAmount",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint64",
+        "name": "creationDate",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "maturityDate",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint16",
+        "name": "currencyCode",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

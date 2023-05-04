@@ -12,22 +12,20 @@ contract RealWorldReceivableStorage {
     struct RealWorldReceivableInfo {
         // The address of the pool that's expected to be paid out for this receivable
         address poolAddress;
-        // The ERC20 token used to settle the receivable
-        address paymentToken;
         // The total expected payment amount of the receivable
         uint96 receivableAmount;
         // The amount of the receivable that has been paid so far
         uint96 paidAmount;
-        // The date at which the receivable is expected to be fully paid
-        uint64 maturityDate;
         // The date at which the receivable is created
         uint64 creationDate;
-        // The ISO 4217 currency code of the receivable, if paid in fiat
+        // The date at which the receivable is expected to be fully paid
+        uint64 maturityDate;
+        // The ISO 4217 currency code that the receivable is denominated in
         uint16 currencyCode;
     }
 
     // Map tokenId to receivable information
-    mapping(uint256 => RealWorldReceivableInfo) public receivableInfoMapping;
+    mapping(uint256 => RealWorldReceivableInfo) public rwrInfoMapping;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

@@ -110,7 +110,6 @@ describe("RealWorldReceivable Contract", function () {
             await expect(
                 realWorldReceivableContract.connect(eaServiceAccount).createRealWorldReceivable(
                     poolContract.address,
-                    testTokenContract.address,
                     0, // currencyCode
                     100,
                     100,
@@ -121,43 +120,20 @@ describe("RealWorldReceivable Contract", function () {
             );
         });
 
-        it("createRealWorldReceivable needs one currency", async function () {
+        it("createRealWorldReceivable emits an event", async function () {
             await expect(
-                realWorldReceivableContract
-                    .connect(borrower)
-                    .createRealWorldReceivable(
-                        poolContract.address,
-                        ethers.constants.AddressZero,
-                        0,
-                        1000,
-                        100,
-                        "Test URI"
-                    )
-            ).to.be.revertedWithCustomError(realWorldReceivableContract, "noReceivableCurrency");
+                realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
+                    poolContract.address,
+                    0, // currencyCode
+                    1000,
+                    100,
+                    "Test URI"
+                )
+            ).to.emit(realWorldReceivableContract, "ReceivableCreated");
         });
-
-        it("createRealWorldReceivable cannot have two currencies", async function () {
-            await expect(
-                realWorldReceivableContract
-                    .connect(borrower)
-                    .createRealWorldReceivable(
-                        poolContract.address,
-                        testTokenContract.address,
-                        840,
-                        1000,
-                        100,
-                        "Test URI"
-                    )
-            ).to.be.revertedWithCustomError(
-                realWorldReceivableContract,
-                "multipleCurrenciesGiven"
-            );
-        });
-
         it("createRealWorldReceivable stores correct details on chain", async function () {
             await realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
                 poolContract.address,
-                testTokenContract.address,
                 0, // currencyCode
                 1000,
                 100,
@@ -165,7 +141,6 @@ describe("RealWorldReceivable Contract", function () {
             );
             await realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
                 poolContract.address,
-                ethers.constants.AddressZero,
                 5, // currencyCode
                 1000,
                 100,
@@ -179,9 +154,8 @@ describe("RealWorldReceivable Contract", function () {
                 0
             );
 
-            const tokenDetails = await realWorldReceivableContract.receivableInfoMapping(tokenId);
+            const tokenDetails = await realWorldReceivableContract.rwrInfoMapping(tokenId);
             expect(tokenDetails.poolAddress).to.equal(poolContract.address);
-            expect(tokenDetails.paymentToken).to.equal(testTokenContract.address);
             expect(tokenDetails.currencyCode).to.equal(0);
             expect(tokenDetails.receivableAmount).to.equal(1000);
             expect(tokenDetails.maturityDate).to.equal(100);
@@ -195,11 +169,8 @@ describe("RealWorldReceivable Contract", function () {
                 1
             );
 
-            const tokenDetails2 = await realWorldReceivableContract.receivableInfoMapping(
-                tokenId2
-            );
+            const tokenDetails2 = await realWorldReceivableContract.rwrInfoMapping(tokenId2);
             expect(tokenDetails2.poolAddress).to.equal(poolContract.address);
-            expect(tokenDetails2.paymentToken).to.equal(ethers.constants.AddressZero);
             expect(tokenDetails2.currencyCode).to.equal(5);
             expect(tokenDetails2.receivableAmount).to.equal(1000);
             expect(tokenDetails2.maturityDate).to.equal(100);
@@ -219,7 +190,6 @@ describe("RealWorldReceivable Contract", function () {
 
                 await realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
                     poolContract.address,
-                    testTokenContract.address,
                     0, // currencyCode
                     1000,
                     100,
@@ -227,11 +197,6 @@ describe("RealWorldReceivable Contract", function () {
                 );
 
                 expect(await realWorldReceivableContract.balanceOf(borrower.address)).to.equal(1);
-
-                await testTokenContract.connect(borrower).mint(borrower.address, toToken(2_000));
-                await testTokenContract
-                    .connect(borrower)
-                    .approve(poolContract.address, toToken(2000));
             });
 
             it("declarePayment emits event and sends funds", async function () {
@@ -243,9 +208,7 @@ describe("RealWorldReceivable Contract", function () {
                     realWorldReceivableContract.connect(borrower).declarePayment(tokenId, 100)
                 ).to.emit(realWorldReceivableContract, "PaymentDeclared");
 
-                const tokenDetails = await realWorldReceivableContract.receivableInfoMapping(
-                    tokenId
-                );
+                const tokenDetails = await realWorldReceivableContract.rwrInfoMapping(tokenId);
                 expect(tokenDetails.paidAmount).to.equal(100);
             });
 
@@ -272,7 +235,6 @@ describe("RealWorldReceivable Contract", function () {
 
             await realWorldReceivableContract.connect(borrower).createRealWorldReceivable(
                 poolContract.address,
-                testTokenContract.address,
                 0, // currencyCode
                 1000,
                 100,

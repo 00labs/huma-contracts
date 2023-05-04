@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
@@ -38,17 +38,33 @@ contract RealWorldReceivable is
      * @param from The address of the owner of the receivable
      * @param to The address of the Pool that's paid by the receivable
      * @param tokenId The ID of the receivable token
-     * @param paymentToken The ERC20 token used to settle the receivable
-     * @param currencyCode The ISO 4217 currency code of the receivable, if paid in fiat
+     * @param currencyCode The ISO 4217 currency code that the receivable is denominated in
      * @param amount The amount that was declared paid
      */
     event PaymentDeclared(
         address indexed from,
         address indexed to,
         uint256 indexed tokenId,
-        address paymentToken,
         uint16 currencyCode,
         uint256 amount
+    );
+
+    /**
+     * @dev Emitted when a receivable is created
+     * @param owner The address of the owner of the receivable
+     * @param tokenId The ID of the receivable token
+     * @param poolAddress The address that's expected to be paid for this receivable
+     * @param receivableAmount The total expected payment amount of the receivable
+     * @param maturityDate The date at which the receivable becomes due
+     * @param currencyCode The ISO 4217 currency code that the receivable is denominated in
+     */
+    event ReceivableCreated(
+        address indexed owner,
+        uint256 indexed tokenId,
+        address indexed poolAddress,
+        uint256 receivableAmount,
+        uint64 maturityDate,
+        uint16 currencyCode
     );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -73,40 +89,41 @@ contract RealWorldReceivable is
     /**
      * @dev Creates a new receivable token and assigns it to the recipient address
      * @param poolAddress The address that's expected to be paid for this receivable
-     * @param paymentToken The ERC20 token used to pay the receivable
-     * @param currencyCode The ISO 4217 currency code of the receivable, if paid in fiat
+     * @param currencyCode The ISO 4217 currency code that the receivable is denominated in
      * @param receivableAmount The total amount of the receivable
      * @param maturityDate The date at which the receivable becomes due
      * @param uri The URI of the metadata associated with the receivable
      */
     function createRealWorldReceivable(
         address poolAddress,
-        address paymentToken,
         uint16 currencyCode,
         uint96 receivableAmount,
         uint64 maturityDate,
         string memory uri
     ) public onlyRole(MINTER_ROLE) {
-        if (paymentToken == address(0) && currencyCode == 0) revert Errors.noReceivableCurrency();
-        if (paymentToken != address(0) && currencyCode != 0)
-            revert Errors.multipleCurrenciesGiven();
-
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(msg.sender, tokenId);
 
-        RealWorldReceivableInfo memory receivableInfo = RealWorldReceivableInfo(
+        rwrInfoMapping[tokenId] = RealWorldReceivableInfo(
             poolAddress,
-            paymentToken,
             receivableAmount,
             0, // paidAmount
-            maturityDate,
             uint64(block.timestamp),
+            maturityDate,
             currencyCode
         );
-        receivableInfoMapping[tokenId] = receivableInfo;
 
         _setTokenURI(tokenId, uri);
+
+        emit ReceivableCreated(
+            msg.sender,
+            tokenId,
+            poolAddress,
+            receivableAmount,
+            maturityDate,
+            currencyCode
+        );
     }
 
     /**
@@ -120,14 +137,13 @@ contract RealWorldReceivable is
      */
     function declarePayment(uint256 tokenId, uint96 paymentAmount) public {
         if (msg.sender != ownerOf(tokenId)) revert Errors.notNFTOwner();
-        RealWorldReceivableInfo storage receivableInfo = receivableInfoMapping[tokenId];
+        RealWorldReceivableInfo storage receivableInfo = rwrInfoMapping[tokenId];
         receivableInfo.paidAmount += paymentAmount;
 
         emit PaymentDeclared(
             msg.sender,
             receivableInfo.poolAddress,
             tokenId,
-            receivableInfo.paymentToken,
             receivableInfo.currencyCode,
             uint256(paymentAmount)
         );
@@ -142,7 +158,7 @@ contract RealWorldReceivable is
      * @return The payment status of the receivable.
      */
     function getStatus(uint256 tokenId) public view returns (Status) {
-        RealWorldReceivableInfo memory receivableInfo = receivableInfoMapping[tokenId];
+        RealWorldReceivableInfo memory receivableInfo = rwrInfoMapping[tokenId];
         if (receivableInfo.paidAmount >= receivableInfo.receivableAmount) {
             return Status.Paid;
         } else if (receivableInfo.paidAmount > 0) {
@@ -153,6 +169,7 @@ contract RealWorldReceivable is
     }
 
     // The following functions are overrides required by Solidity.
+    // super calls functions from right-to-left in the inheritance hierarchy: https://solidity-by-example.org/inheritance/#multiple-inheritance-order
     function _beforeTokenTransfer(
         address from,
         address to,
