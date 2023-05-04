@@ -1,0 +1,59 @@
+[
+  {
+    "inputs": [],
+    "name": "MINTER_ROLE",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "rwrInfoMapping",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "poolAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint96",
+        "name": "receivableAmount",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint96",
+        "name": "paidAmount",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint64",
+        "name": "creationDate",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint64",
+        "name": "maturityDate",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint16",
+        "name": "currencyCode",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
