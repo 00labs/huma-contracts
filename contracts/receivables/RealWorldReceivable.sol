@@ -135,7 +135,7 @@ contract RealWorldReceivable is
      * @param tokenId The ID of the receivable token.
      * @param paymentAmount The amount of payment being declared.
      */
-    function declarePayment(uint256 tokenId, uint96 paymentAmount) public {
+    function declarePayment(uint256 tokenId, uint96 paymentAmount) external {
         if (msg.sender != ownerOf(tokenId)) revert Errors.notNFTOwner();
         RealWorldReceivableInfo storage receivableInfo = rwrInfoMapping[tokenId];
         receivableInfo.paidAmount += paymentAmount;
