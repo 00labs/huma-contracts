@@ -130,8 +130,8 @@ async function verifyContracts() {
     //     ]);
     // console.log(`Verify HumaConfigTimelock result: ${verifyBaseCreditPoolProxyAdminTL}`);
 
-    // const verifyFeeManager = await verifyContract('BaseCreditPoolFeeManager');
-    // console.log(`Verify FeeManager result: ${verifyFeeManager}`);
+    const verifyFeeManager = await verifyContract('JiaPioneerPoolFeeManager');
+    console.log(`Verify FeeManager result: ${verifyFeeManager}`);
 
     // const verifyHDTImpl = await verifyContract('BaseCreditHDTImpl');
     // console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
@@ -144,16 +144,16 @@ async function verifyContracts() {
     //     ]);
     // console.log(`Verify HDT result: ${verifyHDT}`);
 
-    const verifyPoolConfig = await verifyContract('JiaPioneerPoolConfig');
-    console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
+    // const verifyPoolConfig = await verifyContract('JiaPioneerPoolConfig');
+    // console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
 
-    // const verifyPoolImpl = await verifyContract('BaseCreditPoolImpl');
+    // const verifyPoolImpl = await verifyContract('JiaPioneerPoolImpl');
     // console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
 
-    // const verifyPool = await verifyContract('BaseCreditPool',
+    // const verifyPool = await verifyContract('JiaPioneerPool',
     //     [
-    //         `'${deployedContracts['BaseCreditPoolImpl']}'`,
-    //         `'${deployedContracts['BaseCreditPoolProxyAdminTimelock']}'`,
+    //         `'${deployedContracts['JiaPioneerPoolImpl']}'`,
+    //         `'${deployedContracts['JiaPioneerPoolProxyAdminTimelock']}'`,
     //         '[]',
     //     ]);
     // console.log(`Verify Pool result: ${verifyPool}`);
