@@ -13,6 +13,7 @@ abstract contract ReceivableFactoringPoolProcessor is
     uint256 internal constant SECONDS_IN_A_YEAR = 365 days;
 
     event DrawdownMadeWithReceivable(
+        address pool,
         address indexed borrower,
         uint256 borrowAmount,
         uint256 netAmountToBorrower,

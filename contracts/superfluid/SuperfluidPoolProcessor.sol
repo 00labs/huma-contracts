@@ -21,15 +21,22 @@ contract SuperfluidPoolProcessor is
 {
     using SafeERC20 for IERC20;
 
-    event ReadyToSettlement(address receivableAsset, uint256 receivableId, uint256 readyTime);
-    event NotGettingEnoughAllowance(
+    event ReadyToSettlement(
+        address pool,
+        address borrower,
         address receivableAsset,
         uint256 receivableId,
-        address borrower
+        uint256 readyTime
+    );
+    event NotGettingEnoughAllowance(
+        address pool,
+        address borrower,
+        address receivableAsset,
+        uint256 receivableId
     );
 
     event FlowIsTerminated(bytes32 flowKey, uint256 endTime);
-    event ReceivableFlowKey(address borrower, uint256 receivableId, bytes32 flowKey);
+    event ReceivableFlowKey(address pool, address borrower, uint256 receivableId, bytes32 flowKey);
 
     function initialize(
         address _pool,
@@ -82,6 +89,7 @@ contract SuperfluidPoolProcessor is
         SuperfluidFeeManager(feeManager).deleteTempInterest();
 
         emit DrawdownMadeWithReceivable(
+            address(pool),
             borrower,
             borrowAmount,
             netAmountToBorrower,
@@ -192,12 +200,18 @@ contract SuperfluidPoolProcessor is
             // didn't receive enough amount
             // send an event to trigger tryTransferFromBorrower function periodically
 
-            emit NotGettingEnoughAllowance(tradableStream, receivableId, borrower);
+            emit NotGettingEnoughAllowance(address(pool), borrower, tradableStream, receivableId);
         } else {
             // received enough amount from borrower's allowance
             // send an event to notify settlement is ready to be called
 
-            emit ReadyToSettlement(tradableStream, receivableId, block.timestamp);
+            emit ReadyToSettlement(
+                address(pool),
+                borrower,
+                tradableStream,
+                receivableId,
+                block.timestamp
+            );
         }
 
         _streamInfoMapping[receivableId] = si;
@@ -234,7 +248,13 @@ contract SuperfluidPoolProcessor is
             if (received > 0) {
                 pool.makePayment4Processor(si.borrower, received);
                 if (received >= diff) {
-                    emit ReadyToSettlement(tradableStream, receivableId, block.timestamp);
+                    emit ReadyToSettlement(
+                        address(pool),
+                        si.borrower,
+                        tradableStream,
+                        receivableId,
+                        block.timestamp
+                    );
                 }
             }
         }
@@ -450,7 +470,7 @@ contract SuperfluidPoolProcessor is
         // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
         _streamInfoMapping[receivableId] = streamInfo;
 
-        emit ReceivableFlowKey(receiver, receivableId, key);
+        emit ReceivableFlowKey(address(pool), receiver, receivableId, key);
     }
 
     function _transferFromAccount(

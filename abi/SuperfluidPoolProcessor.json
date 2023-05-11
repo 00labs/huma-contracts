@@ -68,6 +68,12 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      },
+      {
         "indexed": true,
         "internalType": "address",
         "name": "borrower",
@@ -139,6 +145,18 @@
       {
         "indexed": false,
         "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
         "name": "receivableAsset",
         "type": "address"
       },
@@ -147,12 +165,6 @@
         "internalType": "uint256",
         "name": "receivableId",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "borrower",
-        "type": "address"
       }
     ],
     "name": "NotGettingEnoughAllowance",
@@ -161,6 +173,18 @@
   {
     "anonymous": false,
     "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
       {
         "indexed": false,
         "internalType": "address",
@@ -186,6 +210,12 @@
   {
     "anonymous": false,
     "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      },
       {
         "indexed": false,
         "internalType": "address",

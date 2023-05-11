@@ -3,6 +3,12 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      },
+      {
         "indexed": true,
         "internalType": "address",
         "name": "borrower",
