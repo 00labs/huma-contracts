@@ -3,7 +3,7 @@ name: gitleaks
 on:
   pull_request:
     types: [opened, reopened, edited, synchronize]
-    branches: ["main", "CertiK_audit"]
+    branches: ["main", "develop", "release*", "CertiK_audit"]
 
   workflow_dispatch:
 
