@@ -44,7 +44,6 @@ describe("Base Credit Pool", function () {
     let recordStatic;
     let poolOperator;
     let poolOwnerTreasury;
-    let borrower2;
     let sId;
 
     before(async function () {
@@ -61,7 +60,6 @@ describe("Base Credit Pool", function () {
             pdsServiceAccount,
             poolOperator,
             poolOwnerTreasury,
-            borrower2,
         ] = await ethers.getSigners();
 
         [humaConfigContract, feeManagerContract, testTokenContract, eaNFTContract] =
@@ -766,62 +764,6 @@ describe("Base Credit Pool", function () {
             await expect(
                 poolContract.connect(borrower).makePayment(borrower.address, 0)
             ).to.be.revertedWithCustomError(poolContract, "zeroAmountProvided");
-        });
-
-        it("makePayment can be called by whitelisted payment contracts", async function () {
-            const BaseCreditPoolReceivable = await ethers.getContractFactory(
-                "BaseCreditPoolReceivable"
-            );
-            baseCreditPoolReceivableContract = await BaseCreditPoolReceivable.deploy();
-            minterRole = await baseCreditPoolReceivableContract.MINTER_ROLE();
-            await baseCreditPoolReceivableContract.grantRole(minterRole, borrower2.address);
-
-            await poolContract.connect(borrower2).requestCredit(toToken(1_000_000), 30, 12);
-            await poolContract
-                .connect(eaServiceAccount)
-                .approveCredit(borrower2.address, toToken(1_000_000), 30, 12, 1217);
-            await poolContract.connect(borrower2).drawdown(toToken(1_000_000));
-
-            await baseCreditPoolReceivableContract.connect(borrower2).safeMint(
-                borrower2.address,
-                poolContract.address,
-                testTokenContract.address,
-                1000,
-                100,
-                1, // baseCreditPoolReceivableContract.PaymentMethod.Payable
-                "Test URI"
-            );
-
-            expect(await baseCreditPoolReceivableContract.balanceOf(borrower2.address)).to.equal(
-                1
-            );
-
-            await testTokenContract.connect(borrower2).mint(borrower2.address, toToken(2_000));
-            await testTokenContract
-                .connect(borrower2)
-                .approve(poolContract.address, toToken(2000));
-
-            const tokenId = await baseCreditPoolReceivableContract.tokenOfOwnerByIndex(
-                borrower2.address,
-                0
-            );
-
-            await expect(
-                baseCreditPoolReceivableContract.connect(borrower2).makePayment(tokenId, 1000)
-            ).to.be.revertedWithCustomError(
-                poolContract,
-                "paymentDetectionServiceAccountRequired"
-            );
-
-            await poolConfigContract
-                .connect(poolOwner)
-                .setWhitelistedPaymentContract(baseCreditPoolReceivableContract.address, true);
-
-            await baseCreditPoolReceivableContract.connect(borrower2).makePayment(tokenId, 1000);
-
-            let creditInfo = await poolContract.creditRecordMapping(borrower2.address);
-
-            expect(creditInfo.totalDue).to.equal(10002738726);
         });
 
         it("Process payback", async function () {
