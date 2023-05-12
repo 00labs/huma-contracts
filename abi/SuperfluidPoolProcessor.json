@@ -239,6 +239,37 @@
     "type": "event"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "receivableAsset",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "receivableId",
+        "type": "uint256"
+      }
+    ],
+    "name": "SettlementSuccess",
+    "type": "event"
+  },
+  {
     "inputs": [
       {
         "internalType": "contract ISuperToken",
