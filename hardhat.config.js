@@ -19,6 +19,10 @@ const fs = require("fs");
 const EMPTY_URL = "empty url";
 const EMPTY_PRIVATE_KEY = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+let sepoliaUrl = process.env["SEPOLIA_URL"];
+if (!sepoliaUrl) {
+    sepoliaUrl = EMPTY_URL;
+}
 let goerliUrl = process.env["GOERLI_URL"];
 if (!goerliUrl) {
     goerliUrl = EMPTY_URL;
@@ -221,6 +225,10 @@ module.exports = {
         matic: {
             url: polygonUrl,
             accounts: [deployer, eaService, pdsService],
+        },
+        sepolia: {
+            url: sepoliaUrl,
+            accounts: [deployer, eaService],
         },
         optimism: {
             url: "https://mainnet.optimism.io",
