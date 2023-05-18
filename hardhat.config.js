@@ -220,6 +220,10 @@ module.exports = {
                 treasury,
                 ea_bcp,
                 invoicePayer,
+                baseCreditPoolOperator,
+                receivableFactoringPoolOperator,
+                baseCreditPoolOwnerTreasury,
+                receivableFactoringPoolOwnerTreasury,
             ],
         },
         matic: {
