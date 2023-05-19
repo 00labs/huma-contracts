@@ -19,6 +19,10 @@ const fs = require("fs");
 const EMPTY_URL = "empty url";
 const EMPTY_PRIVATE_KEY = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+let sepoliaUrl = process.env["SEPOLIA_URL"];
+if (!sepoliaUrl) {
+    sepoliaUrl = EMPTY_URL;
+}
 let goerliUrl = process.env["GOERLI_URL"];
 if (!goerliUrl) {
     goerliUrl = EMPTY_URL;
@@ -38,6 +42,10 @@ if (!mainnetUrl) {
 let deployer = process.env["DEPLOYER"];
 if (!deployer) {
     deployer = EMPTY_PRIVATE_KEY;
+}
+let poolTreasury = process.env["POOL_TREASURY"];
+if (!poolTreasury) {
+    poolTreasury = EMPTY_PRIVATE_KEY;
 }
 let proxyOwner = process.env["PROXY_OWNER"];
 if (!proxyOwner) {
@@ -226,6 +234,10 @@ module.exports = {
             url: polygonUrl,
             accounts: [deployer, eaService, pdsService],
         },
+        sepolia: {
+            url: sepoliaUrl,
+            accounts: [deployer, eaService, poolTreasury],
+        },
         optimism: {
             url: "https://mainnet.optimism.io",
             accounts: {
@@ -366,6 +378,7 @@ module.exports = {
             goerli: process.env.ETHERSCAN_API_KEY || null,
             polygon: process.env.POLYGONSCAN_API_KEY || null,
             mainnet: process.env.ETHERSCAN_API_KEY || null,
+            sepolia: process.env.ETHERSCAN_API_KEY || null,
         },
     },
     contractSizer: {
