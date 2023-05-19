@@ -43,6 +43,10 @@ let deployer = process.env["DEPLOYER"];
 if (!deployer) {
     deployer = EMPTY_PRIVATE_KEY;
 }
+let poolTreasury = process.env["POOL_TREASURY"];
+if (!poolTreasury) {
+    poolTreasury = EMPTY_PRIVATE_KEY;
+}
 let proxyOwner = process.env["PROXY_OWNER"];
 if (!proxyOwner) {
     proxyOwner = EMPTY_PRIVATE_KEY;
@@ -232,7 +236,7 @@ module.exports = {
         },
         sepolia: {
             url: sepoliaUrl,
-            accounts: [deployer, eaService],
+            accounts: [deployer, eaService, poolTreasury],
         },
         optimism: {
             url: "https://mainnet.optimism.io",
@@ -374,6 +378,7 @@ module.exports = {
             goerli: process.env.ETHERSCAN_API_KEY || null,
             polygon: process.env.POLYGONSCAN_API_KEY || null,
             mainnet: process.env.ETHERSCAN_API_KEY || null,
+            sepolia: process.env.ETHERSCAN_API_KEY || null,
         },
     },
     contractSizer: {
