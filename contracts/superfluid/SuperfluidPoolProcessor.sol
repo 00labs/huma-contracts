@@ -37,7 +37,13 @@ contract SuperfluidPoolProcessor is
 
     event FlowIsTerminated(bytes32 flowKey, uint256 endTime);
     event ReceivableFlowKey(address pool, address borrower, uint256 receivableId, bytes32 flowKey);
-    event SettlementSuccess(
+    event ReceivableCleared(
+        address pool,
+        address borrower,
+        address receivableAsset,
+        uint256 receivableId
+    );
+    event SettlementMade(
         address pool,
         address borrower,
         address receivableAsset,
@@ -161,9 +167,9 @@ contract SuperfluidPoolProcessor is
         if (paidoff) {
             delete _streamInfoMapping[receivableId];
             _burnNFT(receivableAsset, receivableId);
-
-            emit SettlementSuccess(poolAddr, si.borrower, receivableAsset, receivableId);
+            emit ReceivableCleared(poolAddr, si.borrower, receivableAsset, receivableId);
         }
+        emit SettlementMade(poolAddr, si.borrower, receivableAsset, receivableId);
 
         _internalCall = false;
     }
