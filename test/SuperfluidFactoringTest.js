@@ -1670,7 +1670,9 @@ describe("Superfluid Factoring", function () {
                 usdcx.address,
                 poolProcessorContract.address
             );
-            await poolProcessorContract.settlement(nftContract.address, streamId);
+            await expect(poolProcessorContract.settlement(nftContract.address, streamId))
+                .to.emit(poolProcessorContract, "SettlementSuccess")
+                .withArgs(poolContract.address, borrower.address, nftContract.address, streamId);
             const afterBorrowAmount = await usdc.balanceOf(borrower.address);
             const afterPoolAmount = await usdc.balanceOf(poolContract.address);
             const afterBorrowXAmount = await usdcx.balanceOf(borrower.address);
