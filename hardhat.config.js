@@ -222,6 +222,11 @@ module.exports = {
             url: polygonUrl,
             accounts: [deployer, eaService, pdsService],
         },
+        alfajores: {
+            url: "https://alfajores-forno.celo-testnet.org",
+            accounts: [deployer, eaService, poolTreasury],
+            chainId: 44787
+          },
         optimism: {
             url: "https://mainnet.optimism.io",
             accounts: {
