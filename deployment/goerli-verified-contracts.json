@@ -26,4 +26,14 @@
 "JiaHDT":"Done",
 "JiaPoolConfig":"Done",
 "JiaPoolImpl":"Done",
-"JiaPool":"Done"}
+"JiaPool":"Done",
+"RWReceivableImpl":"Done",
+"RWReceivable":"Done",
+"ArfPoolTimelock":"Done",
+"ArfPoolProxyAdminTimelock":"Done",
+"ArfPoolFeeManager":"Done",
+"ArfHDTImpl":"Done",
+"ArfHDT":"Done",
+"ArfPoolConfig":"Done",
+"ArfPoolImpl":"Done",
+"ArfPool":"Done"}

@@ -13,6 +13,7 @@ require("hardhat-prettier");
 require("solidity-coverage");
 
 require("hardhat-abi-exporter");
+require("hardhat-celo");
 require("dotenv").config();
 const fs = require("fs");
 
@@ -171,21 +172,22 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [
-                deployer,
-                proxyOwner,
-                lender,
-                ea,
-                eaService,
-                pdsService,
-                treasury,
-                ea_bcp,
-                invoicePayer,
-                baseCreditPoolOperator,
-                receivableFactoringPoolOperator,
-                baseCreditPoolOwnerTreasury,
-                receivableFactoringPoolOwnerTreasury,
-            ],
+            accounts: [deployer, eaService, poolTreasury],
+            // accounts: [
+            //     deployer,
+            //     proxyOwner,
+            //     lender,
+            //     ea,
+            //     eaService,
+            //     pdsService,
+            //     treasury,
+            //     ea_bcp,
+            //     invoicePayer,
+            //     baseCreditPoolOperator,
+            //     receivableFactoringPoolOperator,
+            //     baseCreditPoolOwnerTreasury,
+            //     receivableFactoringPoolOwnerTreasury,
+            // ],
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",
