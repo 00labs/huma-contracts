@@ -224,6 +224,12 @@
       },
       {
         "indexed": false,
+        "internalType": "bytes32",
+        "name": "flowKey",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
         "internalType": "address",
         "name": "receivableAsset",
         "type": "address"
@@ -283,6 +289,12 @@
         "internalType": "address",
         "name": "borrower",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "flowKey",
+        "type": "bytes32"
       },
       {
         "indexed": false,
