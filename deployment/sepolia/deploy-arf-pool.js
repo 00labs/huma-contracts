@@ -31,11 +31,11 @@ async function deployContracts() {
         [],
     ]);
 
-    const baseCreditPoolTL = await deploy("TimelockController", "ArfPoolTimelock", [
-        0,
-        [POOL_OWNER_EOA],
-        [deployer.address],
-    ]);
+    // const baseCreditPoolTL = await deploy("TimelockController", "ArfPoolTimelock", [
+    //     0,
+    //     [POOL_OWNER_EOA],
+    //     [deployer.address],
+    // ]);
 
     const baseCreditPoolProxyAdminTL = await deploy("TimelockController", "ArfPoolProxyAdminTimelock", [
         0,

@@ -14,4 +14,12 @@
 "BaseCreditPool":"Done",
 "BaseCreditHDTImpl":"Done",
 "BaseCreditHDT":"Done",
-"JiaPioneerPoolConfig":"Done"}
+"JiaPioneerPoolConfig":"Done",
+"ArfPoolTimelock":"Done",
+"ArfPoolProxyAdminTimelock":"Done",
+"ArfPoolFeeManager":"Done",
+"ArfHDTImpl":"Done",
+"ArfHDT":"Done",
+"ArfPoolConfig":"Done",
+"ArfPoolImpl":"Done",
+"ArfPool":"Done"}

@@ -126,13 +126,13 @@ async function verifyContracts() {
     console.log(`Verify RWR result: ${verifyRWR}`);
 
 
-    const verifyBaseCreditPoolTL = await verifyContract('ArfPoolTimelock',
-        [
-            0,
-            `['${POOL_OWNER_EOA}']`,
-            `['${deployer.address}']`,
-        ]);
-    console.log(`Verify ArfPoolTimelock result: ${verifyBaseCreditPoolTL}`);
+    // const verifyBaseCreditPoolTL = await verifyContract('ArfPoolTimelock',
+    //     [
+    //         0,
+    //         `['${POOL_OWNER_EOA}']`,
+    //         `['${deployer.address}']`,
+    //     ]);
+    // console.log(`Verify ArfPoolTimelock result: ${verifyBaseCreditPoolTL}`);
 
     const verifyBaseCreditPoolProxyAdminTL = await verifyContract('ArfPoolProxyAdminTimelock',
         [

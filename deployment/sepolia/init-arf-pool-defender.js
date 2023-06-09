@@ -125,7 +125,7 @@ async function initBaseCreditPoolFeeManager() {
     );
     // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
     
-    await transferOwnershipToTL("BaseFeeManager", "ArfPoolFeeManager", "ArfPoolTimelock");
+    // await transferOwnershipToTL("BaseFeeManager", "ArfPoolFeeManager", "ArfPoolTimelock");
 
     await updateInitilizedContract("ArfPoolFeeManager");
 }
@@ -160,7 +160,7 @@ async function initBaseCreditPoolHDT() {
 
     await sendTransaction("HDT", hdt, "setPool", [deployedContracts["ArfPool"]]);
     
-    await transferOwnershipToTL("HDT", "ArfHDT", "ArfPoolTimelock");
+    // await transferOwnershipToTL("HDT", "ArfHDT", "ArfPoolTimelock");
 
     await updateInitilizedContract("ArfHDT");
 }
@@ -206,12 +206,12 @@ async function initBaseCreditPoolConfig() {
     const BaseFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
     const feeManager = BaseFeeManager.attach(deployedContracts["ArfPoolFeeManager"]);
 
-    // await sendTransaction("ArfPoolConfig", poolConfig, "initialize", [
-    //     "ArfPool",
-    //     hdt.address,
-    //     humaConfig.address,
-    //     feeManager.address,
-    // ]);
+    await sendTransaction("ArfPoolConfig", poolConfig, "initialize", [
+        "ArfPool",
+        hdt.address,
+        humaConfig.address,
+        feeManager.address,
+    ]);
 
     const decimals = await hdt.decimals();
     console.log("decimals: " + BigInt(decimals));
@@ -236,11 +236,11 @@ async function initBaseCreditPoolConfig() {
         [0, 0]
     );
 
-    await sendTransaction("ArfPoolConfig", poolConfig, "setEvaluationAgent", [
-        1,
-        deployer.address,
-    ]);
-    
+    // await sendTransaction("ArfPoolConfig", poolConfig, "setEvaluationAgent", [
+    //     1,
+    //     deployer.address,
+    // ]);
+  
     const maxCL = BigInt(10_000)*(BigInt(10)**(BigInt(decimals)));
     console.log("maxCL: " + maxCL);
     await sendTransaction("ArfPoolConfig", poolConfig, "setMaxCreditLine", [maxCL]);
@@ -257,7 +257,7 @@ async function initBaseCreditPoolConfig() {
 
     await sendTransaction("ArfPoolConfig", poolConfig, "setCreditApprovalExpiration", [30]);
     
-    await transferOwnershipToTL("BasePoolConfig", "ArfPoolConfig", "ArfPoolTimelock");
+    // await transferOwnershipToTL("BasePoolConfig", "ArfPoolConfig", "ArfPoolTimelock");
 
     await updateInitilizedContract("ArfPoolConfig");
 }
@@ -319,10 +319,10 @@ async function prepareBaseCreditPool() {
     const pool = BaseCreditPool.attach(deployedContracts["ArfPool"])
     // const poolFrombcpOperator = pool.connect(bcpOperator);
 
-    await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [deployer.address]);
-    // await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [ea_bcp.address]);
-    // await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [lender.address]);
-    await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [poolTreasury.address]);
+    // await sendTransaction("ArfPool", pool, "addApprovedLender", [deployer.address]);
+    // // await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [ea_bcp.address]);
+    // // await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [lender.address]);
+    // await sendTransaction("ArfPool", pool, "addApprovedLender", [poolTreasury.address]);
 
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
@@ -333,9 +333,9 @@ async function prepareBaseCreditPool() {
     const poolFromPoolOwnerTreasury = await pool.connect(poolTreasury);
     const amountOwner = BigInt(20_000)*(BigInt(10)**(BigInt(decimals)));
     console.log("owner to deposit: " + amountOwner);
-    await sendTransaction("TestToken", usdc, "mint", [bcpOwnerTreasury.address, amountOwner]);
-    await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [pool.address, amountOwner]);
-    await sendTransaction("ArfPool", poolFromPoolOwnerTreasury, "makeInitialDeposit", [amountOwner]);
+    // await sendTransaction("TestToken", usdc, "mint", [poolTreasury.address, amountOwner]);
+    // await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [pool.address, amountOwner]);
+    // await sendTransaction("ArfPool", poolFromPoolOwnerTreasury, "makeInitialDeposit", [amountOwner]);
 
     // EA
     // const usdcFromEA = await usdc.connect(ea_bcp);
@@ -345,7 +345,7 @@ async function prepareBaseCreditPool() {
     // await sendTransaction("TestToken", usdcFromEA, "approve", [poolFromEA.address, amountEA]);
     // await sendTransaction("BaseCreditPool", poolFromEA, "makeInitialDeposit", [amountEA]);
 
-    // await sendTransaction("BaseCreditPool", pool, "enablePool", []);
+    await sendTransaction("ArfPool", pool, "enablePool", []);
 }
 
 async function initContracts() {
@@ -369,7 +369,7 @@ async function initContracts() {
     await initBaseCreditPool();
     await initRWR();
 
-    // await prepareBaseCreditPool();
+    await prepareBaseCreditPool();
     
 }
 
