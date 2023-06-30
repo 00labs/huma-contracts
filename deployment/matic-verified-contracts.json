@@ -22,4 +22,15 @@
 "ArfHDT":"Done",
 "ArfPoolConfig":"Done",
 "ArfPoolImpl":"Done",
-"ArfPool":"Done"}
+"ArfPool":"Done",
+"HumaProxyAdminTimelock":"Done",
+"RWReceivableImpl":"Done",
+"RWReceivable":"Done",
+"ArfNewPoolTimelock":"Done",
+"ArfNewPoolProxyAdminTimelock":"Done",
+"ArfNewPoolFeeManager":"Done",
+"ArfNewHDTImpl":"Done",
+"ArfNewHDT":"Done",
+"ArfNewPoolConfig":"Done",
+"ArfNewPoolImpl":"Done",
+"ArfNewPool":"Done"}
