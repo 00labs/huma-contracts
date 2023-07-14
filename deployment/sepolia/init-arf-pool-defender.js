@@ -322,7 +322,7 @@ async function prepareBaseCreditPool() {
     // await sendTransaction("ArfPool", pool, "addApprovedLender", [deployer.address]);
     // // await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [ea_bcp.address]);
     // // await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [lender.address]);
-    // await sendTransaction("ArfPool", pool, "addApprovedLender", [poolTreasury.address]);
+    await sendTransaction("ArfPool", pool, "addApprovedLender", [poolTreasury.address]);
 
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
@@ -345,7 +345,7 @@ async function prepareBaseCreditPool() {
     // await sendTransaction("TestToken", usdcFromEA, "approve", [poolFromEA.address, amountEA]);
     // await sendTransaction("BaseCreditPool", poolFromEA, "makeInitialDeposit", [amountEA]);
 
-    await sendTransaction("ArfPool", pool, "enablePool", []);
+    // await sendTransaction("ArfPool", pool, "enablePool", []);
 }
 
 async function initContracts() {

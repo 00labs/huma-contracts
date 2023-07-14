@@ -114,65 +114,65 @@ async function verifyContracts() {
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
-    // const verifyHumaProxyAdminTL = await verifyContract('HumaProxyAdminTimelock',
-    //     [
-    //         0,
-    //         `['${HUMA_OWNER_SAFE}']`,
-    //         `['${deployer.address}']`,
-    //     ]);
-    // console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+    const verifyHumaProxyAdminTL = await verifyContract('HumaProxyAdminTimelock',
+        [
+            0,
+            `['${HUMA_OWNER_SAFE}']`,
+            `['${deployer.address}']`,
+        ]);
+    console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
-    // const verifyRWRImpl = await verifyContract('RWReceivableImpl');
-    // console.log(`Verify RWRImpl result: ${verifyRWRImpl}`);
+    const verifyRWRImpl = await verifyContract('RWReceivableImpl');
+    console.log(`Verify RWRImpl result: ${verifyRWRImpl}`);
 
-    // const verifyRWR = await verifyContract('RWReceivable',
-    //     [
-    //         `'${deployedContracts['RWReceivableImpl']}'`,
-    //         `'${deployedContracts['HumaConfigTimelock']}'`,
-    //         '[]'
-    //     ]);
-    // console.log(`Verify RWR result: ${verifyRWR}`);
+    const verifyRWR = await verifyContract('RWReceivable',
+        [
+            `'${deployedContracts['RWReceivableImpl']}'`,
+            `'${deployedContracts['HumaConfigTimelock']}'`,
+            '[]'
+        ]);
+    console.log(`Verify RWR result: ${verifyRWR}`);
 
 
-    const verifyBaseCreditPoolTL = await verifyContract('ArfPoolTimelock',
+    const verifyBaseCreditPoolTL = await verifyContract('ArfNewPoolTimelock',
         [
             0,
             `['${POOL_OWNER_SAFE}']`,
             `['${deployer.address}']`,
         ]);
-    console.log(`Verify ArfPoolTimelock result: ${verifyBaseCreditPoolTL}`);
+    console.log(`Verify ArfNewPoolTimelock result: ${verifyBaseCreditPoolTL}`);
 
-    const verifyBaseCreditPoolProxyAdminTL = await verifyContract('ArfPoolProxyAdminTimelock',
+    const verifyBaseCreditPoolProxyAdminTL = await verifyContract('ArfNewPoolProxyAdminTimelock',
         [
             0,
             `['${POOL_OWNER_SAFE}']`,
             `['${deployer.address}']`,
         ]);
-    console.log(`Verify ArfPoolProxyAdminTimelock result: ${verifyBaseCreditPoolProxyAdminTL}`);
+    console.log(`Verify ArfNewPoolProxyAdminTimelock result: ${verifyBaseCreditPoolProxyAdminTL}`);
 
-    const verifyFeeManager = await verifyContract('ArfPoolFeeManager');
+    const verifyFeeManager = await verifyContract('ArfNewPoolFeeManager');
     console.log(`Verify FeeManager result: ${verifyFeeManager}`);
 
-    const verifyHDTImpl = await verifyContract('ArfHDTImpl');
+    const verifyHDTImpl = await verifyContract('ArfNewHDTImpl');
     console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
 
-    const verifyHDT = await verifyContract('ArfHDT',
+    const verifyHDT = await verifyContract('ArfNewHDT',
         [
-            `'${deployedContracts['ArfHDTImpl']}'`,
-            `'${deployedContracts['ArfPoolProxyAdminTimelock']}'`,
+            `'${deployedContracts['ArfNewHDTImpl']}'`,
+            `'${deployedContracts['ArfNewPoolProxyAdminTimelock']}'`,
             '[]'
         ]);
     console.log(`Verify HDT result: ${verifyHDT}`);
 
-    const verifyPoolConfig = await verifyContract('ArfPoolConfig');
+    const verifyPoolConfig = await verifyContract('ArfNewPoolConfig');
     console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
 
-    const verifyPoolImpl = await verifyContract('ArfPoolImpl');
+    const verifyPoolImpl = await verifyContract('ArfNewPoolImpl');
     console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
 
-    const verifyPool = await verifyContract('ArfPool',
+    const verifyPool = await verifyContract('ArfNewPool',
         [
-            `'${deployedContracts['ArfPoolImpl']}'`,
+            `'${deployedContracts['ArfNewPoolImpl']}'`,
             `'${deployedContracts['ArfPoolProxyAdminTimelock']}'`,
             '[]',
         ]);
