@@ -238,7 +238,7 @@ module.exports = {
         },
         alfajores: {
             url: "https://alfajores-forno.celo-testnet.org",
-            accounts: [deployer, eaService, poolTreasury],
+            accounts: [deployer, eaService],
             chainId: 44787
           },
         sepolia: {
