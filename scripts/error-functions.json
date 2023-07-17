@@ -62,12 +62,18 @@
   "durationTooLong()": "0xf1dd53a8",
   "invalidFlowrate()": "0xd06a9328",
   "settlementTooSoon()": "0x0453e75e",
-  "onlySuperfluid()": "0x3f9cd1c2",
   "borrowerMismatch()": "0x27d3e640",
   "notProcessor()": "0x90409ca1",
   "receivableIdMismatch()": "0x97be2b67",
   "flowKeyMismatch()": "0x29d5a5f3",
   "flowIsNotTerminated()": "0xe9c5922f",
   "invalidSuperfluidCallback()": "0xd2747f83",
-  "invalidSuperfluidAction()": "0x2f2cd9e9"
+  "invalidSuperfluidAction()": "0x2f2cd9e9",
+  "notTradableStreamOwner()": "0x5709a724",
+  "tradableStreamNotMatured()": "0xa42ebb88",
+  "tradableStreamNotExisting()": "0xb78e2a5b",
+  "notEnoughAvailableFlowrate()": "0x9c808ab8",
+  "newReceiverSameToOrigin()": "0x6d79ce50",
+  "AuthorizationExpired()": "0x0f05f5bf",
+  "InvalidAuthorization()": "0x2ce87eeb"
 }

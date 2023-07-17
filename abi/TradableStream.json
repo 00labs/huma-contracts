@@ -11,6 +11,51 @@
     "type": "constructor"
   },
   {
+    "inputs": [],
+    "name": "AuthorizationExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidAuthorization",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "invalidFlowrate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "newReceiverSameToOrigin",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notEnoughAvailableFlowrate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notTradableStreamOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "tradableStreamNotExisting",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "tradableStreamNotMatured",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "zeroAddressProvided",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {

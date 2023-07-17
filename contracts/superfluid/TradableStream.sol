@@ -9,6 +9,8 @@ import {IConstantFlowAgreementV1} from "@superfluid-finance/ethereum-contracts/c
 import {CFAv1Library} from "@superfluid-finance/ethereum-contracts/contracts/apps/CFAv1Library.sol";
 import {CFALib} from "./CFALib.sol";
 
+import {Errors} from "../Errors.sol";
+
 struct TradableStreamMetadata {
     uint256 duration;
     uint256 started;
@@ -104,18 +106,28 @@ contract TradableStream is ERC721, Ownable {
     /// @notice require that tokenId exists (minted and not burnt)
     /// @param tokenId ID of token to be checked
     modifier exists(uint256 tokenId) {
-        require(_exists(tokenId), "Token doesn't exist or has been burnt");
+        if (!_exists(tokenId)) {
+            revert Errors.tradableStreamNotExisting();
+        }
         _;
     }
 
     /// @notice Burns an expired TradableStream, resture the stream back to the original receiver
     /// @dev Anyone can call this method to burn the tradableStream at any time,
-    /// will revert if it is not expired yet
+    /// will revert if it is not expired and its flow is not zero yet
     /// @dev See `_beforeTokenTransfer` for the handover process.
     /// @param tokenId The token ID of the TradableStream to be burned
     function burn(uint256 tokenId) external {
         TradableStreamMetadata memory meta = metadatas[tokenId];
 
+        address owner = ownerOf(tokenId);
+        (, int96 flowrate, , ) = cfaV1.cfa.getFlow(meta.token, meta.origin, owner);
+        if (meta.started == 0 && msg.sender != owner) {
+            revert Errors.notTradableStreamOwner();
+        }
+        if (!hasMatured(tokenId) && flowrate > 0) {
+            revert Errors.tradableStreamNotMatured();
+        }
         _burn(tokenId);
 
         emit TradableStreamTerminated(tokenId, meta.origin, meta.receiver);
@@ -143,22 +155,23 @@ contract TradableStream is ERC721, Ownable {
         int96 flowrate,
         uint256 durationInSeconds
     ) internal returns (uint256 tokenId) {
-        require(receiver != address(0), "Empty receiver");
-        require(address(token) != address(0), "Empty token");
-        require(origin != address(0), "Empty origin");
-        require(newOwner != address(0), "Empty owner");
+        if (
+            receiver == address(0) ||
+            address(token) == address(0) ||
+            origin == address(0) ||
+            newOwner == address(0)
+        ) revert Errors.zeroAddressProvided();
 
-        require(flowrate > 0, "Invalid flowrate");
+        if (flowrate <= 0) revert Errors.invalidFlowrate();
 
         // Get flow from origin to receiver
         (, int96 allFlowrate, , ) = cfaV1.cfa.getFlow(token, origin, receiver);
 
         // Get investments
         int96 alreadyTraded = _tradedStream[origin][receiver];
-        require(allFlowrate > alreadyTraded, "No flowrate available for trade");
+        if (alreadyTraded >= allFlowrate) revert Errors.notEnoughAvailableFlowrate();
         int96 availableFlowrate = allFlowrate - alreadyTraded;
-
-        require(flowrate <= availableFlowrate, "Not enough flowrate for trade");
+        if (flowrate > availableFlowrate) revert Errors.notEnoughAvailableFlowrate();
 
         tokenId = nextId;
 
@@ -205,7 +218,7 @@ contract TradableStream is ERC721, Ownable {
         bytes32 r,
         bytes32 s
     ) external returns (uint256) {
-        require(expiry == 0 || block.timestamp <= expiry, "Authorization expired");
+        if (expiry > 0 && block.timestamp > expiry) revert Errors.AuthorizationExpired();
 
         uint256 nonce = nonces[currentOwner]++;
 
@@ -229,7 +242,7 @@ contract TradableStream is ERC721, Ownable {
             )
         );
 
-        require(currentOwner == ecrecover(data, v, r, s), "Invalid authorization");
+        if (currentOwner != ecrecover(data, v, r, s)) revert Errors.InvalidAuthorization();
         return
             _mintTo(
                 currentOwner,
@@ -248,7 +261,7 @@ contract TradableStream is ERC721, Ownable {
     ) internal override {
         TradableStreamMetadata memory meta = metadatas[tokenId];
 
-        require(newReceiver != meta.origin, "Can't transfer to tream's payer");
+        if (newReceiver == meta.origin) revert Errors.newReceiverSameToOrigin();
 
         if (oldReceiver == address(0)) {
             //to mint

@@ -1077,7 +1077,7 @@ describe("Superfluid Factoring", function () {
                     nftContract.address,
                     calldata
                 )
-            ).to.be.revertedWith("Authorization expired");
+            ).to.be.revertedWithCustomError(nftContract, "AuthorizationExpired");
         });
 
         it("Should revert when authorization was invalid", async function () {
@@ -1156,7 +1156,7 @@ describe("Superfluid Factoring", function () {
                     nftContract.address,
                     calldata
                 )
-            ).to.be.revertedWith("Invalid authorization");
+            ).to.be.revertedWithCustomError(nftContract, "InvalidAuthorization");
         });
 
         it("Should drawdown with authorization", async function () {
