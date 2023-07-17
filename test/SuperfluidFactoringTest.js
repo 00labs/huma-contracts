@@ -3954,191 +3954,193 @@ describe("Superfluid Factoring", function () {
             ).to.be.revertedWithCustomError(poolProcessorContract, "invalidSuperfluidAction");
         });
 
-        it.skip("Should settlement and duration is increased when flow was decreased during the loan period, and no enough allowance", async function () {
-            let balance = await usdc.balanceOf(borrower.address);
-            let remainingBal = toUSDC(50);
-            if (balance.gt(remainingBal)) {
-                await usdc
-                    .connect(borrower)
-                    .transfer(defaultDeployer.address, balance.sub(remainingBal));
-            } else {
-                remainingBal = balance;
-            }
+        // Comments out this test because current version doesn't support to increase/decrease flow rate.
 
-            let cr = await poolContract.creditRecordMapping(borrower.address);
-            const remainingTime = 3600 * 24 * 7;
-            let nts = cr.dueDate.toNumber() - remainingTime;
-            await setNextBlockTimestamp(nts);
+        // it.skip("Should settlement and duration is increased when flow was decreased during the loan period, and no enough allowance", async function () {
+        //     let balance = await usdc.balanceOf(borrower.address);
+        //     let remainingBal = toUSDC(50);
+        //     if (balance.gt(remainingBal)) {
+        //         await usdc
+        //             .connect(borrower)
+        //             .transfer(defaultDeployer.address, balance.sub(remainingBal));
+        //     } else {
+        //         remainingBal = balance;
+        //     }
 
-            const streamId = 1;
-            let beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
-            let beforeBorrowerBal = await usdc.balanceOf(borrower.address);
-            let beforePoolBal = await usdc.balanceOf(poolContract.address);
-            const newFlowrate = loanAmount.div(BN.from(streamDuration)).div(4);
-            const calldata = genUpdateFlowCalldata(usdcx, poolProcessorContract, newFlowrate);
-            await sf.connect(payer).callAgreement(cfa.address, calldata, "0x");
-            let afterBorrowerBal = await usdc.balanceOf(borrower.address);
-            let afterPoolBal = await usdc.balanceOf(poolContract.address);
-            let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
+        //     let cr = await poolContract.creditRecordMapping(borrower.address);
+        //     const remainingTime = 3600 * 24 * 7;
+        //     let nts = cr.dueDate.toNumber() - remainingTime;
+        //     await setNextBlockTimestamp(nts);
 
-            expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
-            expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
-            expect(afterSI.lastStartTime).to.equal(nts);
-            expect(afterSI.flowrate).to.equal(newFlowrate);
-            expect(afterSI.endTime).to.equal(beforeSI.endTime);
-            expect(afterSI.receivedFlowAmount).to.equal(
-                BN.from(nts).sub(beforeSI.lastStartTime).mul(beforeSI.flowrate)
-            );
+        //     const streamId = 1;
+        //     let beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
+        //     let beforeBorrowerBal = await usdc.balanceOf(borrower.address);
+        //     let beforePoolBal = await usdc.balanceOf(poolContract.address);
+        //     const newFlowrate = loanAmount.div(BN.from(streamDuration)).div(4);
+        //     const calldata = genUpdateFlowCalldata(usdcx, poolProcessorContract, newFlowrate);
+        //     await sf.connect(payer).callAgreement(cfa.address, calldata, "0x");
+        //     let afterBorrowerBal = await usdc.balanceOf(borrower.address);
+        //     let afterPoolBal = await usdc.balanceOf(poolContract.address);
+        //     let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
-            cr = await poolContract.creditRecordMapping(borrower.address);
-            let crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            let correction = calcCorrection(cr, crs, nts, remainingBal);
-            checkRecord(
-                cr,
-                crs,
-                toUSDC(streamAmount),
-                0,
-                "SKIP",
-                correction,
-                loanAmount.sub(remainingBal),
-                0,
-                0,
-                0,
-                1217,
-                streamDays,
-                3,
-                0
-            );
-            let beforeNTS = nts;
-            const expiration = 1000;
-            nts = cr.dueDate.toNumber() + expiration;
-            await setNextBlockTimestamp(nts);
+        //     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
+        //     expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
+        //     expect(afterSI.lastStartTime).to.equal(nts);
+        //     expect(afterSI.flowrate).to.equal(newFlowrate);
+        //     expect(afterSI.endTime).to.equal(beforeSI.endTime);
+        //     expect(afterSI.receivedFlowAmount).to.equal(
+        //         BN.from(nts).sub(beforeSI.lastStartTime).mul(beforeSI.flowrate)
+        //     );
 
-            beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
-            beforeBorrowerBal = await usdc.balanceOf(borrower.address);
-            beforePoolBal = await usdc.balanceOf(poolContract.address);
-            await poolProcessorContract.settlement(nftContract.address, streamId);
-            afterBorrowerBal = await usdc.balanceOf(borrower.address);
-            afterPoolBal = await usdc.balanceOf(poolContract.address);
-            afterSI = await poolProcessorContract.streamInfoMapping(streamId);
+        //     cr = await poolContract.creditRecordMapping(borrower.address);
+        //     let crs = await poolContract.creditRecordStaticMapping(borrower.address);
+        //     let correction = calcCorrection(cr, crs, nts, remainingBal);
+        //     checkRecord(
+        //         cr,
+        //         crs,
+        //         toUSDC(streamAmount),
+        //         0,
+        //         "SKIP",
+        //         correction,
+        //         loanAmount.sub(remainingBal),
+        //         0,
+        //         0,
+        //         0,
+        //         1217,
+        //         streamDays,
+        //         3,
+        //         0
+        //     );
+        //     let beforeNTS = nts;
+        //     const expiration = 1000;
+        //     nts = cr.dueDate.toNumber() + expiration;
+        //     await setNextBlockTimestamp(nts);
 
-            let received = BN.from(beforeSI.endTime)
-                .sub(beforeNTS)
-                .mul(newFlowrate)
-                .add(beforeSI.receivedFlowAmount);
-            expect(afterPoolBal.sub(beforePoolBal)).to.equal(received);
-            expect(afterBorrowerBal).to.equal(beforeBorrowerBal);
+        //     beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
+        //     beforeBorrowerBal = await usdc.balanceOf(borrower.address);
+        //     beforePoolBal = await usdc.balanceOf(poolContract.address);
+        //     await poolProcessorContract.settlement(nftContract.address, streamId);
+        //     afterBorrowerBal = await usdc.balanceOf(borrower.address);
+        //     afterPoolBal = await usdc.balanceOf(poolContract.address);
+        //     afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
-            cr = await poolContract.creditRecordMapping(borrower.address);
-            crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            printRecord(cr, crs);
-            let unbilled = loanAmount.sub(remainingBal).sub(received).add(correction);
-            let interest = calcInterest(crs, unbilled);
-            checkRecord(
-                cr,
-                crs,
-                toUSDC(streamAmount),
-                0,
-                "SKIP",
-                0,
-                unbilled.add(interest),
-                interest,
-                1,
-                0,
-                1217,
-                streamDays,
-                4,
-                0
-            );
-            let newEndTime = calcNewEndTime(cr, beforeSI);
-            checkResults(afterSI, [
-                borrower.address,
-                beforeSI.endTime,
-                newEndTime,
-                beforeSI.flowrate,
-                0,
-                0,
-            ]);
-            expect(await nftContract.maturesAt(streamId)).to.equal(afterSI.endTime);
+        //     let received = BN.from(beforeSI.endTime)
+        //         .sub(beforeNTS)
+        //         .mul(newFlowrate)
+        //         .add(beforeSI.receivedFlowAmount);
+        //     expect(afterPoolBal.sub(beforePoolBal)).to.equal(received);
+        //     expect(afterBorrowerBal).to.equal(beforeBorrowerBal);
 
-            nts = cr.dueDate.toNumber() + expiration;
-            await setNextBlockTimestamp(nts);
+        //     cr = await poolContract.creditRecordMapping(borrower.address);
+        //     crs = await poolContract.creditRecordStaticMapping(borrower.address);
+        //     printRecord(cr, crs);
+        //     let unbilled = loanAmount.sub(remainingBal).sub(received).add(correction);
+        //     let interest = calcInterest(crs, unbilled);
+        //     checkRecord(
+        //         cr,
+        //         crs,
+        //         toUSDC(streamAmount),
+        //         0,
+        //         "SKIP",
+        //         0,
+        //         unbilled.add(interest),
+        //         interest,
+        //         1,
+        //         0,
+        //         1217,
+        //         streamDays,
+        //         4,
+        //         0
+        //     );
+        //     let newEndTime = calcNewEndTime(cr, beforeSI);
+        //     checkResults(afterSI, [
+        //         borrower.address,
+        //         beforeSI.endTime,
+        //         newEndTime,
+        //         beforeSI.flowrate,
+        //         0,
+        //         0,
+        //     ]);
+        //     expect(await nftContract.maturesAt(streamId)).to.equal(afterSI.endTime);
 
-            beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
-            beforeBorrowerBal = await usdc.balanceOf(borrower.address);
-            beforePoolBal = await usdc.balanceOf(poolContract.address);
-            await poolProcessorContract.settlement(nftContract.address, streamId);
-            afterBorrowerBal = await usdc.balanceOf(borrower.address);
-            afterPoolBal = await usdc.balanceOf(poolContract.address);
-            afterSI = await poolProcessorContract.streamInfoMapping(streamId);
+        //     nts = cr.dueDate.toNumber() + expiration;
+        //     await setNextBlockTimestamp(nts);
 
-            received = BN.from(beforeSI.endTime)
-                .sub(beforeSI.lastStartTime)
-                .mul(beforeSI.flowrate);
-            expect(afterPoolBal.sub(beforePoolBal)).to.equal(received);
-            expect(afterBorrowerBal).to.equal(beforeBorrowerBal);
+        //     beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
+        //     beforeBorrowerBal = await usdc.balanceOf(borrower.address);
+        //     beforePoolBal = await usdc.balanceOf(poolContract.address);
+        //     await poolProcessorContract.settlement(nftContract.address, streamId);
+        //     afterBorrowerBal = await usdc.balanceOf(borrower.address);
+        //     afterPoolBal = await usdc.balanceOf(poolContract.address);
+        //     afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
-            interest = calcInterest(crs, cr.totalDue);
-            let totalDue = cr.totalDue.add(interest).sub(received);
+        //     received = BN.from(beforeSI.endTime)
+        //         .sub(beforeSI.lastStartTime)
+        //         .mul(beforeSI.flowrate);
+        //     expect(afterPoolBal.sub(beforePoolBal)).to.equal(received);
+        //     expect(afterBorrowerBal).to.equal(beforeBorrowerBal);
 
-            cr = await poolContract.creditRecordMapping(borrower.address);
-            crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            correction = calcCorrection(cr, crs, nts, received.sub(interest));
-            printRecord(cr, crs);
-            checkRecord(
-                cr,
-                crs,
-                toUSDC(streamAmount),
-                0,
-                "SKIP",
-                correction,
-                totalDue,
-                0,
-                2,
-                0,
-                1217,
-                streamDays,
-                4,
-                0
-            );
-            newEndTime = calcNewEndTime(cr, beforeSI);
-            checkResults(afterSI, [
-                borrower.address,
-                beforeSI.endTime,
-                newEndTime,
-                beforeSI.flowrate,
-                0,
-                0,
-            ]);
-            expect(await nftContract.maturesAt(streamId)).to.equal(afterSI.endTime);
+        //     interest = calcInterest(crs, cr.totalDue);
+        //     let totalDue = cr.totalDue.add(interest).sub(received);
 
-            nts = afterSI.endTime.toNumber() + expiration;
-            await setNextBlockTimestamp(nts);
+        //     cr = await poolContract.creditRecordMapping(borrower.address);
+        //     crs = await poolContract.creditRecordStaticMapping(borrower.address);
+        //     correction = calcCorrection(cr, crs, nts, received.sub(interest));
+        //     printRecord(cr, crs);
+        //     checkRecord(
+        //         cr,
+        //         crs,
+        //         toUSDC(streamAmount),
+        //         0,
+        //         "SKIP",
+        //         correction,
+        //         totalDue,
+        //         0,
+        //         2,
+        //         0,
+        //         1217,
+        //         streamDays,
+        //         4,
+        //         0
+        //     );
+        //     newEndTime = calcNewEndTime(cr, beforeSI);
+        //     checkResults(afterSI, [
+        //         borrower.address,
+        //         beforeSI.endTime,
+        //         newEndTime,
+        //         beforeSI.flowrate,
+        //         0,
+        //         0,
+        //     ]);
+        //     expect(await nftContract.maturesAt(streamId)).to.equal(afterSI.endTime);
 
-            beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
-            beforeBorrowerBal = await usdc.balanceOf(borrower.address);
-            beforePoolBal = await usdc.balanceOf(poolContract.address);
-            await poolProcessorContract.settlement(nftContract.address, streamId);
-            afterBorrowerBal = await usdc.balanceOf(borrower.address);
-            afterPoolBal = await usdc.balanceOf(poolContract.address);
-            afterSI = await poolProcessorContract.streamInfoMapping(streamId);
+        //     nts = afterSI.endTime.toNumber() + expiration;
+        //     await setNextBlockTimestamp(nts);
 
-            received = BN.from(beforeSI.endTime)
-                .sub(beforeSI.lastStartTime)
-                .mul(beforeSI.flowrate);
-            correction = calcCorrection(cr, crs, nts, cr.totalDue.sub(cr.feesAndInterestDue));
+        //     beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
+        //     beforeBorrowerBal = await usdc.balanceOf(borrower.address);
+        //     beforePoolBal = await usdc.balanceOf(poolContract.address);
+        //     await poolProcessorContract.settlement(nftContract.address, streamId);
+        //     afterBorrowerBal = await usdc.balanceOf(borrower.address);
+        //     afterPoolBal = await usdc.balanceOf(poolContract.address);
+        //     afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
-            console.log(`cr.correction: ${cr.correction}, received: ${received}`);
+        //     received = BN.from(beforeSI.endTime)
+        //         .sub(beforeSI.lastStartTime)
+        //         .mul(beforeSI.flowrate);
+        //     correction = calcCorrection(cr, crs, nts, cr.totalDue.sub(cr.feesAndInterestDue));
 
-            // TODO fix the following expects
-            expect(afterPoolBal.sub(beforePoolBal)).to.equal(
-                received.add(cr.correction).add(correction)
-            );
-            expect(afterBorrowerBal.add(cr.correction)).to.equal(beforeBorrowerBal);
+        //     console.log(`cr.correction: ${cr.correction}, received: ${received}`);
 
-            cr = await poolContract.creditRecordMapping(borrower.address);
-            crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            printRecord(cr, crs);
-        });
+        //     // TODO fix the following expects
+        //     expect(afterPoolBal.sub(beforePoolBal)).to.equal(
+        //         received.add(cr.correction).add(correction)
+        //     );
+        //     expect(afterBorrowerBal.add(cr.correction)).to.equal(beforeBorrowerBal);
+
+        //     cr = await poolContract.creditRecordMapping(borrower.address);
+        //     crs = await poolContract.creditRecordStaticMapping(borrower.address);
+        //     printRecord(cr, crs);
+        // });
     });
 });
