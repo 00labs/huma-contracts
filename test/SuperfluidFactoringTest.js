@@ -403,7 +403,7 @@ describe("Superfluid Factoring", function () {
         usdcx = await ethers.getContractAt("ISuperToken", sfUsdcxAddress);
         cfa = await ethers.getContractAt("IConstantFlowAgreementV1", sfCFAAddress);
         await mint(payer.address, toUSDC(1_000_000));
-        console.log(`payer ${payer.address} usdc balance: ${await usdc.balanceOf(payer.address)}`);
+        // console.log(`payer ${payer.address} usdc balance: ${await usdc.balanceOf(payer.address)}`);
         await usdc.connect(payer).approve(usdcx.address, toUSDC(1_000_000));
 
         const sfRegisterContractFactory = await ethers.getContractFactory("MockSuperAppRegister");
@@ -460,9 +460,9 @@ describe("Superfluid Factoring", function () {
         await poolConfigContract.connect(poolOwner).setReceivableRequiredInBps(10000);
 
         await usdcx.connect(payer).upgrade(toDefaultToken(10_000));
-        console.log(
-            `payer ${payer.address} usdcx balance: ${await usdcx.balanceOf(payer.address)}`
-        );
+        // console.log(
+        //     `payer ${payer.address} usdcx balance: ${await usdcx.balanceOf(payer.address)}`
+        // );
 
         streamAmount = 2000;
         streamDays = 10;
@@ -471,10 +471,10 @@ describe("Superfluid Factoring", function () {
         let flowrate = toDefaultToken(streamAmount).div(BN.from(streamDuration));
         await createFlow(usdcx, payer, borrower, flowrate);
 
-        console.log(`authorize stream...`);
+        // console.log(`authorize stream...`);
         await authorizeFlow(usdcx, payer, nftContract);
 
-        console.log(`mint TradableStream...`);
+        // console.log(`mint TradableStream...`);
         collateralAmount = 500;
         flowrate = toDefaultToken(collateralAmount).div(BN.from(streamDuration)).add(BN.from(1));
         await nftContract
@@ -1297,7 +1297,7 @@ describe("Superfluid Factoring", function () {
             checkResults(res, [borrower.address, flowrate, ts, dueDate, 0, flowKey]);
             const cr = await poolContract.creditRecordMapping(borrower.address);
             const crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            printRecord(cr, crs);
+            // printRecord(cr, crs);
             checkRecord(
                 cr,
                 crs,
@@ -1561,7 +1561,7 @@ describe("Superfluid Factoring", function () {
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
             loanAmount = flowrate.mul(BN.from(streamDuration));
-            console.log(`loanAmount: ${loanAmount}`);
+            // console.log(`loanAmount: ${loanAmount}`);
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
             const signatureData = await borrower._signTypedData(
@@ -1649,7 +1649,7 @@ describe("Superfluid Factoring", function () {
         it("Should settlement", async function () {
             let cr = await poolContract.creditRecordMapping(borrower.address);
             let crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            printRecord(cr, crs);
+            // printRecord(cr, crs);
             const expiration = 10000;
             const nts = cr.dueDate.toNumber() + expiration;
             let block = await ethers.provider.getBlock();
@@ -1678,9 +1678,9 @@ describe("Superfluid Factoring", function () {
                 poolProcessorContract.address
             );
             const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
-            console.log(
-                `afterBorrowAmount: ${afterBorrowAmount}, beforeBorrowAmount: ${beforeBorrowAmount}`
-            );
+            // console.log(
+            //     `afterBorrowAmount: ${afterBorrowAmount}, beforeBorrowAmount: ${beforeBorrowAmount}`
+            // );
             expect(afterBorrowAmount.sub(beforeBorrowAmount)).to.equal(0);
             expect(afterPoolAmount.sub(beforePoolAmount)).to.equal(loanAmount);
             expect(beforeProcessorFlowrate.sub(afterProcessorFlowrate)).to.equal(
@@ -1695,7 +1695,7 @@ describe("Superfluid Factoring", function () {
             );
             cr = await poolContract.creditRecordMapping(borrower.address);
             crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            printRecord(cr, crs);
+            // printRecord(cr, crs);
             checkRecord(
                 cr,
                 crs,
@@ -1745,9 +1745,9 @@ describe("Superfluid Factoring", function () {
 
             let beforeBorrowAmount = await usdc.balanceOf(borrower.address);
             let beforePoolAmount = await usdc.balanceOf(poolContract.address);
-            console.log(
-                `beforeBorrowAmount: ${beforeBorrowAmount}, beforePoolAmount: ${beforePoolAmount}`
-            );
+            // console.log(
+            //     `beforeBorrowAmount: ${beforeBorrowAmount}, beforePoolAmount: ${beforePoolAmount}`
+            // );
             await poolContract.connect(borrower).makePayment(borrower.address, amount);
             let afterBorrowAmount = await usdc.balanceOf(borrower.address);
             let afterPoolAmount = await usdc.balanceOf(poolContract.address);
@@ -2004,7 +2004,7 @@ describe("Superfluid Factoring", function () {
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
             loanAmount = flowrate.mul(BN.from(streamDuration));
-            console.log(`loanAmount: ${loanAmount}`);
+            // console.log(`loanAmount: ${loanAmount}`);
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
             const signatureData = await borrower._signTypedData(
@@ -2445,7 +2445,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(res, [borrower1.address, flowrate, ts, dueDate, 0, flowKey]);
                     let cr = await poolContract.creditRecordMapping(borrower1.address);
                     let crs = await poolContract.creditRecordStaticMapping(borrower1.address);
-                    printRecord(cr, crs);
+                    // printRecord(cr, crs);
                     checkRecord(
                         cr,
                         crs,
