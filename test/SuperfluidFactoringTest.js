@@ -4059,7 +4059,7 @@ describe("Superfluid Factoring", function () {
                 0,
                 0,
             ]);
-            expect(await nftContract.endsAt(streamId)).to.equal(afterSI.endTime);
+            expect(await nftContract.maturesAt(streamId)).to.equal(afterSI.endTime);
 
             nts = cr.dueDate.toNumber() + expiration;
             await setNextBlockTimestamp(nts);
@@ -4110,7 +4110,7 @@ describe("Superfluid Factoring", function () {
                 0,
                 0,
             ]);
-            expect(await nftContract.endsAt(streamId)).to.equal(afterSI.endTime);
+            expect(await nftContract.maturesAt(streamId)).to.equal(afterSI.endTime);
 
             nts = afterSI.endTime.toNumber() + expiration;
             await setNextBlockTimestamp(nts);

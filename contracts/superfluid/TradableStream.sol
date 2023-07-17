@@ -18,9 +18,9 @@ struct TradableStreamMetadata {
     int96 flowrate;
 }
 
-// A TradableStream's maximum duration is one month.
-uint256 constant MAX_DURATION_SECONDS = 60 * 60 * 24 * 30;
-
+/**
+ * TradableStream uses an NFT to make a Superfluid stream tradable.
+ */
 contract TradableStream is ERC721, Ownable {
     string public constant version = "1";
 
@@ -28,11 +28,11 @@ contract TradableStream is ERC721, Ownable {
     using CFALib for CFAv1Library.InitData;
     CFAv1Library.InitData public cfaV1;
 
-    /// @dev when a TradableStream is transferred for the first time and engaged
+    /// @dev emitted when a TradableStream is minted and transferred ownership
     event TradableStreamStarted(
         // token id of the TradableStream
         uint256 tokenId,
-        // original sender of tokenized stream
+        // original sender of the tokenized stream
         address indexed origin,
         // the original receiver of the tokenized stream
         address indexed receiver,
@@ -40,16 +40,20 @@ contract TradableStream is ERC721, Ownable {
         uint256 matureAt
     );
 
-    /// @dev when a TradableStream is burned
+    /// @dev emitted when a TradableStream is burned
     event TradableStreamTerminated(
         // token id of the TradableStream
         uint256 tokenId,
-        // original sender of tokenized stream
+        // original sender of the tokenized stream
         address indexed origin,
         // the original receiver of the tokenized stream
         address indexed receiver
     );
 
+    /**
+     * @notice Refund the excessive token received (e.g. Flowrate increased during
+     * the period when the token was traded)
+     */
     event RefundExtraToken(
         address receiver,
         address owner,
@@ -60,20 +64,18 @@ contract TradableStream is ERC721, Ownable {
     /// @notice token ids => metadata
     mapping(uint256 => TradableStreamMetadata) public metadatas;
 
-    /// @notice origin => investor => total acquired flowrate
-    mapping(address => mapping(address => int96)) public _investments;
+    /// @notice origin => currentReceiver => flowrate in the tradableStream
+    mapping(address => mapping(address => int96)) public _tradedStream;
 
     /// @notice current token id
     uint256 public nextId;
 
-    bytes32 public immutable DOMAIN_SEPARATOR;
+    bytes32 public immutable domainSeparator;
     bytes32 public constant MINTTO_WITH_AUTHORIZATION_TYPEHASH =
         keccak256(
             "MintToWithAuthorization(address receiver,address token,address origin,address owner,int96 flowrate,uint256 durationInSeconds,uint256 nonce,uint256 expiry)"
         );
     mapping(address => uint256) public nonces;
-
-    // address public immutable processor;
 
     constructor(ISuperfluid host) payable Ownable() ERC721("TradableStream", "TSTRM") {
         IConstantFlowAgreementV1 cfa = IConstantFlowAgreementV1(
@@ -86,7 +88,7 @@ contract TradableStream is ERC721, Ownable {
 
         cfaV1 = CFAv1Library.InitData(host, cfa);
 
-        DOMAIN_SEPARATOR = keccak256(
+        domainSeparator = keccak256(
             abi.encode(
                 keccak256(
                     "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
@@ -99,45 +101,37 @@ contract TradableStream is ERC721, Ownable {
         );
     }
 
-    /// @dev require that tokenId exists (minted and not burnt)
-    /// @param tokenId Token ID whose existance is being checked
+    /// @notice require that tokenId exists (minted and not burnt)
+    /// @param tokenId ID of token to be checked
     modifier exists(uint256 tokenId) {
-        require(_exists(tokenId), "token doesn't exist or has been burnt");
+        require(_exists(tokenId), "Token doesn't exist or has been burnt");
         _;
     }
 
-    /// @notice Burns a mature TradableStream, restoring the original stream from origin to receiver
-    /// @dev Anyone can call this method at any time
-    /// @dev  Will revert if TradableStream is not mature
+    /// @notice Burns an expired TradableStream, resture the stream back to the original receiver
+    /// @dev Anyone can call this method to burn the tradableStream at any time,
+    /// will revert if it is not expired yet
     /// @dev See `_beforeTokenTransfer` for the handover process.
-    /// @param tokenId The token ID of the TradableStream that is being burned
+    /// @param tokenId The token ID of the TradableStream to be burned
     function burn(uint256 tokenId) external {
-        require(msg.sender == ownerOf(tokenId), "no permission to burn");
-
         TradableStreamMetadata memory meta = metadatas[tokenId];
-        // The owner can burn the StreamTradable at any time. One case is that the owner may burn it before the duration
-        // if the flow was terminated.
-        // require(meta.started == 0 || isMature(tokenId), "cant burn a non mature TradableStream");
 
         _burn(tokenId);
 
         emit TradableStreamTerminated(tokenId, meta.origin, meta.receiver);
     }
 
-    // TODO: potentially add a dedicated flowrate so don't have to sell everything at once.
-    /// @notice Mint a TradableStream against a stream you're receiving
-    /// @param token the currency this TradableStream is based on
-    /// @param origin the source that streams `token` to your account
-    /// @param flowrate how much flowrate will be moved out
-    /// @param durationInSeconds how long this TradableStream will run after it's been transferred for the first time
+    /// @notice Mint a TradableStream from an existing stream
+    /// @param token the super token
+    /// @param origin the payer of the stream
+    /// @param flowrate the flowrate that will be traded. It can be part of the entire steam.
+    /// @param durationInSeconds the duration for the stream to be traded and owned by the a new receiver
     function mint(
         ISuperToken token,
         address origin,
         int96 flowrate,
         uint256 durationInSeconds
     ) external {
-        // Accepted token toggle?
-
         _mintTo(msg.sender, token, origin, msg.sender, flowrate, durationInSeconds);
     }
 
@@ -145,31 +139,26 @@ contract TradableStream is ERC721, Ownable {
         address receiver,
         ISuperToken token,
         address origin,
-        address owner,
+        address newOwner,
         int96 flowrate,
         uint256 durationInSeconds
     ) internal returns (uint256 tokenId) {
         require(receiver != address(0), "Empty receiver");
         require(address(token) != address(0), "Empty token");
         require(origin != address(0), "Empty origin");
-        require(owner != address(0), "Empty owner");
+        require(newOwner != address(0), "Empty owner");
 
         require(flowrate > 0, "Invalid flowrate");
-
-        require(
-            MAX_DURATION_SECONDS >= durationInSeconds,
-            "TradableStream duration exceeds one month"
-        );
 
         // Get flow from origin to receiver
         (, int96 allFlowrate, , ) = cfaV1.cfa.getFlow(token, origin, receiver);
 
         // Get investments
-        int96 alreadyInvested = _investments[origin][receiver];
-        require(allFlowrate > alreadyInvested, "you don't have any available flowrate");
-        int96 availableFlowrate = allFlowrate - alreadyInvested;
+        int96 alreadyTraded = _tradedStream[origin][receiver];
+        require(allFlowrate > alreadyTraded, "No flowrate available for trade");
+        int96 availableFlowrate = allFlowrate - alreadyTraded;
 
-        require(flowrate < availableFlowrate, "you don't have enough available flowrate");
+        require(flowrate <= availableFlowrate, "Not enough flowrate for trade");
 
         tokenId = nextId;
 
@@ -186,8 +175,8 @@ contract TradableStream is ERC721, Ownable {
         _mint(receiver, tokenId);
         nextId += 1;
 
-        if (owner != receiver) {
-            _transfer(receiver, owner, tokenId);
+        if (newOwner != receiver) {
+            _transfer(receiver, newOwner, tokenId);
         }
     }
 
@@ -196,17 +185,17 @@ contract TradableStream is ERC721, Ownable {
     ///      The receiver generates authorization proof(
     ///      the format is 'MintToWithAuthorization(address receiver,address token,address origin,address owner,int96 flowrate,uint256 durationInSeconds,uint256 nonce,uint256 expiry)'
     ///      ). The owner(who will receive this TradableStream) can call this function with the signature(v, r, s).
-    /// @param receiver the flow's receiver who creates the proof
-    /// @param token the currency this TradableStream is based on
-    /// @param origin the source that streams `token` to the receiver account
-    /// @param flowrate how much flowrate will be moved out
-    /// @param durationInSeconds how long this TradableStream will run after it's been transferred for the first time
+    /// @param currentOwner the flow's current receiver who creates the proof
+    /// @param token the supertoken
+    /// @param origin the payer of the stream
+    /// @param flowrate the flowrate that will be traded. It can be part of the entire steam.
+    /// @param durationInSeconds the duration for the stream to be traded and owned by the a new receiver
     /// @param expiry the expiration timestamp(second) of the proof
     /// @param v v of the signature
     /// @param r r of the signature
     /// @param s s of the signature
     function mintToWithAuthorization(
-        address receiver,
+        address currentOwner,
         address token,
         address origin,
         int96 flowrate,
@@ -218,16 +207,16 @@ contract TradableStream is ERC721, Ownable {
     ) external returns (uint256) {
         require(expiry == 0 || block.timestamp <= expiry, "Authorization expired");
 
-        uint256 nonce = nonces[receiver]++;
+        uint256 nonce = nonces[currentOwner]++;
 
         bytes32 data = keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                DOMAIN_SEPARATOR,
+                domainSeparator,
                 keccak256(
                     abi.encode(
                         MINTTO_WITH_AUTHORIZATION_TYPEHASH,
-                        receiver,
+                        currentOwner,
                         token,
                         origin,
                         msg.sender,
@@ -240,9 +229,16 @@ contract TradableStream is ERC721, Ownable {
             )
         );
 
-        require(receiver == ecrecover(data, v, r, s), "Invalid authorization");
+        require(currentOwner == ecrecover(data, v, r, s), "Invalid authorization");
         return
-            _mintTo(receiver, ISuperToken(token), origin, msg.sender, flowrate, durationInSeconds);
+            _mintTo(
+                currentOwner,
+                ISuperToken(token),
+                origin,
+                msg.sender,
+                flowrate,
+                durationInSeconds
+            );
     }
 
     function _beforeTokenTransfer(
@@ -250,31 +246,27 @@ contract TradableStream is ERC721, Ownable {
         address newReceiver,
         uint256 tokenId
     ) internal override {
-        //blocks transfers to superApps - done for simplicity, but you could support super apps in a new version!
-        // require(
-        //     !cfaV1.host.isApp(ISuperApp(newReceiver)) || newReceiver == address(this),
-        //     "New receiver cannot be a superApp"
-        // );
-
         TradableStreamMetadata memory meta = metadatas[tokenId];
 
-        require(newReceiver != meta.origin, "can't transfer a TradableStream to its origin");
+        require(newReceiver != meta.origin, "Can't transfer to tream's payer");
 
         if (oldReceiver == address(0)) {
-            //minted
-            _investments[meta.origin][newReceiver] += meta.flowrate;
+            //to mint
+            _tradedStream[meta.origin][newReceiver] += meta.flowrate;
         } else if (newReceiver == address(0)) {
-            //burnt
-            _investments[meta.origin][oldReceiver] -= meta.flowrate;
+            //to burn
+            _tradedStream[meta.origin][oldReceiver] -= meta.flowrate;
             delete metadatas[tokenId];
 
-            //burnt
             (, int96 flowrate, , ) = cfaV1.cfa.getFlow(meta.token, meta.origin, oldReceiver);
             if (flowrate > 0) {
-                // If the origin increased or decreased the flowrate after the TradableStream was transferred,
-                // current flowrate will be different from the initial flowrate.
+                // If the flowrate has been changed after the TradableStream was transferred,
+                // the current flowrate can be different from the initial flowrate.
 
-                // decrease current flowrate from the TradableStream's owner
+                // todo This seems to be broken. meta.flowrate may not equal to the flowrate from the statement below.
+                // check if meta.flowrate should be used in the next two statements instead of flowrate
+
+                // decrease the current flowrate from oldReceiver
                 cfaV1._decreaseFlowByOperator(
                     cfaV1.cfa,
                     meta.token,
@@ -292,9 +284,8 @@ contract TradableStream is ERC721, Ownable {
                     flowrate
                 );
             }
-            // If the origin teminated this flow, does nothing.
+            // If the flow has been terminated, do nothing.
         } else {
-            //transfer
             //transfer
             if (meta.started == 0) {
                 metadatas[tokenId].started = block.timestamp;
@@ -305,13 +296,13 @@ contract TradableStream is ERC721, Ownable {
                     block.timestamp + meta.duration
                 );
             } else {
-                if (isMature(tokenId)) {
-                    revert("this niflot is mature and can only be burnt");
+                if (hasMatured(tokenId)) {
+                    revert("this tradableStream has expired");
                 }
             }
 
-            _investments[meta.origin][oldReceiver] -= meta.flowrate;
-            _investments[meta.origin][newReceiver] += meta.flowrate;
+            _tradedStream[meta.origin][oldReceiver] -= meta.flowrate;
+            _tradedStream[meta.origin][newReceiver] += meta.flowrate;
 
             //handover flow
             cfaV1._decreaseFlowByOperator(
@@ -331,18 +322,21 @@ contract TradableStream is ERC721, Ownable {
         }
     }
 
-    function endsAt(uint256 tokenId) public view exists(tokenId) returns (uint256) {
+    function maturesAt(uint256 tokenId) public view exists(tokenId) returns (uint256) {
         if (metadatas[tokenId].started == 0) return 0;
 
         return metadatas[tokenId].started + metadatas[tokenId].duration;
     }
 
-    function isMature(uint256 tokenId) public view exists(tokenId) returns (bool) {
-        uint256 _endsAt = endsAt(tokenId);
-        if (_endsAt == 0) return false;
-        return (_endsAt < block.timestamp);
+    function hasMatured(uint256 tokenId) public view exists(tokenId) returns (bool) {
+        uint256 _maturesAt = maturesAt(tokenId);
+        if (_maturesAt == 0) return false;
+        return (_maturesAt < block.timestamp);
     }
 
+    /**
+     * @notice Gets the remaining value in the TradableStream.
+     */
     function remainingValue(uint256 tokenId)
         public
         view
@@ -390,7 +384,7 @@ contract TradableStream is ERC721, Ownable {
             meta.receiver,
             meta.duration,
             meta.started,
-            endsAt(tokenId),
+            maturesAt(tokenId),
             meta.token,
             meta.flowrate
         );
