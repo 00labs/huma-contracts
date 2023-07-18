@@ -439,13 +439,10 @@ describe("Base Pool Config", function () {
                     );
 
                 await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
-                console.log("done");
                 await poolContract
                     .connect(eaServiceAccount)
                     .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
-                console.log("done");
                 await poolContract.connect(borrower).drawdown(toToken(1_000_000));
-                console.log("done");
                 // origination fee: 11000000000
                 // first month interest: 10002739726
                 let accruedIncome = await poolConfigContract.accruedIncome();

@@ -14,6 +14,9 @@ import "../Errors.sol";
 import "./TradableStream.sol";
 import "./SuperfluidFeeManager.sol";
 
+/**
+ * 
+ */
 contract SuperfluidPoolProcessor is
     ReceivableFactoringPoolProcessor,
     SuperfluidPoolProcessorStorage,

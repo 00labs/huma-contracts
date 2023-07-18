@@ -14,17 +14,16 @@ contract SuperfluidPoolProcessorStorage {
         uint64 lastStartTime;
         uint64 endTime;
         uint256 receivedFlowAmount;
-        /// The mapping from the keccak256 hash of the Super token address and flowId
-        bytes32 flowKey;
+        bytes32 flowKey;  //the keccak256 hash of the Super token address and flowId
     }
 
-    /// The mapping from the keccak256 hash of the receivableAddress and receivableId to
+    /// The mapping from the keccak256 hash of the flow to StreamInfo including
     /// the borrower address. This is needed for us to locate the borrower using
     /// the received receivable asset.
+    // todo why isn't it bytes32? 
     mapping(uint256 => StreamInfo) internal _streamInfoMapping;
 
-    /// The mapping from the keccak256 hash of the Super token address and flowId to
-    /// the flow end time
+    /// The mapping from the keccak256 hash of the flow to to the flow end time
     mapping(bytes32 => uint256) internal _flowEndMapping;
 
     bool internal _internalCall;
