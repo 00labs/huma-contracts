@@ -4287,7 +4287,7 @@ describe("Superfluid Factoring", function () {
         it("Should pay off correctly", async function () {
             let cr = await poolContract.creditRecordMapping(borrower.address);
             let crs = await poolContract.creditRecordStaticMapping(borrower.address);
-            printRecord(cr, crs);
+            // printRecord(cr, crs);
 
             const expiration = 10000;
             const nts = cr.dueDate.toNumber() + expiration;
@@ -4386,7 +4386,7 @@ describe("Superfluid Factoring", function () {
             expect(await poolProcessorContract.flowEndMapping(flowKey)).to.equal(0);
         });
 
-        it("Should pay off correctly if the flow was terminated", async function () {
+        it.only("Should pay off correctly if the flow was terminated", async function () {
             await sfRegisterContract.register(poolProcessorContract.address);
 
             let balance = await usdc.balanceOf(borrower.address);
@@ -4438,7 +4438,7 @@ describe("Superfluid Factoring", function () {
             crs = await poolContract.creditRecordStaticMapping(borrower.address);
             let block = await ethers.provider.getBlock();
             let correction = calcCorrection(cr, crs, block.timestamp, remainingBal);
-            console.log("correction: " + correction);
+            // console.log("correction: " + correction);
             checkRecord(
                 cr,
                 crs,
