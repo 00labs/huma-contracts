@@ -464,9 +464,9 @@ describe("Superfluid Factoring", function () {
         //     `payer ${payer.address} usdcx balance: ${await usdcx.balanceOf(payer.address)}`
         // );
 
-        streamAmount = 2000;
-        streamDays = 10;
-        streamDuration = 10 * 24 * 60 * 60;
+        streamAmount = 6000;
+        streamDays = 30;
+        streamDuration = streamDays * 24 * 60 * 60;
 
         let flowrate = toDefaultToken(streamAmount).div(BN.from(streamDuration));
         await createFlow(usdcx, payer, borrower, flowrate);
@@ -475,7 +475,7 @@ describe("Superfluid Factoring", function () {
         await authorizeFlow(usdcx, payer, nftContract);
 
         // console.log(`mint TradableStream...`);
-        collateralAmount = 500;
+        collateralAmount = 1500;
         flowrate = toDefaultToken(collateralAmount).div(BN.from(streamDuration)).add(BN.from(1));
         await nftContract
             .connect(borrower)
@@ -4181,5 +4181,318 @@ describe("Superfluid Factoring", function () {
         //     crs = await poolContract.creditRecordStaticMapping(borrower.address);
         //     printRecord(cr, crs);
         // });
+    });
+
+    describe("Use front loading fee instead of interest apr", function () {
+        beforeEach(async function () {
+            const frontLoadingFeeBps = 100;
+            await feeManagerContract.connect(poolOwner).setFees(0, frontLoadingFeeBps, 0, 0, 0);
+            let result = await feeManagerContract.getFees();
+            // console.log("fees: " + result);
+
+            await poolContract
+                .connect(eaServiceAccount)
+                ["approveCredit(address,uint256,uint256,uint256,uint256,address,uint256,uint256)"](
+                    borrower.address,
+                    toUSDC(streamAmount),
+                    streamDays,
+                    1,
+                    0,
+                    nftContract.address,
+                    ethers.utils.solidityKeccak256(
+                        ["address", "address", "address"],
+                        [usdcx.address, payer.address, borrower.address]
+                    ),
+                    toUSDC(streamAmount)
+                );
+            await usdc.connect(borrower).approve(poolProcessorContract.address, toUSDC(10_000));
+
+            const beforeAmount = await usdc.balanceOf(borrower.address);
+
+            let flowrate = toDefaultToken(collateralAmount)
+                .div(BN.from(streamDuration))
+                .add(BN.from(1));
+            loanAmount = flowrate.mul(BN.from(streamDuration));
+            const nonce = await nftContract.nonces(borrower.address);
+            const expiry = Math.ceil(Date.now() / 1000) + 300;
+            const signatureData = await borrower._signTypedData(
+                {
+                    name: "TradableStream",
+                    version: nftVersion,
+                    chainId: HARDHAT_CHAIN_ID,
+                    verifyingContract: nftContract.address,
+                },
+                {
+                    MintToWithAuthorization: [
+                        {name: "receiver", type: "address"},
+                        {name: "token", type: "address"},
+                        {name: "origin", type: "address"},
+                        {name: "owner", type: "address"},
+                        {name: "flowrate", type: "int96"},
+                        {name: "durationInSeconds", type: "uint256"},
+                        {name: "nonce", type: "uint256"},
+                        {name: "expiry", type: "uint256"},
+                    ],
+                },
+                {
+                    receiver: borrower.address,
+                    token: usdcx.address,
+                    origin: payer.address,
+                    owner: poolProcessorContract.address,
+                    flowrate: flowrate,
+                    durationInSeconds: streamDuration,
+                    nonce: nonce,
+                    expiry: expiry,
+                }
+            );
+            const signature = ethers.utils.splitSignature(signatureData);
+            const calldata = ethers.utils.defaultAbiCoder.encode(
+                [
+                    "address",
+                    "address",
+                    "address",
+                    "int96",
+                    "uint256",
+                    "uint256",
+                    "uint8",
+                    "bytes32",
+                    "bytes32",
+                ],
+                [
+                    borrower.address,
+                    usdcx.address,
+                    payer.address,
+                    flowrate,
+                    streamDuration,
+                    expiry,
+                    signature.v,
+                    signature.r,
+                    signature.s,
+                ]
+            );
+            await poolProcessorContract.mintAndDrawdown(
+                borrower.address,
+                loanAmount,
+                nftContract.address,
+                calldata
+            );
+
+            const afterAmount = await usdc.balanceOf(borrower.address);
+            const receivedAmount = afterAmount.sub(beforeAmount);
+            const fee = loanAmount.mul(BN.from(frontLoadingFeeBps)).div(BN.from(10000));
+
+            expect(receivedAmount).to.equal(loanAmount.sub(fee));
+        });
+
+        it("Should pay off correctly", async function () {
+            let cr = await poolContract.creditRecordMapping(borrower.address);
+            let crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            printRecord(cr, crs);
+
+            const expiration = 10000;
+            const nts = cr.dueDate.toNumber() + expiration;
+            let block = await ethers.provider.getBlock();
+            const beforeBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
+            const beforeReceivedAmount = BN.from(nts)
+                .sub(block.timestamp)
+                .mul(beforeBorrowerFlowrate);
+            await setNextBlockTimestamp(nts);
+            const streamId = 1;
+            let res = await nftContract.getTradableStreamData(streamId);
+            const flowrate = res[6];
+            const si = await poolProcessorContract.streamInfoMapping(streamId);
+            const beforeBorrowAmount = await usdc.balanceOf(borrower.address);
+            const beforePoolAmount = await usdc.balanceOf(poolContract.address);
+            const beforeBorrowXAmount = await usdcx.balanceOf(borrower.address);
+            const beforeProcessorFlowrate = await cfa.getNetFlow(
+                usdcx.address,
+                poolProcessorContract.address
+            );
+            await expect(poolProcessorContract.settlement(nftContract.address, streamId))
+                .to.emit(poolProcessorContract, "SettlementMade")
+                .withArgs(
+                    poolContract.address,
+                    borrower.address,
+                    si.flowKey,
+                    nftContract.address,
+                    streamId
+                );
+            const afterBorrowAmount = await usdc.balanceOf(borrower.address);
+            const afterPoolAmount = await usdc.balanceOf(poolContract.address);
+            const afterBorrowXAmount = await usdcx.balanceOf(borrower.address);
+            const afterProcessorFlowrate = await cfa.getNetFlow(
+                usdcx.address,
+                poolProcessorContract.address
+            );
+            const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
+            // console.log(
+            //     `afterBorrowAmount: ${afterBorrowAmount}, beforeBorrowAmount: ${beforeBorrowAmount}`
+            // );
+            expect(afterBorrowAmount.sub(beforeBorrowAmount)).to.equal(0);
+            expect(afterPoolAmount.sub(beforePoolAmount)).to.equal(loanAmount);
+            expect(beforeProcessorFlowrate.sub(afterProcessorFlowrate)).to.equal(
+                afterBorrowerFlowrate.sub(beforeBorrowerFlowrate)
+            );
+            expect(afterBorrowerFlowrate.sub(beforeBorrowerFlowrate)).to.equal(flowrate);
+            await expect(nftContract.ownerOf(streamId)).to.be.revertedWith(
+                "ERC721: invalid token ID"
+            );
+            expect(afterBorrowXAmount.sub(beforeBorrowXAmount).sub(beforeReceivedAmount)).to.equal(
+                si.flowrate.mul(BN.from(expiration))
+            );
+            cr = await poolContract.creditRecordMapping(borrower.address);
+            crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            // printRecord(cr, crs);
+            checkRecord(
+                cr,
+                crs,
+                toUSDC(streamAmount),
+                0,
+                "SKIP",
+                "SKIP",
+                0,
+                0,
+                0,
+                0,
+                0,
+                streamDays,
+                0,
+                0
+            );
+            checkResults(await poolContract.receivableInfoMapping(borrower.address), [
+                ethers.constants.AddressZero,
+                0,
+                0,
+            ]);
+            checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
+                ethers.constants.AddressZero,
+                0,
+                0,
+                0,
+                0,
+                ethers.constants.HashZero,
+            ]);
+
+            const flowId = ethers.utils.keccak256(
+                ethers.utils.defaultAbiCoder.encode(
+                    ["address", "address"],
+                    [payer.address, poolProcessorContract.address]
+                )
+            );
+            const flowKey = ethers.utils.solidityKeccak256(
+                ["address", "bytes32"],
+                [usdcx.address, flowId]
+            );
+            expect(await poolProcessorContract.flowEndMapping(flowKey)).to.equal(0);
+        });
+
+        it("Should pay off correctly if the flow was terminated", async function () {
+            await sfRegisterContract.register(poolProcessorContract.address);
+
+            let balance = await usdc.balanceOf(borrower.address);
+            let remainingBal = toUSDC(10);
+            if (balance.gt(remainingBal)) {
+                await usdc
+                    .connect(borrower)
+                    .transfer(defaultDeployer.address, balance.sub(remainingBal));
+            } else {
+                remainingBal = balance;
+            }
+
+            let cr = await poolContract.creditRecordMapping(borrower.address);
+            const remainingTime = 3600 * 24 * 7;
+            let nts = cr.dueDate.toNumber() - remainingTime;
+            await setNextBlockTimestamp(nts);
+
+            await deleteFlow(usdcx, payer, poolProcessorContract);
+
+            const streamId = 1;
+            const flowId = ethers.utils.keccak256(
+                ethers.utils.defaultAbiCoder.encode(
+                    ["address", "address"],
+                    [payer.address, poolProcessorContract.address]
+                )
+            );
+            const flowKey = ethers.utils.solidityKeccak256(
+                ["address", "bytes32"],
+                [usdcx.address, flowId]
+            );
+            let beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
+            let beforeBorrowerBal = await usdc.balanceOf(borrower.address);
+            let beforePoolBal = await usdc.balanceOf(poolContract.address);
+            await poolProcessorContract.onTerminatedFlow(flowKey, streamId);
+            let afterBorrowerBal = await usdc.balanceOf(borrower.address);
+            let afterPoolBal = await usdc.balanceOf(poolContract.address);
+            let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
+
+            expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
+            expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
+            expect(afterSI.lastStartTime).to.equal(nts);
+            expect(afterSI.flowrate).to.equal(0);
+            expect(afterSI.endTime).to.equal(beforeSI.endTime);
+            expect(afterSI.receivedFlowAmount).to.equal(
+                BN.from(nts).sub(beforeSI.lastStartTime).mul(beforeSI.flowrate)
+            );
+
+            cr = await poolContract.creditRecordMapping(borrower.address);
+            crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            let block = await ethers.provider.getBlock();
+            let correction = calcCorrection(cr, crs, block.timestamp, remainingBal);
+            console.log("correction: " + correction);
+            checkRecord(
+                cr,
+                crs,
+                toUSDC(streamAmount),
+                0,
+                "SKIP",
+                correction,
+                loanAmount.sub(remainingBal),
+                0,
+                0,
+                0,
+                0,
+                streamDays,
+                3,
+                0
+            );
+
+            await mint(borrower.address, toUSDC(streamAmount));
+
+            const expiration = 1000;
+            nts = cr.dueDate.toNumber() + expiration;
+            await setNextBlockTimestamp(nts);
+
+            beforeBorrowerBal = await usdc.balanceOf(borrower.address);
+            beforePoolBal = await usdc.balanceOf(poolContract.address);
+            await poolProcessorContract.settlement(nftContract.address, streamId);
+            afterBorrowerBal = await usdc.balanceOf(borrower.address);
+            afterPoolBal = await usdc.balanceOf(poolContract.address);
+
+            expect(afterPoolBal.sub(beforePoolBal)).to.equal(
+                loanAmount.sub(remainingBal).add(correction)
+            );
+            expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(
+                loanAmount.sub(remainingBal).sub(afterSI.receivedFlowAmount).add(correction)
+            );
+
+            cr = await poolContract.creditRecordMapping(borrower.address);
+            crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(
+                cr,
+                crs,
+                toUSDC(streamAmount),
+                0,
+                "SKIP",
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                streamDays,
+                0,
+                0
+            );
+        });
     });
 });
