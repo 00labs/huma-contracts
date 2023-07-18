@@ -4386,7 +4386,7 @@ describe("Superfluid Factoring", function () {
             expect(await poolProcessorContract.flowEndMapping(flowKey)).to.equal(0);
         });
 
-        it.only("Should pay off correctly if the flow was terminated", async function () {
+        it("Should pay off correctly if the flow was terminated", async function () {
             await sfRegisterContract.register(poolProcessorContract.address);
 
             let balance = await usdc.balanceOf(borrower.address);
