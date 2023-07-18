@@ -10,6 +10,8 @@ contract Errors {
     error invalidBasisPointHigherThan10000(); // 0x07982d85
     error withdrawnAmountHigherThanBalance(); // 0x477c0ab2
     error allowanceTooLow(); // 0xcd8ef369
+    error AuthorizationExpired(); // 0x0f05f5bf
+    error InvalidAuthorization(); // 0x2ce87eeb
 
     // security
     error permissionDeniedNotAdmin(); // 0xf2c5b6a7
@@ -85,10 +87,14 @@ contract Errors {
     // superfluid
     error durationTooLong(); // 0xf1dd53a8
     error invalidFlowrate(); // 0xd06a9328
-    error onlySuperfluid(); // 0x3f9cd1c2
     error borrowerMismatch(); // 0x27d3e640
     error flowKeyMismatch(); // 0x29d5a5f3
     error flowIsNotTerminated(); // 0xe9c5922f
     error invalidSuperfluidCallback(); // 0xd2747f83
     error invalidSuperfluidAction(); // 0x2f2cd9e9
+    error notTradableStreamOwner(); // 0x5709a724
+    error tradableStreamNotMatured(); // 0xa42ebb88
+    error tradableStreamNotExisting(); // 0xb78e2a5b
+    error notEnoughAvailableFlowrate(); // 0x9c808ab8
+    error newReceiverSameToOrigin(); // 0x6d79ce50
 }

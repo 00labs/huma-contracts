@@ -11,6 +11,51 @@
     "type": "constructor"
   },
   {
+    "inputs": [],
+    "name": "AuthorizationExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidAuthorization",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "invalidFlowrate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "newReceiverSameToOrigin",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notEnoughAvailableFlowrate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notTradableStreamOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "tradableStreamNotExisting",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "tradableStreamNotMatured",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "zeroAddressProvided",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -193,19 +238,6 @@
   },
   {
     "inputs": [],
-    "name": "DOMAIN_SEPARATOR",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "MINTTO_WITH_AUTHORIZATION_TYPEHASH",
     "outputs": [
       {
@@ -230,7 +262,7 @@
         "type": "address"
       }
     ],
-    "name": "_investments",
+    "name": "_tradedStream",
     "outputs": [
       {
         "internalType": "int96",
@@ -310,19 +342,13 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "endsAt",
+    "inputs": [],
+    "name": "domainSeparator",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "bytes32",
         "name": "",
-        "type": "uint256"
+        "type": "bytes32"
       }
     ],
     "stateMutability": "view",
@@ -399,6 +425,25 @@
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "hasMatured",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "owner",
         "type": "address"
@@ -428,12 +473,12 @@
         "type": "uint256"
       }
     ],
-    "name": "isMature",
+    "name": "maturesAt",
     "outputs": [
       {
-        "internalType": "bool",
+        "internalType": "uint256",
         "name": "",
-        "type": "bool"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -515,7 +560,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "receiver",
+        "name": "currentOwner",
         "type": "address"
       },
       {
