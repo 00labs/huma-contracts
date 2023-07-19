@@ -402,4 +402,8 @@ contract TradableStream is ERC721, Ownable {
             meta.flowrate
         );
     }
+
+    function burned(uint256 tokenId) external view returns (bool) {
+        return !_exists(tokenId);
+    }
 }

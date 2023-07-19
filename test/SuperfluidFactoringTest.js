@@ -1295,7 +1295,19 @@ describe("Superfluid Factoring", function () {
 
             res = await poolProcessorContract.streamInfoMapping(streamId);
             const dueDate = ts + streamDuration;
+<<<<<<< HEAD
             checkResults(res, [borrower.address, flowrate, ts, dueDate, 0, flowKey]);
+=======
+            checkResults(res, [
+                borrower.address,
+                flowrate,
+                usdcx.address,
+                ts,
+                dueDate,
+                0,
+                flowKey,
+            ]);
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
             const cr = await poolContract.creditRecordMapping(borrower.address);
             const crs = await poolContract.creditRecordStaticMapping(borrower.address);
             // printRecord(cr, crs);
@@ -1512,7 +1524,19 @@ describe("Superfluid Factoring", function () {
                 ["address", "bytes32"],
                 [usdcx.address, flowId]
             );
+<<<<<<< HEAD
             checkResults(res, [borrower.address, flowrate, ts, dueDate, 0, flowKey]);
+=======
+            checkResults(res, [
+                borrower.address,
+                flowrate,
+                usdcx.address,
+                ts,
+                dueDate,
+                0,
+                flowKey,
+            ]);
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
             const cr = await poolContract.creditRecordMapping(borrower.address);
             const crs = await poolContract.creditRecordStaticMapping(borrower.address);
             checkRecord(
@@ -1729,6 +1753,10 @@ describe("Superfluid Factoring", function () {
             checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                 ethers.constants.AddressZero,
                 0,
+<<<<<<< HEAD
+=======
+                ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                 0,
                 0,
                 0,
@@ -1861,6 +1889,10 @@ describe("Superfluid Factoring", function () {
             checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                 ethers.constants.AddressZero,
                 0,
+<<<<<<< HEAD
+=======
+                ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                 0,
                 0,
                 0,
@@ -1988,6 +2020,10 @@ describe("Superfluid Factoring", function () {
             checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                 ethers.constants.AddressZero,
                 0,
+<<<<<<< HEAD
+=======
+                ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                 0,
                 0,
                 0,
@@ -2470,7 +2506,19 @@ describe("Superfluid Factoring", function () {
 
                     res = await poolProcessorContract.streamInfoMapping(streamId);
                     const dueDate = ts + streamDuration;
+<<<<<<< HEAD
                     checkResults(res, [borrower1.address, flowrate, ts, dueDate, 0, flowKey]);
+=======
+                    checkResults(res, [
+                        borrower1.address,
+                        flowrate,
+                        usdcx.address,
+                        ts,
+                        dueDate,
+                        0,
+                        flowKey,
+                    ]);
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                     let cr = await poolContract.creditRecordMapping(borrower1.address);
                     let crs = await poolContract.creditRecordStaticMapping(borrower1.address);
                     // printRecord(cr, crs);
@@ -2822,6 +2870,10 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
+<<<<<<< HEAD
+=======
+                        ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -3047,6 +3099,10 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
+<<<<<<< HEAD
+=======
+                        ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -3153,6 +3209,10 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
+<<<<<<< HEAD
+=======
+                        ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -3637,6 +3697,10 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         borrower.address,
                         afterSI.flowrate,
+<<<<<<< HEAD
+=======
+                        usdcx.address,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         afterSI.endTime,
                         afterSI.endTime,
                         0,
@@ -3697,6 +3761,10 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
+<<<<<<< HEAD
+=======
+                        ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -3863,6 +3931,10 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         borrower.address,
                         afterSI.flowrate,
+<<<<<<< HEAD
+=======
+                        usdcx.address,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         afterSI.endTime,
                         afterSI.endTime,
                         0,
@@ -3914,6 +3986,10 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         borrower.address,
                         afterSI.flowrate,
+<<<<<<< HEAD
+=======
+                        usdcx.address,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         afterSI.endTime,
                         afterSI.endTime,
                         0,
@@ -3955,6 +4031,10 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
+<<<<<<< HEAD
+=======
+                        ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -4367,6 +4447,10 @@ describe("Superfluid Factoring", function () {
             checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                 ethers.constants.AddressZero,
                 0,
+<<<<<<< HEAD
+=======
+                ethers.constants.AddressZero,
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                 0,
                 0,
                 0,
@@ -4386,7 +4470,11 @@ describe("Superfluid Factoring", function () {
             expect(await poolProcessorContract.flowEndMapping(flowKey)).to.equal(0);
         });
 
+<<<<<<< HEAD
         it("Should pay off correctly if the flow was terminated", async function () {
+=======
+        it("Should pay off correctly while the flow was terminated", async function () {
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
             await sfRegisterContract.register(poolProcessorContract.address);
 
             let balance = await usdc.balanceOf(borrower.address);
@@ -4494,5 +4582,220 @@ describe("Superfluid Factoring", function () {
                 0
             );
         });
+<<<<<<< HEAD
+=======
+
+        it("Should pay off correctly while the tradable was burned", async function () {
+            let cr = await poolContract.creditRecordMapping(borrower.address);
+            let crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            // printRecord(cr, crs);
+
+            const expiration = 10000;
+            const nts = cr.dueDate.toNumber() + expiration;
+            let block = await ethers.provider.getBlock();
+            await setNextBlockTimestamp(nts);
+
+            const streamId = 1;
+
+            const beforeBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
+            const beforeProcessorFlowrate = await cfa.getNetFlow(
+                usdcx.address,
+                poolProcessorContract.address
+            );
+            let res = await nftContract.getTradableStreamData(streamId);
+            const flowrate = res[6];
+            await nftContract.burn(streamId);
+            const afterProcessorFlowrate = await cfa.getNetFlow(
+                usdcx.address,
+                poolProcessorContract.address
+            );
+            const afterBorrowerFlowrate = await cfa.getNetFlow(usdcx.address, borrower.address);
+            expect(beforeProcessorFlowrate.sub(afterProcessorFlowrate)).to.equal(
+                afterBorrowerFlowrate.sub(beforeBorrowerFlowrate)
+            );
+            expect(afterBorrowerFlowrate.sub(beforeBorrowerFlowrate)).to.equal(flowrate);
+            await expect(nftContract.ownerOf(streamId)).to.be.revertedWith(
+                "ERC721: invalid token ID"
+            );
+
+            const si = await poolProcessorContract.streamInfoMapping(streamId);
+            const beforeBorrowAmount = await usdc.balanceOf(borrower.address);
+            const beforePoolAmount = await usdc.balanceOf(poolContract.address);
+            await expect(poolProcessorContract.settlement(nftContract.address, streamId))
+                .to.emit(poolProcessorContract, "SettlementMade")
+                .withArgs(
+                    poolContract.address,
+                    borrower.address,
+                    si.flowKey,
+                    nftContract.address,
+                    streamId
+                );
+            const afterBorrowAmount = await usdc.balanceOf(borrower.address);
+            const afterPoolAmount = await usdc.balanceOf(poolContract.address);
+            // console.log(
+            //     `afterBorrowAmount: ${afterBorrowAmount}, beforeBorrowAmount: ${beforeBorrowAmount}`
+            // );
+            expect(afterBorrowAmount.sub(beforeBorrowAmount)).to.equal(0);
+            expect(afterPoolAmount.sub(beforePoolAmount)).to.equal(loanAmount);
+
+            cr = await poolContract.creditRecordMapping(borrower.address);
+            crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            // printRecord(cr, crs);
+            checkRecord(
+                cr,
+                crs,
+                toUSDC(streamAmount),
+                0,
+                "SKIP",
+                "SKIP",
+                0,
+                0,
+                0,
+                0,
+                0,
+                streamDays,
+                0,
+                0
+            );
+            checkResults(await poolContract.receivableInfoMapping(borrower.address), [
+                ethers.constants.AddressZero,
+                0,
+                0,
+            ]);
+            checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
+                ethers.constants.AddressZero,
+                0,
+                ethers.constants.AddressZero,
+                0,
+                0,
+                0,
+                ethers.constants.HashZero,
+            ]);
+
+            const flowId = ethers.utils.keccak256(
+                ethers.utils.defaultAbiCoder.encode(
+                    ["address", "address"],
+                    [payer.address, poolProcessorContract.address]
+                )
+            );
+            const flowKey = ethers.utils.solidityKeccak256(
+                ["address", "bytes32"],
+                [usdcx.address, flowId]
+            );
+            expect(await poolProcessorContract.flowEndMapping(flowKey)).to.equal(0);
+        });
+
+        it("Should pay off correctly while the flow was terminated and the tradable was burned", async function () {
+            await sfRegisterContract.register(poolProcessorContract.address);
+
+            let balance = await usdc.balanceOf(borrower.address);
+            let remainingBal = toUSDC(10);
+            if (balance.gt(remainingBal)) {
+                await usdc
+                    .connect(borrower)
+                    .transfer(defaultDeployer.address, balance.sub(remainingBal));
+            } else {
+                remainingBal = balance;
+            }
+
+            let cr = await poolContract.creditRecordMapping(borrower.address);
+            const remainingTime = 3600 * 24 * 7;
+            let nts = cr.dueDate.toNumber() - remainingTime;
+            await setNextBlockTimestamp(nts);
+
+            await deleteFlow(usdcx, payer, poolProcessorContract);
+
+            const streamId = 1;
+
+            await nftContract.burn(streamId);
+
+            const flowId = ethers.utils.keccak256(
+                ethers.utils.defaultAbiCoder.encode(
+                    ["address", "address"],
+                    [payer.address, poolProcessorContract.address]
+                )
+            );
+            const flowKey = ethers.utils.solidityKeccak256(
+                ["address", "bytes32"],
+                [usdcx.address, flowId]
+            );
+            let beforeSI = await poolProcessorContract.streamInfoMapping(streamId);
+            let beforeBorrowerBal = await usdc.balanceOf(borrower.address);
+            let beforePoolBal = await usdc.balanceOf(poolContract.address);
+            await poolProcessorContract.onTerminatedFlow(flowKey, streamId);
+            let afterBorrowerBal = await usdc.balanceOf(borrower.address);
+            let afterPoolBal = await usdc.balanceOf(poolContract.address);
+            let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
+
+            expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
+            expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
+            expect(afterSI.lastStartTime).to.equal(nts);
+            expect(afterSI.flowrate).to.equal(0);
+            expect(afterSI.endTime).to.equal(beforeSI.endTime);
+            expect(afterSI.receivedFlowAmount).to.equal(
+                BN.from(nts).sub(beforeSI.lastStartTime).mul(beforeSI.flowrate)
+            );
+
+            cr = await poolContract.creditRecordMapping(borrower.address);
+            crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            let block = await ethers.provider.getBlock();
+            let correction = calcCorrection(cr, crs, block.timestamp, remainingBal);
+            // console.log("correction: " + correction);
+            checkRecord(
+                cr,
+                crs,
+                toUSDC(streamAmount),
+                0,
+                "SKIP",
+                correction,
+                loanAmount.sub(remainingBal),
+                0,
+                0,
+                0,
+                0,
+                streamDays,
+                3,
+                0
+            );
+
+            await mint(borrower.address, toUSDC(streamAmount));
+
+            const expiration = 1000;
+            nts = cr.dueDate.toNumber() + expiration;
+            await setNextBlockTimestamp(nts);
+
+            beforeBorrowerBal = await usdc.balanceOf(borrower.address);
+            beforePoolBal = await usdc.balanceOf(poolContract.address);
+            await poolProcessorContract.settlement(nftContract.address, streamId);
+            afterBorrowerBal = await usdc.balanceOf(borrower.address);
+            afterPoolBal = await usdc.balanceOf(poolContract.address);
+
+            expect(afterPoolBal.sub(beforePoolBal)).to.equal(
+                loanAmount.sub(remainingBal).add(correction)
+            );
+            expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(
+                loanAmount.sub(remainingBal).sub(afterSI.receivedFlowAmount).add(correction)
+            );
+
+            cr = await poolContract.creditRecordMapping(borrower.address);
+            crs = await poolContract.creditRecordStaticMapping(borrower.address);
+            checkRecord(
+                cr,
+                crs,
+                toUSDC(streamAmount),
+                0,
+                "SKIP",
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                streamDays,
+                0,
+                0
+            );
+        });
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
     });
 });

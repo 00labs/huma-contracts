@@ -15,7 +15,7 @@ import "./TradableStream.sol";
 import "./SuperfluidFeeManager.sol";
 
 /**
- * 
+ *
  */
 contract SuperfluidPoolProcessor is
     ReceivableFactoringPoolProcessor,
@@ -341,30 +341,33 @@ contract SuperfluidPoolProcessor is
     }
 
     function _burnNFT(address receivableAsset, uint256 receivableId) internal virtual {
-        (
-            ,
-            address receiver,
-            uint256 duration,
-            uint256 started,
-            ,
-            ISuperToken token,
-            int96 flowrate
-        ) = TradableStream(receivableAsset).getTradableStreamData(receivableId);
+        bool burned = TradableStream(receivableAsset).burned(receivableId);
+        if (!burned) {
+            (
+                ,
+                address receiver,
+                uint256 duration,
+                uint256 started,
+                ,
+                ISuperToken token,
+                int96 flowrate
+            ) = TradableStream(receivableAsset).getTradableStreamData(receivableId);
 
-        if (block.timestamp > started + duration && flowrate > 0) {
-            // Refund the extra amount to receiver
-            // TODO move this logic to TradableStream
+            if (block.timestamp > started + duration && flowrate > 0) {
+                // Refund the extra amount to receiver
+                // TODO move this logic to TradableStream
 
-            uint256 refundAmount = (block.timestamp - (started + duration)) *
-                uint256(uint96(flowrate));
-            uint256 balance = token.balanceOf(address(this));
-            uint256 sendAmount = balance < refundAmount ? balance : refundAmount;
-            if (sendAmount > 0) {
-                token.transfer(receiver, sendAmount);
+                uint256 refundAmount = (block.timestamp - (started + duration)) *
+                    uint256(uint96(flowrate));
+                uint256 balance = token.balanceOf(address(this));
+                uint256 sendAmount = balance < refundAmount ? balance : refundAmount;
+                if (sendAmount > 0) {
+                    token.transfer(receiver, sendAmount);
+                }
             }
-        }
 
-        TradableStream(receivableAsset).burn(receivableId);
+            TradableStream(receivableAsset).burn(receivableId);
+        }
     }
 
     function _withdrawFromNFT(
@@ -372,9 +375,7 @@ contract SuperfluidPoolProcessor is
         uint256 receivableId,
         StreamInfo memory si
     ) internal virtual {
-        (, , , , , ISuperToken token, ) = TradableStream(receivableAsset).getTradableStreamData(
-            receivableId
-        );
+        ISuperToken token = ISuperToken(si.superToken);
         uint256 amount = si.receivedFlowAmount;
         if (si.endTime > si.lastStartTime) {
             amount += (si.endTime - si.lastStartTime) * si.flowrate;
@@ -491,6 +492,10 @@ contract SuperfluidPoolProcessor is
         streamInfo.endTime = uint64(block.timestamp + duration);
         streamInfo.flowrate = uint96(flowrate);
         streamInfo.borrower = receiver;
+<<<<<<< HEAD
+=======
+        streamInfo.superToken = superToken;
+>>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
         streamInfo.flowKey = key;
         // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
         _streamInfoMapping[receivableId] = streamInfo;
