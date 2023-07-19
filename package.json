@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",
-    "@openzeppelin/contracts-upgradeable": "^4.7.3",
+    "@openzeppelin/contracts-upgradeable": "^4.8.3",
     "@superfluid-finance/ethereum-contracts": "^1.5.0",
     "dotenv": "^16.0.2",
     "hardhat": "^2.11.1"
