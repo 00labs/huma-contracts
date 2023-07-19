@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 {
   "HumaConfig": "0xc8eE3e49b060b118413F2493D30fB5666AeD8A2E",
   "HumaConfigTimelock": "0x4d04FA40f2cb094439a78F0bEBa3763b82255b04",
@@ -16,3 +17,5 @@
   "Multisend": "0x174aBAE032174a4bfd3eE63Cb62626a6fcE457ed",
   "MockSuperAppRegister": "0xdb4E4010810Da955E385E4b7682279237acF61Db"
 }
+=======
+>>>>>>> Stashed changes

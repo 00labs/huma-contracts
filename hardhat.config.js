@@ -226,18 +226,7 @@ module.exports = {
         },
         mumbai: {
             url: mumbaiUrl,
-            accounts: [
-                deployer,
-                proxyOwner,
-                lender,
-                ea_sfp,
-                eaService,
-                pdsService,
-                treasury,
-                payer,
-                sfpOperator,
-                sfpTreasury,
-            ],
+            accounts: [deployer, eaService],
         },
         maticmum: {
             url: mumbaiUrl,

@@ -1,7 +1,7 @@
 const {deploy} = require("../utils.js");
 
-const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
-const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
+const HUMA_OWNER_EOA = "0x4062A9Eab6a49B2Be6aE4F7240D420f6fbE2e615";
+const POOL_OWNER_EOA = "0x7c25422C52e4c5187b9A448df627E79175281d5a";
 
 const SF_USDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
 const SF_HOST_ADDRESS = "0xEB796bdb90fFA0f28255275e16936D25d3418603";
@@ -15,30 +15,30 @@ async function deployContracts() {
     }
     const deployer = await accounts[0];
     console.log("deployer address: " + deployer.address);
-    const proxyOwner = await accounts[1];
+    // const proxyOwner = await accounts[1];
 
-    const eaService = await accounts[4];
-    console.log("ea service address: " + eaService.address);
+    // const eaService = await accounts[4];
+    // console.log("ea service address: " + eaService.address);
 
     // Deploying Superfluid factoring pool
 
     const humaConfig = await deploy("HumaConfig", "HumaConfig");
     const humaConfigTL = await deploy("TimelockController", "HumaConfigTimelock", [
         0,
-        [HUMA_OWNER_MULTI_SIG],
+        [HUMA_OWNER_EOA],
         [deployer.address],
     ]);
 
     const superfluidFactoringPoolTL = await deploy(
         "TimelockController",
         "SuperfluidFactoringPoolTimelock",
-        [0, [POOL_OWNER_MULTI_SIG], [deployer.address]]
+        [0, [POOL_OWNER_EOA], [deployer.address]]
     );
 
     const superfluidFactoringPoolProxyAdminTL = await deploy(
         "TimelockController",
         "SuperfluidFactoringPoolProxyAdminTimelock",
-        [0, [POOL_OWNER_MULTI_SIG], [deployer.address]]
+        [0, [POOL_OWNER_EOA], [deployer.address]]
     );
 
     const feeManager = await deploy("SuperfluidFeeManager", "SuperfluidFactoringPoolFeeManager");
