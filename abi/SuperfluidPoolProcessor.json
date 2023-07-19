@@ -734,6 +734,11 @@
             "type": "uint96"
           },
           {
+            "internalType": "address",
+            "name": "superToken",
+            "type": "address"
+          },
+          {
             "internalType": "uint64",
             "name": "lastStartTime",
             "type": "uint64"
