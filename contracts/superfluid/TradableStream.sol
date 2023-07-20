@@ -122,9 +122,13 @@ contract TradableStream is ERC721, Ownable {
 
         address owner = ownerOf(tokenId);
         (, int96 flowrate, , ) = cfaV1.cfa.getFlow(meta.token, meta.origin, owner);
+
+        // The owner can burn the tradable before the first transfer
         if (meta.started == 0 && msg.sender != owner) {
             revert Errors.notTradableStreamOwner();
         }
+
+        // Anyone can burn the tradable while it is matured or its floww rate is 0
         if (!hasMatured(tokenId) && flowrate > 0) {
             revert Errors.tradableStreamNotMatured();
         }
