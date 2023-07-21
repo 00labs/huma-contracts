@@ -324,8 +324,6 @@
     "type": "function"
   },
   {
-<<<<<<< HEAD
-=======
     "inputs": [
       {
         "internalType": "uint256",
@@ -345,7 +343,6 @@
     "type": "function"
   },
   {
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
     "inputs": [],
     "name": "cfaV1",
     "outputs": [

@@ -6,12 +6,12 @@ const fs = require("fs");
 const VERIFY_ARGS_PATH = "./deployment/mumbai/verify_args/";
 
 const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
-const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
+const POOL_OWNER_MULTI_SIG = "0x7c25422C52e4c5187b9A448df627E79175281d5a";
 
 const SF_USDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
 const SF_HOST_ADDRESS = "0xEB796bdb90fFA0f28255275e16936D25d3418603";
 
-let deployedContracts, proxyOwner, network, deployer;
+let deployedContracts, network, deployer;
 
 const getArgsFile = async function (contractName) {
     const argsFile = `${VERIFY_ARGS_PATH}${contractName}.js`;
@@ -87,8 +87,8 @@ async function verifyContracts() {
         throw new Error("Accounts not set!");
     }
     deployer = await accounts[0];
-    proxyOwner = await accounts[1];
-    console.log("proxyOwner address: " + proxyOwner.address);
+    // proxyOwner = await accounts[1];
+    // console.log("proxyOwner address: " + proxyOwner.address);
 
     // const verifyUsdc = await verifyContract('USDC');
     // console.log(`Verify USDC result: ${verifyUsdc}`);

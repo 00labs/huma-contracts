@@ -492,10 +492,7 @@ contract SuperfluidPoolProcessor is
         streamInfo.endTime = uint64(block.timestamp + duration);
         streamInfo.flowrate = uint96(flowrate);
         streamInfo.borrower = receiver;
-<<<<<<< HEAD
-=======
         streamInfo.superToken = superToken;
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
         streamInfo.flowKey = key;
         // Store a keccak256 hash of the receivableAsset and receivableParam on-chain
         _streamInfoMapping[receivableId] = streamInfo;

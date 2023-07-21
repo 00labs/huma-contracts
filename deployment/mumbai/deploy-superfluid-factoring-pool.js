@@ -17,7 +17,7 @@ async function deployContracts() {
     console.log("deployer address: " + deployer.address);
     // const proxyOwner = await accounts[1];
 
-    // const eaService = await accounts[4];
+    const eaService = await accounts[1];
     // console.log("ea service address: " + eaService.address);
 
     // Deploying Superfluid factoring pool

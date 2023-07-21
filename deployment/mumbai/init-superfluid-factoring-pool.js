@@ -1,4 +1,3 @@
-const {BigNumber: BN} = require("ethers");
 const {
     getInitilizedContract,
     updateInitilizedContract,
@@ -6,25 +5,19 @@ const {
     sendTransaction,
 } = require("../utils.js");
 
-let deployer,
-    deployedContracts,
-    lender,
-    ea_sfp,
-    eaService,
-    pdsService,
-    treasury,
-    sfpOperator,
-    sfpOwnerTreasury,
-    payer;
-
+let deployer, eaService, deployedContracts;
+const PDSServiceAccount = "0xe906B5CDf5d66036b69d84BAfb2643f3aDCD1CA1";
 const SF_FUSDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
 const SF_HOST_ADDRESS = "0xEB796bdb90fFA0f28255275e16936D25d3418603";
 const SF_CFA_ADDRESS = "0x49e565Ed1bdc17F3d220f72DF0857C26FA83F873";
 
 const USDC_ADDRESS = SF_FUSDC_ADDRESS;
 
-const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
-const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
+const poolTreasury = "0x7c25422C52e4c5187b9A448df627E79175281d5a";
+const treasuryAccount = "0x4062A9Eab6a49B2Be6aE4F7240D420f6fbE2e615";
+
+// const HUMA_OWNER_MULTI_SIG = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
+// const POOL_OWNER_MULTI_SIG = "0xB69cD2CC66583a4f46c1a8C977D5A8Bf9ecc81cA";
 
 async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
     if (!deployedContracts[timeLockKey]) {
@@ -74,9 +67,6 @@ async function initHumaConfig() {
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
 
-    const TimelockController = await hre.ethers.getContractFactory("TimelockController");
-    const humaConfigTL = TimelockController.attach(deployedContracts["HumaConfigTimelock"]);
-
     await sendTransaction("HumaConfig", humaConfig, "setProtocolDefaultGracePeriod", [
         30 * 24 * 3600,
     ]);
@@ -86,13 +76,13 @@ async function initHumaConfig() {
     ]);
 
     await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [eaService.address]);
-    await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [pdsService.address]);
+    await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [PDSServiceAccount]);
 
     // Add usdc as an asset supported by the protocol
     await sendTransaction("HumaConfig", humaConfig, "setLiquidityAsset", [USDC_ADDRESS, true]);
 
     // Set treasury for the protocol
-    await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasury.address]);
+    await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasuryAccount]);
 
     // Notice: Gnosis Safe doesn't support Mumbai now
     // await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock");
@@ -116,18 +106,18 @@ async function initFeeManager() {
         deployedContracts["SuperfluidFactoringPoolFeeManager"]
     );
 
-    // await sendTransaction(
-    //     "SuperfluidFactoringPoolFeeManager",
-    //     feeManager,
-    //     "setFees",
-    //     [0, 0, 0, 0, 0]
-    // );
-    // await sendTransaction(
-    //     "SuperfluidFactoringPoolFeeManager",
-    //     feeManager,
-    //     "setMinPrincipalRateInBps",
-    //     [0]
-    // );
+    await sendTransaction(
+        "SuperfluidFactoringPoolFeeManager",
+        feeManager,
+        "setFees",
+        [0, 0, 0, 0, 0]
+    );
+    await sendTransaction(
+        "SuperfluidFactoringPoolFeeManager",
+        feeManager,
+        "setMinPrincipalRateInBps",
+        [0]
+    );
 
     await updateInitilizedContract("SuperfluidFactoringPoolFeeManager");
 }
@@ -234,7 +224,7 @@ async function initPoolConfig() {
     ]);
 
     const decimals = await hdt.decimals();
-    const cap = BN.from(1_000_000).mul(BN.from(10).pow(BN.from(decimals)));
+    const cap = BigInt(1_000_000) * BigInt(10) ** BigInt(decimals);
     console.log("cap: " + cap);
     await sendTransaction("SuperfluidFactoringPoolConfig", poolConfig, "setPoolLiquidityCap", [
         cap,
@@ -243,11 +233,11 @@ async function initPoolConfig() {
     await sendTransaction("SuperfluidFactoringPoolConfig", poolConfig, "setPool", [
         deployedContracts["SuperfluidFactoringPool"],
     ]);
-    console.log(`ea_sfp: ${ea_sfp.address}`);
-    await sendTransaction("SuperfluidFactoringPoolConfig", poolConfig, "setEvaluationAgent", [
-        1,
-        ea_sfp.address,
-    ]);
+    // console.log(`ea_sfp: ${ea_sfp.address}`);
+    // await sendTransaction("SuperfluidFactoringPoolConfig", poolConfig, "setEvaluationAgent", [
+    //     1,
+    //     ea_sfp.address,
+    // ]);
 
     await sendTransaction(
         "SuperfluidFactoringPoolConfig",
@@ -259,9 +249,9 @@ async function initPoolConfig() {
         "SuperfluidFactoringPoolConfig",
         poolConfig,
         "setEARewardsAndLiquidity",
-        [1000, 100]
+        [0, 0]
     );
-    const maxCL = BN.from(1_000).mul(BN.from(10).pow(BN.from(decimals)));
+    const maxCL = BigInt(1_000_000) * BigInt(10) ** BigInt(decimals);
     console.log("maxCL: " + maxCL);
     await sendTransaction("SuperfluidFactoringPoolConfig", poolConfig, "setMaxCreditLine", [
         maxCL,
@@ -291,10 +281,10 @@ async function initPoolConfig() {
     );
 
     await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "addPoolOperator", [
-        sfpOperator.address,
+        deployer.address,
     ]);
     await sendTransaction("ReceivableFactoringPoolConfig", poolConfig, "setPoolOwnerTreasury", [
-        sfpOwnerTreasury.address,
+        poolTreasury,
     ]);
 
     // Notice: Gnosis Safe doesn't support Mumbai now
@@ -367,82 +357,60 @@ async function prepare() {
         "ReceivableFactoringPoolV2"
     );
     const pool = ReceivableFactoringPoolV2.attach(deployedContracts["SuperfluidFactoringPool"]);
-    const poolFromOperator = pool.connect(sfpOperator);
+    // const poolFromOperator = pool.connect(deployer);
 
-    await sendTransaction("SuperfluidFactoringPool", poolFromOperator, "addApprovedLender", [
-        deployer.address,
-    ]);
-    await sendTransaction("SuperfluidFactoringPool", poolFromOperator, "addApprovedLender", [
-        ea_sfp.address,
-    ]);
-    await sendTransaction("SuperfluidFactoringPool", poolFromOperator, "addApprovedLender", [
-        lender.address,
-    ]);
-    await sendTransaction("SuperfluidFactoringPool", poolFromOperator, "addApprovedLender", [
-        sfpOwnerTreasury.address,
-    ]);
+    await sendTransaction("SuperfluidFactoringPool", pool, "addApprovedLender", [poolTreasury]);
 
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(USDC_ADDRESS);
     const decimals = await usdc.decimals();
 
     // Owner
-    const usdcFromPoolOwnerTreasury = await usdc.connect(sfpOwnerTreasury);
-    const poolFromPoolOwnerTreasury = await pool.connect(sfpOwnerTreasury);
-    const amountOwner = BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)));
-    await sendTransaction("TestToken", usdc, "mint", [sfpOwnerTreasury.address, amountOwner]);
-    await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [
-        pool.address,
-        amountOwner,
-    ]);
-    await sendTransaction(
-        "SuperfluidFactoringPool",
-        poolFromPoolOwnerTreasury,
-        "makeInitialDeposit",
-        [amountOwner]
-    );
+    // const usdcFromPoolOwnerTreasury = await usdc.connect(sfpOwnerTreasury);
+    // const poolFromPoolOwnerTreasury = await pool.connect(sfpOwnerTreasury);
+    const amountOwner = BigInt(20_000) * BigInt(10) ** BigInt(decimals);
+    await sendTransaction("TestToken", usdc, "mint", [poolTreasury, amountOwner]);
+    // await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [
+    //     pool.address,
+    //     amountOwner,
+    // ]);
+    // await sendTransaction(
+    //     "SuperfluidFactoringPool",
+    //     poolFromPoolOwnerTreasury,
+    //     "makeInitialDeposit",
+    //     [amountOwner]
+    // );
 
     // EA
-    const usdcFromEA = await usdc.connect(ea_sfp);
-    const poolFromEA = await pool.connect(ea_sfp);
-    const amountEA = BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)));
-    await sendTransaction("TestToken", usdc, "mint", [ea_sfp.address, amountEA]);
-    await sendTransaction("TestToken", usdcFromEA, "approve", [pool.address, amountEA]);
-    await sendTransaction("SuperfluidFactoringPool", poolFromEA, "makeInitialDeposit", [amountEA]);
+    // const usdcFromEA = await usdc.connect(ea_sfp);
+    // const poolFromEA = await pool.connect(ea_sfp);
+    // const amountEA = BN.from(10_000).mul(BN.from(10).pow(BN.from(decimals)));
+    // await sendTransaction("TestToken", usdc, "mint", [ea_sfp.address, amountEA]);
+    // await sendTransaction("TestToken", usdcFromEA, "approve", [pool.address, amountEA]);
+    // await sendTransaction("SuperfluidFactoringPool", poolFromEA, "makeInitialDeposit", [amountEA]);
 
-    await sendTransaction("SuperfluidFactoringPool", pool, "enablePool", []);
+    // await sendTransaction("SuperfluidFactoringPool", pool, "enablePool", []);
 
     //payer
-    const amountPayer = BN.from(100_000_000).mul(BN.from(10).pow(BN.from(decimals)));
-    await sendTransaction("TestToken", usdc, "mint", [payer.address, amountPayer]);
+    // const amountPayer = BN.from(100_000_000).mul(BN.from(10).pow(BN.from(decimals)));
+    // await sendTransaction("TestToken", usdc, "mint", [payer.address, amountPayer]);
 }
 
 async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    [
-        deployer,
-        proxyOwner,
-        lender,
-        ea_sfp,
-        eaService,
-        pdsService,
-        treasury,
-        payer,
-        sfpOperator,
-        sfpOwnerTreasury,
-    ] = await accounts;
+    [deployer, eaService] = await accounts;
     console.log("deployer address: " + deployer.address);
-    console.log("lender address: " + lender.address);
-    console.log("ea address: " + ea_sfp.address);
+    // console.log("lender address: " + lender.address);
+    // console.log("ea address: " + ea_sfp.address);
 
     deployedContracts = await getDeployedContracts();
 
     await initHumaConfig();
     await initFeeManager();
     await initHDT();
-    await initEA();
+    // await initEA();
     await initPoolConfig();
     await initPool();
 
