@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "devDependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.5",
     "@nomiclabs/hardhat-ethers": "^2.1.1",
     "@nomiclabs/hardhat-etherscan": "^3.1.0",
@@ -34,11 +35,13 @@
     "lint-solidity": "yarn solhint -f table 'contracts/**/*.sol'",
     "postinstall": "husky install",
     "coverage": "hardhat coverage --network hardhat",
-    "gitleaks": "bash scripts/gitleaks.sh"
+    "gitleaks": "bash scripts/gitleaks.sh",
+    "gen-error-ids": "hardhat run scripts/gen-error-function-ids.js --network hardhat"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-upgradeable": "^4.8.3",
+    "@superfluid-finance/ethereum-contracts": "^1.5.0",
     "dotenv": "^16.0.2",
     "hardhat": "^2.11.1"
   }

@@ -9,6 +9,9 @@ contract Errors {
     error amountTooLow(); // 0x5b05bfbf
     error invalidBasisPointHigherThan10000(); // 0x07982d85
     error withdrawnAmountHigherThanBalance(); // 0x477c0ab2
+    error allowanceTooLow(); // 0xcd8ef369
+    error AuthorizationExpired(); // 0x0f05f5bf
+    error InvalidAuthorization(); // 0x2ce87eeb
 
     // security
     error permissionDeniedNotAdmin(); // 0xf2c5b6a7
@@ -27,12 +30,13 @@ contract Errors {
     error notPool(); // 0x26d29bbf
     error drawdownFunctionUsedInsteadofDrawdownWithReceivable(); // 0x7e737537
     error notNFTOwner(); // 0x091a5762
+    error notProcessor(); // 0x90409ca1
 
     // system config
     error defaultGracePeriodLessThanMinAllowed(); // 0xa733ff9c
     error treasuryFeeHighThanUpperLimit(); // 0x39cda0d1
     error alreadyAnOperator(); // 0x75cea0fc
-    error alreadyAPauser(); // 0xfbca9e38
+    error alreadyAPauser(); // 0x9f694c22
     error alreadyPoolAdmin(); // 0x7bb356e2
 
     // fee config
@@ -63,7 +67,7 @@ contract Errors {
     error creditLineNotInApprovedState(); // 0xfc91a989
     error paymentIdNotUnderReview(); // 0xd1696aaa
     error creditLineTooHigh(); // 0x552b8377
-    error creditLineOutstanding(); // 0x2901939a
+    error creditLineOutstanding(); // 0xc64e338c
 
     // pool operation
     error exceededPoolLiquidityCap(); // 0x5642ebd4
@@ -74,7 +78,23 @@ contract Errors {
     error borrowingAmountLessThanPlatformFees(); // 0x97fde118
     error withdrawTooSoon(); // 0x67982472
     error paymentAlreadyProcessed(); // 0xfd6754cf
+    error settlementTooSoon(); // 0x0453e75e
+    error receivableIdMismatch(); // 0x97be2b67
 
     error defaultTriggeredTooEarly(); // 0x7872424e
     error defaultHasAlreadyBeenTriggered(); // 0xeb8d2ccc
+
+    // superfluid
+    error durationTooLong(); // 0xf1dd53a8
+    error invalidFlowrate(); // 0xd06a9328
+    error borrowerMismatch(); // 0x27d3e640
+    error flowKeyMismatch(); // 0x29d5a5f3
+    error flowIsNotTerminated(); // 0xe9c5922f
+    error invalidSuperfluidCallback(); // 0xd2747f83
+    error invalidSuperfluidAction(); // 0x2f2cd9e9
+    error notTradableStreamOwner(); // 0x5709a724
+    error tradableStreamNotMatured(); // 0xa42ebb88
+    error tradableStreamNotExisting(); // 0xb78e2a5b
+    error notEnoughAvailableFlowrate(); // 0x9c808ab8
+    error newReceiverSameToOrigin(); // 0x6d79ce50
 }

@@ -1,6 +1,3 @@
-require("dotenv").config();
-require("hardhat-contract-sizer");
-
 require("@nomicfoundation/hardhat-chai-matchers");
 require("@tenderly/hardhat-tenderly");
 
@@ -11,6 +8,7 @@ require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-prettier");
 require("solidity-coverage");
+require("hardhat-contract-sizer");
 
 require("hardhat-abi-exporter");
 require("dotenv").config();
@@ -67,14 +65,24 @@ let ea_bcp = process.env["EA_BASE_CREDIT"];
 if (!ea_bcp) {
     ea_bcp = EMPTY_PRIVATE_KEY;
 }
-let invoicePayer = process.env["INVOICE_PAYER"];
-if (!invoicePayer) {
-    invoicePayer = EMPTY_PRIVATE_KEY;
+let ea_sfp = process.env["EA_SUPERFLUID"];
+if (!ea_sfp) {
+    ea_sfp = EMPTY_PRIVATE_KEY;
 }
+let payer = process.env["PAYER"];
+if (!payer) {
+    payer = EMPTY_PRIVATE_KEY;
+}
+
 let baseCreditPoolOperator = process.env["BASE_CREDIT_POOL_OPERATOR"];
 if (!baseCreditPoolOperator) {
     baseCreditPoolOperator = EMPTY_PRIVATE_KEY;
 }
+let baseCreditPoolOwnerTreasury = process.env["BASE_CREDIT_POOL_OWNER_TREASURY"];
+if (!baseCreditPoolOwnerTreasury) {
+    baseCreditPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
+}
+
 let receivableFactoringPoolOperator = process.env["RECEIVABLE_FACTORING_POOL_OPERATOR"];
 if (!receivableFactoringPoolOperator) {
     receivableFactoringPoolOperator = EMPTY_PRIVATE_KEY;
@@ -83,9 +91,14 @@ let receivableFactoringPoolOwnerTreasury = process.env["RECEIVABLE_FACTORING_POO
 if (!receivableFactoringPoolOwnerTreasury) {
     receivableFactoringPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
 }
-let baseCreditPoolOwnerTreasury = process.env["BASE_CREDIT_POOL_OWNER_TREASURY"];
-if (!baseCreditPoolOwnerTreasury) {
-    baseCreditPoolOwnerTreasury = EMPTY_PRIVATE_KEY;
+
+let sfpOperator = process.env["SUPERFLUID_POOL_OPERATOR"];
+if (!sfpOperator) {
+    sfpOperator = EMPTY_PRIVATE_KEY;
+}
+let sfpTreasury = process.env["SUPERFLUID_POOL_OWNER_TREASURY"];
+if (!sfpTreasury) {
+    sfpTreasury = EMPTY_PRIVATE_KEY;
 }
 
 //
@@ -172,11 +185,14 @@ module.exports = {
                 pdsService,
                 treasury,
                 ea_bcp,
-                invoicePayer,
+                payer,
                 baseCreditPoolOperator,
                 receivableFactoringPoolOperator,
                 baseCreditPoolOwnerTreasury,
                 receivableFactoringPoolOwnerTreasury,
+                ea_sfp,
+                sfpOperator,
+                sfpTreasury,
             ],
         },
         xdai: {
@@ -204,23 +220,28 @@ module.exports = {
             url: polygonUrl,
             accounts: [deployer, eaService],
         },
+        matic: {
+            url: polygonUrl,
+            accounts: [deployer, eaService, pdsService],
+        },
         mumbai: {
+            url: mumbaiUrl,
+            accounts: [deployer, eaService],
+        },
+        maticmum: {
             url: mumbaiUrl,
             accounts: [
                 deployer,
                 proxyOwner,
                 lender,
-                ea,
+                ea_sfp,
                 eaService,
                 pdsService,
                 treasury,
-                ea_bcp,
-                invoicePayer,
+                payer,
+                sfpOperator,
+                sfpTreasury,
             ],
-        },
-        matic: {
-            url: polygonUrl,
-            accounts: [deployer, eaService, pdsService],
         },
         optimism: {
             url: "https://mainnet.optimism.io",
@@ -338,7 +359,7 @@ module.exports = {
     solidity: {
         compilers: [
             {
-                version: "0.8.4",
+                version: "0.8.11",
                 settings: {
                     optimizer: {
                         enabled: true,
@@ -360,8 +381,9 @@ module.exports = {
     etherscan: {
         apiKey: {
             goerli: process.env.ETHERSCAN_API_KEY || null,
-            polygon: process.env.POLYGONSCAN_API_KEY || null,
             mainnet: process.env.ETHERSCAN_API_KEY || null,
+            polygon: process.env.POLYGONSCAN_API_KEY || null,
+            polygonMumbai: process.env.POLYGONSCAN_API_KEY || null,
         },
     },
     contractSizer: {

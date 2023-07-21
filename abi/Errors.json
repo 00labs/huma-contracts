@@ -1,6 +1,21 @@
 [
   {
     "inputs": [],
+    "name": "AuthorizationExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidAuthorization",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "allowanceTooLow",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "alreadyAPauser",
     "type": "error"
   },
@@ -17,6 +32,11 @@
   {
     "inputs": [],
     "name": "amountTooLow",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "borrowerMismatch",
     "type": "error"
   },
   {
@@ -101,6 +121,11 @@
   },
   {
     "inputs": [],
+    "name": "durationTooLong",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "evaluationAgentNotEnoughLiquidity",
     "type": "error"
   },
@@ -112,6 +137,16 @@
   {
     "inputs": [],
     "name": "exceededPoolLiquidityCap",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "flowIsNotTerminated",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "flowKeyMismatch",
     "type": "error"
   },
   {
@@ -131,7 +166,32 @@
   },
   {
     "inputs": [],
+    "name": "invalidFlowrate",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "invalidSuperfluidAction",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "invalidSuperfluidCallback",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "minPrincipalPaymentRateSettingTooHigh",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "newReceiverSameToOrigin",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notEnoughAvailableFlowrate",
     "type": "error"
   },
   {
@@ -181,7 +241,17 @@
   },
   {
     "inputs": [],
+    "name": "notProcessor",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "notProtocolOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "notTradableStreamOwner",
     "type": "error"
   },
   {
@@ -251,12 +321,32 @@
   },
   {
     "inputs": [],
+    "name": "receivableIdMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "requestedCreditWithZeroDuration",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "sameValue",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "settlementTooSoon",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "tradableStreamNotExisting",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "tradableStreamNotMatured",
     "type": "error"
   },
   {

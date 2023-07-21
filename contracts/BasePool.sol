@@ -48,7 +48,11 @@ abstract contract BasePool is Initializable, BasePoolStorage, ILiquidityProvider
         _disableInitializers();
     }
 
-    function initialize(address poolConfigAddr) external initializer {
+    function initialize(address poolConfigAddr) public initializer {
+        _baseInitialize(poolConfigAddr);
+    }
+
+    function _baseInitialize(address poolConfigAddr) internal onlyInitializing {
         _poolConfig = BasePoolConfig(poolConfigAddr);
         _updateCoreData();
 
