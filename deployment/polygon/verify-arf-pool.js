@@ -7,10 +7,11 @@ const {
 
 const fs = require("fs");
 
-const VERIFY_ARGS_PATH = "./deployment/polygon/verify_args/"
+const VERIFY_ARGS_PATH = "./deployment/mumbai/verify_args/"
 
-const HUMA_OWNER_SAFE='0x7E13931931d59f2199fE0b499534412FCD28b7Ed';
-const POOL_OWNER_SAFE='0xD252073bF424bb13B474004bf9F52195d54aEDb6';
+const HUMA_OWNER_EOA='0x7E13931931d59f2199fE0b499534412FCD28b7Ed';
+const POOL_OWNER_EOA='0xD252073bF424bb13B474004bf9F52195d54aEDb6';
+const PROXY_EOA = '0x11C0990B55d323E52841D4E5F1a50367719e6E62';
 
 let deployedContracts, proxyOwner, network, deployer;
 
@@ -109,18 +110,18 @@ async function verifyContracts() {
     const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
         [
             0,
-            `['${HUMA_OWNER_SAFE}']`,
+            `['${HUMA_OWNER_EOA}']`,
             `['${deployer.address}']`,
         ]);
     console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
-    const verifyHumaProxyAdminTL = await verifyContract('HumaProxyAdminTimelock',
-        [
-            0,
-            `['${HUMA_OWNER_SAFE}']`,
-            `['${deployer.address}']`,
-        ]);
-    console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+    // const verifyHumaProxyAdminTL = await verifyContract('HumaProxyAdminTimelock',
+    //     [
+    //         0,
+    //         `['${HUMA_OWNER_EOA}']`,
+    //         `['${deployer.address}']`,
+    //     ]);
+    // console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
     const verifyRWRImpl = await verifyContract('RWReceivableImpl');
     console.log(`Verify RWRImpl result: ${verifyRWRImpl}`);
@@ -134,46 +135,46 @@ async function verifyContracts() {
     console.log(`Verify RWR result: ${verifyRWR}`);
 
 
-    const verifyBaseCreditPoolTL = await verifyContract('ArfNewPoolTimelock',
-        [
-            0,
-            `['${POOL_OWNER_SAFE}']`,
-            `['${deployer.address}']`,
-        ]);
-    console.log(`Verify ArfNewPoolTimelock result: ${verifyBaseCreditPoolTL}`);
+    // const verifyBaseCreditPoolTL = await verifyContract('ArfPoolTimelock',
+    //     [
+    //         0,
+    //         `['${POOL_OWNER_EOA}']`,
+    //         `['${deployer.address}']`,
+    //     ]);
+    // console.log(`Verify ArfPoolTimelock result: ${verifyBaseCreditPoolTL}`);
 
-    const verifyBaseCreditPoolProxyAdminTL = await verifyContract('ArfNewPoolProxyAdminTimelock',
-        [
-            0,
-            `['${POOL_OWNER_SAFE}']`,
-            `['${deployer.address}']`,
-        ]);
-    console.log(`Verify ArfNewPoolProxyAdminTimelock result: ${verifyBaseCreditPoolProxyAdminTL}`);
+    // const verifyBaseCreditPoolProxyAdminTL = await verifyContract('ArfPoolProxyAdminTimelock',
+    //     [
+    //         0,
+    //         `['${POOL_OWNER_EOA}']`,
+    //         `['${deployer.address}']`,
+    //     ]);
+    // console.log(`Verify ArfPoolProxyAdminTimelock result: ${verifyBaseCreditPoolProxyAdminTL}`);
 
-    const verifyFeeManager = await verifyContract('ArfNewPoolFeeManager');
+    const verifyFeeManager = await verifyContract('ArfPoolFeeManager');
     console.log(`Verify FeeManager result: ${verifyFeeManager}`);
 
-    const verifyHDTImpl = await verifyContract('ArfNewHDTImpl');
+    const verifyHDTImpl = await verifyContract('HDTImpl');
     console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
 
-    const verifyHDT = await verifyContract('ArfNewHDT',
+    const verifyHDT = await verifyContract('ArfHDT',
         [
-            `'${deployedContracts['ArfNewHDTImpl']}'`,
-            `'${deployedContracts['ArfNewPoolProxyAdminTimelock']}'`,
+            `'${deployedContracts['HDTImpl']}'`,
+            `'${PROXY_EOA}'`,
             '[]'
         ]);
     console.log(`Verify HDT result: ${verifyHDT}`);
 
-    const verifyPoolConfig = await verifyContract('ArfNewPoolConfig');
+    const verifyPoolConfig = await verifyContract('ArfPoolConfig');
     console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
 
-    const verifyPoolImpl = await verifyContract('ArfNewPoolImpl');
+    const verifyPoolImpl = await verifyContract('BaseCreditPoolImpl');
     console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
 
-    const verifyPool = await verifyContract('ArfNewPool',
+    const verifyPool = await verifyContract('ArfPool',
         [
-            `'${deployedContracts['ArfNewPoolImpl']}'`,
-            `'${deployedContracts['ArfPoolProxyAdminTimelock']}'`,
+            `'${deployedContracts['BaseCreditPoolImpl']}'`,
+            `'${PROXY_EOA}'`,
             '[]',
         ]);
     console.log(`Verify Pool result: ${verifyPool}`);
