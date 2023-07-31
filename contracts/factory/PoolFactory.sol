@@ -251,4 +251,9 @@ contract PoolFactory is AccessControl {
         TimelockController timeLock = new TimelockController(0, poolAdmins, poolExecutors);
         return address(timeLock);
     }
+
+    function transferOwnership(address newOwner) external onlyRole(OWNER_ROLE) {
+        _grantRole(OWNER_ROLE, newOwner);
+        _revokeRole(OWNER_ROLE, msg.sender);
+    }
 }

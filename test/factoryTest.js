@@ -63,14 +63,14 @@ describe("Huma Config", function () {
         },});
 
         poolFactory = await PoolFactory.deploy(
-            protocolOwner.address, configContract.address, hdtImpl.address, 
+            deployer.address, configContract.address, hdtImpl.address, 
             baseCreditPoolImpl.address, receivableFactoringPoolImpl.address
             );
     });
 
     describe("Factory Ownership", function () {
         it("Protocol owner should own the factory", async function () {
-            // await poolFactory.transferOwnership(protocolOwner.address);
+            await poolFactory.transferOwnership(protocolOwner.address);
             const role = await poolFactory.OWNER_ROLE();
             await expect(await poolFactory.hasRole(role, protocolOwner.address)).to.equal(true);
         });
