@@ -63,20 +63,16 @@ describe("Huma Config", function () {
         },});
 
         poolFactory = await PoolFactory.deploy(
-            configContract.address, hdtImpl.address, 
+            protocolOwner.address, configContract.address, hdtImpl.address, 
             baseCreditPoolImpl.address, receivableFactoringPoolImpl.address
             );
-        console.log("Protocol contracts all deployed");
-        console.log(baseCreditPoolImpl.address);
-        console.log(receivableFactoringPoolImpl.address);
-        console.log(configContract.address);
-        console.log(hdtImpl.address);
     });
 
     describe("Factory Ownership", function () {
         it("Protocol owner should own the factory", async function () {
-            await poolFactory.transferOwnership(protocolOwner.address);
-            await expect(await poolFactory.owner()).to.equal(protocolOwner.address);
+            // await poolFactory.transferOwnership(protocolOwner.address);
+            const role = await poolFactory.OWNER_ROLE();
+            await expect(await poolFactory.hasRole(role, protocolOwner.address)).to.equal(true);
         });
     });
 
@@ -94,10 +90,10 @@ describe("Huma Config", function () {
             const role = await poolFactory.DEPLOYER_ROLE();
             await expect(
                 poolFactory.addDeployer(deployer.address)
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith(/AccessControl: account .* is missing role .*/);
             await expect(
                 poolFactory.removeDeployer(deployer.address)
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith(/AccessControl: account .* is missing role .*/);
         });
     });
 
@@ -113,7 +109,7 @@ describe("Huma Config", function () {
             newhdtImpl = await newHDTImpl.deploy();
             await expect(
                 poolFactory.setHDTImplAddress(newhdtImpl.address)
-                ).to.be.revertedWith("Ownable: caller is not the owner");
+                ).to.be.revertedWith(/AccessControl: account .* is missing role .*/);
         });
         it("Owner can set new BaseCredtiPoolImpl Address", async function () {
             const NewImpl = await ethers.getContractFactory("BaseCreditPool");
@@ -127,7 +123,7 @@ describe("Huma Config", function () {
             newImpl = await NewImpl.deploy();
             await expect(
                 poolFactory.setHDTImplAddress(newImpl.address)
-                ).to.be.revertedWith("Ownable: caller is not the owner");
+                ).to.be.revertedWith(/AccessControl: account .* is missing role .*/);
             console.log(await poolFactory.baseCreditPoolImplAddress());
         });
         it("Owner can set new receivableFactoringPoolImpl Address", async function () {
@@ -149,7 +145,7 @@ describe("Huma Config", function () {
             newImpl = await NewImpl.deploy();
             await expect(
                 poolFactory.setHDTImplAddress(newImpl.address)
-                ).to.be.revertedWith("Ownable: caller is not the owner");
+                ).to.be.revertedWith(/AccessControl: account .* is missing role .*/);
         });
     });
     describe("Creating pools", function () {

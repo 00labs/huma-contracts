@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/governance/TimelockController.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import "./LibPoolConfig.sol";
@@ -11,8 +10,9 @@ import "./LibFeeManager.sol";
 import "./LibHDT.sol";
 import "./LibPool.sol";
 
-contract PoolFactory is Ownable, AccessControl {
+contract PoolFactory is AccessControl {
     bytes32 public constant DEPLOYER_ROLE = keccak256("DEPLOYER_ROLE");
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     address public HUMA_CONFIG_ADDRESS;
     address public hdtImplAddress;
@@ -47,22 +47,24 @@ contract PoolFactory is Ownable, AccessControl {
     event PoolCreated(address poolAddress, string poolName);
 
     constructor(
+        address _protocolOwner,
         address _humaConfigAddress,
         address _hdtImplAddress,
         address _baseCreditPoolImplAddress,
         address _receivableFactoringPoolImplAddress
     ) {
+        _grantRole(OWNER_ROLE, _protocolOwner);
         HUMA_CONFIG_ADDRESS = _humaConfigAddress;
         hdtImplAddress = _hdtImplAddress;
         baseCreditPoolImplAddress = _baseCreditPoolImplAddress;
         receivableFactoringPoolImplAddress = _receivableFactoringPoolImplAddress;
     }
 
-    function addDeployer(address account) external onlyOwner {
+    function addDeployer(address account) external onlyRole(OWNER_ROLE) {
         _grantRole(DEPLOYER_ROLE, account);
     }
 
-    function removeDeployer(address account) external onlyOwner {
+    function removeDeployer(address account) external onlyRole(OWNER_ROLE) {
         _revokeRole(DEPLOYER_ROLE, account);
     }
 
@@ -200,19 +202,22 @@ contract PoolFactory is Ownable, AccessControl {
         LibPool.initializeReceivableFactoringPool(_poolAddress, pools[_poolAddress].poolConfig);
     }
 
-    function setHDTImplAddress(address newAddress) external onlyOwner {
+    function setHDTImplAddress(address newAddress) external onlyRole(OWNER_ROLE) {
         address oldAddress = hdtImplAddress;
         hdtImplAddress = newAddress;
         emit HDTImplChanged(oldAddress, newAddress);
     }
 
-    function setBaseCredtiPoolImplAddress(address newAddress) external onlyOwner {
+    function setBaseCredtiPoolImplAddress(address newAddress) external onlyRole(OWNER_ROLE) {
         address oldAddress = hdtImplAddress;
         baseCreditPoolImplAddress = newAddress;
         emit BaseCredtiPoolImplChanged(oldAddress, newAddress);
     }
 
-    function setReceivableFactoringPoolImplAddress(address newAddress) external onlyOwner {
+    function setReceivableFactoringPoolImplAddress(address newAddress)
+        external
+        onlyRole(OWNER_ROLE)
+    {
         address oldAddress = hdtImplAddress;
         receivableFactoringPoolImplAddress = newAddress;
         emit ReceivableFactoringPoolImplChanged(oldAddress, newAddress);
@@ -225,7 +230,7 @@ contract PoolFactory is Ownable, AccessControl {
         return pools[_poolAddress];
     }
 
-    function deletePool(address _poolAddress) external onlyOwner {
+    function deletePool(address _poolAddress) external onlyRole(OWNER_ROLE) {
         if (
             pools[_poolAddress].poolStatus != PoolStatus.Created ||
             pools[_poolAddress].poolStatus != PoolStatus.Initialized
