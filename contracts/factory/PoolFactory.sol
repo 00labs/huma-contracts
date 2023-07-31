@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/governance/TimelockController.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import "../openzeppelin/TransparentUpgradeableProxy.sol";
-
 import "./LibPoolConfig.sol";
 import "./LibFeeManager.sol";
+import "./LibHDT.sol";
+import "./LibPool.sol";
 
 contract PoolFactory is Ownable, AccessControl {
     bytes32 public constant DEPLOYER_ROLE = keccak256("DEPLOYER_ROLE");
@@ -71,20 +71,12 @@ contract PoolFactory is Ownable, AccessControl {
         address[] memory _poolOwner,
         address[] memory _poolExecutors
     ) external onlyRole(DEPLOYER_ROLE) {
-        address feeManagerAddress = LibDeployFeeManager.addFeeManager();
-        TransparentUpgradeableProxy hdt = new TransparentUpgradeableProxy(
-            hdtImplAddress,
-            address(this), //Todo: for now proxy is not upgradable
-            ""
-        );
-        address poolConfigAddress = LibDeployPoolConfig.addPoolConfig();
+        address feeManagerAddress = LibFeeManager.addFeeManager();
+        address hdt = LibHDT.addHDT(hdtImplAddress);
+        address poolConfigAddress = LibPoolConfig.addPoolConfig();
         address timeLockAddress = addTimeLock(_poolOwner, _poolExecutors);
-        TransparentUpgradeableProxy pool = new TransparentUpgradeableProxy(
-            baseCreditPoolImplAddress,
-            address(this), //Todo: for now proxy is not upgradable
-            ""
-        );
-        pools[address(pool)] = PoolRecord(
+        address pool = LibPool.addPool(baseCreditPoolImplAddress);
+        pools[pool] = PoolRecord(
             _poolName,
             PoolStatus.Created,
             timeLockAddress,
@@ -92,7 +84,92 @@ contract PoolFactory is Ownable, AccessControl {
             feeManagerAddress,
             poolConfigAddress
         );
-        emit PoolCreated(address(pool), _poolName);
+        emit PoolCreated(pool, _poolName);
+    }
+
+    function initializePoolFeeManager(
+        address _poolAddress,
+        uint256 _frontLoadingFeeFlat,
+        uint256 _frontLoadingFeeBps,
+        uint256 _lateFeeFlat,
+        uint256 _lateFeeBps,
+        uint256 _membershipFee,
+        uint256 _minPrincipalRateInBps
+    ) external onlyRole(DEPLOYER_ROLE) {
+        LibFeeManager.initializeFeeManager(
+            pools[_poolAddress].feeManager,
+            _frontLoadingFeeFlat,
+            _frontLoadingFeeBps,
+            _lateFeeFlat,
+            _lateFeeBps,
+            _membershipFee,
+            _minPrincipalRateInBps
+        );
+        LibFeeManager.transferOwnership(
+            pools[_poolAddress].feeManager,
+            pools[_poolAddress].poolTimeLock
+        );
+    }
+
+    function initializeHDT(
+        address _poolAddress,
+        string memory name,
+        string memory symbol,
+        address underlyingToken
+    ) external onlyRole(DEPLOYER_ROLE) {
+        LibHDT.initializeHDT(pools[_poolAddress].hdt, name, symbol, underlyingToken);
+        LibHDT.transferOwnership(pools[_poolAddress].hdt, pools[_poolAddress].poolTimeLock);
+    }
+
+    function initializePoolConfigTwo(
+        address _poolAddress,
+        uint256 liquidityCap,
+        uint256 poolOwnerRewards,
+        uint256 poolOwnerLiquidity,
+        uint256 EARewards,
+        uint256 EALiquidity,
+        uint256 maxCreditLine,
+        uint256 _apr,
+        uint256 receivableRequiredInBps
+    ) external onlyRole(DEPLOYER_ROLE) {
+        LibPoolConfig.initializePoolLiquidityConfig(
+            pools[_poolAddress].poolConfig,
+            liquidityCap,
+            poolOwnerRewards,
+            poolOwnerLiquidity,
+            EARewards,
+            EALiquidity,
+            maxCreditLine,
+            _apr,
+            receivableRequiredInBps
+        );
+        LibPoolConfig.transferOwnership(
+            pools[_poolAddress].poolConfig,
+            pools[_poolAddress].poolTimeLock
+        );
+    }
+
+    function initializePoolConfigOne(
+        address _poolAddress,
+        address _poolOwnerTreasury,
+        uint256 _poolPayPeriod,
+        uint256 withdrawalLockoutPeriod
+    ) external onlyRole(DEPLOYER_ROLE) {
+        LibPoolConfig.initializePoolBasicConfig(
+            pools[_poolAddress].poolConfig,
+            pools[_poolAddress].poolName,
+            _poolAddress,
+            pools[_poolAddress].hdt,
+            HUMA_CONFIG_ADDRESS,
+            pools[_poolAddress].feeManager,
+            _poolOwnerTreasury,
+            _poolPayPeriod,
+            withdrawalLockoutPeriod
+        );
+    }
+
+    function initializeBaseCreditPool(address _poolAddress) external onlyRole(DEPLOYER_ROLE) {
+        LibPool.initializeBaseCreditPool(_poolAddress, pools[_poolAddress].poolConfig);
     }
 
     function createReceivableFactoringPool(
@@ -100,20 +177,12 @@ contract PoolFactory is Ownable, AccessControl {
         address[] memory _poolOwner,
         address[] memory _poolExecutors
     ) external onlyRole(DEPLOYER_ROLE) {
-        address feeManagerAddress = LibDeployFeeManager.addFeeManager();
-        TransparentUpgradeableProxy hdt = new TransparentUpgradeableProxy(
-            hdtImplAddress,
-            address(this), //Todo: for now proxy is not upgradable
-            ""
-        );
-        address poolConfigAddress = LibDeployPoolConfig.addPoolConfig();
+        address feeManagerAddress = LibFeeManager.addFeeManager();
+        address hdt = LibHDT.addHDT(hdtImplAddress);
+        address poolConfigAddress = LibPoolConfig.addPoolConfig();
         address timeLockAddress = addTimeLock(_poolOwner, _poolExecutors);
-        TransparentUpgradeableProxy pool = new TransparentUpgradeableProxy(
-            receivableFactoringPoolImplAddress,
-            address(this), //Todo: for now proxy is not upgradable
-            ""
-        );
-        pools[address(pool)] = PoolRecord(
+        address pool = LibPool.addPool(receivableFactoringPoolImplAddress);
+        pools[pool] = PoolRecord(
             _poolName,
             PoolStatus.Created,
             timeLockAddress,
@@ -121,7 +190,14 @@ contract PoolFactory is Ownable, AccessControl {
             feeManagerAddress,
             poolConfigAddress
         );
-        emit PoolCreated(address(pool), _poolName);
+        emit PoolCreated(pool, _poolName);
+    }
+
+    function initializeReceivableFactoringPool(address _poolAddress)
+        external
+        onlyRole(DEPLOYER_ROLE)
+    {
+        LibPool.initializeReceivableFactoringPool(_poolAddress, pools[_poolAddress].poolConfig);
     }
 
     function setHDTImplAddress(address newAddress) external onlyOwner {
@@ -170,12 +246,4 @@ contract PoolFactory is Ownable, AccessControl {
         TimelockController timeLock = new TimelockController(0, poolAdmins, poolExecutors);
         return address(timeLock);
     }
-
-    // function initializeFeeManager() {}
-
-    // function initializeHDT() {}
-
-    // function initializePoolConfig() {}
-
-    // function initializePool() {}
 }

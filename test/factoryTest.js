@@ -3,7 +3,7 @@ const {ethers} = require("hardhat");
 const {expect} = require("chai");
 
 describe("Huma Config", function () {
-    let baseCreditPoolImpl;
+    let poolAddress;
     before(async function () {
         [
             deployer, 
@@ -20,10 +20,13 @@ describe("Huma Config", function () {
         const HumaConfig = await ethers.getContractFactory("HumaConfig");
         configContract = await HumaConfig.deploy();
 
+
         // Deploy TestToken, give initial tokens to lender
         // console.log("deploying TestToken");
         const TestToken = await ethers.getContractFactory("TestToken");
         testTokenContract = await TestToken.deploy();
+
+        await configContract.setLiquidityAsset(testTokenContract.address, true);
 
         // console.log("deploying HDTImpl");
         const HDTImpl = await ethers.getContractFactory("HDT");
@@ -38,17 +41,25 @@ describe("Huma Config", function () {
         receivableFactoringPoolImpl = await ReceivableFactoringPoolImpl.deploy();
 
         // console.log("deploying LibFeeManager");
-        const LibFeeManager = await ethers.getContractFactory("LibDeployFeeManager");
+        const LibFeeManager = await ethers.getContractFactory("LibFeeManager");
         libFeeManager = await LibFeeManager.deploy();
 
         // console.log("deploying LibPoolConfig");
-        const LibPoolConfig = await ethers.getContractFactory("LibDeployPoolConfig");
+        const LibPoolConfig = await ethers.getContractFactory("LibPoolConfig");
         libPoolConfig = await LibPoolConfig.deploy();
+
+        const LibHDT = await ethers.getContractFactory("LibHDT");
+        libHDT = await LibHDT.deploy();
+
+        const LibPool = await ethers.getContractFactory("LibPool");
+        libPool = await LibPool.deploy();
 
         // console.log("deploying PoolFactory");
         const PoolFactory = await ethers.getContractFactory("PoolFactory",{libraries: {
-            LibDeployFeeManager: libFeeManager.address,
-            LibDeployPoolConfig: libPoolConfig.address,
+            LibFeeManager: libFeeManager.address,
+            LibPoolConfig: libPoolConfig.address,
+            LibHDT: libHDT.address,
+            LibPool: libPool.address,
         },});
 
         poolFactory = await PoolFactory.deploy(
@@ -178,7 +189,7 @@ describe("Huma Config", function () {
                 [poolOwner.address],
                 ); 
             const receipt = await tnx.wait();
-            const poolAddress = await receipt.events.pop().args[0];
+            poolAddress = await receipt.events.pop().args[0];
             const poolRecord = await poolFactory.checkPool(poolAddress);
             await expect(
                 poolRecord['poolName']
@@ -190,6 +201,51 @@ describe("Huma Config", function () {
             ).to.equal(
                     0,
                     );
+        });
+    });
+    describe("Initialize pools", function () {
+        it("Initialize Fee Manager", async function () {
+            await poolFactory.initializePoolFeeManager(
+                poolAddress,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            );
+        });
+        it("Initialize HDT", async function () {
+            await poolFactory.initializeHDT(
+                poolAddress,
+                "Test HDT",
+                "THDT",
+                testTokenContract.address
+            );
+        });
+        it("Initialize Pool Config", async function () {
+            await poolFactory.initializePoolConfigOne(
+                poolAddress,
+                poolOwner.address,
+                30,
+                30
+            );
+            await poolFactory.initializePoolConfigTwo(
+                poolAddress,
+                1_000_000_000_000,
+                0,
+                0,
+                0,
+                0,
+                1000_000_000,
+                1000,
+                0
+            );
+        });
+        it("Initialize Pool", async function () {
+            await poolFactory.initializeReceivableFactoringPool(
+                poolAddress
+            );
         });
     });
 });
