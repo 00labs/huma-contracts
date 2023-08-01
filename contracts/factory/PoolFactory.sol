@@ -14,7 +14,7 @@ contract PoolFactory is AccessControl {
     bytes32 public constant DEPLOYER_ROLE = keccak256("DEPLOYER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
-    address public HUMA_CONFIG_ADDRESS;
+    address public immutable HUMA_CONFIG_ADDRESS;
     address public hdtImplAddress;
     address public baseCreditPoolImplAddress;
     address public receivableFactoringPoolImplAddress;
@@ -45,6 +45,8 @@ contract PoolFactory is AccessControl {
     event DeployerRemoved(address deployerAddress);
 
     event PoolCreated(address poolAddress, string poolName);
+    event PoolAdded(address poolAddress, string poolName);
+    event OwnershipChanged(address oldOwner, address newOwner);
 
     constructor(
         address _protocolOwner,
@@ -62,10 +64,12 @@ contract PoolFactory is AccessControl {
 
     function addDeployer(address account) external onlyRole(OWNER_ROLE) {
         _grantRole(DEPLOYER_ROLE, account);
+        emit DeployerAdded(account);
     }
 
     function removeDeployer(address account) external onlyRole(OWNER_ROLE) {
         _revokeRole(DEPLOYER_ROLE, account);
+        emit DeployerRemoved(account);
     }
 
     function createBaseCreditPool(
@@ -78,15 +82,23 @@ contract PoolFactory is AccessControl {
         address poolConfigAddress = LibPoolConfig.addPoolConfig();
         address timeLockAddress = addTimeLock(_poolOwner, _poolExecutors);
         address pool = LibPool.addPool(baseCreditPoolImplAddress);
-        pools[pool] = PoolRecord(
+        emit PoolCreated(pool, _poolName);
+        _addExistingPool(
+            pool,
             _poolName,
-            PoolStatus.Created,
             timeLockAddress,
-            address(hdt),
+            hdt,
             feeManagerAddress,
             poolConfigAddress
         );
-        emit PoolCreated(pool, _poolName);
+        // pools[pool] = PoolRecord(
+        //     _poolName,
+        //     PoolStatus.Created,
+        //     timeLockAddress,
+        //     address(hdt),
+        //     feeManagerAddress,
+        //     poolConfigAddress
+        // );
     }
 
     function initializePoolFeeManager(
@@ -230,6 +242,36 @@ contract PoolFactory is AccessControl {
         return pools[_poolAddress];
     }
 
+    function _addExistingPool(
+        address _poolAddress,
+        string memory _poolName,
+        address _poolTimeLock,
+        address _hdt,
+        address _feeManager,
+        address _poolConfig
+    ) private {
+        pools[_poolAddress] = PoolRecord(
+            _poolName,
+            PoolStatus.Created,
+            _poolTimeLock,
+            _hdt,
+            _feeManager,
+            _poolConfig
+        );
+        emit PoolAdded(_poolAddress, _poolName);
+    }
+
+    function addExistingPool(
+        address _poolAddress,
+        string memory _poolName,
+        address _poolTimeLock,
+        address _hdt,
+        address _feeManager,
+        address _poolConfig
+    ) external onlyRole(OWNER_ROLE) {
+        _addExistingPool(_poolAddress, _poolName, _poolTimeLock, _hdt, _feeManager, _poolConfig);
+    }
+
     function deletePool(address _poolAddress) external onlyRole(OWNER_ROLE) {
         if (
             pools[_poolAddress].poolStatus != PoolStatus.Created ||
@@ -241,6 +283,8 @@ contract PoolFactory is AccessControl {
 
         emit PoolDeleted(_poolAddress);
     }
+
+    function updatePoolStatus(address _poolAddress) external onlyRole(DEPLOYER_ROLE) {}
 
     function addTimeLock(address[] memory poolAdmins, address[] memory poolExecutors)
         internal

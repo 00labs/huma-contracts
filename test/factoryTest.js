@@ -73,6 +73,7 @@ describe("Huma Config", function () {
             await poolFactory.transferOwnership(protocolOwner.address);
             const role = await poolFactory.OWNER_ROLE();
             await expect(await poolFactory.hasRole(role, protocolOwner.address)).to.equal(true);
+            await expect(await poolFactory.hasRole(role, deployer.address)).to.equal(false);
         });
     });
 
