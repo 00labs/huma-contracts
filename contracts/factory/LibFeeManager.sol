@@ -33,4 +33,9 @@ library LibFeeManager {
         BaseFeeManager feeManager = BaseFeeManager(_feeManagerAddress);
         feeManager.transferOwnership(newOwner);
     }
+
+    function owner(address _feeManagerAddress) public view returns (address) {
+        BaseFeeManager feeManager = BaseFeeManager(_feeManagerAddress);
+        return feeManager.owner();
+    }
 }

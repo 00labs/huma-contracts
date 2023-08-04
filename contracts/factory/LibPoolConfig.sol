@@ -57,4 +57,9 @@ library LibPoolConfig {
         BasePoolConfig poolConfig = BasePoolConfig(_poolConfigAddress);
         poolConfig.transferOwnership(newOwner);
     }
+
+    function owner(address _poolConfigAddress) public view returns (address) {
+        BasePoolConfig poolConfig = BasePoolConfig(_poolConfigAddress);
+        return poolConfig.owner();
+    }
 }

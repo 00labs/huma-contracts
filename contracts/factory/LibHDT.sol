@@ -28,4 +28,9 @@ library LibHDT {
         HDT hdt = HDT(_hdtAddress);
         hdt.transferOwnership(newOwner);
     }
+
+    function owner(address _hdtAddress) public view returns (address) {
+        HDT hdt = HDT(_hdtAddress);
+        return hdt.owner();
+    }
 }

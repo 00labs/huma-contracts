@@ -245,4 +245,10 @@ describe("Huma Config", function () {
             );
         });
     });
+    describe("Updating pool status", function () {
+        it("Pool should be initialized", async function () {
+        await poolFactory.updatePoolStatus(poolAddress);
+        console.log(await poolFactory.checkPool(poolAddress));
+        });
+    });
 });

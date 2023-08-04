@@ -48,6 +48,8 @@ contract PoolFactory is AccessControl {
     event PoolAdded(address poolAddress, string poolName);
     event OwnershipChanged(address oldOwner, address newOwner);
 
+    event PoolStatusUpdated(PoolStatus oldStatus, PoolStatus newStatus);
+
     constructor(
         address _protocolOwner,
         address _humaConfigAddress,
@@ -284,7 +286,21 @@ contract PoolFactory is AccessControl {
         emit PoolDeleted(_poolAddress);
     }
 
-    function updatePoolStatus(address _poolAddress) external onlyRole(DEPLOYER_ROLE) {}
+    function updatePoolStatus(address _poolAddress) external onlyRole(DEPLOYER_ROLE) {
+        address poolTimeLock = pools[_poolAddress].poolTimeLock;
+        if (LibFeeManager.owner(pools[_poolAddress].feeManager) != poolTimeLock) {
+            revert("FEE_MANAGER_NOT_INITIALIZED");
+        }
+        if (LibHDT.owner(pools[_poolAddress].hdt) != poolTimeLock) {
+            revert("HDT_NOT_INITIALIZED");
+        }
+        if (LibPoolConfig.owner(pools[_poolAddress].poolConfig) != poolTimeLock) {
+            revert("POOL_CONFIG_NOT_INITIALIZED");
+        }
+        PoolStatus oldStatus = pools[_poolAddress].poolStatus;
+        pools[_poolAddress].poolStatus = PoolStatus.Initialized;
+        emit PoolStatusUpdated(oldStatus, PoolStatus.Initialized);
+    }
 
     function addTimeLock(address[] memory poolAdmins, address[] memory poolExecutors)
         internal
@@ -299,5 +315,6 @@ contract PoolFactory is AccessControl {
     function transferOwnership(address newOwner) external onlyRole(OWNER_ROLE) {
         _grantRole(OWNER_ROLE, newOwner);
         _revokeRole(OWNER_ROLE, msg.sender);
+        emit OwnershipChanged(msg.sender, newOwner);
     }
 }
