@@ -33,4 +33,10 @@
 "ArfNewHDT":"Done",
 "ArfNewPoolConfig":"Done",
 "ArfNewPoolImpl":"Done",
-"ArfNewPool":"Done"}
+"ArfNewPool":"Done",
+"BSOSPoolTimelock":"Done",
+"BSOSPoolProxyAdminTimelock":"Done",
+"BSOSPoolFeeManager":"Done",
+"BSOSHDT":"Done",
+"BSOSPoolConfig":"Done",
+"BSOSPool":"Done"}
