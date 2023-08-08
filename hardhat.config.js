@@ -13,12 +13,17 @@ require("hardhat-prettier");
 require("solidity-coverage");
 
 require("hardhat-abi-exporter");
+require("hardhat-celo");
 require("dotenv").config();
 const fs = require("fs");
 
 const EMPTY_URL = "empty url";
 const EMPTY_PRIVATE_KEY = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+let sepoliaUrl = process.env["SEPOLIA_URL"];
+if (!sepoliaUrl) {
+    sepoliaUrl = EMPTY_URL;
+}
 let goerliUrl = process.env["GOERLI_URL"];
 if (!goerliUrl) {
     goerliUrl = EMPTY_URL;
@@ -38,6 +43,10 @@ if (!mainnetUrl) {
 let deployer = process.env["DEPLOYER"];
 if (!deployer) {
     deployer = EMPTY_PRIVATE_KEY;
+}
+let poolTreasury = process.env["POOL_TREASURY"];
+if (!poolTreasury) {
+    poolTreasury = EMPTY_PRIVATE_KEY;
 }
 let proxyOwner = process.env["PROXY_OWNER"];
 if (!proxyOwner) {
@@ -163,21 +172,22 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [
-                deployer,
-                proxyOwner,
-                lender,
-                ea,
-                eaService,
-                pdsService,
-                treasury,
-                ea_bcp,
-                invoicePayer,
-                baseCreditPoolOperator,
-                receivableFactoringPoolOperator,
-                baseCreditPoolOwnerTreasury,
-                receivableFactoringPoolOwnerTreasury,
-            ],
+            accounts: [deployer, eaService, poolTreasury],
+            // accounts: [
+            //     deployer,
+            //     proxyOwner,
+            //     lender,
+            //     ea,
+            //     eaService,
+            //     pdsService,
+            //     treasury,
+            //     ea_bcp,
+            //     invoicePayer,
+            //     baseCreditPoolOperator,
+            //     receivableFactoringPoolOperator,
+            //     baseCreditPoolOwnerTreasury,
+            //     receivableFactoringPoolOwnerTreasury,
+            // ],
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",
@@ -216,11 +226,24 @@ module.exports = {
                 treasury,
                 ea_bcp,
                 invoicePayer,
+                baseCreditPoolOperator,
+                receivableFactoringPoolOperator,
+                baseCreditPoolOwnerTreasury,
+                receivableFactoringPoolOwnerTreasury,
             ],
         },
         matic: {
             url: polygonUrl,
             accounts: [deployer, eaService, pdsService],
+        },
+        alfajores: {
+            url: "https://alfajores-forno.celo-testnet.org",
+            accounts: [deployer, eaService, poolTreasury],
+            chainId: 44787
+          },
+        sepolia: {
+            url: sepoliaUrl,
+            accounts: [deployer, eaService, poolTreasury],
         },
         optimism: {
             url: "https://mainnet.optimism.io",
@@ -362,6 +385,7 @@ module.exports = {
             goerli: process.env.ETHERSCAN_API_KEY || null,
             polygon: process.env.POLYGONSCAN_API_KEY || null,
             mainnet: process.env.ETHERSCAN_API_KEY || null,
+            sepolia: process.env.ETHERSCAN_API_KEY || null,
         },
     },
     contractSizer: {
