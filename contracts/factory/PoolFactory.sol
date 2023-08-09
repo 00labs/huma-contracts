@@ -184,8 +184,8 @@ contract PoolFactory is AccessControl {
         );
     }
 
-    function initializeBaseCreditPool(address _poolAddress) external onlyRole(DEPLOYER_ROLE) {
-        LibPool.initializeBaseCreditPool(_poolAddress, pools[_poolAddress].poolConfig);
+    function initializePool(address _poolAddress) external onlyRole(DEPLOYER_ROLE) {
+        LibPool.initializePool(_poolAddress, pools[_poolAddress].poolConfig);
     }
 
     function createReceivableFactoringPool(
@@ -207,13 +207,6 @@ contract PoolFactory is AccessControl {
             poolConfigAddress
         );
         emit PoolCreated(pool, _poolName);
-    }
-
-    function initializeReceivableFactoringPool(address _poolAddress)
-        external
-        onlyRole(DEPLOYER_ROLE)
-    {
-        LibPool.initializeReceivableFactoringPool(_poolAddress, pools[_poolAddress].poolConfig);
     }
 
     function setHDTImplAddress(address newAddress) external onlyRole(OWNER_ROLE) {
@@ -296,6 +289,9 @@ contract PoolFactory is AccessControl {
         }
         if (LibPoolConfig.owner(pools[_poolAddress].poolConfig) != poolTimeLock) {
             revert("POOL_CONFIG_NOT_INITIALIZED");
+        }
+        if (!LibPool.initialized(_poolAddress)) {
+            revert("POOL_NOT_INITIALIZED");
         }
         PoolStatus oldStatus = pools[_poolAddress].poolStatus;
         pools[_poolAddress].poolStatus = PoolStatus.Initialized;

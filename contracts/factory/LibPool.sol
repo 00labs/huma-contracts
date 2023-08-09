@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../BaseCreditPool.sol";
-import "../ReceivableFactoringPool.sol";
+import "../BasePool.sol";
 import "../openzeppelin/TransparentUpgradeableProxy.sol";
 
 library LibPool {
@@ -15,15 +14,13 @@ library LibPool {
         return address(pool);
     }
 
-    function initializeBaseCreditPool(address _poolAddress, address _poolConfigAddress) public {
-        BaseCreditPool pool = BaseCreditPool(_poolAddress);
+    function initializePool(address _poolAddress, address _poolConfigAddress) public {
+        BasePool pool = BasePool(_poolAddress);
         pool.initialize(_poolConfigAddress);
     }
 
-    function initializeReceivableFactoringPool(address _poolAddress, address _poolConfigAddress)
-        public
-    {
-        ReceivableFactoringPool pool = ReceivableFactoringPool(_poolAddress);
-        pool.initialize(_poolConfigAddress);
+    function initialized(address _poolAddress) public returns (bool) {
+        BasePool pool = BasePool(_poolAddress);
+        return pool.poolConfig() != address(0);
     }
 }

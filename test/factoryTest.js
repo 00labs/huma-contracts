@@ -240,7 +240,7 @@ describe("Huma Config", function () {
             );
         });
         it("Initialize Pool", async function () {
-            await poolFactory.initializeReceivableFactoringPool(
+            await poolFactory.initializePool(
                 poolAddress
             );
         });
