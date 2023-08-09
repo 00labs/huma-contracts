@@ -7,7 +7,7 @@ const {
 
 const fs = require("fs");
 
-const VERIFY_ARGS_PATH = "./deployment/goerli/verify_args/"
+const VERIFY_ARGS_PATH = "./deployment/alfajores/verify_args/"
 
 const HUMA_OWNER_EOA = "0x18A00C3cdb71491eF7c3b890f9df37CB5Ec11D2A";
 const POOL_OWNER_EOA = "0xf9f1f8b93Be684847D8DaF82b1643b2D5BB4419a";
@@ -162,7 +162,6 @@ async function verifyContracts() {
 
     const verifyPoolImpl = await verifyContract('ArfNewPoolImpl');
     console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
-
     const verifyPool = await verifyContract('ArfNewPool',
         [
             `'${deployedContracts['ArfNewPoolImpl']}'`,
@@ -170,6 +169,29 @@ async function verifyContracts() {
             '[]',
         ]);
     console.log(`Verify Pool result: ${verifyPool}`);
+
+    const verifyLibFeeManager = await verifyContract('LibFeeManager');
+    console.log(`Verify LibFeeManager result: ${verifyLibFeeManager}`);
+
+    const verifyLibPoolConfig = await verifyContract('LibPoolConfig');
+    console.log(`Verify LibPoolConfig result: ${verifyLibPoolConfig}`);
+
+    const verifyLibHDT = await verifyContract('LibHDT');
+    console.log(`Verify LibHDT result: ${verifyLibHDT}`);
+
+    const verifyLibPool = await verifyContract('LibPool');
+    console.log(`Verify LibPool result: ${verifyLibPool}`);
+
+    const verifyPoolFactory = await verifyContract('HumaPoolFactory',
+        [
+            `'${HUMA_OWNER_EOA}'`,
+            `'${deployedContracts['HumaConfig']}'`,
+            `'${deployedContracts['ArfNewHDTImpl']}'`,
+            `'${deployedContracts['ArfNewPoolImpl']}'`,
+            `'${deployedContracts['ReceivableFactoringPoolImpl']}'`,
+        ]);
+    console.log(`Verify Pool result: ${verifyPoolFactory}`);
+
 }
 
 verifyContracts()
