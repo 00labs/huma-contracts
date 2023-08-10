@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "../BasePool.sol";
-import "../ReceivableFactoringPool.sol";
 import "../openzeppelin/TransparentUpgradeableProxy.sol";
 
 library LibPool {
@@ -18,5 +17,10 @@ library LibPool {
     function initializePool(address _poolAddress, address _poolConfigAddress) public {
         BasePool pool = BasePool(_poolAddress);
         pool.initialize(_poolConfigAddress);
+    }
+
+    function initialized(address _poolAddress) public view returns (bool) {
+        BasePool pool = BasePool(_poolAddress);
+        return pool.poolConfig() != address(0);
     }
 }

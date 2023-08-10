@@ -292,6 +292,9 @@ contract PoolFactory is AccessControl {
         if (LibPoolConfig.owner(pools[_poolAddress].poolConfig) != poolTimeLock) {
             revert("POOL_CONFIG_NOT_INITIALIZED");
         }
+        if (!LibPool.initialized(_poolAddress)) {
+            revert("POOL_NOT_INITIALIZED");
+        }
         PoolStatus oldStatus = pools[_poolAddress].poolStatus;
         pools[_poolAddress].poolStatus = PoolStatus.Initialized;
         emit PoolStatusUpdated(oldStatus, PoolStatus.Initialized);
