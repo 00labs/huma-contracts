@@ -39,7 +39,8 @@ library LibPoolConfig {
         uint256 EALiquidity,
         uint256 maxCreditLine,
         uint256 _apr,
-        uint256 receivableRequiredInBps
+        uint256 receivableRequiredInBps,
+        address _defaultPoolOperator
     ) public {
         BasePoolConfig poolConfig = BasePoolConfig(_poolConfigAddress);
 
@@ -49,6 +50,7 @@ library LibPoolConfig {
         poolConfig.setMaxCreditLine(maxCreditLine);
         poolConfig.setAPR(_apr);
         poolConfig.setReceivableRequiredInBps(receivableRequiredInBps);
+        poolConfig.addPoolOperator(_defaultPoolOperator);
     }
 
     function transferOwnership(address _poolConfigAddress, address newOwner) public {

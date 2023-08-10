@@ -133,7 +133,7 @@ contract PoolFactory is AccessControl {
         string memory symbol,
         address underlyingToken
     ) external onlyRole(DEPLOYER_ROLE) {
-        LibHDT.initializeHDT(pools[_poolAddress].hdt, name, symbol, underlyingToken);
+        LibHDT.initializeHDT(pools[_poolAddress].hdt, name, symbol, underlyingToken, _poolAddress);
         LibHDT.transferOwnership(pools[_poolAddress].hdt, pools[_poolAddress].poolTimeLock);
     }
 
@@ -146,7 +146,8 @@ contract PoolFactory is AccessControl {
         uint256 EALiquidity,
         uint256 maxCreditLine,
         uint256 _apr,
-        uint256 receivableRequiredInBps
+        uint256 receivableRequiredInBps,
+        address _defaultPoolOperator
     ) external onlyRole(DEPLOYER_ROLE) {
         LibPoolConfig.initializePoolLiquidityConfig(
             pools[_poolAddress].poolConfig,
@@ -157,7 +158,8 @@ contract PoolFactory is AccessControl {
             EALiquidity,
             maxCreditLine,
             _apr,
-            receivableRequiredInBps
+            receivableRequiredInBps,
+            _defaultPoolOperator
         );
         LibPoolConfig.transferOwnership(
             pools[_poolAddress].poolConfig,
@@ -184,8 +186,8 @@ contract PoolFactory is AccessControl {
         );
     }
 
-    function initializeBaseCreditPool(address _poolAddress) external onlyRole(DEPLOYER_ROLE) {
-        LibPool.initializeBaseCreditPool(_poolAddress, pools[_poolAddress].poolConfig);
+    function initializePool(address _poolAddress) external onlyRole(DEPLOYER_ROLE) {
+        LibPool.initializePool(_poolAddress, pools[_poolAddress].poolConfig);
     }
 
     function createReceivableFactoringPool(
@@ -207,13 +209,6 @@ contract PoolFactory is AccessControl {
             poolConfigAddress
         );
         emit PoolCreated(pool, _poolName);
-    }
-
-    function initializeReceivableFactoringPool(address _poolAddress)
-        external
-        onlyRole(DEPLOYER_ROLE)
-    {
-        LibPool.initializeReceivableFactoringPool(_poolAddress, pools[_poolAddress].poolConfig);
     }
 
     function setHDTImplAddress(address newAddress) external onlyRole(OWNER_ROLE) {
