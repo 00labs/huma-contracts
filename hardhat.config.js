@@ -239,6 +239,11 @@ module.exports = {
             accounts: [deployer, eaService],
             chainId: 44787
           },
+        celo: {
+            url: "https://forno.celo.org",
+            accounts: [deployer, eaService],
+            chainId: 42220
+        },
         sepolia: {
             url: sepoliaUrl,
             accounts: [deployer, eaService, poolTreasury],
@@ -385,6 +390,7 @@ module.exports = {
             mainnet: process.env.ETHERSCAN_API_KEY || null,
             sepolia: process.env.ETHERSCAN_API_KEY || null,
             alfajores: process.env.CELOSCAN_API_KEY || null,
+            celo: process.env.CELOSCAN_API_KEY || null,
         },
         // customChains: [
         //     {
