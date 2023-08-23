@@ -117,7 +117,7 @@ describe("Huma Config", function () {
             newBaseCreditPoolImpl = await NewImpl.deploy();
             await poolFactory.connect(protocolOwner).setBaseCredtiPoolImplAddress(newBaseCreditPoolImpl.address);
             await expect(await poolFactory.baseCreditPoolImplAddress()).to.equal(newBaseCreditPoolImpl.address);
-            console.log(await poolFactory.baseCreditPoolImplAddress());
+            // console.log(await poolFactory.baseCreditPoolImplAddress());
         });
         it("Other accounts cannot set new BaseCredtiPoolImpl", async function () {
             const NewImpl = await ethers.getContractFactory("BaseCreditPool");
@@ -125,7 +125,7 @@ describe("Huma Config", function () {
             await expect(
                 poolFactory.setHDTImplAddress(newImpl.address)
                 ).to.be.revertedWith(/AccessControl: account .* is missing role .*/);
-            console.log(await poolFactory.baseCreditPoolImplAddress());
+            // console.log(await poolFactory.baseCreditPoolImplAddress());
         });
         it("Owner can set new receivableFactoringPoolImpl Address", async function () {
             const NewImpl = await ethers.getContractFactory("ReceivableFactoringPool");
@@ -151,7 +151,6 @@ describe("Huma Config", function () {
     });
     describe("Creating pools", function () {
         it("Non-deployer cannot create pools", async function () {
-            console.log(await poolFactory.baseCreditPoolImplAddress());
             await expect(
                 poolFactory.connect(protocolOwner).createBaseCreditPool(
                     'Testing pool',
@@ -202,6 +201,7 @@ describe("Huma Config", function () {
     });
     describe("Initialize pools", function () {
         it("Initialize Fee Manager", async function () {
+            await expect(poolFactory.updatePoolStatus(poolAddress)).to.be.revertedWith("FEE_MANAGER_NOT_INITIALIZED");
             await poolFactory.initializePoolFeeManager(
                 poolAddress,
                 0,
@@ -213,6 +213,7 @@ describe("Huma Config", function () {
             );
         });
         it("Initialize HDT", async function () {
+            await expect(poolFactory.updatePoolStatus(poolAddress)).to.be.revertedWith("HDT_NOT_INITIALIZED");
             await poolFactory.initializeHDT(
                 poolAddress,
                 "Test HDT",
@@ -221,6 +222,7 @@ describe("Huma Config", function () {
             );
         });
         it("Initialize Pool Config", async function () {
+            await expect(poolFactory.updatePoolStatus(poolAddress)).to.be.revertedWith("POOL_CONFIG_NOT_INITIALIZED");
             await poolFactory.initializePoolConfigOne(
                 poolAddress,
                 poolOwner.address,
@@ -236,10 +238,12 @@ describe("Huma Config", function () {
                 0,
                 1000_000_000,
                 1000,
-                0
+                0,
+                deployer.address
             );
         });
         it("Initialize Pool", async function () {
+            await expect(poolFactory.updatePoolStatus(poolAddress)).to.be.revertedWith("POOL_NOT_INITIALIZED");
             await poolFactory.initializePool(
                 poolAddress
             );
@@ -248,7 +252,8 @@ describe("Huma Config", function () {
     describe("Updating pool status", function () {
         it("Pool should be initialized", async function () {
         await poolFactory.updatePoolStatus(poolAddress);
-        console.log(await poolFactory.checkPool(poolAddress));
+        const poolStatus = await poolFactory.checkPool(poolAddress);
+        await expect(poolStatus['poolStatus']).to.equal(1);
         });
     });
 });

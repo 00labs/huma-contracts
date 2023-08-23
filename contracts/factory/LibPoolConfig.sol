@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../BasePoolConfig.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 library LibPoolConfig {
     function addPoolConfig() public returns (address) {
@@ -22,9 +22,7 @@ library LibPoolConfig {
         uint256 withdrawalLockoutPeriod
     ) public {
         BasePoolConfig poolConfig = BasePoolConfig(_poolConfigAddress);
-        console.log("test");
         poolConfig.initialize(_poolName, _hdtAddress, _humaConfigAddress, _feeManagerAddress);
-        console.log("test2");
         poolConfig.setPool(_poolAddress);
         poolConfig.setPoolToken(_hdtAddress);
         poolConfig.setPoolOwnerTreasury(_poolOwnerTreasury);
@@ -41,7 +39,8 @@ library LibPoolConfig {
         uint256 EALiquidity,
         uint256 maxCreditLine,
         uint256 _apr,
-        uint256 receivableRequiredInBps
+        uint256 receivableRequiredInBps,
+        address _defaultPoolOperator
     ) public {
         BasePoolConfig poolConfig = BasePoolConfig(_poolConfigAddress);
 
@@ -51,6 +50,7 @@ library LibPoolConfig {
         poolConfig.setMaxCreditLine(maxCreditLine);
         poolConfig.setAPR(_apr);
         poolConfig.setReceivableRequiredInBps(receivableRequiredInBps);
+        poolConfig.addPoolOperator(_defaultPoolOperator);
     }
 
     function transferOwnership(address _poolConfigAddress, address newOwner) public {

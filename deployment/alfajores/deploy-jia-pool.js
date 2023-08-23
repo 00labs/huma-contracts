@@ -1,7 +1,7 @@
 const {deploy} = require("../utils.js");
 
-const HUMA_OWNER_EOA='0x1e7A60fdc43E70d67A3C81AFAE1e95efC48b681b';
-const POOL_OWNER_EOA='0x242c334d3bd2882515547fFCF2733F3BB3701ACA';
+const HUMA_OWNER_EOA='0x18A00C3cdb71491eF7c3b890f9df37CB5Ec11D2A';
+const POOL_OWNER_EOA='0xf9f1f8b93Be684847D8DaF82b1643b2D5BB4419a';
 
 async function deployContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
@@ -24,36 +24,42 @@ async function deployContracts() {
         [deployer.address],
     ]);
 
+    const HumaProxyAdminTL = await deploy("TimelockController", "HumaProxyAdminTimelock", [
+        0,
+        [HUMA_OWNER_EOA],
+        [deployer.address],
+    ]);
+
     const rwrImpl = await deploy("RealWorldReceivable", "RWReceivableImpl");
     const rwr = await deploy("TransparentUpgradeableProxy", "RWReceivable", [
         rwrImpl.address,
-        humaConfigTL.address,
+        HumaProxyAdminTL.address,
         [],
     ]);
 
-    // const baseCreditPoolTL = await deploy("TimelockController", "ArfPoolTimelock", [
-    //     0,
-    //     [POOL_OWNER_EOA],
-    //     [deployer.address],
-    // ]);
-
-    const baseCreditPoolProxyAdminTL = await deploy("TimelockController", "ArfPoolProxyAdminTimelock", [
+    const baseCreditPoolTL = await deploy("TimelockController", "ArfNewPoolTimelock", [
         0,
         [POOL_OWNER_EOA],
         [deployer.address],
     ]);
 
-    const bc_feeManager = await deploy("BaseFeeManager", "ArfPoolFeeManager");
-    const bc_hdtImpl = await deploy("HDT", "ArfHDTImpl");
-    const bc_hdt = await deploy("TransparentUpgradeableProxy", "ArfHDT", [
+    const baseCreditPoolProxyAdminTL = await deploy("TimelockController", "ArfNewPoolProxyAdminTimelock", [
+        0,
+        [POOL_OWNER_EOA],
+        [deployer.address],
+    ]);
+
+    const bc_feeManager = await deploy("BaseFeeManager", "ArfNewPoolFeeManager");
+    const bc_hdtImpl = await deploy("HDT", "ArfNewHDTImpl");
+    const bc_hdt = await deploy("TransparentUpgradeableProxy", "ArfNewHDT", [
         bc_hdtImpl.address,
         baseCreditPoolProxyAdminTL.address,
         [],
     ]);
-    const bc_poolConfig = await deploy("BasePoolConfig", "ArfPoolConfig");
+    const bc_poolConfig = await deploy("BasePoolConfig", "ArfNewPoolConfig");
 
-    const bc_poolImpl = await deploy("BaseCreditPool", "ArfPoolImpl");
-    const bc_pool = await deploy("TransparentUpgradeableProxy", "ArfPool", [
+    const bc_poolImpl = await deploy("BaseCreditPool", "ArfNewPoolImpl");
+    const bc_pool = await deploy("TransparentUpgradeableProxy", "ArfNewPool", [
         bc_poolImpl.address,
         baseCreditPoolProxyAdminTL.address,
         [],

@@ -19,7 +19,7 @@ library LibPool {
         pool.initialize(_poolConfigAddress);
     }
 
-    function initialized(address _poolAddress) public returns (bool) {
+    function initialized(address _poolAddress) public view returns (bool) {
         BasePool pool = BasePool(_poolAddress);
         return pool.poolConfig() != address(0);
     }

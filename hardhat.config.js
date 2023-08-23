@@ -1,8 +1,7 @@
-require("dotenv").config();
 require("hardhat-contract-sizer");
 
 require("@nomicfoundation/hardhat-chai-matchers");
-require("@tenderly/hardhat-tenderly");
+// require("@tenderly/hardhat-tenderly");
 
 require("hardhat-gas-reporter");
 require("hardhat-abi-exporter");
@@ -12,7 +11,6 @@ require("@nomiclabs/hardhat-etherscan");
 require("hardhat-prettier");
 require("solidity-coverage");
 
-require("hardhat-abi-exporter");
 require("hardhat-celo");
 require("dotenv").config();
 const fs = require("fs");
@@ -238,9 +236,14 @@ module.exports = {
         },
         alfajores: {
             url: "https://alfajores-forno.celo-testnet.org",
-            accounts: [deployer, eaService, poolTreasury],
+            accounts: [deployer, eaService],
             chainId: 44787
           },
+        celo: {
+            url: "https://forno.celo.org",
+            accounts: [deployer, eaService],
+            chainId: 42220
+        },
         sepolia: {
             url: sepoliaUrl,
             accounts: [deployer, eaService, poolTreasury],
@@ -386,7 +389,19 @@ module.exports = {
             polygon: process.env.POLYGONSCAN_API_KEY || null,
             mainnet: process.env.ETHERSCAN_API_KEY || null,
             sepolia: process.env.ETHERSCAN_API_KEY || null,
+            alfajores: process.env.CELOSCAN_API_KEY || null,
+            celo: process.env.CELOSCAN_API_KEY || null,
         },
+        // customChains: [
+        //     {
+        //       network: "alfajores",
+        //       chainId: 44787,
+        //       urls: {
+        //         apiURL: "https://api-alfajores.celoscan.io/api",
+        //         browserURL: "https://alfajores.celoscan.io/"
+        //       }
+        //     }
+        //   ]
     },
     contractSizer: {
         alphaSort: true,

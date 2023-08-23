@@ -18,10 +18,12 @@ library LibHDT {
         address _hdtAddress,
         string memory name,
         string memory symbol,
-        address underlyingToken
+        address underlyingToken,
+        address _poolAddress
     ) public {
         HDT hdt = HDT(_hdtAddress);
         hdt.initialize(name, symbol, underlyingToken);
+        hdt.setPool(_poolAddress);
     }
 
     function transferOwnership(address _hdtAddress, address newOwner) public {

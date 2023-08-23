@@ -7,9 +7,10 @@ const {
 
 let deployer, eaService;
 
-const PDSServiceAccount = "0x4b2ea800c9791ea68faa284a69ac0df226eafa2b"
-const treasuryAccount = "0x37f3591F7Ee1D53Ea445b710e6310FF3F92D5446"
-// const poolTreasury = "0x942836828c2fbb046CE8C944d61143a0cE3608A5"
+const PDSServiceAccount = "0x4388fDAF0Ae0F3B843882fF299E87e127c49A74c"
+const treasuryAccount = "0xABd48A580F66ad5Ad0Fe983968De686F408c88EE"
+const cUSD_ADDRESS = "0x765DE816845861e75A25fCA122bb6898B8B1282a";
+// const poolTreasury = "0xf9f1f8b93Be684847D8DaF82b1643b2D5BB4419a"
 
 async function transferOwnershipToTL(contractName, contractKey, timeLockKey) {
     if (!deployedContracts[timeLockKey]) {
@@ -50,9 +51,9 @@ async function initHumaConfig() {
         throw new Error("EANFT not deployed yet!");
     }
 
-    if (!deployedContracts["USDC"]) {
-        throw new Error("USDC not deployed yet!");
-    }
+    // if (!deployedContracts["USDC"]) {
+    //     throw new Error("USDC not deployed yet!");
+    // }
 
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
@@ -68,16 +69,16 @@ async function initHumaConfig() {
     await sendTransaction("HumaConfig", humaConfig, "setEAServiceAccount", [eaService.address]);
     await sendTransaction("HumaConfig", humaConfig, "setPDSServiceAccount", [PDSServiceAccount]);
 
-    const USDC = await hre.ethers.getContractFactory("TestToken");
-    const usdc = USDC.attach(deployedContracts["USDC"]);
+    // const USDC = await hre.ethers.getContractFactory("TestToken");
+    // const usdc = USDC.attach(deployedContracts["USDC"]);
 
     // Add usdc as an asset supported by the protocol
-    await sendTransaction("HumaConfig", humaConfig, "setLiquidityAsset", [usdc.address, true]);
+    await sendTransaction("HumaConfig", humaConfig, "setLiquidityAsset", [cUSD_ADDRESS, true]);
 
     // Set treasury for the protocol
     await sendTransaction("HumaConfig", humaConfig, "setHumaTreasury", [treasuryAccount]);
 
-    await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock")
+    // await transferOwnershipToTL("HumaConfig", "HumaConfig", "HumaConfigTimelock")
 
     await updateInitilizedContract("HumaConfig");
 }
@@ -104,110 +105,110 @@ async function initEA() {
 }
 
 async function initBaseCreditPoolFeeManager() {
-    const initilized = await getInitilizedContract("ArfPoolFeeManager");
+    const initilized = await getInitilizedContract("ArfNewPoolFeeManager");
     if (initilized) {
-        console.log("ArfPoolFeeManager is already initialized!");
+        console.log("ArfNewPoolFeeManager is already initialized!");
         return;
     }
 
-    if (!deployedContracts["ArfPoolFeeManager"]) {
-        throw new Error("ArfPoolFeeManager not deployed yet!");
+    if (!deployedContracts["ArfNewPoolFeeManager"]) {
+        throw new Error("ArfNewPoolFeeManager not deployed yet!");
     }
 
     const BaseFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
-    const feeManager = BaseFeeManager.attach(deployedContracts["ArfPoolFeeManager"]);
+    const feeManager = BaseFeeManager.attach(deployedContracts["ArfNewPoolFeeManager"]);
 
     await sendTransaction(
-        "ArfPoolFeeManager",
+        "ArfNewPoolFeeManager",
         feeManager,
         "setFees",
-        [10_000_000, 0, 20_000_000, 0, 0]
+        [0, 0, 0, 0, 0]
     );
-    // await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
+    await sendTransaction("FeeManager", feeManager, "setMinPrincipalRateInBps", [0]);
     
-    // await transferOwnershipToTL("BaseFeeManager", "ArfPoolFeeManager", "ArfPoolTimelock");
+    await transferOwnershipToTL("BaseFeeManager", "ArfNewPoolFeeManager", "ArfNewPoolTimelock");
 
-    await updateInitilizedContract("ArfPoolFeeManager");
+    await updateInitilizedContract("ArfNewPoolFeeManager");
 }
 
 async function initBaseCreditPoolHDT() {
-    const initilized = await getInitilizedContract("ArfHDT");
+    const initilized = await getInitilizedContract("ArfNewHDT");
     if (initilized) {
-        console.log("ArfHDT is already initialized!");
+        console.log("ArfNewHDT is already initialized!");
         return;
     }
 
-    if (!deployedContracts["ArfHDT"]) {
-        throw new Error("ArfHDT not deployed yet!");
+    if (!deployedContracts["ArfNewHDT"]) {
+        throw new Error("ArfNewHDT not deployed yet!");
     }
 
     const HDT = await hre.ethers.getContractFactory("HDT");
-    const hdt = HDT.attach(deployedContracts["ArfHDT"]);
+    const hdt = HDT.attach(deployedContracts["ArfNewHDT"]);
 
-    if (!deployedContracts["USDC"]) {
-        throw new Error("USDC not deployed yet!");
-    }
+    // if (!deployedContracts["USDC"]) {
+    //     throw new Error("USDC not deployed yet!");
+    // }
 
-    if (!deployedContracts["ArfPool"]) {
-        throw new Error("ArfPool not deployed yet!");
+    if (!deployedContracts["ArfNewPool"]) {
+        throw new Error("ArfNewPool not deployed yet!");
     }
 
     await sendTransaction("HDT", hdt, "initialize", [
-        "Arf HDT",
+        "Arf new HDT",
         "AHDT",
-        deployedContracts["USDC"],
+        cUSD_ADDRESS,
     ]);
 
-    await sendTransaction("HDT", hdt, "setPool", [deployedContracts["ArfPool"]]);
+    await sendTransaction("HDT", hdt, "setPool", [deployedContracts["ArfNewPool"]]);
     
-    // await transferOwnershipToTL("HDT", "ArfHDT", "ArfPoolTimelock");
+    // await transferOwnershipToTL("HDT", "ArfNewHDT", "ArfNewPoolTimelock");
 
-    await updateInitilizedContract("ArfHDT");
+    await updateInitilizedContract("ArfNewHDT");
 }
 
 async function initBaseCreditPoolConfig() {
-    const initilized = await getInitilizedContract("ArfPoolConfig");
+    const initilized = await getInitilizedContract("ArfNewPoolConfig");
     if (initilized) {
-        console.log("ArfPoolConfig is already initialized!");
+        console.log("ArfNewPoolConfig is already initialized!");
         return;
     }
 
-    if (!deployedContracts["ArfPoolConfig"]) {
-        throw new Error("ArfPoolConfig not deployed yet!");
+    if (!deployedContracts["ArfNewPoolConfig"]) {
+        throw new Error("ArfNewPoolConfig not deployed yet!");
     }
 
     const ReceivableFactoringPoolConfig = await hre.ethers.getContractFactory("BasePoolConfig");
     const poolConfig = ReceivableFactoringPoolConfig.attach(
-        deployedContracts["ArfPoolConfig"]
+        deployedContracts["ArfNewPoolConfig"]
     );
 
-    if (!deployedContracts["ArfPool"]) {
-        throw new Error("ArfPool not deployed yet!");
+    if (!deployedContracts["ArfNewPool"]) {
+        throw new Error("ArfNewPool not deployed yet!");
     }
 
-    if (!deployedContracts["ArfHDT"]) {
-        throw new Error("ArfHDT not deployed yet!");
+    if (!deployedContracts["ArfNewHDT"]) {
+        throw new Error("ArfNewHDT not deployed yet!");
     }
 
     if (!deployedContracts["HumaConfig"]) {
         throw new Error("HumaConfig not deployed yet!");
     }
 
-    if (!deployedContracts["ArfPoolFeeManager"]) {
-        throw new Error("ArfPoolFeeManager not deployed yet!");
+    if (!deployedContracts["ArfNewPoolFeeManager"]) {
+        throw new Error("ArfNewPoolFeeManager not deployed yet!");
     }
 
     const HDT = await hre.ethers.getContractFactory("HDT");
-    const hdt = HDT.attach(deployedContracts["ArfHDT"]);
+    const hdt = HDT.attach(deployedContracts["ArfNewHDT"]);
 
     const HumaConfig = await hre.ethers.getContractFactory("HumaConfig");
     const humaConfig = HumaConfig.attach(deployedContracts["HumaConfig"]);
 
     const BaseFeeManager = await hre.ethers.getContractFactory("BaseFeeManager");
-    const feeManager = BaseFeeManager.attach(deployedContracts["ArfPoolFeeManager"]);
+    const feeManager = BaseFeeManager.attach(deployedContracts["ArfNewPoolFeeManager"]);
 
-    await sendTransaction("ArfPoolConfig", poolConfig, "initialize", [
-        "ArfPool",
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "initialize", [
+        "ArfNewPool",
         hdt.address,
         humaConfig.address,
         feeManager.address,
@@ -217,74 +218,76 @@ async function initBaseCreditPoolConfig() {
     console.log("decimals: " + BigInt(decimals));
     const cap = BigInt(1_000_000)*(BigInt(10)**(BigInt(decimals)));
     console.log("cap: " + cap);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setPoolLiquidityCap", [cap]);
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setPoolLiquidityCap", [cap]);
 
-    await sendTransaction("ArfPoolConfig", poolConfig, "setPool", [
-        deployedContracts["ArfPool"],
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setPool", [
+        deployedContracts["ArfNewPool"],
     ]);
 
     await sendTransaction(
-        "ArfPoolConfig",
+        "ArfNewPoolConfig",
         poolConfig,
         "setPoolOwnerRewardsAndLiquidity",
-        [500, 200]
+        [0, 0]
     );
     await sendTransaction(
-        "ArfPoolConfig",
+        "ArfNewPoolConfig",
         poolConfig,
         "setEARewardsAndLiquidity",
         [0, 0]
     );
 
-    // await sendTransaction("ArfPoolConfig", poolConfig, "setEvaluationAgent", [
-    //     1,
-    //     deployer.address,
-    // ]);
+    // // await sendTransaction("ArfPoolConfig", poolConfig, "setEvaluationAgent", [
+    // //     1,
+    // //     deployer.address,
+    // // ]);
   
-    const maxCL = BigInt(10_000)*(BigInt(10)**(BigInt(decimals)));
+    const maxCL = BigInt(1_000_000)*(BigInt(10)**(BigInt(decimals)));
     console.log("maxCL: " + maxCL);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setMaxCreditLine", [maxCL]);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setAPR", [1000]);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setReceivableRequiredInBps", [0]);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setPoolPayPeriod", [15]);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setPoolToken", [
-        deployedContracts["ArfHDT"],
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setMaxCreditLine", [maxCL]);
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setAPR", [1300]);
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setReceivableRequiredInBps", [0]);
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setPoolPayPeriod", [30]);
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setPoolToken", [
+        deployedContracts["ArfNewHDT"],
     ]);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [0]);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
-    await sendTransaction("ArfPoolConfig", poolConfig, "addPoolOperator", [deployer.address]);
-    await sendTransaction("ArfPoolConfig", poolConfig, "setPoolOwnerTreasury", [poolTreasury.address]);
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [30]);
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [10]);
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "addPoolOperator", [deployer.address]);
 
-    await sendTransaction("ArfPoolConfig", poolConfig, "setCreditApprovalExpiration", [30]);
+
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setPoolOwnerTreasury", [poolTreasury]);
+
+    await sendTransaction("ArfNewPoolConfig", poolConfig, "setCreditApprovalExpiration", [10]);
     
-    // await transferOwnershipToTL("BasePoolConfig", "ArfPoolConfig", "ArfPoolTimelock");
+    // await transferOwnershipToTL("BasePoolConfig", "ArfNewPoolConfig", "ArfNewPoolTimelock");
 
-    await updateInitilizedContract("ArfPoolConfig");
+    await updateInitilizedContract("ArfNewPoolConfig");
 }
 
 async function initBaseCreditPool() {
-    const initilized = await getInitilizedContract("ArfPool");
+    const initilized = await getInitilizedContract("ArfNewPool");
     if (initilized) {
-        console.log("ArfPool is already initialized!");
+        console.log("ArfNewPool is already initialized!");
         return;
     }
 
-    if (!deployedContracts["ArfPool"]) {
-        throw new Error("ArfPool not deployed yet!");
+    if (!deployedContracts["ArfNewPool"]) {
+        throw new Error("ArfNewPool not deployed yet!");
     }
 
-    if (!deployedContracts["ArfPoolConfig"]) {
-        throw new Error("ArfPoolConfig not deployed yet!");
+    if (!deployedContracts["ArfNewPoolConfig"]) {
+        throw new Error("ArfNewPoolConfig not deployed yet!");
     }
 
     const ReceivableFactoringPool = await hre.ethers.getContractFactory("BaseCreditPool");
-    const pool = ReceivableFactoringPool.attach(deployedContracts["ArfPool"]);
+    const pool = ReceivableFactoringPool.attach(deployedContracts["ArfNewPool"]);
 
-    await sendTransaction("ArfPool", pool, "initialize", [
-        deployedContracts["ArfPoolConfig"],
+    await sendTransaction("ArfNewPool", pool, "initialize", [
+        deployedContracts["ArfNewPoolConfig"],
     ]);
 
-    await updateInitilizedContract("ArfPool");
+    await updateInitilizedContract("ArfNewPool");
 }
 
 async function initRWR() {
@@ -308,31 +311,31 @@ async function initRWR() {
 
 async function prepareBaseCreditPool() {
     // The operations commented off need to run with TL on Defender
-    if (!deployedContracts["ArfPool"]) {
-        throw new Error("ArfPool not deployed yet!");
+    if (!deployedContracts["ArfNewPool"]) {
+        throw new Error("ArfNewPool not deployed yet!");
     }
-    if (!deployedContracts["USDC"]) {
-        throw new Error("USDC not deployed yet!");
-    }
+    // if (!deployedContracts["USDC"]) {
+    //     throw new Error("USDC not deployed yet!");
+    // }
 
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
-    const pool = BaseCreditPool.attach(deployedContracts["ArfPool"])
+    const pool = BaseCreditPool.attach(deployedContracts["ArfNewPool"])
     // const poolFrombcpOperator = pool.connect(bcpOperator);
 
-    // await sendTransaction("ArfPool", pool, "addApprovedLender", [deployer.address]);
-    // // await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [ea_bcp.address]);
-    // // await sendTransaction("ArfPool", poolFrombcpOperator, "addApprovedLender", [lender.address]);
-    // await sendTransaction("ArfPool", pool, "addApprovedLender", [poolTreasury.address]);
+    // await sendTransaction("ArfNewPool", pool, "addApprovedLender", [deployer.address]);
+    // // await sendTransaction("ArfNewPool", poolFrombcpOperator, "addApprovedLender", [ea_bcp.address]);
+    // // await sendTransaction("ArfNewPool", poolFrombcpOperator, "addApprovedLender", [lender.address]);
+    // await sendTransaction("ArfNewPool", pool, "addApprovedLender", [poolTreasury]);
 
-    const USDC = await hre.ethers.getContractFactory("TestToken");
-    const usdc = USDC.attach(deployedContracts["USDC"]);
-    const decimals = await usdc.decimals();
+    // const USDC = await hre.ethers.getContractFactory("TestToken");
+    // const usdc = USDC.attach(deployedContracts["USDC"]);
+    // const decimals = await usdc.decimals();
 
     // Owner
-    const usdcFromPoolOwnerTreasury = await usdc.connect(poolTreasury);
-    const poolFromPoolOwnerTreasury = await pool.connect(poolTreasury);
-    const amountOwner = BigInt(20_000)*(BigInt(10)**(BigInt(decimals)));
-    console.log("owner to deposit: " + amountOwner);
+    // const usdcFromPoolOwnerTreasury = await usdc.connect(poolTreasury);
+    // const poolFromPoolOwnerTreasury = await pool.connect(poolTreasury);
+    // const amountOwner = BigInt(20_000)*(BigInt(10)**(BigInt(decimals)));
+    // console.log("owner to deposit: " + amountOwner);
     // await sendTransaction("TestToken", usdc, "mint", [poolTreasury.address, amountOwner]);
     // await sendTransaction("TestToken", usdcFromPoolOwnerTreasury, "approve", [pool.address, amountOwner]);
     // await sendTransaction("ArfPool", poolFromPoolOwnerTreasury, "makeInitialDeposit", [amountOwner]);
@@ -354,22 +357,22 @@ async function initContracts() {
     const accounts = await hre.ethers.getSigners();
     let invoicePayer;
     [
-        deployer, eaService, poolTreasury
+        deployer, eaService  //, poolTreasury
     ] = await accounts;
     console.log("deployer address: " + deployer.address);
-    console.log("ea address: " + eaService.address);
+    // console.log("ea address: " + eaService.address);
 
     deployedContracts = await getDeployedContracts();
     
     await initHumaConfig();
-    await initEA();
-    await initBaseCreditPoolFeeManager();
-    await initBaseCreditPoolHDT();
-    await initBaseCreditPoolConfig();
-    await initBaseCreditPool();
+    // await initEA();
+    // await initBaseCreditPoolFeeManager();
+    // await initBaseCreditPoolHDT();
+    // await initBaseCreditPoolConfig();
+    // await initBaseCreditPool();
     await initRWR();
 
-    await prepareBaseCreditPool();
+    // await prepareBaseCreditPool();
     
 }
 
