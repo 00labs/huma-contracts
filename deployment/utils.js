@@ -2,8 +2,8 @@ const {BigNumber: BN, ethers} = require("ethers");
 const fs = require("fs");
 const DEPLOYED_PATH = "./deployment/";
 
-const MAX_FEE_PER_GAS = 5_000_000_000;
-const MAX_PRIORITY_FEE_PER_GAS = 0;
+const MAX_FEE_PER_GAS = 175_000_000_000;
+const MAX_PRIORITY_FEE_PER_GAS = 50_000_000_000;
 
 const getContractAddressFile = async function (fileType = "deployed", network) {
     if (!network) {
