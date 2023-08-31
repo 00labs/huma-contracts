@@ -18,5 +18,17 @@
     "BaseCreditHDT": "0x73c16Db24951135BC8A628185BdbfA79115793E5",
     "BaseCreditPoolConfig": "0x39f7D6040EC30B62c508723e2EDb822413837527",
     "BaseCreditPoolImpl": "0xb9Cb48e53bf4728C316f9b876281927BE792A02D",
-    "BaseCreditPool": "0xAb3dc5221F373Dd879BEc070058c775A0f6Af759"
+    "BaseCreditPool": "0xAb3dc5221F373Dd879BEc070058c775A0f6Af759",
+    "SuperfluidFactoringPoolTimelock": "0xB37274ad1398FAF6daA2A1be4F1098C0F17EB72c",
+    "SuperfluidFactoringPoolProxyAdminTimelock": "0x9b8Ae37408A3A23008Ae3D54F3A17e591ecc8f8D",
+    "SuperfluidFactoringPoolFeeManager": "0xd5FD3F917cf8901BeB102d81504033C748c87F19",
+    "SuperfluidPoolHDTImpl": "0xeAF1Ccf4BCd1EED093c325e789575779D5e1Df5f",
+    "SuperfluidPoolHDT": "0xe3b9dC648BD35dd4ac8267468e91181810A35B60",
+    "SuperfluidFactoringPoolConfig": "0x22C024496036A8e97F93E14efa0d8379192bb22c",
+    "SuperfluidFactoringPoolImpl": "0x2749d2c507940484685bB63659DD1b01e4B1CaF8",
+    "SuperfluidFactoringPool": "0xF713B5203Cb6f3223830De218c2ed89Ee654b94B",
+    "SuperfluidProcessorImpl": "0xBbdD65fed81b0F93477ea95dd39684DFbB078a34",
+    "SuperfluidProcessor": "0x6E2f33b6d3F1E2048d078984f7FFF847C0Ed3bEd",
+    "SuperfluidTradableStream": "0xa8B0362cfE0c8e4fd1D74c3512348d6f48d71080",
+    "Multisend": "0xDa21D2Be30353EC6Aa5AcD37999806cCefaa4C6A"
 }

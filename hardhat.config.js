@@ -216,18 +216,18 @@ module.exports = {
                 mnemonic: mnemonic(),
             },
         },
-        polygon: {
-            url: polygonUrl,
-            accounts: [deployer, eaService],
-        },
+        // polygon: {
+        //     url: polygonUrl,
+        //     accounts: [deployer, eaService],
+        // },
         matic: {
             url: polygonUrl,
-            accounts: [deployer, eaService, pdsService],
-        },
-        mumbai: {
-            url: mumbaiUrl,
             accounts: [deployer, eaService],
         },
+        // mumbai: {
+        //     url: mumbaiUrl,
+        //     accounts: [deployer, eaService],
+        // },
         maticmum: {
             url: mumbaiUrl,
             accounts: [
