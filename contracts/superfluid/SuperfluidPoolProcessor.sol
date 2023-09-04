@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {ISuperToken} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
+import {ISuperfluid, ISuperToken, SuperAppDefinitions} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
 import {IConstantFlowAgreementV1} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
 import {SuperAppBase} from "@superfluid-finance/ethereum-contracts/contracts/apps/SuperAppBase.sol";
 
@@ -54,6 +54,14 @@ contract SuperfluidPoolProcessor is
         address receivableAsset,
         uint256 receivableId
     );
+
+    // constructor(ISuperfluid _host, string memory registrationKey) {
+    //     uint256 configWord = SuperAppDefinitions.APP_LEVEL_FINAL |
+    //         SuperAppDefinitions.BEFORE_AGREEMENT_CREATED_NOOP |
+    //         SuperAppDefinitions.BEFORE_AGREEMENT_UPDATED_NOOP |
+    //         SuperAppDefinitions.BEFORE_AGREEMENT_TERMINATED_NOOP;
+    //     _host.registerAppWithKey(configWord, registrationKey);
+    // }
 
     function initialize(
         address _pool,
