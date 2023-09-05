@@ -406,7 +406,9 @@ describe("Superfluid Factoring", function () {
         // console.log(`payer ${payer.address} usdc balance: ${await usdc.balanceOf(payer.address)}`);
         await usdc.connect(payer).approve(usdcx.address, toUSDC(1_000_000));
 
-        const sfRegisterContractFactory = await ethers.getContractFactory("MockSuperAppRegister");
+        const sfRegisterContractFactory = await ethers.getContractFactory(
+            "SuperfluidSuperAppRegister"
+        );
         sfRegisterContract = await sfRegisterContractFactory.deploy(sfHostAddress);
         await sfRegisterContract.deployed();
 
@@ -2104,6 +2106,20 @@ describe("Superfluid Factoring", function () {
                 nftContract.address,
                 calldata
             );
+        });
+
+        describe("SuperApp register", function () {
+            it("Should revert if not the owner", async function () {
+                await expect(
+                    sfRegisterContract.connect(poolOwner).register(poolProcessorContract.address)
+                ).to.be.revertedWith("Ownable: caller is not the owner");
+            });
+
+            it("Should send SuperAppRegistered event after register", async function () {
+                await expect(sfRegisterContract.register(poolConfigContract.address))
+                    .to.emit(sfRegisterContract, "SuperAppRegistered")
+                    .withArgs(poolConfigContract.address);
+            });
         });
 
         describe("flow is terminated", function () {
