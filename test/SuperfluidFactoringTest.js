@@ -2115,10 +2115,14 @@ describe("Superfluid Factoring", function () {
                 ).to.be.revertedWith("Ownable: caller is not the owner");
             });
 
-            it("Should send SuperAppRegistered event after register", async function () {
+            it("Should be registered and send SuperAppRegistered event after register", async function () {
                 await expect(sfRegisterContract.register(poolConfigContract.address))
                     .to.emit(sfRegisterContract, "SuperAppRegistered")
                     .withArgs(poolConfigContract.address);
+
+                expect(await sfRegisterContract.isSuperApp(poolConfigContract.address)).to.equal(
+                    true
+                );
             });
         });
 

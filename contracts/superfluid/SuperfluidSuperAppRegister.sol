@@ -13,6 +13,10 @@ contract SuperfluidSuperAppRegister is Ownable {
         host = _host;
     }
 
+    /**
+     * @dev Declares app as a super app
+     * @param superApp Super app address
+     */
     function register(ISuperApp superApp) external onlyOwner {
         uint256 configWord = SuperAppDefinitions.APP_LEVEL_FINAL |
             SuperAppDefinitions.BEFORE_AGREEMENT_CREATED_NOOP |
@@ -22,5 +26,13 @@ contract SuperfluidSuperAppRegister is Ownable {
         host.registerAppByFactory(superApp, configWord);
 
         emit SuperAppRegistered(address(superApp));
+    }
+
+    /**
+     * @dev Query if the app is registered
+     * @param app Super app address
+     */
+    function isSuperApp(ISuperApp app) external view returns (bool) {
+        return host.isApp(ISuperApp(app));
     }
 }

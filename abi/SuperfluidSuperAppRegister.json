@@ -56,6 +56,25 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "contract ISuperApp",
+        "name": "app",
+        "type": "address"
+      }
+    ],
+    "name": "isSuperApp",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "owner",
     "outputs": [
