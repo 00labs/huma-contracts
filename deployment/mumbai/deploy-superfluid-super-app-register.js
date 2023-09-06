@@ -15,9 +15,11 @@ async function deployContracts() {
     const eaService = await accounts[4];
     console.log("ea service address: " + eaService.address);
 
-    const MockSuperAppRegister = await deploy("MockSuperAppRegister", "MockSuperAppRegister", [
-        MUMBAI_SF_HOST_ADDRESS,
-    ]);
+    const SuperfluidSuperAppRegister = await deploy(
+        "SuperfluidSuperAppRegister",
+        "SuperfluidSuperAppRegister",
+        [MUMBAI_SF_HOST_ADDRESS]
+    );
 }
 
 deployContracts()

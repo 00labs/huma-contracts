@@ -83,10 +83,10 @@ async function verifyContracts() {
         throw new Error("Accounts not set!");
     }
 
-    const verifyMockSuperAppRegister = await verifyContract("MockSuperAppRegister", [
+    const verifySuperfluidSuperAppRegister = await verifyContract("SuperfluidSuperAppRegister", [
         `'${MUMBAI_SF_HOST_ADDRESS}'`,
     ]);
-    console.log(`Verify MockSuperAppRegister result: ${verifyMockSuperAppRegister}`);
+    console.log(`Verify SuperfluidSuperAppRegister result: ${verifySuperfluidSuperAppRegister}`);
 }
 
 verifyContracts()

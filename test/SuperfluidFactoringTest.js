@@ -406,7 +406,9 @@ describe("Superfluid Factoring", function () {
         // console.log(`payer ${payer.address} usdc balance: ${await usdc.balanceOf(payer.address)}`);
         await usdc.connect(payer).approve(usdcx.address, toUSDC(1_000_000));
 
-        const sfRegisterContractFactory = await ethers.getContractFactory("MockSuperAppRegister");
+        const sfRegisterContractFactory = await ethers.getContractFactory(
+            "SuperfluidSuperAppRegister"
+        );
         sfRegisterContract = await sfRegisterContractFactory.deploy(sfHostAddress);
         await sfRegisterContract.deployed();
 
@@ -1295,9 +1297,6 @@ describe("Superfluid Factoring", function () {
 
             res = await poolProcessorContract.streamInfoMapping(streamId);
             const dueDate = ts + streamDuration;
-<<<<<<< HEAD
-            checkResults(res, [borrower.address, flowrate, ts, dueDate, 0, flowKey]);
-=======
             checkResults(res, [
                 borrower.address,
                 flowrate,
@@ -1307,7 +1306,6 @@ describe("Superfluid Factoring", function () {
                 0,
                 flowKey,
             ]);
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
             const cr = await poolContract.creditRecordMapping(borrower.address);
             const crs = await poolContract.creditRecordStaticMapping(borrower.address);
             // printRecord(cr, crs);
@@ -1524,9 +1522,6 @@ describe("Superfluid Factoring", function () {
                 ["address", "bytes32"],
                 [usdcx.address, flowId]
             );
-<<<<<<< HEAD
-            checkResults(res, [borrower.address, flowrate, ts, dueDate, 0, flowKey]);
-=======
             checkResults(res, [
                 borrower.address,
                 flowrate,
@@ -1536,7 +1531,6 @@ describe("Superfluid Factoring", function () {
                 0,
                 flowKey,
             ]);
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
             const cr = await poolContract.creditRecordMapping(borrower.address);
             const crs = await poolContract.creditRecordStaticMapping(borrower.address);
             checkRecord(
@@ -1753,10 +1747,7 @@ describe("Superfluid Factoring", function () {
             checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                 ethers.constants.AddressZero,
                 0,
-<<<<<<< HEAD
-=======
                 ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                 0,
                 0,
                 0,
@@ -1889,10 +1880,7 @@ describe("Superfluid Factoring", function () {
             checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                 ethers.constants.AddressZero,
                 0,
-<<<<<<< HEAD
-=======
                 ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                 0,
                 0,
                 0,
@@ -2020,10 +2008,7 @@ describe("Superfluid Factoring", function () {
             checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                 ethers.constants.AddressZero,
                 0,
-<<<<<<< HEAD
-=======
                 ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                 0,
                 0,
                 0,
@@ -2121,6 +2106,24 @@ describe("Superfluid Factoring", function () {
                 nftContract.address,
                 calldata
             );
+        });
+
+        describe("SuperApp register", function () {
+            it("Should revert if not the owner", async function () {
+                await expect(
+                    sfRegisterContract.connect(poolOwner).register(poolProcessorContract.address)
+                ).to.be.revertedWith("Ownable: caller is not the owner");
+            });
+
+            it("Should be registered and send SuperAppRegistered event after register", async function () {
+                await expect(sfRegisterContract.register(poolConfigContract.address))
+                    .to.emit(sfRegisterContract, "SuperAppRegistered")
+                    .withArgs(poolConfigContract.address);
+
+                expect(await sfRegisterContract.isSuperApp(poolConfigContract.address)).to.equal(
+                    true
+                );
+            });
         });
 
         describe("flow is terminated", function () {
@@ -2506,9 +2509,6 @@ describe("Superfluid Factoring", function () {
 
                     res = await poolProcessorContract.streamInfoMapping(streamId);
                     const dueDate = ts + streamDuration;
-<<<<<<< HEAD
-                    checkResults(res, [borrower1.address, flowrate, ts, dueDate, 0, flowKey]);
-=======
                     checkResults(res, [
                         borrower1.address,
                         flowrate,
@@ -2518,7 +2518,6 @@ describe("Superfluid Factoring", function () {
                         0,
                         flowKey,
                     ]);
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                     let cr = await poolContract.creditRecordMapping(borrower1.address);
                     let crs = await poolContract.creditRecordStaticMapping(borrower1.address);
                     // printRecord(cr, crs);
@@ -2870,10 +2869,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
-<<<<<<< HEAD
-=======
                         ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -3099,10 +3095,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
-<<<<<<< HEAD
-=======
                         ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -3209,10 +3202,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
-<<<<<<< HEAD
-=======
                         ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -3697,10 +3687,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         borrower.address,
                         afterSI.flowrate,
-<<<<<<< HEAD
-=======
                         usdcx.address,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         afterSI.endTime,
                         afterSI.endTime,
                         0,
@@ -3761,10 +3748,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
-<<<<<<< HEAD
-=======
                         ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -3931,10 +3915,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         borrower.address,
                         afterSI.flowrate,
-<<<<<<< HEAD
-=======
                         usdcx.address,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         afterSI.endTime,
                         afterSI.endTime,
                         0,
@@ -3986,10 +3967,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         borrower.address,
                         afterSI.flowrate,
-<<<<<<< HEAD
-=======
                         usdcx.address,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         afterSI.endTime,
                         afterSI.endTime,
                         0,
@@ -4031,10 +4009,7 @@ describe("Superfluid Factoring", function () {
                     checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                         ethers.constants.AddressZero,
                         0,
-<<<<<<< HEAD
-=======
                         ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                         0,
                         0,
                         0,
@@ -4447,10 +4422,7 @@ describe("Superfluid Factoring", function () {
             checkResults(await poolProcessorContract.streamInfoMapping(streamId), [
                 ethers.constants.AddressZero,
                 0,
-<<<<<<< HEAD
-=======
                 ethers.constants.AddressZero,
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
                 0,
                 0,
                 0,
@@ -4470,11 +4442,7 @@ describe("Superfluid Factoring", function () {
             expect(await poolProcessorContract.flowEndMapping(flowKey)).to.equal(0);
         });
 
-<<<<<<< HEAD
-        it("Should pay off correctly if the flow was terminated", async function () {
-=======
         it("Should pay off correctly while the flow was terminated", async function () {
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
             await sfRegisterContract.register(poolProcessorContract.address);
 
             let balance = await usdc.balanceOf(borrower.address);
@@ -4582,8 +4550,6 @@ describe("Superfluid Factoring", function () {
                 0
             );
         });
-<<<<<<< HEAD
-=======
 
         it("Should pay off correctly while the tradable was burned", async function () {
             let cr = await poolContract.creditRecordMapping(borrower.address);
@@ -4796,6 +4762,5 @@ describe("Superfluid Factoring", function () {
                 0
             );
         });
->>>>>>> dc28c86e1d11e7dd046d329b9ba90bf0e7e24045
     });
 });
