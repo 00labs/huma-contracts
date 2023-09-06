@@ -3,10 +3,11 @@
 "HumaConfigTimelock":"Done",
 "RWReceivableImpl":"Done",
 "RWReceivable":"Done",
-"ArfPoolFeeManager":"Done",
 "HDTImpl":"Done",
-"ArfHDT":"Done",
-"ArfPoolConfig":"Done",
 "BaseCreditPoolImpl":"Done",
-"ArfPool":"Done",
-"USDC":"Done"}
+"ReceivableFactoringPoolImpl":"Done",
+"LibFeeManager":"Done",
+"LibPoolConfig":"Done",
+"LibHDT":"Done",
+"LibPool":"Done",
+"HumaPoolFactory":"Done"}

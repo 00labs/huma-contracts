@@ -212,22 +212,18 @@ module.exports = {
             url: polygonUrl,
             accounts: [deployer, eaService],
         },
-        mumbai: {
+        polygonMumbai: {
             url: mumbaiUrl,
             accounts: [
                 deployer,
-                proxyOwner,
-                lender,
-                ea,
                 eaService,
-                pdsService,
-                treasury,
-                ea_bcp,
-                invoicePayer,
-                baseCreditPoolOperator,
-                receivableFactoringPoolOperator,
-                baseCreditPoolOwnerTreasury,
-                receivableFactoringPoolOwnerTreasury,
+            ],
+        },
+        maticmum: {
+            url: mumbaiUrl,
+            accounts: [
+                deployer,
+                eaService,
             ],
         },
         matic: {
@@ -391,6 +387,7 @@ module.exports = {
             sepolia: process.env.ETHERSCAN_API_KEY || null,
             alfajores: process.env.CELOSCAN_API_KEY || null,
             celo: process.env.CELOSCAN_API_KEY || null,
+            polygonMumbai: process.env.POLYGONSCAN_API_KEY || null,
         },
         // customChains: [
         //     {
