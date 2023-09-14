@@ -1,32 +1,33 @@
 {
     "overrides": [
-      {
-        "files": "*.sol",
-        "options": {
-          "printWidth": 99,
-          "tabWidth": 4,
-          "useTabs": false,
-          "singleQuote": false,
-          "bracketSpacing": false,
-          "explicitTypes": "always"
+        {
+            "files": "*.sol",
+            "options": {
+                "printWidth": 99,
+                "tabWidth": 4,
+                "useTabs": false,
+                "singleQuote": false,
+                "bracketSpacing": false,
+                "explicitTypes": "always"
+            }
+        },
+        {
+            "files": ["*.js", ".prettierrc"],
+            "options": {
+                "printWidth": 99,
+                "tabWidth": 4,
+                "useTabs": false,
+                "singleQuote": false,
+                "bracketSpacing": false,
+                "explicitTypes": "always"
+            }
+        },
+        {
+            "files": "*.json",
+            "options": {
+                "tabWidth": 4,
+                "printWidth": 80
+            }
         }
-      },
-      {
-        "files": "*.js",
-        "options": {
-          "printWidth": 99,
-          "tabWidth": 4,
-          "useTabs": false,
-          "singleQuote": false,
-          "bracketSpacing": false,
-          "explicitTypes": "always"
-        }
-      },
-      {
-        "files": "*.json",
-        "options": {
-            "printWidth": 80
-        }
-      }
     ]
-  }
+}
