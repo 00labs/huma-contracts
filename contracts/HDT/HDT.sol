@@ -14,6 +14,7 @@ import "../Errors.sol";
  */
 contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     event PoolChanged(address pool);
+    event AssetTokenChanged(address oldToken, address newToken);
 
     constructor() {
         _disableInitializers();
@@ -46,6 +47,12 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
     function setPool(address poolAddress) external onlyOwner {
         _pool = IPool(poolAddress);
         emit PoolChanged(poolAddress);
+    }
+
+    function setAssetToken(address newTokenAddress) external onlyOwner {
+        address oldTokenAddress = _assetToken;
+        _assetToken = newTokenAddress;
+        emit AssetTokenChanged(oldTokenAddress, newTokenAddress);
     }
 
     function decimals() public view override returns (uint8) {
