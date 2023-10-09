@@ -209,7 +209,11 @@ contract SuperfluidPoolProcessor is
 
         (address underlyingTokenAddr, , , ) = pool.getCoreData();
         IERC20 underlyingToken = IERC20(underlyingTokenAddr);
-        uint256 difference = flowrate * (si.endTime - endTime);
+        uint256 difference = _convertAmount(
+            flowrate * (si.endTime - endTime),
+            si.superToken,
+            underlyingTokenAddr
+        );
         uint256 received = _transferFromAccount(
             underlyingToken,
             borrower,
@@ -258,9 +262,9 @@ contract SuperfluidPoolProcessor is
         if (cr.state > BS.CreditState.GoodStanding)
             revert Errors.creditLineNotInGoodStandingState();
 
-        uint256 amount = si.receivedFlowAmount;
         (address underlyingTokenAddr, , , ) = pool.getCoreData();
         IERC20 underlyingToken = IERC20(underlyingTokenAddr);
+        uint256 amount = _convertAmount(si.receivedFlowAmount, si.superToken, underlyingTokenAddr);
         if (amount < cr.totalDue) {
             uint256 diff = cr.totalDue - amount;
             uint256 received = _transferFromAccount(
@@ -407,7 +411,7 @@ contract SuperfluidPoolProcessor is
         if (decimalsIn == decimalsOut) {
             amountOut = amountIn;
         } else {
-            amountOut = (amountIn * decimalsOut) / decimalsIn;
+            amountOut = (amountIn * (10**decimalsOut)) / (10**decimalsIn);
         }
     }
 
