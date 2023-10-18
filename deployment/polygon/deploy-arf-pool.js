@@ -50,7 +50,7 @@ async function deployContracts() {
     ]);
 
     const bc_feeManager = await deploy("BaseFeeManager", "ArfNewPoolFeeManager");
-    const bc_hdtImpl = await deploy("HDT", "ArfNewHDTImpl");
+    const bc_hdtImpl = await deploy("HDT", "ArfNewHDTImplUpgrade");
     const bc_hdt = await deploy("TransparentUpgradeableProxy", "ArfNewHDT", [
         bc_hdtImpl.address,
         baseCreditPoolProxyAdminTL.address,
