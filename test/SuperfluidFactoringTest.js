@@ -10,6 +10,7 @@ const {
     checkRecord,
     printRecord,
 } = require("./BaseTest");
+const {impersonate} = require("../deployment/utils.js");
 
 require("dotenv").config();
 
@@ -28,34 +29,37 @@ const POLYGON_USDC_ADDRESS = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 const POLYGON_SF_USDCX_ADDRESS = "0xCAa7349CEA390F89641fe306D93591f87595dc1F";
 const POLYGON_SF_HOST_ADDRESS = "0x3E14dC1b13c488a8d5D310918780c983bD5982E7";
 const POLYGON_SF_CFA_ADDRESS = "0x6EeE6060f715257b970700bc2656De21dEdF074C";
-
-const GOERLI_USDC_ADDRESS = "0xc94dd466416A7dFE166aB2cF916D3875C049EBB7";
-const GOERLI_SF_USDCX_ADDRESS = "0x8aE68021f6170E5a766bE613cEA0d75236ECCa9a";
-const GOERLI_SF_HOST_ADDRESS = "0x22ff293e14F1EC3A09B137e9e06084AFd63adDF9";
-const GOERLI_SF_CFA_ADDRESS = "0xEd6BcbF6907D4feEEe8a8875543249bEa9D308E8";
+const POLYGON_SF_SUPER_APP_REGISTER_ADDRESS = "0xb9714068220AABAf34E490B04D5D26Cfb4400063";
+const POLYGON_SF_SUPER_APP_REGISTER_OWNER = "0x9ea47a502beffb25c8d559e614203562bb7d886d";
 
 const MUMBAI_USDC_ADDRESS = "0xbe49ac1EadAc65dccf204D4Df81d650B50122aB2";
 const MUMBAI_SF_USDCX_ADDRESS = "0x42bb40bF79730451B11f6De1CbA222F17b87Afd7";
 const MUMBAI_SF_HOST_ADDRESS = "0xEB796bdb90fFA0f28255275e16936D25d3418603";
 const MUMBAI_SF_CFA_ADDRESS = "0x49e565Ed1bdc17F3d220f72DF0857C26FA83F873";
+const MUMBAI_SF_SUPER_APP_REGISTER_ADDRESS = "0x42c87A5521a2234c511089fF55d5FE55589beB47";
+const MUMBAI_SF_SUPER_APP_REGISTER_OWNER = "0x60891b087e81ee2a61b7606f68019ec112c539b9";
 
-// let chainUrl = polygonUrl;
-// let usdcMapSlot = POLYGON_USDC_MAP_SLOT;
-// let usdcDecimals = 6;
+let chainUrl = polygonUrl;
+let usdcMapSlot = POLYGON_USDC_MAP_SLOT;
+let usdcDecimals = 6;
 
-// let usdcAddress = POLYGON_USDC_ADDRESS;
-// let sfUsdcxAddress = POLYGON_SF_USDCX_ADDRESS;
-// let sfHostAddress = POLYGON_SF_HOST_ADDRESS;
-// let sfCFAAddress = POLYGON_SF_CFA_ADDRESS;
+let usdcAddress = POLYGON_USDC_ADDRESS;
+let sfUsdcxAddress = POLYGON_SF_USDCX_ADDRESS;
+let sfHostAddress = POLYGON_SF_HOST_ADDRESS;
+let sfCFAAddress = POLYGON_SF_CFA_ADDRESS;
+let sfRegisterAddress = POLYGON_SF_SUPER_APP_REGISTER_ADDRESS;
+let sfRegisterOwnerAddress = POLYGON_SF_SUPER_APP_REGISTER_OWNER;
 
-let chainUrl = mumbaiUrl;
-let usdcMapSlot = MUMBAI_USDC_MAP_SLOT;
-let usdcDecimals = 18;
+// let chainUrl = mumbaiUrl;
+// let usdcMapSlot = MUMBAI_USDC_MAP_SLOT;
+// let usdcDecimals = 18;
 
-let usdcAddress = MUMBAI_USDC_ADDRESS;
-let sfUsdcxAddress = MUMBAI_SF_USDCX_ADDRESS;
-let sfHostAddress = MUMBAI_SF_HOST_ADDRESS;
-let sfCFAAddress = MUMBAI_SF_CFA_ADDRESS;
+// let usdcAddress = MUMBAI_USDC_ADDRESS;
+// let sfUsdcxAddress = MUMBAI_SF_USDCX_ADDRESS;
+// let sfHostAddress = MUMBAI_SF_HOST_ADDRESS;
+// let sfCFAAddress = MUMBAI_SF_CFA_ADDRESS;
+// let sfRegisterAddress = MUMBAI_SF_SUPER_APP_REGISTER_ADDRESS;
+// let sfRegisterOwnerAddress = MUMBAI_SF_SUPER_APP_REGISTER_OWNER;
 
 let usdc, sf, usdcx, cfa;
 
@@ -72,7 +76,8 @@ let defaultDeployer,
     poolOperator,
     poolOwnerTreasury,
     payer,
-    borrower1;
+    borrower1,
+    sfRegisterOwner;
 
 let humaConfigContract,
     eaNFTContract,
@@ -97,6 +102,16 @@ function convertDefaultToUSDC(amount) {
         return amount
             .mul(BN.from(10).pow(BN.from(usdcDecimals)))
             .div(BN.from(10).pow(BN.from(18)));
+    } else {
+        return amount;
+    }
+}
+
+function convertUSDCToDefault(amount) {
+    if (usdcDecimals != 18) {
+        return amount
+            .mul(BN.from(10).pow(BN.from(18)))
+            .div(BN.from(10).pow(BN.from(usdcDecimals)));
     } else {
         return amount;
     }
@@ -398,6 +413,8 @@ describe("Superfluid Factoring", function () {
             poolOwnerTreasury,
             borrower1,
         ] = await ethers.getSigners();
+        sfRegisterOwner = await impersonate(sfRegisterOwnerAddress);
+
         usdc = await ethers.getContractAt("IERC20", usdcAddress);
         sf = await ethers.getContractAt("ISuperfluid", sfHostAddress);
         usdcx = await ethers.getContractAt("ISuperToken", sfUsdcxAddress);
@@ -405,13 +422,10 @@ describe("Superfluid Factoring", function () {
         await mint(payer.address, toUSDC(1_000_000));
         // console.log(`payer ${payer.address} usdc balance: ${await usdc.balanceOf(payer.address)}`);
         await usdc.connect(payer).approve(usdcx.address, toUSDC(1_000_000));
-
-        const sfRegisterContractFactory = await ethers.getContractFactory(
-            "SuperfluidSuperAppRegister"
+        sfRegisterContract = await ethers.getContractAt(
+            "SuperfluidSuperAppRegister",
+            sfRegisterAddress
         );
-        sfRegisterContract = await sfRegisterContractFactory.deploy(sfHostAddress);
-        await sfRegisterContract.deployed();
-
         const nftContractFactory = await ethers.getContractFactory("TradableStream");
         nftContract = await nftContractFactory.deploy(sfHostAddress);
         await nftContract.deployed();
@@ -421,6 +435,7 @@ describe("Superfluid Factoring", function () {
         streamDays,
         streamDuration,
         collateralAmount,
+        loanAmountInDefault,
         loanAmount,
         streamId,
         nftVersion;
@@ -557,7 +572,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -632,7 +647,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -707,7 +722,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -782,7 +797,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -857,7 +872,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -932,7 +947,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -1009,7 +1024,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -1088,7 +1103,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -1177,7 +1192,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(streamDuration);
+            loanAmount = convertDefaultToUSDC(flowrate.mul(streamDuration));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -1415,7 +1430,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(BN.from(streamDuration));
+            loanAmount = convertDefaultToUSDC(flowrate.mul(BN.from(streamDuration)));
             nonce = await nftContract.nonces(borrower.address);
             expiry = Math.ceil(Date.now() / 1000) + 300;
 
@@ -1579,7 +1594,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(BN.from(streamDuration));
+            loanAmount = convertDefaultToUSDC(flowrate.mul(BN.from(streamDuration)));
             // console.log(`loanAmount: ${loanAmount}`);
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
@@ -2019,7 +2034,9 @@ describe("Superfluid Factoring", function () {
 
     describe("SuperApp", function () {
         beforeEach(async function () {
-            await sfRegisterContract.register(poolProcessorContract.address);
+            await sfRegisterContract
+                .connect(sfRegisterOwner)
+                .register(poolProcessorContract.address);
 
             await poolContract
                 .connect(eaServiceAccount)
@@ -2041,7 +2058,8 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(BN.from(streamDuration));
+            loanAmountInDefault = flowrate.mul(BN.from(streamDuration));
+            loanAmount = convertDefaultToUSDC(loanAmountInDefault);
             // console.log(`loanAmount: ${loanAmount}`);
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
@@ -2116,7 +2134,11 @@ describe("Superfluid Factoring", function () {
             });
 
             it("Should be registered and send SuperAppRegistered event after register", async function () {
-                await expect(sfRegisterContract.register(poolConfigContract.address))
+                await expect(
+                    sfRegisterContract
+                        .connect(sfRegisterOwner)
+                        .register(poolConfigContract.address)
+                )
                     .to.emit(sfRegisterContract, "SuperAppRegistered")
                     .withArgs(poolConfigContract.address);
 
@@ -2328,7 +2350,9 @@ describe("Superfluid Factoring", function () {
                     let afterPoolBal = await usdc.balanceOf(poolContract.address);
                     let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
-                    let remainingBal = loanAmount.sub(afterSI.receivedFlowAmount);
+                    let remainingBal = loanAmount.sub(
+                        convertDefaultToUSDC(afterSI.receivedFlowAmount)
+                    );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
                     expect(afterSI.lastStartTime).to.equal(nts);
@@ -2394,7 +2418,8 @@ describe("Superfluid Factoring", function () {
                     flowrate = toDefaultToken(collateralAmount)
                         .div(BN.from(streamDuration))
                         .add(BN.from(1));
-                    loanAmount = flowrate.mul(BN.from(streamDuration));
+                    loanAmountInDefault = flowrate.mul(BN.from(streamDuration));
+                    loanAmount = convertDefaultToUSDC(loanAmountInDefault);
                     const nonce = await nftContract.nonces(borrower1.address);
                     const expiry = Math.ceil(Date.now() / 1000) + 300;
                     const signatureData = await borrower1._signTypedData(
@@ -2559,7 +2584,9 @@ describe("Superfluid Factoring", function () {
                     let afterPoolBal = await usdc.balanceOf(poolContract.address);
                     let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
-                    let remainingBal = loanAmount.sub(afterSI.receivedFlowAmount);
+                    let remainingBal = convertDefaultToUSDC(
+                        loanAmountInDefault.sub(afterSI.receivedFlowAmount)
+                    );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
                     expect(afterSI.lastStartTime).to.equal(nts);
@@ -2605,7 +2632,9 @@ describe("Superfluid Factoring", function () {
                     afterPoolBal = await usdc.balanceOf(poolContract.address);
                     afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
-                    remainingBal = loanAmount.sub(afterSI.receivedFlowAmount);
+                    remainingBal = convertDefaultToUSDC(
+                        loanAmountInDefault.sub(afterSI.receivedFlowAmount)
+                    );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
                     expect(afterSI.lastStartTime).to.equal(nts);
@@ -2802,7 +2831,11 @@ describe("Superfluid Factoring", function () {
                     afterBorrowerBal = await usdc.balanceOf(borrower.address);
                     afterPoolBal = await usdc.balanceOf(poolContract.address);
 
-                    let received = loanAmount.sub(remainingBal).sub(afterSI.receivedFlowAmount);
+                    let received = convertDefaultToUSDC(
+                        loanAmountInDefault
+                            .sub(convertUSDCToDefault(remainingBal))
+                            .sub(afterSI.receivedFlowAmount)
+                    );
 
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(received);
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(received);
@@ -2817,7 +2850,7 @@ describe("Superfluid Factoring", function () {
                         0,
                         "SKIP",
                         correction,
-                        afterSI.receivedFlowAmount,
+                        convertDefaultToUSDC(afterSI.receivedFlowAmount),
                         0,
                         0,
                         0,
@@ -2844,7 +2877,9 @@ describe("Superfluid Factoring", function () {
                     );
 
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(
-                        afterSI.receivedFlowAmount.add(correction)
+                        convertDefaultToUSDC(
+                            afterSI.receivedFlowAmount.add(convertUSDCToDefault(correction))
+                        )
                     );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(correction);
 
@@ -2912,7 +2947,8 @@ describe("Superfluid Factoring", function () {
                     flowrate = toDefaultToken(collateralAmount)
                         .div(BN.from(streamDuration))
                         .add(BN.from(1));
-                    loanAmount = flowrate.mul(BN.from(streamDuration));
+                    loanAmountInDefault = flowrate.mul(BN.from(streamDuration));
+                    loanAmount = convertDefaultToUSDC(loanAmountInDefault);
                     const nonce = await nftContract.nonces(borrower1.address);
                     const expiry = Math.ceil(Date.now() / 1000) + 300;
                     const signatureData = await borrower1._signTypedData(
@@ -3028,7 +3064,9 @@ describe("Superfluid Factoring", function () {
                     let afterBorrowerBal = await usdc.balanceOf(borrower.address);
                     let afterPoolBal = await usdc.balanceOf(poolContract.address);
 
-                    let received = loanAmount.sub(remainingBal).sub(afterSI.receivedFlowAmount);
+                    let received = loanAmount
+                        .sub(remainingBal)
+                        .sub(convertDefaultToUSDC(afterSI.receivedFlowAmount));
 
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(received);
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(received);
@@ -3042,7 +3080,7 @@ describe("Superfluid Factoring", function () {
                         0,
                         "SKIP",
                         correction,
-                        afterSI.receivedFlowAmount,
+                        convertDefaultToUSDC(afterSI.receivedFlowAmount),
                         0,
                         0,
                         0,
@@ -3070,7 +3108,9 @@ describe("Superfluid Factoring", function () {
                     );
 
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(
-                        afterSI.receivedFlowAmount.add(correction)
+                        convertDefaultToUSDC(
+                            afterSI.receivedFlowAmount.add(convertUSDCToDefault(correction))
+                        )
                     );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(correction);
 
@@ -3135,7 +3175,11 @@ describe("Superfluid Factoring", function () {
                     afterBorrowerBal = await usdc.balanceOf(borrower1.address);
                     afterPoolBal = await usdc.balanceOf(poolContract.address);
 
-                    received = loanAmount.sub(remainingBal).sub(afterSI.receivedFlowAmount);
+                    received = convertDefaultToUSDC(
+                        loanAmountInDefault
+                            .sub(convertUSDCToDefault(remainingBal))
+                            .sub(afterSI.receivedFlowAmount)
+                    );
 
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(received);
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(received);
@@ -3149,7 +3193,7 @@ describe("Superfluid Factoring", function () {
                         0,
                         "SKIP",
                         correction,
-                        afterSI.receivedFlowAmount,
+                        convertDefaultToUSDC(afterSI.receivedFlowAmount),
                         0,
                         0,
                         0,
@@ -3177,7 +3221,9 @@ describe("Superfluid Factoring", function () {
                     );
 
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(
-                        afterSI.receivedFlowAmount.add(correction)
+                        convertDefaultToUSDC(
+                            afterSI.receivedFlowAmount.add(convertUSDCToDefault(correction))
+                        )
                     );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(correction);
 
@@ -3292,11 +3338,15 @@ describe("Superfluid Factoring", function () {
                     afterPoolBal = await usdc.balanceOf(poolContract.address);
 
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(0);
-                    expect(afterPoolBal.sub(beforePoolBal)).to.equal(afterSI.receivedFlowAmount);
+                    expect(afterPoolBal.sub(beforePoolBal)).to.equal(
+                        convertDefaultToUSDC(afterSI.receivedFlowAmount)
+                    );
 
                     cr = await poolContract.creditRecordMapping(borrower.address);
                     crs = await poolContract.creditRecordStaticMapping(borrower.address);
-                    unbilled = unbilled.sub(afterSI.receivedFlowAmount).add(correction);
+                    unbilled = unbilled
+                        .sub(convertDefaultToUSDC(afterSI.receivedFlowAmount))
+                        .add(correction);
                     let interest = calcInterest(crs, unbilled);
                     checkRecord(
                         cr,
@@ -3401,7 +3451,7 @@ describe("Superfluid Factoring", function () {
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(
                         loanAmount
                             .sub(remainingBal)
-                            .sub(afterSI.receivedFlowAmount)
+                            .sub(convertDefaultToUSDC(afterSI.receivedFlowAmount))
                             .add(correction)
                     );
 
@@ -3457,7 +3507,9 @@ describe("Superfluid Factoring", function () {
                     let afterPoolBal = await usdc.balanceOf(poolContract.address);
                     let afterSI = await poolProcessorContract.streamInfoMapping(streamId);
 
-                    let remainingBal = loanAmount.sub(afterSI.receivedFlowAmount);
+                    let remainingBal = convertDefaultToUSDC(
+                        loanAmountInDefault.sub(afterSI.receivedFlowAmount)
+                    );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(remainingBal);
                     expect(afterPoolBal.sub(beforePoolBal)).to.equal(remainingBal);
                     expect(afterSI.lastStartTime).to.equal(nts);
@@ -3656,13 +3708,15 @@ describe("Superfluid Factoring", function () {
                     afterBorrowerBal = await usdc.balanceOf(borrower.address);
                     afterPoolBal = await usdc.balanceOf(poolContract.address);
 
-                    expect(afterPoolBal.sub(beforePoolBal)).to.equal(afterSI.receivedFlowAmount);
+                    expect(afterPoolBal.sub(beforePoolBal)).to.equal(
+                        convertDefaultToUSDC(afterSI.receivedFlowAmount)
+                    );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(0);
 
                     let unbilled = loanAmount
                         .sub(remainingBal)
                         .sub(received)
-                        .sub(afterSI.receivedFlowAmount)
+                        .sub(convertDefaultToUSDC(afterSI.receivedFlowAmount))
                         .add(correction);
                     let interest = calcInterest(crs, unbilled);
 
@@ -3884,13 +3938,15 @@ describe("Superfluid Factoring", function () {
                     afterBorrowerBal = await usdc.balanceOf(borrower.address);
                     afterPoolBal = await usdc.balanceOf(poolContract.address);
 
-                    expect(afterPoolBal.sub(beforePoolBal)).to.equal(afterSI.receivedFlowAmount);
+                    expect(afterPoolBal.sub(beforePoolBal)).to.equal(
+                        convertDefaultToUSDC(afterSI.receivedFlowAmount)
+                    );
                     expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(0);
 
                     let unbilled = loanAmount
                         .sub(remainingBal)
                         .sub(received)
-                        .sub(afterSI.receivedFlowAmount)
+                        .sub(convertDefaultToUSDC(afterSI.receivedFlowAmount))
                         .add(correction);
                     let interest = calcInterest(crs, unbilled);
 
@@ -4267,7 +4323,7 @@ describe("Superfluid Factoring", function () {
             let flowrate = toDefaultToken(collateralAmount)
                 .div(BN.from(streamDuration))
                 .add(BN.from(1));
-            loanAmount = flowrate.mul(BN.from(streamDuration));
+            loanAmount = convertDefaultToUSDC(flowrate.mul(BN.from(streamDuration)));
             const nonce = await nftContract.nonces(borrower.address);
             const expiry = Math.ceil(Date.now() / 1000) + 300;
             const signatureData = await borrower._signTypedData(
@@ -4443,7 +4499,9 @@ describe("Superfluid Factoring", function () {
         });
 
         it("Should pay off correctly while the flow was terminated", async function () {
-            await sfRegisterContract.register(poolProcessorContract.address);
+            await sfRegisterContract
+                .connect(sfRegisterOwner)
+                .register(poolProcessorContract.address);
 
             let balance = await usdc.balanceOf(borrower.address);
             let remainingBal = toUSDC(10);
@@ -4528,7 +4586,10 @@ describe("Superfluid Factoring", function () {
                 loanAmount.sub(remainingBal).add(correction)
             );
             expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(
-                loanAmount.sub(remainingBal).sub(afterSI.receivedFlowAmount).add(correction)
+                loanAmount
+                    .sub(remainingBal)
+                    .sub(convertDefaultToUSDC(afterSI.receivedFlowAmount))
+                    .add(correction)
             );
 
             cr = await poolContract.creditRecordMapping(borrower.address);
@@ -4652,7 +4713,9 @@ describe("Superfluid Factoring", function () {
         });
 
         it("Should pay off correctly while the flow was terminated and the tradable was burned", async function () {
-            await sfRegisterContract.register(poolProcessorContract.address);
+            await sfRegisterContract
+                .connect(sfRegisterOwner)
+                .register(poolProcessorContract.address);
 
             let balance = await usdc.balanceOf(borrower.address);
             let remainingBal = toUSDC(10);
@@ -4740,7 +4803,10 @@ describe("Superfluid Factoring", function () {
                 loanAmount.sub(remainingBal).add(correction)
             );
             expect(beforeBorrowerBal.sub(afterBorrowerBal)).to.equal(
-                loanAmount.sub(remainingBal).sub(afterSI.receivedFlowAmount).add(correction)
+                loanAmount
+                    .sub(remainingBal)
+                    .sub(convertDefaultToUSDC(afterSI.receivedFlowAmount))
+                    .add(correction)
             );
 
             cr = await poolContract.creditRecordMapping(borrower.address);
