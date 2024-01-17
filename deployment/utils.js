@@ -2,8 +2,8 @@ const {BigNumber: BN, ethers} = require("ethers");
 const fs = require("fs");
 const DEPLOYED_PATH = "./deployment/";
 
-const MAX_FEE_PER_GAS = 30_000_000_000;
-const MAX_PRIORITY_FEE_PER_GAS = 2_000_000_000;
+const MAX_FEE_PER_GAS = 40_000_000_000;
+const MAX_PRIORITY_FEE_PER_GAS = 38_000_000_000;
 
 const getContractAddressFile = async function (fileType = "deployed", network) {
     if (!network) {
@@ -119,14 +119,21 @@ const sendTransaction = async function (
     console.log(`${contractName}:${logMessage} End!`);
 };
 
-async function deploy(contractName, keyName, contractParameters, deployer) {
+async function deploy(contractName, keyName, contractParameters, libraries, deployer) {
     const deployed = await getDeployedContract(keyName);
     if (deployed) {
         console.log(`${keyName} already deployed: ${deployed}`);
         let Contract = await hre.ethers.getContractFactory(contractName);
         return Contract.attach(deployed);
     }
-    let Contract = await hre.ethers.getContractFactory(contractName);
+
+    let Contract;
+    if (libraries) {
+        Contract = await hre.ethers.getContractFactory(contractName, libraries);
+    } else {
+        Contract = await hre.ethers.getContractFactory(contractName);
+    }
+    
     if (deployer) {
         Contract = Contract.connect(deployer);
     }

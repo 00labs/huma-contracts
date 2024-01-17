@@ -12,7 +12,7 @@ import "./HumaConfig.sol";
 import "./BasePool.sol";
 import "./Errors.sol";
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract BasePoolConfig is Ownable, Initializable {
     using SafeERC20 for IERC20;

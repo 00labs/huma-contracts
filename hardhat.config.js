@@ -1,8 +1,7 @@
-require("dotenv").config();
 require("hardhat-contract-sizer");
 
 require("@nomicfoundation/hardhat-chai-matchers");
-require("@tenderly/hardhat-tenderly");
+// require("@tenderly/hardhat-tenderly");
 
 require("hardhat-gas-reporter");
 require("hardhat-abi-exporter");
@@ -12,13 +11,17 @@ require("@nomiclabs/hardhat-etherscan");
 require("hardhat-prettier");
 require("solidity-coverage");
 
-require("hardhat-abi-exporter");
+require("hardhat-celo");
 require("dotenv").config();
 const fs = require("fs");
 
 const EMPTY_URL = "empty url";
 const EMPTY_PRIVATE_KEY = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+let sepoliaUrl = process.env["SEPOLIA_URL"];
+if (!sepoliaUrl) {
+    sepoliaUrl = EMPTY_URL;
+}
 let goerliUrl = process.env["GOERLI_URL"];
 if (!goerliUrl) {
     goerliUrl = EMPTY_URL;
@@ -38,6 +41,10 @@ if (!mainnetUrl) {
 let deployer = process.env["DEPLOYER"];
 if (!deployer) {
     deployer = EMPTY_PRIVATE_KEY;
+}
+let poolTreasury = process.env["POOL_TREASURY"];
+if (!poolTreasury) {
+    poolTreasury = EMPTY_PRIVATE_KEY;
 }
 let proxyOwner = process.env["PROXY_OWNER"];
 if (!proxyOwner) {
@@ -163,21 +170,22 @@ module.exports = {
         },
         goerli: {
             url: goerliUrl,
-            accounts: [
-                deployer,
-                proxyOwner,
-                lender,
-                ea,
-                eaService,
-                pdsService,
-                treasury,
-                ea_bcp,
-                invoicePayer,
-                baseCreditPoolOperator,
-                receivableFactoringPoolOperator,
-                baseCreditPoolOwnerTreasury,
-                receivableFactoringPoolOwnerTreasury,
-            ],
+            accounts: [deployer, eaService, poolTreasury],
+            // accounts: [
+            //     deployer,
+            //     proxyOwner,
+            //     lender,
+            //     ea,
+            //     eaService,
+            //     pdsService,
+            //     treasury,
+            //     ea_bcp,
+            //     invoicePayer,
+            //     baseCreditPoolOperator,
+            //     receivableFactoringPoolOperator,
+            //     baseCreditPoolOwnerTreasury,
+            //     receivableFactoringPoolOwnerTreasury,
+            // ],
         },
         xdai: {
             url: "https://rpc.xdaichain.com/",
@@ -204,23 +212,37 @@ module.exports = {
             url: polygonUrl,
             accounts: [deployer, eaService],
         },
-        mumbai: {
+        polygonMumbai: {
             url: mumbaiUrl,
             accounts: [
                 deployer,
-                proxyOwner,
-                lender,
-                ea,
                 eaService,
-                pdsService,
-                treasury,
-                ea_bcp,
-                invoicePayer,
+            ],
+        },
+        maticmum: {
+            url: mumbaiUrl,
+            accounts: [
+                deployer,
+                eaService,
             ],
         },
         matic: {
             url: polygonUrl,
             accounts: [deployer, eaService, pdsService],
+        },
+        alfajores: {
+            url: "https://alfajores-forno.celo-testnet.org",
+            accounts: [deployer, eaService],
+            chainId: 44787
+          },
+        celo: {
+            url: "https://forno.celo.org",
+            accounts: [deployer, eaService],
+            chainId: 42220
+        },
+        sepolia: {
+            url: sepoliaUrl,
+            accounts: [deployer, eaService, poolTreasury],
         },
         optimism: {
             url: "https://mainnet.optimism.io",
@@ -362,7 +384,21 @@ module.exports = {
             goerli: process.env.ETHERSCAN_API_KEY || null,
             polygon: process.env.POLYGONSCAN_API_KEY || null,
             mainnet: process.env.ETHERSCAN_API_KEY || null,
+            sepolia: process.env.ETHERSCAN_API_KEY || null,
+            alfajores: process.env.CELOSCAN_API_KEY || null,
+            celo: process.env.CELOSCAN_API_KEY || null,
+            polygonMumbai: process.env.POLYGONSCAN_API_KEY || null,
         },
+        // customChains: [
+        //     {
+        //       network: "alfajores",
+        //       chainId: 44787,
+        //       urls: {
+        //         apiURL: "https://api-alfajores.celoscan.io/api",
+        //         browserURL: "https://alfajores.celoscan.io/"
+        //       }
+        //     }
+        //   ]
     },
     contractSizer: {
         alphaSort: true,
