@@ -184,7 +184,7 @@ async function verifyContracts() {
     const verifyLibPool = await verifyContract('LibPool');
     console.log(`Verify LibPool result: ${verifyLibPool}`);
 
-    const verifyPoolFactory = await verifyContract('HumaPoolFactory',
+    const verifyPoolFactory = await verifyContract('HumaPoolFactoryCreditCollective',
         [
             `'${HUMA_OWNER_ADDRESS}'`,
             `'${deployedContracts['HumaConfig']}'`,

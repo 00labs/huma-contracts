@@ -46,7 +46,7 @@ async function deployContracts() {
     const libPoolConfig = await deploy("LibPoolConfig", "LibPoolConfig");
     const libHDT = await deploy("LibHDT", "LibHDT");
     const libPool = await deploy("LibPool", "LibPool");
-    const poolFactory = await deploy("PoolFactory", "HumaPoolFactory",
+    const poolFactory = await deploy("PoolFactory", "HumaPoolFactoryCreditCollective",
     [
         HUMA_OWNER_ADDRESS, 
         humaConfig.address, 
