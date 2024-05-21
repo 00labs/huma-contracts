@@ -228,7 +228,7 @@ module.exports = {
         },
         matic: {
             url: polygonUrl,
-            accounts: [deployer, eaService, pdsService],
+            accounts: [deployer, eaService],
         },
         alfajores: {
             url: "https://alfajores-forno.celo-testnet.org",

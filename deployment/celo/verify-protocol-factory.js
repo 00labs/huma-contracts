@@ -96,35 +96,35 @@ async function verifyContracts() {
     // const verifyUsdc = await verifyContract('USDC');
     // console.log(`Verify USDC result: ${verifyUsdc}`);
 
-    const verifyEANFT = await verifyContract('EANFT');
-    console.log(`Verify EANFT result: ${verifyEANFT}`);
+    // const verifyEANFT = await verifyContract('EANFT');
+    // console.log(`Verify EANFT result: ${verifyEANFT}`);
 
     // const verifyRNNFT = await verifyContract('RNNFT', [
     //     `'${deployedContracts['USDC']}'`
     // ]);
     // console.log(`Verify RNNFT result: ${verifyRNNFT}`);
 
-    const verifyHumaConfig = await verifyContract('HumaConfig');
-    console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
+    // const verifyHumaConfig = await verifyContract('HumaConfig');
+    // console.log(`Verify HumaConfig result: ${verifyHumaConfig}`);
 
-    const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
-        [
-            0,
-            `['${HUMA_OWNER_ADDRESS}']`,
-            `['${deployer.address}']`,
-        ]);
-    console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
+    // const verifyHumaConfigTL = await verifyContract('HumaConfigTimelock',
+    //     [
+    //         0,
+    //         `['${HUMA_OWNER_ADDRESS}']`,
+    //         `['${deployer.address}']`,
+    //     ]);
+    // console.log(`Verify HumaConfigTimelock result: ${verifyHumaConfigTL}`);
 
-    const verifyRWRImpl = await verifyContract('RWReceivableImpl');
-    console.log(`Verify RWRImpl result: ${verifyRWRImpl}`);
+    // const verifyRWRImpl = await verifyContract('RWReceivableImpl');
+    // console.log(`Verify RWRImpl result: ${verifyRWRImpl}`);
 
-    const verifyRWR = await verifyContract('RWReceivable',
-        [
-            `'${deployedContracts['RWReceivableImpl']}'`,
-            `'${deployedContracts['HumaProxyAdminTimelock']}'`,
-            '[]'
-        ]);
-    console.log(`Verify RWR result: ${verifyRWR}`);
+    // const verifyRWR = await verifyContract('RWReceivable',
+    //     [
+    //         `'${deployedContracts['RWReceivableImpl']}'`,
+    //         `'${deployedContracts['HumaProxyAdminTimelock']}'`,
+    //         '[]'
+    //     ]);
+    // console.log(`Verify RWR result: ${verifyRWR}`);
 
 
     // const verifyBaseCreditPoolTL = await verifyContract('ArfNewPoolTimelock',
@@ -146,53 +146,53 @@ async function verifyContracts() {
     // const verifyFeeManager = await verifyContract('ArfNewPoolFeeManager');
     // console.log(`Verify FeeManager result: ${verifyFeeManager}`);
 
-    const verifyHDTImpl = await verifyContract('HDTImpl');
+    const verifyHDTImpl = await verifyContract('newHDTImpl');
     console.log(`Verify HDTImpl result: ${verifyHDTImpl}`);
 
-    // const verifyHDT = await verifyContract('ArfNewHDT',
-    //     [
-    //         `'${deployedContracts['ArfNewHDTImpl']}'`,
-    //         `'${deployedContracts['ArfNewPoolProxyAdminTimelock']}'`,
-    //         '[]'
-    //     ]);
-    // console.log(`Verify HDT result: ${verifyHDT}`);
+    const verifyHDT = await verifyContract('HDT',
+        [
+            `'${deployedContracts['HDTImpl']}'`,
+            deployer.address,
+            '[]'
+        ]);
+    console.log(`Verify HDT result: ${verifyHDT}`);
 
     // const verifyPoolConfig = await verifyContract('ArfNewPoolConfig');
     // console.log(`Verify poolConfig result: ${verifyPoolConfig}`);
 
-    const verifyPoolImpl = await verifyContract('BaseCreditPoolImpl');
-    console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
-    const verifyRFPoolImpl = await verifyContract('ReceivableFactoringPoolImpl');
-    console.log(`Verify PoolImpl result: ${verifyRFPoolImpl}`);
-    // const verifyPool = await verifyContract('ArfNewPool',
+    // const verifyPoolImpl = await verifyContract('BaseCreditPoolImpl');
+    // console.log(`Verify PoolImpl result: ${verifyPoolImpl}`);
+    // const verifyRFPoolImpl = await verifyContract('ReceivableFactoringPoolImpl');
+    // console.log(`Verify PoolImpl result: ${verifyRFPoolImpl}`);
+    // // const verifyPool = await verifyContract('ArfNewPool',
+    // //     [
+    // //         `'${deployedContracts['ArfNewPoolImpl']}'`,
+    // //         `'${deployedContracts['ArfNewPoolProxyAdminTimelock']}'`,
+    // //         '[]',
+    // //     ]);
+    // // console.log(`Verify Pool result: ${verifyPool}`);
+
+    // const verifyLibFeeManager = await verifyContract('LibFeeManager');
+    // console.log(`Verify LibFeeManager result: ${verifyLibFeeManager}`);
+
+    // const verifyLibPoolConfig = await verifyContract('LibPoolConfig');
+    // console.log(`Verify LibPoolConfig result: ${verifyLibPoolConfig}`);
+
+    // const verifyLibHDT = await verifyContract('LibHDT');
+    // console.log(`Verify LibHDT result: ${verifyLibHDT}`);
+
+    // const verifyLibPool = await verifyContract('LibPool');
+    // console.log(`Verify LibPool result: ${verifyLibPool}`);
+
+    // const verifyPoolFactory = await verifyContract('HumaPoolFactoryCreditCollective',
     //     [
-    //         `'${deployedContracts['ArfNewPoolImpl']}'`,
-    //         `'${deployedContracts['ArfNewPoolProxyAdminTimelock']}'`,
-    //         '[]',
+    //         `'${HUMA_OWNER_ADDRESS}'`,
+    //         `'${deployedContracts['HumaConfig']}'`,
+    //         `'${deployedContracts['HDTImpl']}'`,
+    //         `'${deployedContracts['BaseCreditPoolImpl']}'`,
+    //         `'${deployedContracts['ReceivableFactoringPoolImpl']}'`,
     //     ]);
-    // console.log(`Verify Pool result: ${verifyPool}`);
-
-    const verifyLibFeeManager = await verifyContract('LibFeeManager');
-    console.log(`Verify LibFeeManager result: ${verifyLibFeeManager}`);
-
-    const verifyLibPoolConfig = await verifyContract('LibPoolConfig');
-    console.log(`Verify LibPoolConfig result: ${verifyLibPoolConfig}`);
-
-    const verifyLibHDT = await verifyContract('LibHDT');
-    console.log(`Verify LibHDT result: ${verifyLibHDT}`);
-
-    const verifyLibPool = await verifyContract('LibPool');
-    console.log(`Verify LibPool result: ${verifyLibPool}`);
-
-    const verifyPoolFactory = await verifyContract('HumaPoolFactoryCreditCollective',
-        [
-            `'${HUMA_OWNER_ADDRESS}'`,
-            `'${deployedContracts['HumaConfig']}'`,
-            `'${deployedContracts['HDTImpl']}'`,
-            `'${deployedContracts['BaseCreditPoolImpl']}'`,
-            `'${deployedContracts['ReceivableFactoringPoolImpl']}'`,
-        ]);
-    console.log(`Verify Pool result: ${verifyPoolFactory}`);
+    // console.log(`Verify Pool result: ${verifyPoolFactory}`);
 
 }
 

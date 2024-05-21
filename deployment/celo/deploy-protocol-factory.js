@@ -37,7 +37,7 @@ async function deployContracts() {
         [],
     ]);
 
-    const hdtImpl = await deploy("HDT", "HDTImpl");
+    const hdtImpl = await deploy("HDT", "newHDTImpl");
 
     const bc_poolImpl = await deploy("BaseCreditPool", "BaseCreditPoolImpl");
     const rf_poolImpl = await deploy("BaseCreditPool", "ReceivableFactoringPoolImpl");
