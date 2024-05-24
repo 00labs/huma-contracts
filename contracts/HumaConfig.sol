@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "./Errors.sol";
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 /** @notice HumaConfig maintains all the global configurations supported by Huma protocol.
  */
