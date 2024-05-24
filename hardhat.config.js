@@ -27,6 +27,10 @@ let mumbaiUrl = process.env["MUMBAI_URL"];
 if (!mumbaiUrl) {
     mumbaiUrl = EMPTY_URL;
 }
+let amoyUrl = process.env["AMOY_URL"];
+if (!amoyUrl) {
+    amoyUrl = EMPTY_URL;
+}
 let polygonUrl = process.env["POLYGON_URL"];
 if (!polygonUrl) {
     polygonUrl = EMPTY_URL;
@@ -202,6 +206,10 @@ module.exports = {
         },
         polygon: {
             url: polygonUrl,
+            accounts: [deployer, eaService],
+        },
+        amoy: {
+            url: amoyUrl,
             accounts: [deployer, eaService],
         },
         mumbai: {
