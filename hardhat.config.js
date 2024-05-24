@@ -389,17 +389,18 @@ module.exports = {
             alfajores: process.env.CELOSCAN_API_KEY || null,
             celo: process.env.CELOSCAN_API_KEY || null,
             polygonMumbai: process.env.POLYGONSCAN_API_KEY || null,
+            amoy: process.env.POLYGONSCAN_API_KEY || null,
         },
-        // customChains: [
-        //     {
-        //       network: "alfajores",
-        //       chainId: 44787,
-        //       urls: {
-        //         apiURL: "https://api-alfajores.celoscan.io/api",
-        //         browserURL: "https://alfajores.celoscan.io/"
-        //       }
-        //     }
-        //   ]
+        customChains: [
+            {
+                network: "amoy",
+                chainId: 80002,
+                urls: {
+                    apiURL: "https://api-amoy.polygonscan.com/api",
+                    browserURL: "https://amoy.polygonscan.com/",
+                },
+            },
+          ]
     },
     contractSizer: {
         alphaSort: true,
