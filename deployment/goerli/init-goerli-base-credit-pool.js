@@ -6,9 +6,18 @@ const {
     sendTransaction,
 } = require("../utils.js");
 
-let deployer, deployedContracts, lender, ea, eaService, pdsService, treasury, ea_bcp;
+let deployer,
+    deployedContracts,
+    lender,
+    ea,
+    eaService,
+    pdsService,
+    treasury,
+    ea_bcp,
+    baseCreditPoolOperator,
+    baseCreditPoolOwnerTreasury;
 
-const HUMA_OWNER_ADRESS='0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB';
+const HUMA_OWNER_ADRESS = "0x1931bD73055335Ba06efB22DB96169dbD4C5B4DB";
 
 async function initHumaConfig() {
     const initilized = await getInitilizedContract("HumaConfig");
@@ -233,6 +242,18 @@ async function initBaseCreditPoolConfig() {
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setWithdrawalLockoutPeriod", [1]);
     await sendTransaction("BaseCreditPoolConfig", poolConfig, "setPoolDefaultGracePeriod", [60]);
 
+    const poolConfigFromPoolOperator = await poolConfig.connect(baseCreditPoolOperator);
+    await sendTransaction("BaseCreditPoolConfig", poolConfigFromPoolOperator, "addPoolOperator", [
+        baseCreditPoolOperator.address,
+    ]);
+    const poolConfigFromOwnerTreasury = await poolConfig.connect(baseCreditPoolOwnerTreasury);
+    await sendTransaction(
+        "BaseCreditPoolConfig",
+        poolConfigFromOwnerTreasury,
+        "setPoolOwnerTreasury",
+        [poolConfigFromOwnerTreasury.address]
+    );
+
     await updateInitilizedContract("BaseCreditPoolConfig");
 }
 
@@ -271,10 +292,21 @@ async function prepareBaseCreditPool() {
 
     const BaseCreditPool = await hre.ethers.getContractFactory("BaseCreditPool");
     const pool = BaseCreditPool.attach(deployedContracts["BaseCreditPool"]);
+    const poolFromPoolOperator = await pool.connect(baseCreditPoolOperator);
+    const poolFromPoolOwnerTreasury = await pool.connect(baseCreditPoolOwnerTreasury);
 
-    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [deployer.address]);
-    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [ea_bcp.address]);
-    await sendTransaction("BaseCreditPool", pool, "addApprovedLender", [lender.address]);
+    await sendTransaction("BaseCreditPool", poolFromPoolOperator, "addApprovedLender", [
+        deployer.address,
+    ]);
+    await sendTransaction("BaseCreditPool", poolFromPoolOperator, "addApprovedLender", [
+        ea_bcp.address,
+    ]);
+    await sendTransaction("BaseCreditPool", poolFromPoolOperator, "addApprovedLender", [
+        lender.address,
+    ]);
+    await sendTransaction("BaseCreditPool", poolFromPoolOperator, "addApprovedLender", [
+        baseCreditPoolOwnerTreasury.address,
+    ]);
 
     const USDC = await hre.ethers.getContractFactory("TestToken");
     const usdc = USDC.attach(deployedContracts["USDC"]);
@@ -284,7 +316,9 @@ async function prepareBaseCreditPool() {
     const amountOwner = BN.from(20_000).mul(BN.from(10).pow(BN.from(decimals)));
     await sendTransaction("TestToken", usdc, "mint", [deployer.address, amountOwner]);
     await sendTransaction("TestToken", usdc, "approve", [pool.address, amountOwner]);
-    await sendTransaction("BaseCreditPool", pool, "makeInitialDeposit", [amountOwner]);
+    await sendTransaction("BaseCreditPool", poolFromPoolOwnerTreasury, "makeInitialDeposit", [
+        amountOwner,
+    ]);
 
     // EA
     const usdcFromEA = await usdc.connect(ea_bcp);
@@ -301,7 +335,18 @@ async function initContracts() {
     const network = (await hre.ethers.provider.getNetwork()).name;
     console.log("network : ", network);
     const accounts = await hre.ethers.getSigners();
-    [deployer, proxyOwner, lender, ea, eaService, pdsService, treasury, ea_bcp] = await accounts;
+    [
+        deployer,
+        proxyOwner,
+        lender,
+        ea,
+        eaService,
+        pdsService,
+        treasury,
+        ea_bcp,
+        baseCreditPoolOperator,
+        baseCreditPoolOwnerTreasury,
+    ] = await accounts;
     console.log("deployer address: " + deployer.address);
     console.log("lender address: " + lender.address);
     console.log("ea address: " + ea.address);
