@@ -86,27 +86,7 @@ describe("Credit Line Integration Test", async function () {
     });
 
     it("Day 0: Initial drawdown", async function () {
-        // Establish credit line
-        await poolContract.connect(borrower).requestCredit(toToken(5040), 30, 12);
-        record = await poolContract.creditRecordMapping(borrower.address);
-        recordStatic = await poolContract.creditRecordStaticMapping(borrower.address);
-        checkRecord(
-            record,
-            recordStatic,
-            toToken(5040),
-            0,
-            "SKIP",
-            0,
-            0,
-            0,
-            0,
-            12,
-            1217,
-            30,
-            1,
-            0
-        );
-
+        // requestCredit is disabled (no-op), go directly to approveCredit
         await poolContract
             .connect(eaServiceAccount)
             .approveCredit(borrower.address, toToken(5040), 30, 12, 1217);

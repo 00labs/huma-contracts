@@ -960,7 +960,7 @@ describe("Invoice Factoring", function () {
         describe("Default flow", async function () {
             it("Writeoff less than pool value", async function () {
                 await expect(
-                    poolContract.triggerDefault(borrower.address)
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
                 // post withdraw
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
@@ -981,7 +981,7 @@ describe("Invoice Factoring", function () {
                 await poolContract.refreshAccount(borrower.address);
 
                 await expect(
-                    poolContract.triggerDefault(borrower.address)
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     toToken(1_002_760)
@@ -1000,7 +1000,7 @@ describe("Invoice Factoring", function () {
                 await poolContract.refreshAccount(borrower.address);
 
                 await expect(
-                    poolContract.triggerDefault(borrower.address)
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
                 expect(await hdtContract.withdrawableFundsOf(poolOwnerTreasury.address)).to.equal(
                     1004214400000
@@ -1042,13 +1042,13 @@ describe("Invoice Factoring", function () {
 
             it("Multiple partial payments after default", async function () {
                 await expect(
-                    poolContract.triggerDefault(borrower.address)
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
 
                 await advanceClock(30);
                 await advanceClock(30);
                 await expect(
-                    poolContract.triggerDefault(borrower.address)
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
 
                 await advanceClock(30);

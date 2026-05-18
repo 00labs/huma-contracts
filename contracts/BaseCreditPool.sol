@@ -270,7 +270,10 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         override
         returns (BS.CreditRecord memory cr)
     {
-        if (_creditRecordMapping[borrower].state != BS.CreditState.Defaulted) {
+        if (
+            _creditRecordMapping[borrower].state == BS.CreditState.GoodStanding ||
+            _creditRecordMapping[borrower].state == BS.CreditState.Delayed
+        ) {
             if (isDefaultReady(borrower)) return _updateDueInfo(borrower, false, false);
             else return _updateDueInfo(borrower, false, true);
         }
@@ -287,15 +290,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         uint256 intervalInDays,
         uint256 numOfPayments
     ) external virtual override {
-        // Open access to the borrower. Data validation happens in _initiateCredit()
-        _initiateCredit(
-            msg.sender,
-            creditLimit,
-            _poolConfig.poolAprInBps(),
-            intervalInDays,
-            numOfPayments,
-            false
-        );
+        // disabled - no-op, use approveCredit instead
     }
 
     /**
@@ -306,6 +301,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
      */
     function triggerDefault(address borrower) external virtual override returns (uint256 losses) {
         _protocolAndPoolOn();
+        onlyEAServiceAccount();
 
         // check to make sure the default grace period has passed.
         BS.CreditRecord memory cr = _getCreditRecord(borrower);
@@ -854,7 +850,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
 
             if (cr.missedPeriods > 0) {
                 if (cr.state != BS.CreditState.Defaulted) cr.state = BS.CreditState.Delayed;
-            } else cr.state = BS.CreditState.GoodStanding;
+            } else if (cr.state == BS.CreditState.Delayed) cr.state = BS.CreditState.GoodStanding;
 
             _setCreditRecord(borrower, cr);
 
