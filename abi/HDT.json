@@ -11,6 +11,11 @@
   },
   {
     "inputs": [],
+    "name": "transferNotAllowed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "zeroAddressProvided",
     "type": "error"
   },

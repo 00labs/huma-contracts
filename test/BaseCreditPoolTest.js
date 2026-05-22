@@ -153,7 +153,6 @@ describe("Base Credit Pool", function () {
             expect(record.totalDue).to.equal(0);
             expect(record.unbilledPrincipal).to.equal(0);
 
-            await poolContract.connect(borrower).requestCredit(toToken(4000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(4000), 30, 12, 1217);
@@ -215,112 +214,16 @@ describe("Base Credit Pool", function () {
         });
     });
 
-    // Borrowing tests are grouped into two suites: Borrowing Request and Funding.
-    // In beforeEach() of "Borrowing request", we make sure there is 100 liquidity.
     describe("Borrowing request", function () {
-        afterEach(async function () {
-            if (await humaConfigContract.connect(protocolOwner).paused())
-                await humaConfigContract.connect(protocolOwner).unpause();
-        });
-
-        it("Should reject loan requests while zero period", async function () {
-            await humaConfigContract.connect(poolOwner).pause();
-            await expect(
-                poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 0)
-            ).to.be.revertedWithCustomError(poolContract, "requestedCreditWithZeroDuration");
-        });
-        it("Should reject loan requests while protocol is paused", async function () {
-            await humaConfigContract.connect(poolOwner).pause();
-            await expect(
-                poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12)
-            ).to.be.revertedWithCustomError(poolContract, "protocolIsPaused");
-        });
-
-        it("Shall reject request loan while pool is off", async function () {
-            await poolContract.connect(poolOwner).disablePool();
-            await expect(
-                poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12)
-            ).to.be.revertedWithCustomError(poolContract, "poolIsNotOn");
-        });
-
-        it("Shall reject request loan greater than limit", async function () {
-            await expect(
-                poolContract.connect(borrower).requestCredit(toToken(10_000_001), 30, 12)
-            ).to.be.revertedWithCustomError(poolContract, "greaterThanMaxCreditLine");
-        });
-
-        it("Shall allow loan request", async function () {
-            expect(await testTokenContract.balanceOf(borrower.address)).to.equal(0);
-
-            await poolConfigContract.connect(poolOwner).setAPR(1217);
-
+        it("requestCredit is disabled (no-op)", async function () {
             await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
-
-            const loanInformation = await getCreditInfo(poolContract, borrower.address);
-            expect(loanInformation.creditLimit).to.equal(toToken(1_000_000));
-            expect(loanInformation.intervalInDays).to.equal(30);
-            expect(loanInformation.aprInBps).to.equal(1217);
-            expect(loanInformation.state).to.equal(1);
-        });
-
-        it("Shall allow new request if there is existing loan in Requested state", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(1_000), 30, 12);
-            await poolContract.connect(borrower).requestCredit(toToken(2_000), 60, 24);
-            const loanInformation = await getCreditInfo(poolContract, borrower.address);
-            expect(loanInformation.creditLimit).to.equal(toToken(2_000));
-            expect(loanInformation.intervalInDays).to.equal(60);
-            expect(loanInformation.aprInBps).to.equal(1217);
-            expect(loanInformation.remainingPeriods).to.equal(24);
-            expect(loanInformation.state).to.equal(1);
-        });
-
-        it("Shall reject loan requests if there is an outstanding loan with outstanding balance", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(3_000), 30, 12);
-            await poolContract
-                .connect(eaServiceAccount)
-                .approveCredit(borrower.address, toToken(3000), 30, 12, 1217);
-            await poolContract.connect(borrower).drawdown(toToken(2_000));
-
-            await expect(
-                poolContract.connect(borrower).requestCredit(toToken(1_000), 30, 12)
-            ).to.be.revertedWithCustomError(poolContract, "creditLineAlreadyExists");
-        });
-
-        it("Shall allow new request if existing loan has been paid off", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(3_000), 30, 12);
-            await expect(
-                poolContract.connect(borrower).makePayment(borrower.address, toToken(3_000))
-            ).to.be.revertedWithCustomError(poolContract, "creditLineNotInStateForMakingPayment");
-
-            await poolContract
-                .connect(eaServiceAccount)
-                .approveCredit(borrower.address, toToken(3000), 30, 12, 1217);
-            await expect(
-                poolContract.connect(borrower).makePayment(borrower.address, toToken(3_000))
-            ).to.be.revertedWithCustomError(poolContract, "creditLineNotInStateForMakingPayment");
-
-            await poolContract.connect(borrower).drawdown(toToken(3_000));
-            await testTokenContract.connect(borrower).mint(borrower.address, toToken(2_000));
-            await testTokenContract
-                .connect(borrower)
-                .approve(poolContract.address, toToken(3_100));
-            await poolContract.connect(borrower).makePayment(borrower.address, toToken(3_100));
-            await poolContract.connect(borrower).requestCredit(toToken(4_000), 90, 36);
-            const loanInformation = await getCreditInfo(poolContract, borrower.address);
-            expect(loanInformation.creditLimit).to.equal(toToken(4_000));
-            expect(loanInformation.intervalInDays).to.equal(90);
-            expect(loanInformation.aprInBps).to.equal(1217);
-            expect(loanInformation.remainingPeriods).to.equal(36);
-            expect(loanInformation.state).to.equal(1);
-            expect(loanInformation.totalDue).to.equal(0);
-            expect(loanInformation.feesAndInterestDue).to.equal(0);
-            expect(loanInformation.correction).to.equal(0);
+            const cr = await poolContract.creditRecordMapping(borrower.address);
+            expect(cr.state).to.equal(0); // Deleted - no credit created
         });
     });
 
     describe("Drawdown", function () {
         beforeEach(async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
         });
 
         it("Should not allow loan funding while protocol is paused", async function () {
@@ -539,7 +442,6 @@ describe("Base Credit Pool", function () {
     describe("IsLate()", function () {
         it("Shall not mark the account as late if there is no drawdown", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
@@ -551,7 +453,6 @@ describe("Base Credit Pool", function () {
         });
         it("Shall mark the account as late if no payment is received by the dueDate", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
@@ -567,7 +468,6 @@ describe("Base Credit Pool", function () {
     describe("Credit expiration without a timely first drawdown", function () {
         it("Cannot borrow after credit expiration window", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
@@ -581,25 +481,23 @@ describe("Base Credit Pool", function () {
 
         it("Can borrow if no credit expiration has been setup for the pool", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(0);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
 
             await advanceClock(6);
 
-            await expect(poolContract.connect(borrower).drawdown(toToken(1_000_000)));
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
             let creditInfo = await poolContract.creditRecordMapping(borrower.address);
             expect(creditInfo.remainingPeriods).to.equal(11);
         });
 
         it("Expiration window does not apply after initial drawdown", async function () {
             await poolConfigContract.connect(poolOwner).setCreditApprovalExpiration(5);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
-            await expect(poolContract.connect(borrower).drawdown(toToken(500_000)));
+            await poolContract.connect(borrower).drawdown(toToken(500_000));
             let creditInfo = await poolContract.creditRecordMapping(borrower.address);
             expect(creditInfo.unbilledPrincipal).to.equal(toToken(500_000));
 
@@ -612,8 +510,20 @@ describe("Base Credit Pool", function () {
     });
 
     describe("Account update by service account", function () {
+        it("Shall reject refreshAccount from non-PDS caller", async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+            await expect(
+                poolContract.connect(borrower).refreshAccount(borrower.address)
+            ).to.be.revertedWithCustomError(
+                poolContract,
+                "paymentDetectionServiceAccountRequired"
+            );
+        });
+
         it("Shall not emit BillRefreshed event when the bill should not be refreshed", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
@@ -624,7 +534,6 @@ describe("Base Credit Pool", function () {
         });
 
         it("Shall emit BillRefreshed event when the bill is refreshed", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
@@ -673,7 +582,6 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.eaIncome).to.equal(6480834246);
         });
         it("BillRefresh when it is default ready should not distribute income", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
@@ -724,11 +632,11 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.eaIncome).to.equal(13342866129);
 
             // trigger default
-            await expect(poolContract.connect(pdsServiceAccount).triggerDefault(borrower.address))
+            await expect(poolContract.connect(eaServiceAccount).triggerDefault(borrower.address))
                 .to.emit(poolContract, "DefaultTriggered")
-                .withArgs(borrower.address, 1077952440866, pdsServiceAccount.address);
+                .withArgs(borrower.address, 1077952440866, eaServiceAccount.address);
 
-            // post-default refreshAccount should do nothing
+            // post-default refreshAccount is no-op (Patch 3: only GoodStanding or Delayed)
             await advanceClock(30);
             await expect(
                 poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address)
@@ -738,13 +646,59 @@ describe("Base Credit Pool", function () {
             expect(accruedIncome.poolOwnerIncome).to.equal(4447622043);
             expect(accruedIncome.eaIncome).to.equal(13342866129);
         });
+
+        it("refreshAccount should be no-op for Approved state", async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+
+            // Account is Approved (state=2), no drawdown yet
+            let record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.state).to.equal(2);
+
+            await advanceClock(31);
+
+            // refreshAccount should be no-op because state is not GoodStanding or Delayed
+            await expect(
+                poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address)
+            ).to.not.emit(poolContract, "BillRefreshed");
+        });
+
+        it("refreshAccount should be no-op for Deleted state", async function () {
+            // borrower has no credit record, state defaults to Deleted (0)
+            let record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.state).to.equal(0);
+
+            await expect(
+                poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address)
+            ).to.not.emit(poolContract, "BillRefreshed");
+        });
+
+        it("refreshAccount should be no-op for Defaulted state", async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+
+            // Advance to default-ready
+            await advanceClock(100);
+            await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
+            await poolContract.connect(eaServiceAccount).triggerDefault(borrower.address);
+
+            let record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.state).to.equal(5); // Defaulted
+
+            await advanceClock(31);
+            await expect(
+                poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address)
+            ).to.not.emit(poolContract, "BillRefreshed");
+        });
     });
 
     // In "Payback".beforeEach(), make sure there is a loan funded.
     describe("Payback", function () {
         beforeEach(async function () {
             await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
 
             await poolContract
                 .connect(eaServiceAccount)
@@ -843,7 +797,6 @@ describe("Base Credit Pool", function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
             await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
 
             await poolContract
                 .connect(eaServiceAccount)
@@ -879,7 +832,6 @@ describe("Base Credit Pool", function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
             await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
 
             await poolContract
                 .connect(eaServiceAccount)
@@ -942,7 +894,6 @@ describe("Base Credit Pool", function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
             await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
 
             await poolContract
                 .connect(eaServiceAccount)
@@ -972,7 +923,6 @@ describe("Base Credit Pool", function () {
     describe("makePayment after account deleted", function () {
         it("Shall revert makePayment() if the account has been deleted", async function () {
             await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 2);
 
             await poolContract
                 .connect(eaServiceAccount)
@@ -1007,7 +957,6 @@ describe("Base Credit Pool", function () {
             let lenderBalance = await testTokenContract.balanceOf(lender.address);
 
             await poolConfigContract.connect(poolOwner).setAPR(1217);
-            await poolContract.connect(borrower).requestCredit(toToken(1_500_000), 30, 12);
 
             await poolContract
                 .connect(eaServiceAccount)
@@ -1129,7 +1078,6 @@ describe("Base Credit Pool", function () {
         describe("Common", function () {
             beforeEach(async function () {
                 await poolConfigContract.connect(poolOwner).setAPR(1217);
-                await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
 
                 await poolContract
                     .connect(eaServiceAccount)
@@ -1147,10 +1095,10 @@ describe("Base Credit Pool", function () {
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
 
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 let creditInfo = await poolContract.creditRecordMapping(borrower.address);
                 await expect(
-                    poolContract.triggerDefault(borrower.address)
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
 
                 expect(creditInfo.unbilledPrincipal).to.equal(1010002739726);
@@ -1165,10 +1113,10 @@ describe("Base Credit Pool", function () {
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
 
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 creditInfo = await poolContract.creditRecordMapping(borrower.address);
                 await expect(
-                    poolContract.triggerDefault(borrower.address)
+                    poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
                 ).to.be.revertedWithCustomError(poolContract, "defaultTriggeredTooEarly");
 
                 expect(creditInfo.unbilledPrincipal).to.equal(1032205561651);
@@ -1238,11 +1186,11 @@ describe("Base Credit Pool", function () {
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
@@ -1458,7 +1406,6 @@ describe("Base Credit Pool", function () {
                 await poolConfigContract.connect(poolOwner).setAPR(1217);
                 await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
 
-                await poolContract.connect(borrower).requestCredit(toToken(5_000_000), 30, 12);
                 await poolContract
                     .connect(eaServiceAccount)
                     .approveCredit(borrower.address, toToken(5_000_000), 30, 12, 1217);
@@ -1469,11 +1416,11 @@ describe("Base Credit Pool", function () {
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
@@ -1486,6 +1433,85 @@ describe("Base Credit Pool", function () {
 
                 expect(await poolContract.totalPoolValue()).to.equal(0);
             });
+        });
+
+        it("triggerDefault should reject non-EA callers", async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+
+            // Advance to default-ready
+            await advanceClock(100);
+            await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
+
+            // borrower should be rejected
+            await expect(
+                poolContract.connect(borrower).triggerDefault(borrower.address)
+            ).to.be.revertedWithCustomError(poolContract, "evaluationAgentServiceAccountRequired");
+
+            // pdsServiceAccount should be rejected
+            await expect(
+                poolContract.connect(pdsServiceAccount).triggerDefault(borrower.address)
+            ).to.be.revertedWithCustomError(poolContract, "evaluationAgentServiceAccountRequired");
+        });
+
+        it("Defaulted state should not be reset to GoodStanding by _updateDueInfo", async function () {
+            await poolConfigContract.connect(poolOwner).setAPR(1217);
+            await poolConfigContract.connect(poolOwner).setPoolDefaultGracePeriod(60);
+
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+            let blockBefore = await ethers.provider.getBlock();
+            let dueDate = blockBefore.timestamp + 2592000;
+
+            // Advance 3 periods to become default-ready
+            let nextDate = dueDate + 1;
+            await mineNextBlockWithTimestamp(nextDate);
+            dueDate += 2592000;
+            await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
+
+            nextDate = dueDate + 1;
+            await mineNextBlockWithTimestamp(nextDate);
+            dueDate += 2592000;
+            await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
+
+            nextDate = dueDate + 1;
+            await mineNextBlockWithTimestamp(nextDate);
+            dueDate += 2592000;
+
+            // Trigger default
+            await poolContract.connect(eaServiceAccount).triggerDefault(borrower.address);
+            let record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.state).to.equal(5); // Defaulted
+
+            // Pay enough to clear totalDue but not payoff
+            await testTokenContract.connect(borrower).mint(borrower.address, toToken(200_000));
+            await testTokenContract
+                .connect(borrower)
+                .approve(poolContract.address, toToken(200_000));
+
+            nextDate = dueDate - 20 * 24 * 3600;
+            await setNextBlockTimestamp(nextDate);
+            await poolContract.connect(borrower).makePayment(borrower.address, toToken(25_000));
+
+            record = await poolContract.creditRecordMapping(borrower.address);
+            expect(record.state).to.equal(5); // Still Defaulted
+
+            // Advance past dueDate so _updateDueInfo recalculates
+            nextDate = dueDate + 1;
+            await mineNextBlockWithTimestamp(nextDate);
+            dueDate += 2592000;
+
+            // Small payment triggers _updateDueInfo with missedPeriods=0
+            await poolContract.connect(borrower).makePayment(borrower.address, toToken(50_000));
+
+            record = await poolContract.creditRecordMapping(borrower.address);
+            // With patch: state should remain Defaulted (5)
+            // Without patch (bug): state would become GoodStanding (3)
+            expect(record.state).to.equal(5);
         });
     });
 
@@ -1539,7 +1565,6 @@ describe("Base Credit Pool", function () {
         });
 
         it("Should withdraw protocol fee", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
@@ -1565,7 +1590,6 @@ describe("Base Credit Pool", function () {
         });
 
         it("Should withdraw pool owner fee", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
@@ -1591,7 +1615,6 @@ describe("Base Credit Pool", function () {
         });
 
         it("Should withdraw ea fee", async function () {
-            await poolContract.connect(borrower).requestCredit(toToken(1_000_000), 30, 12);
             await poolContract
                 .connect(eaServiceAccount)
                 .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
