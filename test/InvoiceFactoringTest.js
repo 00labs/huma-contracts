@@ -978,7 +978,7 @@ describe("Invoice Factoring", function () {
                 // pay period 1
                 await advanceClock(30);
                 await ethers.provider.send("evm_mine", []);
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
 
                 await expect(
                     poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
@@ -997,7 +997,7 @@ describe("Invoice Factoring", function () {
 
                 // pay period 2
                 await advanceClock(30);
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
 
                 await expect(
                     poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)

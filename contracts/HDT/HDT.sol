@@ -148,4 +148,15 @@ contract HDT is ERC20Upgradeable, OwnableUpgradeable, HDTStorage, IHDT {
         if (msg.sender != address(_pool)) revert Errors.notPool();
         _;
     }
+
+    /**
+     * @notice Disable HDT token transfers. Only mint (from=0) and burn (to=0) are allowed.
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 /* amount */
+    ) internal virtual override {
+        if (from != address(0) && to != address(0)) revert Errors.transferNotAllowed();
+    }
 }

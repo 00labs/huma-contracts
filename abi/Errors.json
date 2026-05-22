@@ -261,6 +261,11 @@
   },
   {
     "inputs": [],
+    "name": "transferNotAllowed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "treasuryFeeHighThanUpperLimit",
     "type": "error"
   },

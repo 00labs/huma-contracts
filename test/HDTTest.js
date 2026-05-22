@@ -65,5 +65,28 @@ describe("HDT - some negative cases", function () {
                 "zeroAmountProvided"
             );
         });
+
+        it("Cannot transfer HDT between accounts", async function () {
+            // Mint some tokens: with totalSupply=0, convertToShares returns assets directly
+            await pool.setValue(0);
+            await pool.mintAmount(deployer.address, toToken(1_000));
+            // Now set pool value so the token has asset backing
+            await pool.setValue(toToken(1_000));
+            expect(await hdtContract.balanceOf(deployer.address)).to.be.gt(0);
+
+            const [, , recipient] = await ethers.getSigners();
+            // transfer should be blocked
+            await expect(
+                hdtContract.transfer(recipient.address, toToken(100))
+            ).to.be.revertedWithCustomError(hdtContract, "transferNotAllowed");
+
+            // transferFrom should also be blocked
+            await hdtContract.approve(recipient.address, toToken(100));
+            await expect(
+                hdtContract
+                    .connect(recipient)
+                    .transferFrom(deployer.address, recipient.address, toToken(100))
+            ).to.be.revertedWithCustomError(hdtContract, "transferNotAllowed");
+        });
     });
 });

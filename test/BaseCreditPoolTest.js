@@ -510,6 +510,19 @@ describe("Base Credit Pool", function () {
     });
 
     describe("Account update by service account", function () {
+        it("Shall reject refreshAccount from non-PDS caller", async function () {
+            await poolContract
+                .connect(eaServiceAccount)
+                .approveCredit(borrower.address, toToken(1_000_000), 30, 12, 1217);
+            await poolContract.connect(borrower).drawdown(toToken(1_000_000));
+            await expect(
+                poolContract.connect(borrower).refreshAccount(borrower.address)
+            ).to.be.revertedWithCustomError(
+                poolContract,
+                "paymentDetectionServiceAccountRequired"
+            );
+        });
+
         it("Shall not emit BillRefreshed event when the bill should not be refreshed", async function () {
             await poolContract
                 .connect(eaServiceAccount)
@@ -1082,7 +1095,7 @@ describe("Base Credit Pool", function () {
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
 
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 let creditInfo = await poolContract.creditRecordMapping(borrower.address);
                 await expect(
                     poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
@@ -1100,7 +1113,7 @@ describe("Base Credit Pool", function () {
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
 
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 creditInfo = await poolContract.creditRecordMapping(borrower.address);
                 await expect(
                     poolContract.connect(eaServiceAccount).triggerDefault(borrower.address)
@@ -1173,11 +1186,11 @@ describe("Base Credit Pool", function () {
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
@@ -1403,11 +1416,11 @@ describe("Base Credit Pool", function () {
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;
-                await poolContract.refreshAccount(borrower.address);
+                await poolContract.connect(pdsServiceAccount).refreshAccount(borrower.address);
                 nextDate = dueDate + 1;
                 await mineNextBlockWithTimestamp(nextDate);
                 dueDate += 2592000;

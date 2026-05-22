@@ -270,6 +270,7 @@ contract BaseCreditPool is BasePool, BaseCreditPoolStorage, ICredit {
         override
         returns (BS.CreditRecord memory cr)
     {
+        onlyPDSServiceAccount();
         if (
             _creditRecordMapping[borrower].state == BS.CreditState.GoodStanding ||
             _creditRecordMapping[borrower].state == BS.CreditState.Delayed
